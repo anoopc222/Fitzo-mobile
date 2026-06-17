@@ -1,0 +1,360 @@
+import React, { useState } from 'react';
+import {
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  Modal, TextInput, Alert, ActivityIndicator, RefreshControl,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { colors } from '../theme/colors';
+import { typography, weight } from '../theme/typography';
+
+const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
+const MEAL_COLORS = { Breakfast: '#fb923c', Lunch: '#22d3ee', Dinner: colors.purple, Snack: colors.success };
+
+const MACRO_TARGETS = { calories: 2000, protein: 150, carbs: 250, fats: 65 };
+
+async function fetchFoodLog(userId, date) {
+  const [logs, profile] = await Promise.all([
+    supabase.from('food_logs')
+      .select('id, food_name, calories, protein, carbs, fats, meal_type, logged_at')
+      .eq('user_id', userId)
+      .gte('logged_at', `${date}T00:00:00`)
+      .lte('logged_at', `${date}T23:59:59`)
+      .order('logged_at', { ascending: true }),
+    supabase.from('profiles').select('calorie_target, protein_target, carbs_target, fats_target').eq('id', userId).single(),
+  ]);
+  return { logs: logs.data ?? [], profile: profile.data };
+}
+
+async function addFood(userId, food) {
+  const { error } = await supabase.from('food_logs').insert({ user_id: userId, ...food, logged_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
+async function deleteFoodLog(id) {
+  const { error } = await supabase.from('food_logs').delete().eq('id', id);
+  if (error) throw error;
+}
+
+function dateStr(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function fmtDate(d) {
+  const today = new Date();
+  if (dateStr(d) === dateStr(today)) return 'Today';
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  if (dateStr(d) === dateStr(yesterday)) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function MacroBar({ label, value, target, color }) {
+  const pct = Math.min(100, Math.round((value / target) * 100));
+  return (
+    <View style={styles.macroBarWrap}>
+      <View style={styles.macroBarHeader}>
+        <Text style={styles.macroBarLabel}>{label}</Text>
+        <Text style={[styles.macroBarVal, { color }]}>{value}<Text style={styles.macroBarUnit}> / {target}</Text></Text>
+      </View>
+      <View style={styles.macroBarBg}>
+        <View style={[styles.macroBarFill, { width: `${pct}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={styles.macroBarPct}>{pct}%</Text>
+    </View>
+  );
+}
+
+export default function FoodLogScreen() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showModal, setShowModal] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState('Breakfast');
+  const [form, setForm] = useState({ food_name: '', calories: '', protein: '', carbs: '', fats: '' });
+
+  const today = dateStr(currentDate);
+
+  const { data, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['food', user?.id, today],
+    queryFn: () => fetchFoodLog(user.id, today),
+    enabled: !!user?.id,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const addMut = useMutation({
+    mutationFn: (food) => addFood(user.id, food),
+    onSuccess: () => {
+      qc.invalidateQueries(['food', user.id, today]);
+      qc.invalidateQueries(['home', user.id]);
+      setShowModal(false);
+      setForm({ food_name: '', calories: '', protein: '', carbs: '', fats: '' });
+    },
+    onError: (e) => Alert.alert('Error', e.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: deleteFoodLog,
+    onSuccess: () => { qc.invalidateQueries(['food', user.id, today]); qc.invalidateQueries(['home', user.id]); },
+  });
+
+  const logs = data?.logs ?? [];
+  const profile = data?.profile;
+  const targets = {
+    calories: profile?.calorie_target ?? MACRO_TARGETS.calories,
+    protein: profile?.protein_target ?? MACRO_TARGETS.protein,
+    carbs: profile?.carbs_target ?? MACRO_TARGETS.carbs,
+    fats: profile?.fats_target ?? MACRO_TARGETS.fats,
+  };
+
+  const totals = logs.reduce((acc, l) => ({
+    calories: acc.calories + (l.calories ?? 0),
+    protein: acc.protein + (l.protein ?? 0),
+    carbs: acc.carbs + (l.carbs ?? 0),
+    fats: acc.fats + (l.fats ?? 0),
+  }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+
+  const byMeal = {};
+  MEAL_TYPES.forEach(m => { byMeal[m] = logs.filter(l => l.meal_type === m); });
+
+  const prevDay = () => setCurrentDate(d => { const next = new Date(d); next.setDate(d.getDate() - 1); return next; });
+  const nextDay = () => {
+    const tomorrow = new Date(); tomorrow.setDate(new Date().getDate() + 1);
+    if (currentDate < tomorrow) setCurrentDate(d => { const next = new Date(d); next.setDate(d.getDate() + 1); return next; });
+  };
+
+  const handleAdd = () => {
+    if (!form.food_name.trim() || !form.calories) return Alert.alert('Required', 'Enter food name and calories');
+    addMut.mutate({
+      food_name: form.food_name.trim(),
+      calories: parseFloat(form.calories) || 0,
+      protein: parseFloat(form.protein) || 0,
+      carbs: parseFloat(form.carbs) || 0,
+      fats: parseFloat(form.fats) || 0,
+      meal_type: selectedMeal,
+    });
+  };
+
+  // Calorie ring percentage
+  const calPct = Math.min(100, Math.round((totals.calories / targets.calories) * 100));
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      {/* Date nav */}
+      <View style={styles.dateNav}>
+        <TouchableOpacity onPress={prevDay} style={styles.dateArrow}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.dateLabel}>{fmtDate(currentDate)}</Text>
+        <TouchableOpacity onPress={nextDay} style={styles.dateArrow}>
+          <Ionicons name="chevron-forward" size={22} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}>
+        {isLoading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} /> : (
+          <>
+            {/* Calorie summary */}
+            <View style={styles.summaryCard}>
+              <View style={styles.calorieRing}>
+                <View style={[styles.ringOuter, { borderColor: calPct >= 100 ? colors.danger : colors.accent }]}>
+                  <Text style={[styles.ringNum, { color: calPct >= 100 ? colors.danger : colors.accent }]}>
+                    {totals.calories.toFixed(0)}
+                  </Text>
+                  <Text style={styles.ringLabel}>kcal</Text>
+                </View>
+                <View style={styles.ringRight}>
+                  <Text style={styles.ringTarget}>Goal: {targets.calories} kcal</Text>
+                  <Text style={[styles.ringRemain, { color: calPct >= 100 ? colors.danger : colors.success }]}>
+                    {calPct >= 100
+                      ? `+${(totals.calories - targets.calories).toFixed(0)} over`
+                      : `${(targets.calories - totals.calories).toFixed(0)} remaining`
+                    }
+                  </Text>
+                </View>
+              </View>
+
+              {/* Macro bars */}
+              <View style={styles.macroBars}>
+                <MacroBar label="Protein" value={Math.round(totals.protein)} target={targets.protein} color={colors.success} />
+                <MacroBar label="Carbs" value={Math.round(totals.carbs)} target={targets.carbs} color="#fb923c" />
+                <MacroBar label="Fats" value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
+              </View>
+            </View>
+
+            {/* Add food button */}
+            <TouchableOpacity style={styles.addBtn} onPress={() => { setSelectedMeal('Breakfast'); setForm({ food_name: '', calories: '', protein: '', carbs: '', fats: '' }); setShowModal(true); }}>
+              <Ionicons name="add-circle" size={20} color={colors.bg} />
+              <Text style={styles.addBtnText}>Add Food</Text>
+            </TouchableOpacity>
+
+            {/* Meals by type */}
+            {MEAL_TYPES.map(meal => {
+              const items = byMeal[meal] ?? [];
+              const mealCals = items.reduce((s, l) => s + (l.calories ?? 0), 0);
+              const mealColor = MEAL_COLORS[meal];
+              return (
+                <View key={meal} style={styles.mealCard}>
+                  <View style={styles.mealHeader}>
+                    <View style={[styles.mealIconWrap, { backgroundColor: mealColor + '22' }]}>
+                      <Ionicons name={MEAL_ICONS[meal]} size={18} color={mealColor} />
+                    </View>
+                    <Text style={styles.mealTitle}>{meal}</Text>
+                    <Text style={[styles.mealCals, { color: mealColor }]}>{mealCals.toFixed(0)} kcal</Text>
+                    <TouchableOpacity onPress={() => { setSelectedMeal(meal); setForm({ food_name: '', calories: '', protein: '', carbs: '', fats: '' }); setShowModal(true); }}>
+                      <Ionicons name="add-circle-outline" size={22} color={mealColor} />
+                    </TouchableOpacity>
+                  </View>
+                  {items.length === 0 ? (
+                    <Text style={styles.mealEmpty}>Nothing logged yet</Text>
+                  ) : (
+                    items.map(item => (
+                      <View key={item.id} style={styles.foodItem}>
+                        <View style={styles.foodItemLeft}>
+                          <Text style={styles.foodName}>{item.food_name}</Text>
+                          <View style={styles.macroChips}>
+                            {item.protein > 0 && <MacroChip label={`${Math.round(item.protein)}P`} color={colors.success} />}
+                            {item.carbs > 0 && <MacroChip label={`${Math.round(item.carbs)}C`} color="#fb923c" />}
+                            {item.fats > 0 && <MacroChip label={`${Math.round(item.fats)}F`} color={colors.warning} />}
+                          </View>
+                        </View>
+                        <Text style={styles.foodCals}>{item.calories} kcal</Text>
+                        <TouchableOpacity onPress={() => Alert.alert('Delete', `Remove "${item.food_name}"?`, [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(item.id) },
+                        ])}>
+                          <Ionicons name="close" size={16} color={colors.textDim} />
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                  )}
+                </View>
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
+
+      {/* Add Food Modal */}
+      <Modal visible={showModal} transparent animationType="slide">
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Add Food</Text>
+              <TouchableOpacity onPress={() => setShowModal(false)}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Meal type chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mealChips}>
+              {MEAL_TYPES.map(m => (
+                <TouchableOpacity key={m} style={[styles.mealChip, selectedMeal === m && { backgroundColor: MEAL_COLORS[m], borderColor: MEAL_COLORS[m] }]}
+                  onPress={() => setSelectedMeal(m)}>
+                  <Text style={[styles.mealChipText, selectedMeal === m && { color: '#fff' }]}>{m}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TextInput style={styles.inputFull} placeholder="Food name (e.g. Chicken breast 100g)"
+              placeholderTextColor={colors.textDim} value={form.food_name}
+              onChangeText={v => setForm(p => ({ ...p, food_name: v }))} />
+
+            <View style={styles.macroInputRow}>
+              <MacroInput label="Calories" value={form.calories} onChange={v => setForm(p => ({ ...p, calories: v }))} color={colors.accent} />
+              <MacroInput label="Protein" value={form.protein} onChange={v => setForm(p => ({ ...p, protein: v }))} color={colors.success} />
+              <MacroInput label="Carbs" value={form.carbs} onChange={v => setForm(p => ({ ...p, carbs: v }))} color="#fb923c" />
+              <MacroInput label="Fats" value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
+            </View>
+
+            <TouchableOpacity style={styles.saveBtn} onPress={handleAdd} disabled={addMut.isPending}>
+              {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Food</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+function MacroChip({ label, color }) {
+  return <Text style={[styles.macroChip, { color }]}>{label}</Text>;
+}
+
+function MacroInput({ label, value, onChange, color }) {
+  return (
+    <View style={styles.macroInputWrap}>
+      <Text style={[styles.macroInputLabel, { color }]}>{label}</Text>
+      <TextInput
+        style={styles.macroInput}
+        value={value}
+        onChangeText={onChange}
+        keyboardType="numeric"
+        placeholder="0"
+        placeholderTextColor={colors.textDim}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.bg },
+  dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  dateArrow: { padding: 10 },
+  dateLabel: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text },
+  content: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 12 },
+
+  summaryCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
+  calorieRing: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
+  ringOuter: { width: 90, height: 90, borderRadius: 45, borderWidth: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
+  ringNum: { fontSize: typography.xl, fontWeight: weight.black },
+  ringLabel: { fontSize: 9, color: colors.textMuted, fontWeight: weight.bold },
+  ringRight: { flex: 1 },
+  ringTarget: { fontSize: typography.sm, color: colors.textMuted, marginBottom: 4 },
+  ringRemain: { fontSize: typography.sm, fontWeight: weight.bold },
+  macroBars: { gap: 8 },
+  macroBarWrap: { gap: 3 },
+  macroBarHeader: { flexDirection: 'row', justifyContent: 'space-between' },
+  macroBarLabel: { fontSize: 10, color: colors.textMuted, fontWeight: weight.medium },
+  macroBarVal: { fontSize: 10, fontWeight: weight.bold },
+  macroBarUnit: { color: colors.textDim, fontWeight: weight.normal },
+  macroBarBg: { height: 5, backgroundColor: colors.bgElevated, borderRadius: 3, overflow: 'hidden' },
+  macroBarFill: { height: '100%', borderRadius: 3 },
+  macroBarPct: { fontSize: 8, color: colors.textDim, textAlign: 'right' },
+
+  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.accent, borderRadius: 14, padding: 14, marginBottom: 14 },
+  addBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.base },
+
+  mealCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 10 },
+  mealHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  mealIconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  mealTitle: { flex: 1, fontSize: typography.base, fontWeight: weight.semibold, color: colors.text },
+  mealCals: { fontSize: typography.sm, fontWeight: weight.bold, marginRight: 8 },
+  mealEmpty: { fontSize: typography.xs, color: colors.textDim, textAlign: 'center', paddingVertical: 8 },
+  foodItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.bgElevated, gap: 10 },
+  foodItemLeft: { flex: 1 },
+  foodName: { fontSize: typography.sm, color: colors.text, fontWeight: weight.medium, marginBottom: 3 },
+  macroChips: { flexDirection: 'row', gap: 6 },
+  macroChip: { fontSize: 10, fontWeight: weight.bold },
+  foodCals: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, minWidth: 60, textAlign: 'right' },
+
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000088' },
+  sheet: { backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40, maxHeight: '85%' },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  sheetTitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
+  mealChips: { flexDirection: 'row', gap: 8, paddingBottom: 14 },
+  mealChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgElevated },
+  mealChipText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
+  inputFull: { backgroundColor: colors.bgElevated, borderRadius: 12, padding: 13, color: colors.text, fontSize: typography.sm, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+  macroInputRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  macroInputWrap: { flex: 1 },
+  macroInputLabel: { fontSize: 9, fontWeight: weight.bold, marginBottom: 5, letterSpacing: 0.5 },
+  macroInput: { backgroundColor: colors.bgElevated, borderRadius: 10, padding: 10, color: colors.text, fontSize: typography.sm, borderWidth: 1, borderColor: colors.border, textAlign: 'center' },
+  saveBtn: { backgroundColor: colors.accent, borderRadius: 14, padding: 14, alignItems: 'center' },
+  saveBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.base },
+});
