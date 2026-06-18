@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Modal, TextInput, Alert, ActivityIndicator, RefreshControl,
@@ -7,8 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
 import { typography, weight } from '../theme/typography';
 import MonthHeatmap from '../components/MonthHeatmap';
 
@@ -53,6 +53,8 @@ function getWeekRange(offsetWeeks = 0) {
 
 export default function StepsScreen({ navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [distUnit, setDistUnit] = useState('KM');
   const [showLogModal, setShowLogModal] = useState(false);
@@ -306,6 +308,8 @@ export default function StepsScreen({ navigation }) {
 }
 
 function WeekCard({ title, total, goalDays, color }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.weekCard}>
       <Text style={styles.weekTitle}>{title}</Text>
@@ -316,7 +320,7 @@ function WeekCard({ title, total, goalDays, color }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   title: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Modal, TextInput, Alert, ActivityIndicator, RefreshControl,
@@ -7,13 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
 import { typography, weight } from '../theme/typography';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
-const MEAL_COLORS = { Breakfast: '#fb923c', Lunch: '#22d3ee', Dinner: colors.purple, Snack: colors.success };
 
 const MACRO_TARGETS = { calories: 2000, protein: 150, carbs: 250, fats: 65 };
 
@@ -53,6 +52,8 @@ function fmtDate(d) {
 }
 
 function MacroBar({ label, value, target, color }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const pct = Math.min(100, Math.round((value / target) * 100));
   return (
     <View style={styles.macroBarWrap}>
@@ -70,6 +71,11 @@ function MacroBar({ label, value, target, color }) {
 
 export default function FoodLogScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const MEAL_COLORS = useMemo(() => ({
+    Breakfast: '#fb923c', Lunch: '#22d3ee', Dinner: colors.purple, Snack: colors.success,
+  }), [colors]);
   const qc = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
@@ -283,10 +289,14 @@ export default function FoodLogScreen() {
 }
 
 function MacroChip({ label, color }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return <Text style={[styles.macroChip, { color }]}>{label}</Text>;
 }
 
 function MacroInput({ label, value, onChange, color }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.macroInputWrap}>
       <Text style={[styles.macroInputLabel, { color }]}>{label}</Text>
@@ -302,7 +312,7 @@ function MacroInput({ label, value, onChange, color }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   dateArrow: { padding: 10 },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Modal, TextInput,
 } from 'react-native';
@@ -6,16 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
 import { typography, weight } from '../theme/typography';
-
-const THEMES = [
-  { id: 'dark', label: 'Dark', desc: 'Default dark theme', bg: '#080810', accent: '#d4ff00' },
-  { id: 'hud', label: 'HUD', desc: 'Matrix-style green', bg: '#030a03', accent: '#00ff41' },
-  { id: 'midnight', label: 'Midnight', desc: 'Deep navy', bg: '#020718', accent: '#7c3aed' },
-  { id: 'amber', label: 'Amber', desc: 'Warm amber tones', bg: '#0f0a00', accent: '#fbbf24' },
-];
 
 const NOTIFICATION_ITEMS = [
   { key: 'weigh_in', label: 'Daily weigh-in reminder', icon: 'scale-outline' },
@@ -40,8 +33,9 @@ async function updateSettings(userId, fields) {
 
 export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
+  const { colors, isDark, setIsDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
-  const [selectedTheme, setSelectedTheme] = useState('dark');
   const [notifs, setNotifs] = useState({ weigh_in: false, workout: false, sleep: false, steps: false });
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [goalsForm, setGoalsForm] = useState({});
@@ -166,31 +160,28 @@ export default function SettingsScreen({ navigation }) {
 
         {/* ── Theme ───────────────────────────────────────────────── */}
         <SectionHeader title="Appearance" />
-        <View style={styles.themeGrid}>
-          {THEMES.map(theme => (
-            <TouchableOpacity
-              key={theme.id}
-              style={[styles.themeCard, selectedTheme === theme.id && styles.themeCardActive]}
-              onPress={() => setSelectedTheme(theme.id)}
-            >
-              <View style={[styles.themePreview, { backgroundColor: theme.bg, borderColor: theme.accent }]}>
-                <View style={[styles.themeAccentBar, { backgroundColor: theme.accent }]} />
-                <View style={[styles.themeCardRow, { backgroundColor: theme.accent + '22' }]} />
-                <View style={[styles.themeCardRow, { backgroundColor: theme.accent + '11', width: '60%' }]} />
-              </View>
-              <Text style={[styles.themeLabel, selectedTheme === theme.id && { color: colors.accent }]}>
-                {theme.label}
-              </Text>
-              <Text style={styles.themeDesc}>{theme.desc}</Text>
-              {selectedTheme === theme.id && (
-                <View style={styles.themeCheck}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={[styles.themeOption, styles.rowBorder]}
+            onPress={() => setIsDark(true)}
+          >
+            <Ionicons name="moon" size={18} color={isDark ? colors.accent : colors.textMuted} />
+            <Text style={[styles.switchLabel, isDark && { color: colors.accent, fontWeight: weight.semibold }]}>
+              Dark
+            </Text>
+            {isDark && <Ionicons name="checkmark-circle" size={18} color={colors.accent} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.themeOption}
+            onPress={() => setIsDark(false)}
+          >
+            <Ionicons name="sunny" size={18} color={!isDark ? colors.accent : colors.textMuted} />
+            <Text style={[styles.switchLabel, !isDark && { color: colors.accent, fontWeight: weight.semibold }]}>
+              Light
+            </Text>
+            {!isDark && <Ionicons name="checkmark-circle" size={18} color={colors.accent} />}
+          </TouchableOpacity>
         </View>
-        <Text style={styles.themeNote}>Theme changes apply on next app restart</Text>
 
         {/* ── Notifications ───────────────────────────────────────── */}
         <SectionHeader title="Notifications" />
@@ -289,10 +280,14 @@ export default function SettingsScreen({ navigation }) {
 }
 
 function SectionHeader({ title }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return <Text style={styles.sectionTitle}>{title}</Text>;
 }
 
 function SettingRow({ icon, label, value, chevron, onPress, last, danger }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <TouchableOpacity
       style={[styles.settingRow, !last && styles.rowBorder]}
@@ -307,7 +302,7 @@ function SettingRow({ icon, label, value, chevron, onPress, last, danger }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -334,22 +329,7 @@ const styles = StyleSheet.create({
   },
   editGoalsBtnText: { fontSize: typography.xs, color: colors.accent, fontWeight: weight.semibold },
 
-  themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 6 },
-  themeCard: {
-    width: '48%', backgroundColor: colors.bgCard, borderRadius: 14,
-    padding: 12, borderWidth: 1, borderColor: colors.border,
-  },
-  themeCardActive: { borderColor: colors.accent },
-  themePreview: {
-    height: 56, borderRadius: 8, borderWidth: 2, marginBottom: 8,
-    padding: 6, gap: 3, overflow: 'hidden',
-  },
-  themeAccentBar: { height: 3, borderRadius: 2, width: '40%' },
-  themeCardRow: { height: 7, borderRadius: 4 },
-  themeLabel: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text, marginBottom: 2 },
-  themeDesc: { fontSize: 10, color: colors.textDim },
-  themeCheck: { position: 'absolute', top: 8, right: 8 },
-  themeNote: { fontSize: 10, color: colors.textDim, textAlign: 'center', marginBottom: 4 },
+  themeOption: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
 
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
   switchLabel: { flex: 1, fontSize: typography.base, color: colors.text },

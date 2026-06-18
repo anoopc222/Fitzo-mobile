@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Modal, TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -8,18 +8,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
 import { typography, weight } from '../theme/typography';
 import MonthHeatmap from '../components/MonthHeatmap';
 import CircularGauge from '../components/CircularGauge';
 
-const SLEEP_COLOR = colors.purple;
 const W = Dimensions.get('window').width - 32;
 const QUALITY_OPTIONS = ['Poor', 'Fair', 'Good', 'Great'];
 
-const QUALITY_COLOR = { Poor: colors.danger, Fair: colors.warning, Good: colors.success, Great: colors.accent };
 const QUALITY_SCORE = { Poor: 25, Fair: 50, Good: 75, Great: 100 };
+const getQualityColor = (colors) => ({ Poor: colors.danger, Fair: colors.warning, Good: colors.success, Great: colors.accent });
 
 async function fetchSleep(userId) {
   const [logs, profile] = await Promise.all([
@@ -48,6 +47,8 @@ async function deleteSleepLog(id) {
 }
 
 function SleepTrendChart({ data, goal, width }) {
+  const { colors } = useTheme();
+  const SLEEP_COLOR = colors.purple;
   if (!data || data.length < 2) return null;
   const h = 120;
   const pad = { top: 8, bottom: 20, left: 28, right: 8 };
@@ -87,6 +88,10 @@ function SleepTrendChart({ data, goal, width }) {
 
 export default function SleepScreen({ navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const SLEEP_COLOR = colors.purple;
+  const QUALITY_COLOR = useMemo(() => getQualityColor(colors), [colors]);
   const qc = useQueryClient();
   const [chartRange, setChartRange] = useState('1M');
   const [showLogModal, setShowLogModal] = useState(false);
@@ -342,6 +347,8 @@ export default function SleepScreen({ navigation }) {
 }
 
 function HeroStat({ label, value, color }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.heroStatItem}>
       <Text style={styles.heroStatLabel}>{label}</Text>
@@ -350,7 +357,9 @@ function HeroStat({ label, value, color }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => {
+  const SLEEP_COLOR = colors.purple;
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   title: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
@@ -406,4 +415,5 @@ const styles = StyleSheet.create({
   preset: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border },
   presetActive: { backgroundColor: SLEEP_COLOR, borderColor: SLEEP_COLOR },
   presetText: { fontSize: typography.xs, color: colors.text, fontWeight: weight.semibold },
-});
+  });
+};

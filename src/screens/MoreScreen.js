@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 
-const MENU_ITEMS = [
+const getMenuItems = (colors) => [
   { label: 'Progress',     icon: 'trending-up', screen: 'Progress',     color: colors.success, sub: 'Exercise PRs & trends' },
   { label: 'Measurements', icon: 'body',        screen: 'Measurements', color: colors.accent,  sub: 'Body measurements (7 sites)' },
   { label: 'Health Log',   icon: 'heart-half',  screen: 'HealthLog',    color: colors.danger,  sub: 'Blood tests & vitals' },
@@ -17,6 +17,9 @@ const MENU_ITEMS = [
 
 export default function MoreScreen({ navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const MENU_ITEMS = useMemo(() => getMenuItems(colors), [colors]);
   const name    = user?.user_metadata?.full_name?.split(' ')[0] ?? 'there';
   const initial = (name[0] ?? 'F').toUpperCase();
 
@@ -69,7 +72,7 @@ export default function MoreScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
 
   header: {
