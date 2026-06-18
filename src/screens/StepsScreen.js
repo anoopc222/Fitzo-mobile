@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
-import MonthHeatmap from '../components/MonthHeatmap';
+import CustomCalendar from '../components/CustomCalendar';
 
 const STEP_COLOR = '#22d3ee';
 const KM_PER_STEP = 0.000762;
@@ -126,9 +126,14 @@ export default function StepsScreen({ navigation }) {
     return count;
   })();
 
-  // Heatmap
+  // Calendar data
   const heatmapData = {};
-  logs.forEach(l => { heatmapData[l.logged_at.split('T')[0]] = l.steps; });
+  logs.forEach(l => {
+    heatmapData[l.logged_at.split('T')[0]] = {
+      color: STEP_COLOR,
+      label: l.steps.toLocaleString() + ' steps',
+    };
+  });
 
   const monthName = new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); };
@@ -206,22 +211,17 @@ export default function StepsScreen({ navigation }) {
               </View>
             )}
 
-            {/* Monthly heatmap */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <TouchableOpacity onPress={prevMonth}><Ionicons name="chevron-back" size={20} color={colors.textMuted} /></TouchableOpacity>
-                <Text style={styles.cardTitle}>{monthName}</Text>
-                <TouchableOpacity onPress={nextMonth}><Ionicons name="chevron-forward" size={20} color={colors.textMuted} /></TouchableOpacity>
-              </View>
-              <MonthHeatmap data={heatmapData} color={STEP_COLOR} month={viewMonth} year={viewYear} />
-              <View style={styles.heatmapLegend}>
-                <Text style={styles.legendLabel}>Fewer</Text>
-                {[0.15, 0.4, 0.65, 0.9].map((op, i) => (
-                  <View key={i} style={[styles.legendDot, { backgroundColor: `${STEP_COLOR}${Math.round(op * 200 + 35).toString(16).padStart(2, '0')}` }]} />
-                ))}
-                <Text style={styles.legendLabel}>More</Text>
-              </View>
-            </View>
+            {/* Monthly calendar */}
+            <CustomCalendar
+              month={viewMonth}
+              year={viewYear}
+              isDark={isDark}
+              data={heatmapData}
+              onMonthChange={({ month, year }) => {
+                setViewMonth(month);
+                setViewYear(year);
+              }}
+            />
 
             {/* History */}
             <View style={styles.card}>

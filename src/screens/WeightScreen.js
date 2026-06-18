@@ -11,8 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
-import MonthHeatmap from '../components/MonthHeatmap';
 import CircularGauge from '../components/CircularGauge';
+import CustomCalendar from '../components/CustomCalendar';
 
 const W = Dimensions.get('window').width - 32;
 const KG_TO_LBS = 2.20462;
@@ -159,7 +159,12 @@ export default function WeightScreen({ navigation }) {
   const chartData = logs.filter(l => new Date(l.logged_at) >= cutoff).slice().reverse().map(l => ({ val: toDisplay(l.weight) }));
 
   const heatmapData = {};
-  logs.forEach(l => { heatmapData[l.logged_at.split('T')[0]] = l.weight; });
+  logs.forEach(l => {
+    heatmapData[l.logged_at.split('T')[0]] = {
+      color: '#e879f9',
+      label: l.weight.toFixed(1) + ' ' + unitLabel,
+    };
+  });
 
   const weekAgo = new Date(Date.now() - 7 * 86400000);
   const weekLogs = logs.filter(l => new Date(l.logged_at) >= weekAgo);
@@ -271,15 +276,17 @@ export default function WeightScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Monthly heatmap */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <TouchableOpacity onPress={prevMonth}><Ionicons name="chevron-back" size={20} color={colors.textMuted} /></TouchableOpacity>
-                <Text style={styles.cardTitle}>{monthName}</Text>
-                <TouchableOpacity onPress={nextMonth}><Ionicons name="chevron-forward" size={20} color={colors.textMuted} /></TouchableOpacity>
-              </View>
-              <MonthHeatmap data={heatmapData} color="#e879f9" month={viewMonth} year={viewYear} />
-            </View>
+            {/* Monthly calendar */}
+            <CustomCalendar
+              month={viewMonth}
+              year={viewYear}
+              isDark={isDark}
+              data={heatmapData}
+              onMonthChange={({ month, year }) => {
+                setViewMonth(month);
+                setViewYear(year);
+              }}
+            />
 
             {/* History */}
             <View style={styles.card}>

@@ -11,8 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
-import MonthHeatmap from '../components/MonthHeatmap';
 import CircularGauge from '../components/CircularGauge';
+import CustomCalendar from '../components/CustomCalendar';
 
 const W = Dimensions.get('window').width - 32;
 const QUALITY_OPTIONS = ['Poor', 'Fair', 'Good', 'Great'];
@@ -167,9 +167,14 @@ export default function SleepScreen({ navigation }) {
   const cutoff = new Date(Date.now() - rangeDays * 86400000);
   const chartData = logs.filter(l => new Date(l.logged_at) >= cutoff).slice().reverse().map(l => ({ val: l.hours }));
 
-  // Heatmap (value = hours)
+  // Calendar data
   const heatmapData = {};
-  logs.forEach(l => { heatmapData[l.logged_at.split('T')[0]] = l.hours; });
+  logs.forEach(l => {
+    heatmapData[l.logged_at.split('T')[0]] = {
+      color: SLEEP_COLOR,
+      label: l.hours + ' hours',
+    };
+  });
 
   const monthName = new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); };
@@ -240,15 +245,17 @@ export default function SleepScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Monthly heatmap */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <TouchableOpacity onPress={prevMonth}><Ionicons name="chevron-back" size={20} color={colors.textMuted} /></TouchableOpacity>
-                <Text style={styles.cardTitle}>{monthName}</Text>
-                <TouchableOpacity onPress={nextMonth}><Ionicons name="chevron-forward" size={20} color={colors.textMuted} /></TouchableOpacity>
-              </View>
-              <MonthHeatmap data={heatmapData} color={SLEEP_COLOR} month={viewMonth} year={viewYear} />
-            </View>
+            {/* Monthly calendar */}
+            <CustomCalendar
+              month={viewMonth}
+              year={viewYear}
+              isDark={isDark}
+              data={heatmapData}
+              onMonthChange={({ month, year }) => {
+                setViewMonth(month);
+                setViewYear(year);
+              }}
+            />
 
             {/* History */}
             <View style={styles.card}>
