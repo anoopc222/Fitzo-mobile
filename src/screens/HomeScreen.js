@@ -15,7 +15,7 @@ const CAL_CELL  = (SCREEN_W - CAL_PAD * 2 - CAL_GAP * 6) / 7;
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import Sparkline from '../components/Sparkline';
 
@@ -230,6 +230,8 @@ async function fetchHome(userId) {
 // ─── quick nav ──────────────────────────────────────────────────────────────
 // ─── Day Detail Modal ────────────────────────────────────────────────────────
 function DayStat({ icon, value, label, color }) {
+  const { colors } = useTheme();
+  const ddS = useMemo(() => createDdS(colors), [colors]);
   return (
     <View style={ddS.dayStat}>
       <Text style={ddS.dayStatIcon}>{icon}</Text>
@@ -262,6 +264,8 @@ async function fetchDayData(userId, dateStr) {
 }
 
 function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
+  const { colors } = useTheme();
+  const ddS = useMemo(() => createDdS(colors), [colors]);
   const sType = session ? classifySession(session.notes) : null;
 
   const { data: dd, isLoading } = useQuery({
@@ -379,6 +383,8 @@ async function fetchMonthSessions(userId, year, month) {
 }
 
 function StreakCalendarModal({ visible, userId, onClose }) {
+  const { colors } = useTheme();
+  const scS = useMemo(() => createScS(colors), [colors]);
   const today    = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
@@ -601,6 +607,8 @@ const WEEK_TABS = ['THIS WEEK', 'LAST WEEK', 'THIS MONTH', 'CUT SCORE'];
 // ─── component ──────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const navigation = useNavigation();
   const [activeTab,   setActiveTab]   = useState(0);
   const [showStreak,  setShowStreak]  = useState(false);
@@ -948,6 +956,8 @@ function deltaStr(n) {
 }
 
 function StatTile({ value, label, sub, color }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.statTile}>
       <Text style={[styles.statTileNum, { color }]}>{value}</Text>
@@ -958,7 +968,7 @@ function StatTile({ value, label, sub, color }) {
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   content: { paddingBottom: 40 },
@@ -1050,7 +1060,7 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.warning, alignItems: 'center', justifyContent: 'center', shadowColor: colors.warning, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 10, elevation: 10 },
 });
 
-const scS = StyleSheet.create({
+const createScS = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
   title: { fontSize: 22, fontWeight: '900', color: colors.text },
@@ -1081,7 +1091,7 @@ const scS = StyleSheet.create({
   legendText: { fontSize: 11, color: colors.textMuted },
 });
 
-const ddS = StyleSheet.create({
+const createDdS = (colors) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '82%', borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'flex-start', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },

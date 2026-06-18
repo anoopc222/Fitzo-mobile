@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator,
@@ -7,8 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
 import { typography, weight } from '../theme/typography';
 
 const GOALS = [
@@ -46,6 +46,8 @@ async function updateProfile(userId, fields) {
 
 export default function ProfileScreen({ navigation }) {
   const { user, signOut } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
@@ -249,6 +251,8 @@ export default function ProfileScreen({ navigation }) {
 }
 
 function StatTile({ label, value, icon, color }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.statTile}>
       <Ionicons name={icon} size={18} color={color} />
@@ -259,6 +263,8 @@ function StatTile({ label, value, icon, color }) {
 }
 
 function BodyField({ label, value, editing, onChange, placeholder, numeric }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.bodyField}>
       <Text style={styles.bodyFieldLabel}>{label}</Text>
@@ -272,7 +278,7 @@ function BodyField({ label, value, editing, onChange, placeholder, numeric }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   title: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },

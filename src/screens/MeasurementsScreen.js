@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Modal, Alert, ActivityIndicator, RefreshControl,
@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 
 const SITES = [
@@ -50,7 +50,7 @@ function fmt(v) {
   return v != null ? `${Number(v).toFixed(1)}` : '--';
 }
 
-function diffColor(diff) {
+function diffColor(diff, colors) {
   if (diff === null || diff === undefined) return colors.textDim;
   if (Math.abs(diff) < 0.1) return colors.textMuted;
   return diff < 0 ? colors.success : colors.warning;
@@ -58,6 +58,8 @@ function diffColor(diff) {
 
 export default function MeasurementsScreen({ navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({});
@@ -150,7 +152,7 @@ export default function MeasurementsScreen({ navigation }) {
                       <Text style={[styles.compCell, styles.compValCell]}>
                         {fmt(prev)}
                       </Text>
-                      <Text style={[styles.compCell, styles.compDiffCell, { color: diffColor(diff) }]}>
+                      <Text style={[styles.compCell, styles.compDiffCell, { color: diffColor(diff, colors) }]}>
                         {diff !== null ? `${diff > 0 ? '+' : ''}${diff.toFixed(1)}` : '--'}
                       </Text>
                     </View>
@@ -244,7 +246,7 @@ export default function MeasurementsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

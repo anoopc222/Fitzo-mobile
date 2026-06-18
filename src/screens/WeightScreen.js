@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Modal, TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -8,8 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
 import { typography, weight } from '../theme/typography';
 import MonthHeatmap from '../components/MonthHeatmap';
 import CircularGauge from '../components/CircularGauge';
@@ -41,6 +41,7 @@ async function updateGoal(userId, goalKg) {
 }
 
 function WeightTrendChart({ data, width }) {
+  const { colors } = useTheme();
   if (!data || data.length < 2) return null;
   const h = 140;
   const pad = { top: 10, bottom: 24, left: 38, right: 10 };
@@ -86,6 +87,8 @@ function WeightTrendChart({ data, width }) {
 
 export default function WeightScreen({ navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [unit, setUnit] = useState('KG');
   const [chartRange, setChartRange] = useState('30D');
@@ -355,6 +358,8 @@ export default function WeightScreen({ navigation }) {
 }
 
 function HeroStat({ label, value, color }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.heroStatItem}>
       <Text style={styles.heroStatLabel}>{label}</Text>
@@ -363,7 +368,7 @@ function HeroStat({ label, value, color }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   title: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },

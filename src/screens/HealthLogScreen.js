@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Modal, Alert, ActivityIndicator, RefreshControl,
@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 
 // ─── marker definitions with reference ranges ────────────────────────────────
@@ -89,7 +89,7 @@ function getStatus(marker, value) {
   return 'danger';
 }
 
-function statusColor(status) {
+function statusColor(colors, status) {
   return { good: colors.success, warning: colors.warning, danger: colors.danger, unknown: colors.textDim }[status];
 }
 
@@ -123,6 +123,8 @@ async function deleteHealthLog(id) {
 
 export default function HealthLogScreen({ navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeTab, setActiveTab] = useState('Latest');
@@ -229,7 +231,7 @@ export default function HealthLogScreen({ navigation }) {
                       const val = latest[marker.key];
                       if (val == null) return null;
                       const status = getStatus(marker, val);
-                      const sc = statusColor(status);
+                      const sc = statusColor(colors, status);
                       return (
                         <View key={marker.key} style={styles.markerCard}>
                           <View style={[styles.markerStatus, { backgroundColor: sc + '22' }]}>
@@ -285,7 +287,7 @@ export default function HealthLogScreen({ navigation }) {
                     <View style={styles.histValues}>
                       {MARKERS.filter(m => log[m.key] != null).map(marker => {
                         const status = getStatus(marker, log[marker.key]);
-                        const sc = statusColor(status);
+                        const sc = statusColor(colors, status);
                         return (
                           <View key={marker.key} style={styles.histValue}>
                             <View style={[styles.histDot, { backgroundColor: sc }]} />
@@ -343,7 +345,7 @@ export default function HealthLogScreen({ navigation }) {
                     {latest?.[marker.key] != null && (
                       <View style={styles.refCurrent}>
                         <Text style={styles.refCurrentLabel}>Your last value:</Text>
-                        <Text style={[styles.refCurrentVal, { color: statusColor(getStatus(marker, latest[marker.key])) }]}>
+                        <Text style={[styles.refCurrentVal, { color: statusColor(colors, getStatus(marker, latest[marker.key])) }]}>
                           {latest[marker.key]} {marker.unit}
                         </Text>
                       </View>
@@ -415,6 +417,8 @@ export default function HealthLogScreen({ navigation }) {
 }
 
 function RefRange({ label, color, range }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={[styles.refRange, { backgroundColor: color + '18', borderColor: color + '44' }]}>
       <View style={[styles.refRangeDot, { backgroundColor: color }]} />
@@ -424,7 +428,7 @@ function RefRange({ label, color, range }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

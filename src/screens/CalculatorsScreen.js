@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+
+// Some calculator entries below use a theme token name (e.g. 'accent') instead of
+// a literal hex value for their `color` field, since CALCULATORS is static module
+// data defined outside any component. resolveColor() turns a token into the live
+// theme color at render time, and passes literal hex strings straight through.
+const resolveColor = (token, colors) => colors[token] ?? token;
 
 // ─── math helpers ────────────────────────────────────────────────────────────
 const fmt = (v, d = 1) => isNaN(v) || !isFinite(v) ? '--' : Number(v).toFixed(d);
@@ -76,7 +82,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'oneRM', label: '1RM', icon: 'barbell', color: colors.accent,
+    id: 'oneRM', label: '1RM', icon: 'barbell', color: 'accent',
     desc: 'One Rep Max (Brzycki formula)',
     fields: [
       { key: 'weight', label: 'Weight lifted (kg)', placeholder: '100' },
@@ -117,7 +123,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'macros', label: 'Macro Split', icon: 'pie-chart', color: colors.success,
+    id: 'macros', label: 'Macro Split', icon: 'pie-chart', color: 'success',
     desc: 'Calculate macros from TDEE',
     fields: [
       { key: 'calories', label: 'Daily calories (kcal)', placeholder: '2000' },
@@ -138,7 +144,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'lbm', label: 'Lean Body Mass', icon: 'fitness', color: colors.blue,
+    id: 'lbm', label: 'Lean Body Mass', icon: 'fitness', color: 'blue',
     desc: 'LBM and fat mass from body fat %',
     fields: [
       { key: 'weight', label: 'Body weight (kg)', placeholder: '80' },
@@ -155,7 +161,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'ffmi', label: 'FFMI', icon: 'barbell', color: colors.accent,
+    id: 'ffmi', label: 'FFMI', icon: 'barbell', color: 'accent',
     desc: 'Fat-Free Mass Index',
     fields: [
       { key: 'weight', label: 'Weight (kg)', placeholder: '80' },
@@ -194,7 +200,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'hrZones', label: 'HR Zones', icon: 'heart', color: colors.danger,
+    id: 'hrZones', label: 'HR Zones', icon: 'heart', color: 'danger',
     desc: 'Heart rate training zones',
     fields: [{ key: 'age', label: 'Age (years)', placeholder: '30' }],
     compute: ({ age }) => {
@@ -213,7 +219,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'protein', label: 'Protein Needs', icon: 'nutrition', color: colors.success,
+    id: 'protein', label: 'Protein Needs', icon: 'nutrition', color: 'success',
     desc: 'Daily protein target for your goal',
     fields: [
       { key: 'weight', label: 'Body weight (kg)', placeholder: '80' },
@@ -248,7 +254,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'deficit', label: 'Deficit Planner', icon: 'trending-down', color: colors.warning,
+    id: 'deficit', label: 'Deficit Planner', icon: 'trending-down', color: 'warning',
     desc: 'How long to reach your goal weight',
     fields: [
       { key: 'current', label: 'Current weight (kg)', placeholder: '90' },
@@ -289,7 +295,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'volumeLoad', label: 'Volume Load', icon: 'layers', color: colors.accent,
+    id: 'volumeLoad', label: 'Volume Load', icon: 'layers', color: 'accent',
     desc: 'Total training volume for a set',
     fields: [
       { key: 'sets', label: 'Sets', placeholder: '4' },
@@ -306,7 +312,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'wilks', label: 'Wilks Score', icon: 'trophy', color: colors.warning,
+    id: 'wilks', label: 'Wilks Score', icon: 'trophy', color: 'warning',
     desc: 'Powerlifting strength standard',
     fields: [
       { key: 'total', label: 'Powerlifting total (kg)', placeholder: '400' },
@@ -325,7 +331,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'sleep', label: 'Sleep Calculator', icon: 'moon', color: colors.purple,
+    id: 'sleep', label: 'Sleep Calculator', icon: 'moon', color: 'purple',
     desc: 'Optimal wake-up times based on sleep cycles',
     fields: [{ key: 'bedtime', label: 'Bedtime (HH:MM, 24h)', placeholder: '23:00' }],
     compute: ({ bedtime }) => {
@@ -342,7 +348,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'strengthLevel', label: 'Strength Level', icon: 'barbell', color: colors.blue,
+    id: 'strengthLevel', label: 'Strength Level', icon: 'barbell', color: 'blue',
     desc: 'Strength standard relative to bodyweight',
     fields: [
       { key: 'lift', label: 'Lift (bench/squat/deadlift)', placeholder: 'bench' },
@@ -379,7 +385,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'plateCalc', label: 'Plate Calculator', icon: 'barbell', color: colors.accent,
+    id: 'plateCalc', label: 'Plate Calculator', icon: 'barbell', color: 'accent',
     desc: 'Plates needed per side for a barbell',
     fields: [
       { key: 'target', label: 'Target weight (kg)', placeholder: '100' },
@@ -401,6 +407,8 @@ const CALCULATORS = [
 
 // ─── screen ───────────────────────────────────────────────────────────────────
 export default function CalculatorsScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState(null);
   const [inputs, setInputs] = useState({});
@@ -446,6 +454,7 @@ export default function CalculatorsScreen({ navigation }) {
         {filtered.map((calc) => {
           const isOpen = openId === calc.id;
           const calcResults = results[calc.id] ?? [];
+          const calcColor = resolveColor(calc.color, colors);
 
           return (
             <View key={calc.id} style={styles.calcCard}>
@@ -453,8 +462,8 @@ export default function CalculatorsScreen({ navigation }) {
                 style={styles.calcHeader}
                 onPress={() => setOpenId(isOpen ? null : calc.id)}
               >
-                <View style={[styles.calcIcon, { backgroundColor: calc.color + '22' }]}>
-                  <Ionicons name={calc.icon} size={20} color={calc.color} />
+                <View style={[styles.calcIcon, { backgroundColor: calcColor + '22' }]}>
+                  <Ionicons name={calc.icon} size={20} color={calcColor} />
                 </View>
                 <View style={styles.calcInfo}>
                   <Text style={styles.calcLabel}>{calc.label}</Text>
@@ -495,7 +504,7 @@ export default function CalculatorsScreen({ navigation }) {
                   )}
 
                   {/* Calculate button */}
-                  <TouchableOpacity style={[styles.calcBtn, { backgroundColor: calc.color }]} onPress={() => handleCompute(calc)}>
+                  <TouchableOpacity style={[styles.calcBtn, { backgroundColor: calcColor }]} onPress={() => handleCompute(calc)}>
                     <Text style={styles.calcBtnText}>Calculate</Text>
                   </TouchableOpacity>
 
@@ -505,7 +514,7 @@ export default function CalculatorsScreen({ navigation }) {
                       {calcResults.map((r, i) => (
                         <View key={i} style={styles.resultRow}>
                           <Text style={styles.resultLabel}>{r.label}</Text>
-                          <Text style={[styles.resultValue, { color: calc.color }]}>{r.value}</Text>
+                          <Text style={[styles.resultValue, { color: calcColor }]}>{r.value}</Text>
                         </View>
                       ))}
                     </View>
@@ -521,7 +530,7 @@ export default function CalculatorsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   title: { flex: 1, fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },

@@ -8,8 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
 import { typography, weight } from '../theme/typography';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ const MONTH_FULL  = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
 
 // Returns { icon, cardBg, cardBorder, iconBg, titleColor }
-function getWorkoutStyle(name) {
+function getWorkoutStyle(name, colors) {
   if (!name) return { icon: '🏋️', cardBg: colors.bgCard, cardBorder: '#404020', iconBg: '#1a1a00', titleColor: colors.text };
   const n = name.toLowerCase().trim();
 
@@ -265,6 +265,8 @@ function blankEx() { return { _key: tid(), name: '', sets: [{ _key: tid(), weigh
 
 // ─── Session Detail Modal ─────────────────────────────────────────────────────
 function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onEdit, onRepeat, onDelete }) {
+  const { colors } = useTheme();
+  const dS = useMemo(() => createDS(colors), [colors]);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
   useEffect(() => {
@@ -276,7 +278,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
 
   if (!session) return null;
 
-  const ws = getWorkoutStyle(session.notes);
+  const ws = getWorkoutStyle(session.notes, colors);
   const exercises = (session.workout_exercises ?? []).slice().sort((a, b) => a.order_index - b.order_index);
   const totalSets = exercises.reduce((s, ex) => s + (ex.sets?.length ?? 0), 0);
   const vol = session.total_volume ?? calcSessionVol(session);
@@ -381,7 +383,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             const sortedSets = (ex.sets ?? []).slice().sort((a, b) => a.set_number - b.set_number);
             const bestIdx = getBestSetIndex(sortedSets);
             const exMuscles = getExerciseMuscles(ex.exercise_name);
-            const exStyle = getWorkoutStyle(ex.exercise_name);
+            const exStyle = getWorkoutStyle(ex.exercise_name, colors);
 
             return (
               <TouchableOpacity key={ex.id} style={dS.exCard} onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
@@ -480,6 +482,8 @@ const CAL_DAY_NAMES   = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const CAL_MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function DatePickerModal({ visible, value, onSelect, onClose }) {
+  const { colors } = useTheme();
+  const dpS = useMemo(() => createDpS(colors), [colors]);
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
@@ -594,6 +598,8 @@ function DatePickerModal({ visible, value, onSelect, onClose }) {
 const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
 
 function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, onCancel, isSaving }) {
+  const { colors } = useTheme();
+  const eS = useMemo(() => createES(colors), [colors]);
   const [date, setDate] = useState('');
   const [name, setName] = useState('');
   const [exercises, setExercises] = useState([]);
@@ -849,6 +855,8 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function WorkoutScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const s = useMemo(() => createS(colors), [colors]);
   const qc = useQueryClient();
 
   const today = new Date();
@@ -1055,7 +1063,7 @@ export default function WorkoutScreen() {
           }
 
           const sess = item.session;
-          const ws   = getWorkoutStyle(sess.notes);
+          const ws   = getWorkoutStyle(sess.notes, colors);
           const vol  = sess.total_volume ?? calcSessionVol(sess);
           const delta = getVolumeDelta(sess, sessions);
           const exs  = sess.workout_exercises ?? [];
@@ -1137,7 +1145,7 @@ export default function WorkoutScreen() {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const s = StyleSheet.create({
+const createS = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
 
   appHeader: {
@@ -1211,7 +1219,7 @@ const s = StyleSheet.create({
   },
 });
 
-const dS = StyleSheet.create({
+const createDS = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0c0c18' },
   handle: { width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
 
@@ -1310,7 +1318,7 @@ const dS = StyleSheet.create({
   deleteBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.danger },
 });
 
-const eS = StyleSheet.create({
+const createES = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
   header: {
@@ -1443,7 +1451,7 @@ const eS = StyleSheet.create({
   cardioHintText: { fontSize: typography.xs, color: '#60a5fa', flex: 1 },
 });
 
-const dpS = StyleSheet.create({
+const createDpS = (colors) => StyleSheet.create({
   overlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.75)',
     justifyContent: 'center', alignItems: 'center',

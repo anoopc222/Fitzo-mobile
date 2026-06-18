@@ -7,8 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
 import { typography, weight } from '../theme/typography';
 
 async function fetchProgress(userId) {
@@ -61,6 +61,8 @@ function calcTrend(sessions) {
 }
 
 function TrendIcon({ trend }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (!trend) return null;
   const map = {
     up: { icon: 'trending-up', color: colors.success, label: 'Improving' },
@@ -78,6 +80,8 @@ function TrendIcon({ trend }) {
 
 export default function ProgressScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [search, setSearch] = useState('');
   const [expandedEx, setExpandedEx] = useState(null);
 
@@ -228,7 +232,7 @@ export default function ProgressScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   title: { fontSize: typography.xl, fontWeight: weight.bold, color: colors.text },
