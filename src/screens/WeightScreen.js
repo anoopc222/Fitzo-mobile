@@ -74,7 +74,7 @@ async function deleteWeightLog(id) {
 }
 
 // ─── Weight Heatmap — ports _renderWeightHeatmap (quartile-relative-to-month) ─
-function WeightHeatmap({ year, month, logsByDate, colors }) {
+function WeightHeatmap({ year, month, logsByDate, colors, unit }) {
   const SCREEN_W = Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
   const firstDay = new Date(year, month, 1).getDay();
@@ -134,7 +134,7 @@ function WeightHeatmap({ year, month, logsByDate, colors }) {
             >
               <Text style={[s_hm.dayNum, cell.lvl === 0 && { color: colors.textDim }]}>{cell.day}</Text>
               <Text style={[s_hm.wTxt, cell.lvl === 0 && { color: colors.textDim, opacity: 0.5 }]}>
-                {cell.w !== undefined ? cell.w.toFixed(1) : '—'}
+                {cell.w !== undefined ? toDisp(cell.w, unit).toFixed(1) : '—'}
               </Text>
             </View>
           );
@@ -631,7 +631,7 @@ export default function WeightScreen() {
                   <Text style={styles.hmLegendLabel}>High</Text>
                 </View>
               </View>
-              <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} />
+              <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} />
             </View>
 
             {/* ── 30-Day Trend ── */}
