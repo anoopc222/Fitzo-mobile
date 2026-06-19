@@ -438,6 +438,17 @@ function StreakCalendarModal({ visible, userId, onClose }) {
     staleTime: 0, gcTime: 0,
   });
 
+  const prevMonthDate = new Date(calYear, calMonth - 2, 1);
+  const prevYear  = prevMonthDate.getFullYear();
+  const prevMonth = prevMonthDate.getMonth() + 1;
+
+  const { data: prevSessions = [] } = useQuery({
+    queryKey: ['streak-sessions', userId, prevYear, prevMonth],
+    queryFn: () => fetchMonthSessions(userId, prevYear, prevMonth),
+    enabled: !!(userId && visible),
+    staleTime: 0, gcTime: 0,
+  });
+
   const dayMap = useMemo(() => {
     const m = {};
     sessions.forEach(s => { m[s.date] = { session: s, type: classifySession(s.notes) }; });
@@ -447,11 +458,14 @@ function StreakCalendarModal({ visible, userId, onClose }) {
   const gymCount    = sessions.filter(s => classifySession(s.notes) === 'gym').length;
   const cardioCount = sessions.filter(s => classifySession(s.notes) === 'cardio').length;
   const restCount   = sessions.filter(s => classifySession(s.notes) === 'rest').length;
-  const thisMonth   = gymCount + cardioCount;
+  const thisMonth   = gymCount;
+  const prevGymCount = prevSessions.filter(s => classifySession(s.notes) === 'gym').length;
+  const vsLastMonth  = thisMonth - prevGymCount;
+  const vsLastMonthLabel = `${vsLastMonth > 0 ? '↑' : vsLastMonth < 0 ? '↓' : '·'} ${Math.abs(vsLastMonth)} vs ${CAL_MONTHS_SHORT[prevMonth-1]}`;
 
   const weeklyActive = useMemo(() => {
     const wm = {};
-    sessions.filter(s => classifySession(s.notes) !== 'rest').forEach(s => {
+    sessions.filter(s => classifySession(s.notes) === 'gym').forEach(s => {
       const d = new Date(s.date + 'T00:00:00');
       const dow = d.getDay();
       const offset = dow === 0 ? -6 : 1 - dow;
@@ -488,21 +502,25 @@ function StreakCalendarModal({ visible, userId, onClose }) {
 
   const isoForDay = (day) => `${calYear}-${String(calMonth).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
 
+  const TOP_STATS = [
+    { val: gymCount,    lbl: 'GYM',    icon: 'barbell',          color: C_GREEN   },
+    { val: cardioCount, lbl: 'CARDIO', icon: 'bicycle',          color: '#60a5fa' },
+    { val: restCount,   lbl: 'REST',   icon: 'bed',              color: '#f59e0b' },
+  ];
+
   const STATS = [
-    { val: gymCount,    lbl: 'GYM',         color: C_GREEN   },
-    { val: cardioCount, lbl: 'CARDIO',       color: '#60a5fa' },
-    { val: restCount,   lbl: 'REST',         color: '#f59e0b' },
-    { val: bestWk,      lbl: 'BEST WK',      color: colors.accent },
-    { val: lowWk,       lbl: 'LOW WK',       color: C_KCAL    },
-    { val: wkStreak,    lbl: 'WK STREAK',    color: colors.textMuted },
-    { val: thisMonth,   lbl: 'THIS MONTH',   color: colors.text },
-    { val: `${consistency}%`, lbl: 'CONSISTENCY', color: consistency >= 50 ? C_GREEN : C_KCAL },
-    { val: noLog,       lbl: 'NO LOG',       color: colors.textDim },
+    { val: bestWk,      lbl: 'BEST WK',      icon: 'trending-up',      color: colors.accent },
+    { val: lowWk,       lbl: 'LOW WK',       icon: 'trending-down',    color: C_KCAL    },
+    { val: wkStreak,    lbl: 'WK STREAK',    icon: 'flame',            color: colors.textMuted },
+    { val: thisMonth,   lbl: 'THIS MONTH',   icon: 'calendar',         color: colors.text, sub: vsLastMonthLabel },
+    { val: `${consistency}%`, lbl: 'CONSISTENCY', icon: 'checkmark-circle', color: consistency >= 50 ? C_GREEN : C_KCAL, sub: `${metGoalWeeks}/${weeklyActive.length} wks · ${WEEKLY_SESSION_GOAL}/wk` },
+    { val: noLog,       lbl: 'NO LOG',       icon: 'close-circle',     color: colors.textDim },
   ];
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={scS.safe}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={scS.overlay}>
+        <View style={scS.popup}>
         {/* Header */}
         <View style={scS.header}>
           <View style={{ flex: 1 }}>
@@ -515,12 +533,28 @@ function StreakCalendarModal({ visible, userId, onClose }) {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* 3×3 stats grid */}
+          {/* Merged Gym/Cardio/Rest row */}
+          <View style={scS.topCard}>
+            {TOP_STATS.map((item, idx) => (
+              <React.Fragment key={idx}>
+                <View style={scS.topCell}>
+                  <Ionicons name={item.icon} size={16} color={item.color} style={{ marginBottom: 4 }} />
+                  <Text style={[scS.statVal, { color: item.color }]}>{item.val}</Text>
+                  <Text style={scS.statLbl}>{item.lbl}</Text>
+                </View>
+                {idx < TOP_STATS.length - 1 && <View style={scS.topDivider} />}
+              </React.Fragment>
+            ))}
+          </View>
+
+          {/* Square stats grid */}
           <View style={scS.statsGrid}>
             {STATS.map((item, idx) => (
               <View key={idx} style={scS.statCell}>
+                <Ionicons name={item.icon} size={16} color={item.color} style={{ marginBottom: 4 }} />
                 <Text style={[scS.statVal, { color: item.color }]}>{item.val}</Text>
                 <Text style={scS.statLbl}>{item.lbl}</Text>
+                {item.sub && <Text style={scS.statSub}>{item.sub}</Text>}
               </View>
             ))}
           </View>
@@ -619,7 +653,8 @@ function StreakCalendarModal({ visible, userId, onClose }) {
             onClose={() => setShowDay(false)}
           />
         )}
-      </SafeAreaView>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -1067,15 +1102,21 @@ const createStyles = (colors) => StyleSheet.create({
 });
 
 const createScS = (colors) => StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  popup: { width: '100%', maxWidth: 420, maxHeight: '85%', backgroundColor: colors.bgElevated, borderRadius: 28, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  title: { fontSize: 22, fontWeight: '900', color: colors.text },
+  title: { fontSize: 20, fontWeight: '900', color: colors.text },
   subtitle: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
   closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.bgCard },
+  topCard: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: 14, marginHorizontal: 16, marginTop: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  topCell: { flex: 1, alignItems: 'center', paddingVertical: 14 },
+  topDivider: { width: 1, backgroundColor: colors.border },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingVertical: 14 },
-  statCell: { width: '30.5%', backgroundColor: colors.bgCard, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  statVal: { fontSize: 22, fontWeight: '900' },
-  statLbl: { fontSize: 9, color: colors.textDim, fontWeight: '700', letterSpacing: 0.8, marginTop: 4, textAlign: 'center' },
+  statCell: { width: '31.5%', aspectRatio: 1, backgroundColor: colors.bgCard, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  statVal: { fontSize: 20, fontWeight: '900' },
+  statLbl: { fontSize: 9, color: colors.textDim, fontWeight: '700', letterSpacing: 0.8, marginTop: 3, textAlign: 'center' },
+  statSub: { fontSize: 8, color: colors.textMuted, marginTop: 2, textAlign: 'center' },
   calSection: { paddingHorizontal: CAL_PAD, marginTop: 4 },
   calNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   calMonthTitle: { fontSize: 20, fontWeight: '900', color: colors.text },
