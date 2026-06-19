@@ -552,7 +552,7 @@ export default function WeightScreen() {
                 <View>
                   <Text style={styles.heroNum}>{latest ? toDisp(latest.weight, unit).toFixed(1) : '—'}</Text>
                   <Text style={styles.heroLabel}>{unit.toUpperCase()} · LATEST ENTRY</Text>
-                  <Text style={styles.heroSub}>
+                  <Text style={[styles.heroSub, vsPrev != null && { color: vsPrev <= 0 ? colors.good : colors.danger }]}>
                     {vsPrev != null ? `${vsPrev <= 0 ? '▼' : '▲'} ${Math.abs(toDisp(vsPrev, unit)).toFixed(1)} vs prev` : '— vs prev'}
                   </Text>
                 </View>
@@ -568,7 +568,7 @@ export default function WeightScreen() {
               <View style={styles.goalProgressRow}>
                 <CircularGauge
                   percent={goalProgress ? goalProgress.pct : 0}
-                  size={80} strokeWidth={8} color={colors.accent}
+                  size={56} strokeWidth={6} color={colors.accent}
                   value={goalProgress ? `${Math.round(goalProgress.pct)}%` : '—'}
                   label="DONE"
                 />
@@ -585,8 +585,11 @@ export default function WeightScreen() {
                     <Text style={styles.goalStatLabel}>TO GO</Text>
                     <Text style={styles.goalStatVal}>{goalProgress ? Math.abs(toDisp(goalProgress.toGo, unit)).toFixed(1) : '—'}{unit}</Text>
                   </View>
-                  {goalProgress?.etaText && <Text style={styles.goalEta}>{goalProgress.etaText}</Text>}
-                  {goalProgress?.rateText && <Text style={styles.goalRate}>{goalProgress.rateText}</Text>}
+                  {(goalProgress?.etaText || goalProgress?.rateText) && (
+                    <Text style={styles.goalEta}>
+                      {[goalProgress?.etaText, goalProgress?.rateText].filter(Boolean).join(' · ')}
+                    </Text>
+                  )}
                 </View>
               </View>
 
@@ -596,9 +599,9 @@ export default function WeightScreen() {
                 <View style={styles.dividerLine} />
               </View>
               <View style={styles.statTileRowInline}>
-                <StatCell value={mMax != null ? toDisp(mMax, unit).toFixed(1) : '—'} label={`${MONTH_NAMES[month].toUpperCase()} PEAK`} />
-                <StatCell value={mMin != null ? toDisp(mMin, unit).toFixed(1) : '—'} label={`${MONTH_NAMES[month].toUpperCase()} LOW`} color={colors.good} />
-                <StatCell value={mAvg != null ? toDisp(mAvg, unit).toFixed(1) : '—'} label={`${MONTH_NAMES[month].toUpperCase()} AVG`} />
+                <StatCell value={mMax != null ? toDisp(mMax, unit).toFixed(1) : '—'} label="PEAK" />
+                <StatCell value={mMin != null ? toDisp(mMin, unit).toFixed(1) : '—'} label="LOW" color={colors.good} />
+                <StatCell value={mAvg != null ? toDisp(mAvg, unit).toFixed(1) : '—'} label="AVG" />
               </View>
 
               <View style={styles.sectionDivider}>
