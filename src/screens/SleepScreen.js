@@ -35,7 +35,9 @@ async function fetchSleep(userId) {
   if (logs.error) throw logs.error;
   if (sessions.error) throw sessions.error;
   if (steps.error) throw steps.error;
-  return { logs: logs.data ?? [], profile: profile.data, sessions: sessions.data ?? [], steps: steps.data ?? [] };
+  const normLogs = (logs.data ?? []).map(l => ({ ...l, logged_at: l.logged_at.slice(0, 10) }));
+  const normSteps = (steps.data ?? []).map(s => ({ ...s, logged_at: s.logged_at.slice(0, 10) }));
+  return { logs: normLogs, profile: profile.data, sessions: sessions.data ?? [], steps: normSteps };
 }
 
 async function logSleep(userId, { date, hours }) {

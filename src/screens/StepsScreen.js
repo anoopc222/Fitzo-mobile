@@ -56,7 +56,8 @@ async function fetchSteps(userId) {
     supabase.from('profiles').select('step_goal').eq('id', userId).single(),
   ]);
   if (logs.error) throw logs.error;
-  return { logs: logs.data ?? [], profile: profile.data };
+  const normLogs = (logs.data ?? []).map(l => ({ ...l, logged_at: l.logged_at.slice(0, 10) }));
+  return { logs: normLogs, profile: profile.data };
 }
 
 async function logSteps(userId, { date, steps, goal, activityType, note }) {
