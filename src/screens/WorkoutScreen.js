@@ -20,7 +20,7 @@ async function fetchSessions(userId) {
       id, date, notes, total_volume, duration_min, calories_burned,
       workout_exercises (
         id, exercise_name, order_index,
-        sets ( id, set_number, weight_kg, reps, rpe )
+        sets ( id, set_number, weight_kg, reps, rpe, duration_min, distance_km, avg_rpm, speed_kmh, incline_pct, calories )
       )
     `)
     .eq('user_id', userId)
@@ -69,15 +69,32 @@ async function saveSession(userId, { sessionId, date, name, exercises }) {
 
     for (let j = 0; j < (ex.sets ?? []).length; j++) {
       const s = ex.sets[j];
-      const w = parseFloat(s.weight_kg);
-      const r = parseInt(s.reps, 10);
-      const wVal = isNaN(w) ? null : w;
-      const rVal = isNaN(r) ? null : r;
-      if (wVal !== null || rVal !== null) {
+      const num = (v) => {
+        const n = parseFloat(v);
+        return isNaN(n) ? null : n;
+      };
+      const wVal = num(s.weight_kg);
+      const rVal = s.reps === '' || s.reps == null ? null : (isNaN(parseInt(s.reps, 10)) ? null : parseInt(s.reps, 10));
+      const rpeVal = num(s.rpe);
+      const durVal = num(s.duration_min);
+      const distVal = num(s.distance_km);
+      const rpmVal = num(s.avg_rpm);
+      const speedVal = num(s.speed_kmh);
+      const inclineVal = num(s.incline_pct);
+      const calVal = num(s.calories) ?? (durVal != null
+        ? calcCardioEntryKcal(ex.name, {
+            duration_min: durVal, speed_kmh: speedVal, incline_pct: inclineVal, avg_rpm: rpmVal,
+          }) || null
+        : null);
+      const hasAny = [wVal, rVal, rpeVal, durVal, distVal, rpmVal, speedVal, inclineVal, calVal]
+        .some(v => v !== null);
+      if (hasAny) {
         if (wVal && rVal) totalVol += wVal * rVal;
         await supabase.from('sets').insert({
           exercise_id: newEx.id, set_number: j + 1,
-          weight_kg: wVal, reps: rVal, rpe: null,
+          weight_kg: wVal, reps: rVal, rpe: rpeVal,
+          duration_min: durVal, distance_km: distVal, avg_rpm: rpmVal,
+          speed_kmh: speedVal, incline_pct: inclineVal, calories: calVal,
         });
       }
     }
@@ -161,27 +178,25 @@ function calcCardioKcal(type, dur, speed, incline, rpm) {
   return Math.round(met * bw * dur / 60);
 }
 
-// Per-type field mapping onto the sets table's 3 numeric columns (weight_kg, reps, rpe)
-// duration always -> reps; secondary metrics packed into weight_kg/rpe depending on type
+// Per-type field mapping onto the sets table's dedicated cardio columns
 function getCardioFieldDefs(type) {
   if (type === 'Incline Walk')
-    return { secondary: { key: 'weight_kg', label: 'SPEED (KM/H)', placeholder: '3.5' },
-              tertiary:  { key: 'rpe', label: 'INCLINE (%)', placeholder: '12' } };
+    return { secondary: { key: 'speed_kmh', label: 'SPEED (KM/H)', placeholder: '3.5' },
+              tertiary:  { key: 'incline_pct', label: 'INCLINE (%)', placeholder: '12' } };
   if (type === 'Air Bike')
-    return { secondary: { key: 'weight_kg', label: 'DISTANCE (KM)', placeholder: 'optional' },
-              tertiary:  { key: 'rpe', label: 'AVG RPM', placeholder: 'optional' } };
+    return { secondary: { key: 'distance_km', label: 'DISTANCE (KM)', placeholder: 'optional' },
+              tertiary:  { key: 'avg_rpm', label: 'AVG RPM', placeholder: 'optional' } };
   if (type === 'Treadmill Run')
-    return { secondary: { key: 'weight_kg', label: 'DISTANCE (KM)', placeholder: '5' },
-              tertiary:  { key: 'rpe', label: 'SPEED (KM/H)', placeholder: '10' } };
+    return { secondary: { key: 'distance_km', label: 'DISTANCE (KM)', placeholder: '5' },
+              tertiary:  { key: 'speed_kmh', label: 'SPEED (KM/H)', placeholder: '10' } };
   return { secondary: null, tertiary: null };
 }
 
 function calcCardioEntryKcal(type, entry) {
-  const dur = entry.reps;
-  let speed = 0, incline = 0, rpm = 0;
-  if (type === 'Incline Walk') { speed = entry.weight_kg; incline = entry.rpe; }
-  else if (type === 'Air Bike') { rpm = entry.rpe; }
-  else if (type === 'Treadmill Run') { speed = entry.rpe; }
+  const dur = entry.duration_min;
+  const speed = entry.speed_kmh ?? 0;
+  const incline = entry.incline_pct ?? 0;
+  const rpm = entry.avg_rpm ?? 0;
   return calcCardioKcal(type, dur, speed, incline, rpm);
 }
 
@@ -362,7 +377,13 @@ function getRecentTypes(sessions) {
 
 let _tid = 0;
 function tid() { return `_t${++_tid}`; }
-function blankEx() { return { _key: tid(), name: '', sets: [{ _key: tid(), weight_kg: '', reps: '' }] }; }
+function blankSet() {
+  return {
+    _key: tid(), weight_kg: '', reps: '', rpe: '',
+    duration_min: '', distance_km: '', avg_rpm: '', speed_kmh: '', incline_pct: '', calories: '',
+  };
+}
+function blankEx() { return { _key: tid(), name: '', sets: [blankSet()] }; }
 
 // ─── Session Detail Modal ─────────────────────────────────────────────────────
 function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onEdit, onRepeat, onDelete }) {
@@ -387,7 +408,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   const totalSets = exercises.reduce((s, ex) => s + (ex.sets?.length ?? 0), 0);
   const vol = session.total_volume ?? calcSessionVol(session);
   const totalMin = exercises.reduce((s, ex) =>
-    s + (ex.sets ?? []).reduce((ss, st) => ss + (st.reps ?? 0), 0), 0);
+    s + (ex.sets ?? []).reduce((ss, st) => ss + (st.duration_min ?? 0), 0), 0);
   const cardioKcal = exercises.reduce((s, ex) =>
     s + (ex.sets ?? []).reduce((ss, st) => ss + calcCardioEntryKcal(ex.exercise_name, st), 0), 0);
   const kcal = session.calories_burned ?? (isCardio ? cardioKcal : 0) ?? 0;
@@ -499,7 +520,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             const exStyle = getWorkoutStyle(ex.exercise_name, colors);
 
             if (isCardio) {
-              const exMin = sortedSets.reduce((s, st) => s + (st.reps ?? 0), 0);
+              const exMin = sortedSets.reduce((s, st) => s + (st.duration_min ?? 0), 0);
               const exKcal = sortedSets.reduce((s, st) => s + calcCardioEntryKcal(ex.exercise_name, st), 0);
               return (
                 <View key={ex.id} style={dS.exCard}>
@@ -887,7 +908,7 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
 
   const addSet = (exIdx) =>
     setExercises(prev => prev.map((ex, i) => i !== exIdx ? ex : {
-      ...ex, sets: [...(ex.sets ?? []), { _key: tid(), weight_kg: '', reps: '' }],
+      ...ex, sets: [...(ex.sets ?? []), blankSet()],
     }));
 
   const removeSet = (exIdx, sIdx) =>
@@ -1085,9 +1106,10 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
                           (ex.sets ?? []).map((s, sIdx) => {
                             const def = getCardioFieldDefs(ex.name);
                             const autoKcal = calcCardioEntryKcal(ex.name, {
-                              reps: parseFloat(s.reps) || 0,
-                              weight_kg: parseFloat(s.weight_kg) || 0,
-                              rpe: parseFloat(s.rpe) || 0,
+                              duration_min: parseFloat(s.duration_min) || 0,
+                              speed_kmh: parseFloat(s.speed_kmh) || 0,
+                              incline_pct: parseFloat(s.incline_pct) || 0,
+                              avg_rpm: parseFloat(s.avg_rpm) || 0,
                             });
                             return (
                               <View key={s._key} style={eS.cardioFieldCard}>
@@ -1096,8 +1118,8 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
                                     <Text style={eS.cardioFieldLabel}>DURATION (MIN)</Text>
                                     <TextInput
                                       style={eS.setInput}
-                                      value={s.reps}
-                                      onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
+                                      value={s.duration_min}
+                                      onChangeText={v => updateSet(exIdx, sIdx, 'duration_min', v)}
                                       keyboardType="numeric"
                                       placeholder="min"
                                       placeholderTextColor={colors.textDim}
@@ -1295,7 +1317,18 @@ export default function WorkoutScreen() {
           _key: ex.id,
           name: ex.exercise_name,
           sets: (ex.sets ?? []).slice().sort((a, b) => a.set_number - b.set_number)
-            .map(s => ({ _key: s.id, weight_kg: s.weight_kg != null ? String(s.weight_kg) : '', reps: s.reps != null ? String(s.reps) : '' })),
+            .map(s => ({
+              _key: s.id,
+              weight_kg: s.weight_kg != null ? String(s.weight_kg) : '',
+              reps: s.reps != null ? String(s.reps) : '',
+              rpe: s.rpe != null ? String(s.rpe) : '',
+              duration_min: s.duration_min != null ? String(s.duration_min) : '',
+              distance_km: s.distance_km != null ? String(s.distance_km) : '',
+              avg_rpm: s.avg_rpm != null ? String(s.avg_rpm) : '',
+              speed_kmh: s.speed_kmh != null ? String(s.speed_kmh) : '',
+              incline_pct: s.incline_pct != null ? String(s.incline_pct) : '',
+              calories: s.calories != null ? String(s.calories) : '',
+            })),
         })),
     });
     setShowDetail(false);
