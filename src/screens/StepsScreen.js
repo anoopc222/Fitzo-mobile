@@ -24,6 +24,9 @@ import Chip from '../components/ui/Chip';
 const KM_PER_STEP = 0.000762;
 const KCAL_PER_STEP = 0.04;
 const KCAL_PER_GRAM_FAT = 7.7;
+const KM_TO_MI = 0.621371;
+
+function toDispKm(km, unit) { return unit === 'mi' ? +(km * KM_TO_MI).toFixed(2) : +km.toFixed(2); }
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -379,6 +382,7 @@ export default function StepsScreen() {
   const [note, setNote] = useState('');
   const [goalInput, setGoalInput] = useState('');
   const [showGoalSheet, setShowGoalSheet] = useState(false);
+  const [distUnit, setDistUnit] = useState('km');
 
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
@@ -523,7 +527,7 @@ export default function StepsScreen() {
         </View>
       </View>
 
-      {/* Month nav */}
+      {/* Month nav + unit toggle */}
       <View style={styles.topRow}>
         <View style={styles.monthNav}>
           <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
@@ -533,6 +537,13 @@ export default function StepsScreen() {
           <TouchableOpacity onPress={nextMonth} style={styles.monthBtn}>
             <Text style={styles.monthChevron}>›</Text>
           </TouchableOpacity>
+        </View>
+        <View style={styles.segmentRow}>
+          {['km', 'mi'].map(u => (
+            <TouchableOpacity key={u} onPress={() => setDistUnit(u)} style={[styles.segmentBtn, distUnit === u && styles.segmentBtnActive]}>
+              <Text style={[styles.segmentText, distUnit === u && styles.segmentTextActive]}>{u.toUpperCase()}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
@@ -560,7 +571,7 @@ export default function StepsScreen() {
               <View style={styles.tileGrid}>
                 <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} />
                 <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} />
-                <Tile value={actStats ? `${actStats.totalKm.toFixed(1)}km` : '—'} label="KM WALKED" color={colors.good} />
+                <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={`${distUnit.toUpperCase()} WALKED`} color={colors.good} />
                 <Tile value={actStats ? actStats.totalCal.toLocaleString() : '—'} label="KCAL BURNED" color={colors.pink} />
                 <Tile value={actStats ? `${actStats.totalFatG.toFixed(1)}g` : '—'} label="🔥 FAT BURNED" color={colors.warn} />
                 <Tile
