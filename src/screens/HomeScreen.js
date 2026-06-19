@@ -40,8 +40,10 @@ function getGreeting() {
 
 function getWeekRange(offsetWeeks = 0) {
   const now = new Date();
+  const dow = now.getDay();
+  const monOffset = dow === 0 ? -6 : 1 - dow;
   const start = new Date(now);
-  start.setDate(now.getDate() - now.getDay() - offsetWeeks * 7);
+  start.setDate(now.getDate() + monOffset - offsetWeeks * 7);
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
@@ -57,9 +59,16 @@ function getMonthRange() {
 
 function fmtWeekLabel() {
   const now = new Date();
+  const dow = now.getDay();
+  const monOffset = dow === 0 ? -6 : 1 - dow;
   const start = new Date(now);
-  start.setDate(now.getDate() - now.getDay());
+  start.setDate(now.getDate() + monOffset);
   return `${start.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} – Today`;
+}
+
+function fmtLastWeekLabel() {
+  const [start, end] = getWeekRange(1);
+  return `${fmtDate(start)} – ${fmtDate(end)}`;
 }
 
 function fmtK(n) {
@@ -107,6 +116,7 @@ async function fetchHome(userId) {
     thisWeekFood,
     lastWeekFood,
     monthFood,
+    monthWeight,
   ] = await Promise.all([
     supabase.from('profiles')
       .select('full_name, goal, weight_goal_kg, step_goal, sleep_goal_hours')
@@ -156,6 +166,9 @@ async function fetchHome(userId) {
     supabase.from('food_logs')
       .select('calories').eq('user_id', userId)
       .gte('logged_at', `${monthStart}T00:00:00`).lte('logged_at', `${monthEnd}T23:59:59`),
+    supabase.from('weight_logs')
+      .select('weight').eq('user_id', userId)
+      .gte('logged_at', `${monthStart}T00:00:00`).lte('logged_at', `${monthEnd}T23:59:59`),
   ]);
 
   const weightArr = (weightHist.data ?? []).map(w => w.weight).reverse();
@@ -192,6 +205,8 @@ async function fetchHome(userId) {
   const thisWeekSessions = (thisWeekWorkouts.data ?? []).filter(s => classifySession(s.notes) === 'gym').length;
   const lastWeekSessions = (lastWeekWorkouts.data ?? []).filter(s => classifySession(s.notes) === 'gym').length;
   const monthSessions    = (monthWorkouts.data ?? []).filter(s => classifySession(s.notes) === 'gym').length;
+  const monthCardioCount = (monthWorkouts.data ?? []).filter(s => classifySession(s.notes) === 'cardio').length;
+  const monthRestCount   = (monthWorkouts.data ?? []).filter(s => classifySession(s.notes) === 'rest').length;
   const thisWeekStepsArr = thisWeekSteps.data ?? [];
   const lastWeekStepsArr = lastWeekSteps.data ?? [];
   const monthStepsArr    = monthSteps.data ?? [];
@@ -204,6 +219,11 @@ async function fetchHome(userId) {
   const thisWeekGoalDays = thisWeekStepsArr.filter(l => l.steps >= (l.goal ?? stepGoal)).length;
   const lastWeekGoalDays = lastWeekStepsArr.filter(l => l.steps >= (l.goal ?? stepGoal)).length;
   const monthGoalDays    = monthStepsArr.filter(l => l.steps >= (l.goal ?? stepGoal)).length;
+  const monthAvgSteps    = monthStepsArr.length ? Math.round(monthStepsTotal / monthStepsArr.length) : 0;
+  const monthWeightArr   = monthWeight.data ?? [];
+  const monthAvgWeight   = monthWeightArr.length
+    ? +(monthWeightArr.reduce((s, w) => s + w.weight, 0) / monthWeightArr.length).toFixed(1)
+    : null;
 
   // Weight change helper: earliest vs latest log within a date range
   const weightDeltaFor = (startDate, endDate) => {
@@ -253,7 +273,11 @@ async function fetchHome(userId) {
     motivText, streak,
     thisWeek: { sessions: thisWeekSessions, steps: thisWeekStepsTotal, kcal: thisWeekKcal, goalDays: thisWeekGoalDays, weightDelta: weekWeightDelta },
     lastWeek: { sessions: lastWeekSessions, steps: lastWeekStepsTotal, kcal: lastWeekKcal, goalDays: lastWeekGoalDays, weightDelta: lastWeekWeightDelta },
-    thisMonth: { sessions: monthSessions, steps: monthStepsTotal, kcal: monthKcal, goalDays: monthGoalDays, weightDelta: monthWeightDelta },
+    thisMonth: {
+      sessions: monthSessions, steps: monthStepsTotal, kcal: monthKcal, goalDays: monthGoalDays, weightDelta: monthWeightDelta,
+      gymCount: monthSessions, cardioCount: monthCardioCount, restCount: monthRestCount,
+      avgWeight: monthAvgWeight, avgSteps: monthAvgSteps,
+    },
     sessionsLeft,
   };
 }
@@ -690,17 +714,25 @@ export default function HomeScreen() {
     else navigation.navigate('More'); // HomeStack screen
   }
 
-  const cutScore = Math.min(100, Math.round(
-    (data?.thisWeek?.sessions ?? 0) * 15 +
-    (data?.thisWeek?.steps ?? 0) / 1000 +
-    (data?.lastWorkoutDate ? Math.max(0, 7 - (data.daysSinceWorkout ?? 7)) : 0) * 5
-  ));
-
   const thisWeekSessions = data?.thisWeek?.sessions ?? 0;
   const sessionsLeft     = data?.sessionsLeft ?? WEEKLY_SESSION_GOAL;
 
   const tabStats = [data?.thisWeek, data?.lastWeek, data?.thisMonth];
-  const periodDays = [new Date().getDay() + 1, 7, new Date().getDate()];
+  const todayIsoDow = (() => { const d = new Date().getDay(); return d === 0 ? 7 : d; })();
+  const periodDays = [Math.max(1, todayIsoDow - 1), 7, new Date().getDate()];
+
+  const stepGoalForWeek = data?.stepGoal ?? 10000;
+  const stepsPct    = Math.min(100, Math.round(((data?.thisWeek?.steps ?? 0) / (stepGoalForWeek * periodDays[0])) * 100));
+  const caloriesPct = (data?.thisWeek?.kcal ?? 0) > 0 ? 100 : 0;
+  const sessionsPct = Math.min(100, Math.round((thisWeekSessions / WEEKLY_SESSION_GOAL) * 100));
+  const weightDelta = data?.thisWeek?.weightDelta;
+  const wtTrendPct  = weightDelta == null ? 0 : Math.max(0, Math.min(100, Math.round(50 - weightDelta * 50)));
+
+  const cutScore = Math.round(stepsPct * 0.3 + caloriesPct * 0.2 + sessionsPct * 0.35 + wtTrendPct * 0.15);
+  const cutStatus = cutScore >= 80 ? 'Crushing it!' : cutScore >= 50 ? 'On track' : 'Needs attention';
+  const cutSubtitle = (stepsPct < 50 || caloriesPct < 50)
+    ? 'Steps or calories off target this week.'
+    : 'Based on this week\'s consistency.';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -925,17 +957,38 @@ export default function HomeScreen() {
               </View>
 
               {activeTab === 3 ? (
-                <View style={styles.cutRow}>
-                  <LinearGradient colors={[colors.accent + '33', 'transparent']} style={styles.cutGauge}>
-                    <Text style={styles.cutNum}>{cutScore}</Text>
-                    <Text style={styles.cutOf}>/ 100</Text>
-                  </LinearGradient>
-                  <View style={styles.cutDetails}>
-                    <Text style={styles.cutTitle}>CUT SCORE</Text>
-                    <Text style={styles.cutSub}>Based on this week's consistency</Text>
-                    <View style={styles.cutTrack}>
-                      <View style={[styles.cutFill, { width: `${cutScore}%` }]} />
+                <View>
+                  <View style={styles.weekHdr}>
+                    <View style={styles.weekHdrLeft}>
+                      <Ionicons name="speedometer-outline" size={13} color={colors.accent} />
+                      <Text style={styles.weekHdrLabel}>WEEKLY CUT SCORE</Text>
                     </View>
+                  </View>
+                  <View style={styles.cutRow}>
+                    <View style={[styles.cutRing, { borderColor: colors.warning }]}>
+                      <Text style={[styles.cutNum, { color: colors.warning }]}>{cutScore}</Text>
+                      <Text style={styles.cutOf}>/100</Text>
+                    </View>
+                    <View style={styles.cutDetails}>
+                      <Text style={styles.cutTitle}>{cutStatus}</Text>
+                      <Text style={styles.cutSub}>{cutSubtitle}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.cutBreakdown}>
+                    {[
+                      { label: 'Steps', value: stepsPct },
+                      { label: 'Calories', value: caloriesPct },
+                      { label: 'Sessions', value: sessionsPct },
+                      { label: 'Wt trend', value: wtTrendPct },
+                    ].map(row => (
+                      <View key={row.label} style={styles.cutBreakdownRow}>
+                        <Text style={styles.cutBreakdownLabel}>{row.label}</Text>
+                        <View style={styles.cutTrack}>
+                          <View style={[styles.cutFill, { width: `${row.value}%`, backgroundColor: colors.accent }]} />
+                        </View>
+                        <Text style={styles.cutBreakdownValue}>{row.value}</Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
               ) : (
@@ -944,12 +997,28 @@ export default function HomeScreen() {
                     <View style={styles.weekHdrLeft}>
                       <Ionicons name="calendar-outline" size={13} color={colors.accent} />
                       <Text style={styles.weekHdrLabel}>
-                        {activeTab === 0 ? 'THIS WEEK' : activeTab === 1 ? 'LAST WEEK' : 'THIS MONTH'}
+                        {activeTab === 0 ? 'THIS WEEK' : activeTab === 1 ? 'LAST WEEK' : 'MONTHLY'}
                       </Text>
                     </View>
                     {activeTab === 0 && <Text style={styles.weekHdrDate}>{fmtWeekLabel()}</Text>}
+                    {activeTab === 1 && <Text style={styles.weekHdrDate}>{fmtLastWeekLabel()}</Text>}
+                    {activeTab === 2 && <Text style={styles.weekHdrDate}>{CAL_MONTHS_SHORT[new Date().getMonth()]} {new Date().getFullYear()}</Text>}
                   </View>
 
+                  {activeTab === 2 ? (
+                    <>
+                      <View style={styles.statsRow}>
+                        <StatTile value={String(tabStats[2]?.gymCount ?? 0)} label="GYM" color={C_GREEN} />
+                        <StatTile value={String(tabStats[2]?.cardioCount ?? 0)} label="CARDIO" color="#60a5fa" />
+                        <StatTile value={tabStats[2]?.kcal ? fmtK(tabStats[2].kcal) : '—'} label="KCAL" color={C_KCAL} />
+                        <StatTile value={tabStats[2]?.avgWeight != null ? tabStats[2].avgWeight.toFixed(1) : '—'} label="AVG WT" color={C_WEIGHT} />
+                      </View>
+                      <View style={styles.statsRow}>
+                        <StatTile value={fmtK(tabStats[2]?.avgSteps)} label="AVG STEPS" color={C_STEPS} />
+                        <StatTile value={String(tabStats[2]?.restCount ?? 0)} label="REST DAYS" color="#f59e0b" />
+                      </View>
+                    </>
+                  ) : (
                   <View style={styles.statsRow}>
                     <StatTile
                       value={String(tabStats[activeTab]?.sessions ?? 0)}
@@ -978,6 +1047,7 @@ export default function HomeScreen() {
                       color={C_WEIGHT}
                     />
                   </View>
+                  )}
                 </>
               )}
             </View>
@@ -1073,13 +1143,18 @@ const createStyles = (colors) => StyleSheet.create({
   statTileSub: { fontSize: 8, color: colors.textMuted, marginTop: 3, textAlign: 'center', fontFamily: fontFamily.body },
   cutRow: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16 },
   cutGauge: { width: 70, height: 70, borderRadius: 35, borderWidth: 2.5, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  cutRing: { width: 70, height: 70, borderRadius: 35, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },
   cutNum: { fontSize: 22, fontWeight: '900', color: colors.accent },
   cutOf: { fontSize: 9, color: colors.textMuted },
   cutDetails: { flex: 1 },
-  cutTitle: { fontSize: 12, fontWeight: '700', color: colors.accent, letterSpacing: 1 },
-  cutSub: { fontSize: 10, color: colors.textMuted, marginTop: 2, marginBottom: 8 },
-  cutTrack: { height: 5, backgroundColor: colors.bgElevated, borderRadius: 3, overflow: 'hidden' },
+  cutTitle: { fontSize: 16, fontWeight: '900', color: colors.text },
+  cutSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  cutTrack: { flex: 1, height: 5, backgroundColor: colors.bgElevated, borderRadius: 3, overflow: 'hidden' },
   cutFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 3 },
+  cutBreakdown: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
+  cutBreakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cutBreakdownLabel: { width: 64, fontSize: 12, color: colors.textMuted },
+  cutBreakdownValue: { width: 28, fontSize: 12, color: colors.text, textAlign: 'right' },
   restCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#001815', borderWidth: 1, borderColor: '#006650', borderRadius: 14, padding: 12, marginBottom: 8 },
   restIcon: { width: 44, height: 44, borderRadius: 11, backgroundColor: '#002820', borderWidth: 1, borderColor: '#006650', alignItems: 'center', justifyContent: 'center' },
   restTitle: { fontSize: typography.sm, fontWeight: weight.bold, color: '#00cc99' },
