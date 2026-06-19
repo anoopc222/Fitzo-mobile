@@ -277,6 +277,7 @@ export default function SleepScreen() {
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
   const [hoursInput, setHoursInput] = useState('');
   const [goalInput, setGoalInput] = useState('');
+  const [showGoalSheet, setShowGoalSheet] = useState(false);
 
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
@@ -309,7 +310,7 @@ export default function SleepScreen() {
 
   const goalMut = useMutation({
     mutationFn: (h) => updateSleepGoal(user.id, parseFloat(h)),
-    onSuccess: () => { qc.invalidateQueries(['sleep', user.id]); setGoalInput(''); },
+    onSuccess: () => { qc.invalidateQueries(['sleep', user.id]); setGoalInput(''); setShowGoalSheet(false); },
   });
 
   const deleteMut = useMutation({
@@ -480,6 +481,12 @@ export default function SleepScreen() {
             {/* ── Recovery card ── */}
             <View style={styles.recoveryCard}>
               <View style={styles.recoveryGradientBar} />
+              <View style={styles.recoveryTopRow}>
+                <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(goal)); setShowGoalSheet(true); }}>
+                  <Text style={styles.goalPillBtnText}>🌙 {goal}h</Text>
+                  <Ionicons name="pencil" size={11} color={colors.accent} />
+                </TouchableOpacity>
+              </View>
               <View style={styles.recoveryRow}>
                 <CircularGauge
                   percent={recoveryScore} size={92} strokeWidth={9} color={recoveryColor}
@@ -495,31 +502,6 @@ export default function SleepScreen() {
               <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} />
               <StatTile value={`${streak}d`} label="GOAL STREAK" color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} />
               <StatTile value={consistency} label="CONSISTENCY" />
-            </View>
-
-            {/* ── Sleep goal ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>SLEEP GOAL</Text>
-                <Text style={styles.goalCurrentVal}>{goal} hrs</Text>
-              </View>
-              <View style={styles.goalRow}>
-                <TextInput
-                  style={styles.goalInput}
-                  placeholder={String(goal)}
-                  placeholderTextColor={colors.textDim}
-                  value={goalInput}
-                  onChangeText={setGoalInput}
-                  keyboardType="numeric"
-                />
-                <TouchableOpacity
-                  style={styles.setGoalBtn}
-                  onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
-                  disabled={goalMut.isPending}
-                >
-                  {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.setGoalBtnText}>SET</Text>}
-                </TouchableOpacity>
-              </View>
             </View>
 
             {/* ── Insights ── */}
@@ -640,6 +622,49 @@ export default function SleepScreen() {
           {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Sleep</Text>}
         </TouchableOpacity>
       </BottomSheet>
+
+      {/* Sleep Goal bottom sheet */}
+      <BottomSheet visible={showGoalSheet} onClose={() => setShowGoalSheet(false)}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>🌙 SET SLEEP GOAL</Text>
+          <TouchableOpacity onPress={() => setShowGoalSheet(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.goalBigVal}>{(parseFloat(goalInput) || goal)}h</Text>
+        <Text style={styles.goalBigSub}>sleep / night</Text>
+
+        <TextInput
+          style={styles.sheetInput}
+          value={goalInput}
+          onChangeText={setGoalInput}
+          placeholder={String(goal)}
+          placeholderTextColor={colors.textDim}
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.sheetFieldLabel}>QUICK PRESETS</Text>
+        <View style={styles.quickAddRow}>
+          {[6, 7, 7.5, 8, 9].map(h => (
+            <TouchableOpacity
+              key={h}
+              style={[styles.quickAddChip, parseFloat(goalInput) === h && { backgroundColor: colors.accent }]}
+              onPress={() => setGoalInput(String(h))}
+            >
+              <Text style={[styles.quickAddChipText, parseFloat(goalInput) === h && { color: colors.bg }]}>{h}h</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={styles.saveBtn}
+          onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
+          disabled={goalMut.isPending}
+        >
+          {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Goal</Text>}
+        </TouchableOpacity>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -700,16 +725,23 @@ const createStyles = (colors) => StyleSheet.create({
 
   recoveryCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, marginBottom: 12, position: 'relative', overflow: 'hidden' },
   recoveryGradientBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#818cf8' },
+  recoveryTopRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 },
+  goalPillBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.accent + '66',
+  },
+  goalPillBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
   recoveryRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   recoveryVerdict: { flex: 1, fontSize: typography.base, color: colors.text, fontFamily: fontFamily.body },
 
   statTileRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
 
-  goalCurrentVal: { fontSize: typography.base, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
-  goalRow: { flexDirection: 'row', gap: 10 },
-  goalInput: { flex: 1, backgroundColor: colors.bgElevated, borderRadius: 12, padding: 12, color: colors.text, fontSize: typography.base, borderWidth: 1, borderColor: colors.border },
-  setGoalBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' },
-  setGoalBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.sm },
+  goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
+  goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },
+  quickAddRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  quickAddChip: { backgroundColor: colors.bgElevated, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.border },
+  quickAddChipText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text },
 
   insightRow: { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'flex-start' },
   insightIcon: { fontSize: 16 },

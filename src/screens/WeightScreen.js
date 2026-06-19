@@ -379,6 +379,7 @@ export default function WeightScreen() {
   const [weightInput, setWeightInput] = useState('');
   const [note, setNote] = useState('');
   const [goalInput, setGoalInput] = useState('');
+  const [showGoalSheet, setShowGoalSheet] = useState(false);
 
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
@@ -410,7 +411,7 @@ export default function WeightScreen() {
 
   const goalMut = useMutation({
     mutationFn: (goal) => updateWeightGoal(user.id, fromDisp(parseFloat(goal), unit)),
-    onSuccess: () => { qc.invalidateQueries(['weight', user.id]); setGoalInput(''); },
+    onSuccess: () => { qc.invalidateQueries(['weight', user.id]); setGoalInput(''); setShowGoalSheet(false); },
   });
 
   const deleteMut = useMutation({
@@ -559,7 +560,16 @@ export default function WeightScreen() {
 
             {/* ── Goal Progress ── */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>GOAL PROGRESS</Text>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>GOAL PROGRESS</Text>
+                <TouchableOpacity
+                  style={styles.goalPillBtn}
+                  onPress={() => { setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
+                >
+                  <Text style={styles.goalPillBtnText}>Edit Goal</Text>
+                  <Ionicons name="pencil" size={11} color={colors.accent} />
+                </TouchableOpacity>
+              </View>
               <View style={styles.goalProgressRow}>
                 <CircularGauge
                   percent={goalProgress ? goalProgress.pct : 0}
@@ -583,23 +593,6 @@ export default function WeightScreen() {
                   {goalProgress?.etaText && <Text style={styles.goalEta}>{goalProgress.etaText}</Text>}
                   {goalProgress?.rateText && <Text style={styles.goalRate}>{goalProgress.rateText}</Text>}
                 </View>
-              </View>
-              <View style={styles.goalRow}>
-                <TextInput
-                  style={styles.goalInput}
-                  placeholder={goalKg ? toDisp(goalKg, unit).toFixed(1) : `Goal (${unit})`}
-                  placeholderTextColor={colors.textDim}
-                  value={goalInput}
-                  onChangeText={setGoalInput}
-                  keyboardType="numeric"
-                />
-                <TouchableOpacity
-                  style={styles.setGoalBtn}
-                  onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
-                  disabled={goalMut.isPending}
-                >
-                  {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.setGoalBtnText}>SET GOAL</Text>}
-                </TouchableOpacity>
               </View>
             </View>
 
@@ -773,6 +766,58 @@ export default function WeightScreen() {
           {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Weight</Text>}
         </TouchableOpacity>
       </BottomSheet>
+
+      {/* Weight Goal bottom sheet */}
+      <BottomSheet visible={showGoalSheet} onClose={() => setShowGoalSheet(false)}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>SET WEIGHT GOAL</Text>
+          <TouchableOpacity onPress={() => setShowGoalSheet(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.goalBigVal}>{(parseFloat(goalInput) || (goalKg ? toDisp(goalKg, unit) : '—'))}{unit}</Text>
+        <Text style={styles.goalBigSub}>target weight</Text>
+
+        <TextInput
+          style={styles.sheetInput}
+          value={goalInput}
+          onChangeText={setGoalInput}
+          placeholder={goalKg ? toDisp(goalKg, unit).toFixed(1) : `Goal (${unit})`}
+          placeholderTextColor={colors.textDim}
+          keyboardType="numeric"
+        />
+
+        {latest && (
+          <>
+            <Text style={styles.sheetFieldLabel}>QUICK PRESETS</Text>
+            <View style={styles.quickAddRow}>
+              {[-10, -5, -2, 2, 5, 10].map(delta => {
+                const presetVal = +(toDisp(latest.weight, unit) + delta).toFixed(1);
+                return (
+                  <TouchableOpacity
+                    key={delta}
+                    style={[styles.quickAddChip, parseFloat(goalInput) === presetVal && { backgroundColor: colors.accent }]}
+                    onPress={() => setGoalInput(String(presetVal))}
+                  >
+                    <Text style={[styles.quickAddChipText, parseFloat(goalInput) === presetVal && { color: colors.bg }]}>
+                      {delta > 0 ? '+' : ''}{delta}{unit}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        <TouchableOpacity
+          style={styles.saveBtn}
+          onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
+          disabled={goalMut.isPending}
+        >
+          {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Goal</Text>}
+        </TouchableOpacity>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -873,10 +918,17 @@ const createStyles = (colors) => StyleSheet.create({
   goalEta: { fontSize: 11, color: colors.accent, marginTop: 4 },
   goalRate: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
 
-  goalRow: { flexDirection: 'row', gap: 10 },
-  goalInput: { flex: 1, backgroundColor: colors.bgElevated, borderRadius: 12, padding: 12, color: colors.text, fontSize: typography.base, borderWidth: 1, borderColor: colors.border },
-  setGoalBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
-  setGoalBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.sm },
+  goalPillBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.accent + '66',
+  },
+  goalPillBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
+  goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
+  goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },
+  quickAddRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  quickAddChip: { backgroundColor: colors.bgElevated, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.border },
+  quickAddChipText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text },
 
   statTileRow: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
 
