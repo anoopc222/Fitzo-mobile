@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 
 const getMenuItems = (colors) => [
+  { label: 'Diet Plan',    icon: 'restaurant',  screen: 'Diet',         color: colors.warning, sub: 'Weekly macros & cardio plan' },
   { label: 'Progress',     icon: 'trending-up', screen: 'Progress',     color: colors.success, sub: 'Exercise PRs & trends' },
   { label: 'Measurements', icon: 'body',        screen: 'Measurements', color: colors.accent,  sub: 'Body measurements (7 sites)' },
   { label: 'Health Log',   icon: 'heart-half',  screen: 'HealthLog',    color: colors.danger,  sub: 'Blood tests & vitals' },
