@@ -288,10 +288,14 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   if (!session) return null;
 
   const ws = getWorkoutStyle(session.notes, colors);
+  const sType = getSessionType(session.notes);
+  const isCardio = sType === 'cardio';
   const exercises = (session.workout_exercises ?? []).slice().sort((a, b) => a.order_index - b.order_index);
   const totalSets = exercises.reduce((s, ex) => s + (ex.sets?.length ?? 0), 0);
   const vol = session.total_volume ?? calcSessionVol(session);
   const kcal = session.calories_burned ?? 0;
+  const totalMin = exercises.reduce((s, ex) =>
+    s + (ex.sets ?? []).reduce((ss, st) => ss + (st.reps ?? 0), 0), 0);
   const pbSet = pbMap[session.id] ?? new Set();
   const muscleGroups = getMuscleGroups(exercises);
   const delta = getVolumeDelta(session, allSessions);
@@ -330,13 +334,17 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
 
         {/* Stats row */}
         <View style={dS.statsRow}>
-          {[
+          {(isCardio ? [
+            { label: 'ACTIVITIES', icon: '🏃', value: exercises.length },
+            { label: 'MINUTES',    icon: '⏱',  value: totalMin > 0 ? totalMin : '—' },
+            { label: 'KCAL',       icon: '🔥', value: kcal > 0 ? kcal : '—' },
+          ] : [
             { label: 'EXR',    icon: '🏋️', value: exercises.length },
             { label: 'SETS',   icon: '🔄', value: totalSets },
             { label: 'KG VOL', icon: '⚡', value: vol > 0 ? vol.toLocaleString() : '—' },
             { label: 'KCAL',   icon: '🔥', value: kcal > 0 ? kcal : '—' },
-          ].map(({ label, icon, value }, i) => (
-            <View key={label} style={[dS.statCell, i < 3 && dS.statCellBorder]}>
+          ]).map(({ label, icon, value }, i, arr) => (
+            <View key={label} style={[dS.statCell, i < arr.length - 1 && dS.statCellBorder]}>
               <Text style={{ fontSize: 18 }}>{icon}</Text>
               <Text style={dS.statValue}>{value}</Text>
               <Text style={dS.statLabel}>{label}</Text>
@@ -372,7 +380,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         {/* Exercises */}
         <ScrollView style={dS.exScroll} keyboardShouldPersistTaps="handled">
           <View style={dS.exSectionHeader}>
-            <Text style={dS.exLabel}>EXERCISES</Text>
+            <Text style={dS.exLabel}>{isCardio ? 'ACTIVITIES' : 'EXERCISES'}</Text>
             <TouchableOpacity onPress={toggleAll} style={dS.collapseToggleWrap}>
               <Text style={dS.collapseToggleText}>{allExpanded ? 'COLLAPSE ALL' : 'EXPAND ALL'}</Text>
               <View style={[dS.toggleSwitch, allExpanded && dS.toggleSwitchOn]}>
@@ -394,6 +402,31 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             const bestIdx = getBestSetIndex(sortedSets);
             const exMuscles = getExerciseMuscles(ex.exercise_name);
             const exStyle = getWorkoutStyle(ex.exercise_name, colors);
+
+            if (isCardio) {
+              const exMin = sortedSets.reduce((s, st) => s + (st.reps ?? 0), 0);
+              const exKcal = totalMin > 0 ? Math.round(kcal * (exMin / totalMin)) : 0;
+              return (
+                <View key={ex.id} style={dS.exCard}>
+                  <View style={dS.exCardHeader}>
+                    <View style={[dS.exIcon, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
+                      <Text style={{ fontSize: 18 }}>{exStyle.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={dS.exName}>{(ex.exercise_name ?? '').toUpperCase()}</Text>
+                      <View style={dS.chipRow}>
+                        <View style={dS.pillChip}>
+                          <Text style={dS.pillChipText}>⏱ {exMin > 0 ? `${exMin} min` : '—'}</Text>
+                        </View>
+                        <View style={dS.pillChip}>
+                          <Text style={dS.pillChipText}>🔥 {exKcal > 0 ? `${exKcal} kcal` : '—'}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            }
 
             return (
               <TouchableOpacity key={ex.id} style={dS.exCard} onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
@@ -881,7 +914,9 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
                       <Text style={[eS.exCardName, isActive && eS.exCardNameActive]} numberOfLines={1}>
                         {ex.name.trim() || (isCardio ? 'New Activity' : 'New Exercise')}
                       </Text>
-                      <Text style={eS.exSetsCount}>{(ex.sets ?? []).length} sets</Text>
+                      <Text style={eS.exSetsCount}>
+                        {isCardio ? `${(ex.sets ?? []).length} entr${(ex.sets ?? []).length === 1 ? 'y' : 'ies'}` : `${(ex.sets ?? []).length} sets`}
+                      </Text>
                       <TouchableOpacity onPress={() => removeExercise(exIdx)} style={eS.exDeleteBtn}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                         <View style={eS.exDeleteX}>
@@ -906,34 +941,89 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
                           />
                         </View>
 
-                        {(ex.sets ?? []).map((s, sIdx) => (
-                          <View key={s._key} style={eS.setRow}>
-                            <Text style={eS.setNumLabel}>{sIdx + 1}</Text>
-                            <TextInput
-                              style={eS.setInput}
-                              value={s.weight_kg}
-                              onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
-                              keyboardType="decimal-pad"
-                              placeholder={isCardio ? 'km' : 'kg'}
-                              placeholderTextColor={colors.textDim}
-                            />
-                            <Text style={eS.setX}>×</Text>
-                            <TextInput
-                              style={eS.setInput}
-                              value={s.reps}
-                              onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
-                              keyboardType="numeric"
-                              placeholder={isCardio ? 'min' : 'reps'}
-                              placeholderTextColor={colors.textDim}
-                            />
-                            <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
-                              <Ionicons name="close" size={14} color={colors.textDim} />
-                            </TouchableOpacity>
-                          </View>
-                        ))}
+                        {isCardio ? (
+                          (ex.sets ?? []).map((s, sIdx) => {
+                            const durationMin = parseFloat(s.reps) || 0;
+                            const autoKcal = Math.round(durationMin * 8);
+                            return (
+                              <View key={s._key} style={eS.cardioFieldCard}>
+                                <View style={eS.cardioFieldRow}>
+                                  <View style={eS.cardioFieldCol}>
+                                    <Text style={eS.cardioFieldLabel}>DURATION (MIN)</Text>
+                                    <TextInput
+                                      style={eS.setInput}
+                                      value={s.reps}
+                                      onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
+                                      keyboardType="numeric"
+                                      placeholder="min"
+                                      placeholderTextColor={colors.textDim}
+                                    />
+                                  </View>
+                                  <View style={eS.cardioFieldCol}>
+                                    <Text style={eS.cardioFieldLabel}>CALORIES (AUTO)</Text>
+                                    <Text style={eS.cardioAutoValue}>{autoKcal > 0 ? `${autoKcal} kcal` : '—'}</Text>
+                                  </View>
+                                  <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
+                                    <Ionicons name="close" size={14} color={colors.textDim} />
+                                  </TouchableOpacity>
+                                </View>
+                                <View style={eS.cardioFieldRow}>
+                                  <View style={eS.cardioFieldCol}>
+                                    <Text style={eS.cardioFieldLabel}>AVG RPM</Text>
+                                    <TextInput
+                                      style={eS.setInput}
+                                      value={s.rpe}
+                                      onChangeText={v => updateSet(exIdx, sIdx, 'rpe', v)}
+                                      keyboardType="numeric"
+                                      placeholder="rpm"
+                                      placeholderTextColor={colors.textDim}
+                                    />
+                                  </View>
+                                  <View style={eS.cardioFieldCol}>
+                                    <Text style={eS.cardioFieldLabel}>DISTANCE (KM)</Text>
+                                    <TextInput
+                                      style={eS.setInput}
+                                      value={s.weight_kg}
+                                      onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
+                                      keyboardType="decimal-pad"
+                                      placeholder="km"
+                                      placeholderTextColor={colors.textDim}
+                                    />
+                                  </View>
+                                </View>
+                              </View>
+                            );
+                          })
+                        ) : (
+                          (ex.sets ?? []).map((s, sIdx) => (
+                            <View key={s._key} style={eS.setRow}>
+                              <Text style={eS.setNumLabel}>{sIdx + 1}</Text>
+                              <TextInput
+                                style={eS.setInput}
+                                value={s.weight_kg}
+                                onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
+                                keyboardType="decimal-pad"
+                                placeholder="kg"
+                                placeholderTextColor={colors.textDim}
+                              />
+                              <Text style={eS.setX}>×</Text>
+                              <TextInput
+                                style={eS.setInput}
+                                value={s.reps}
+                                onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
+                                keyboardType="numeric"
+                                placeholder="reps"
+                                placeholderTextColor={colors.textDim}
+                              />
+                              <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
+                                <Ionicons name="close" size={14} color={colors.textDim} />
+                              </TouchableOpacity>
+                            </View>
+                          ))
+                        )}
 
                         <TouchableOpacity style={eS.addSetBtn} onPress={() => addSet(exIdx)}>
-                          <Text style={eS.addSetText}>+ Add Set</Text>
+                          <Text style={eS.addSetText}>{isCardio ? '+ Add Entry' : '+ Add Set'}</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -1391,6 +1481,9 @@ const createDS = (colors) => StyleSheet.create({
   exName: { fontSize: typography.sm, fontFamily: fontFamily.bodyExtraBold, color: colors.text, letterSpacing: 0.3 },
   exMuscleRow: { flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' },
   exMuscleTag: { fontSize: 10, color: colors.textDim, fontWeight: weight.medium },
+  chipRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  pillChip: { backgroundColor: colors.dim, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  pillChipText: { fontFamily: fontFamily.bodyBold, fontSize: typography.xs, color: colors.text },
   pbBadge: {
     backgroundColor: colors.accent + '14', borderWidth: 1, borderColor: colors.accent + '55',
     borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2,
@@ -1564,6 +1657,12 @@ const createES = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.blue + '55', marginBottom: 10,
   },
   cardioHintText: { fontSize: typography.xs, color: colors.blue, flex: 1 },
+
+  cardioFieldCard: { backgroundColor: colors.dim, borderRadius: 10, padding: 10, marginBottom: 8, gap: 8 },
+  cardioFieldRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  cardioFieldCol: { flex: 1 },
+  cardioFieldLabel: { fontFamily: fontFamily.bodyBold, fontSize: 9, color: colors.textDim, letterSpacing: 0.4, marginBottom: 4 },
+  cardioAutoValue: { fontFamily: fontFamily.monoBold, fontSize: typography.sm, color: colors.pink, paddingVertical: 6 },
 });
 
 const createDpS = (colors) => StyleSheet.create({
