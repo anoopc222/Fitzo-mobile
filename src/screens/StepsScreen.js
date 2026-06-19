@@ -181,7 +181,7 @@ function TrendChart({ monthData, allLogs, goal, colors, width }) {
       {/* grid lines */}
       {[0, 1, 2, 3].map(i => {
         const y = P.t + (ph / 3) * i;
-        return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />;
+        return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />;
       })}
 
       {/* goal dashed line */}
@@ -240,7 +240,7 @@ function WeeklyBarChart({ days, goal, colors, width }) {
 
   return (
     <Svg width={width} height={H}>
-      <Line x1={0} y1={goalY} x2={width} y2={goalY} stroke="rgba(255,255,255,0.18)" strokeWidth={1.3} strokeDasharray="4,3" />
+      <Line x1={0} y1={goalY} x2={width} y2={goalY} stroke={colors.border} strokeWidth={1.3} strokeDasharray="4,3" />
       {days.map((day, i) => {
         const x = barGap + i * (barW + barGap);
         const barH = day.steps > 0 ? Math.max(3, (day.steps / maxVal) * chartH) : 0;
@@ -252,7 +252,7 @@ function WeeklyBarChart({ days, goal, colors, width }) {
             {!day.isFuture && day.steps > 0 ? (
               <Rect x={x} y={barY} width={barW} height={barH} rx={5} fill={color} fillOpacity={0.85} />
             ) : (
-              <Rect x={x} y={padTop} width={barW} height={chartH} rx={5} fill="rgba(255,255,255,0.04)" />
+              <Rect x={x} y={padTop} width={barW} height={chartH} rx={5} fill={colors.dim} />
             )}
             {day.isToday && (
               <Rect x={x - 1} y={padTop - 2} width={barW + 2} height={chartH + 2} rx={5} fill="none" stroke="rgba(245,158,11,0.6)" strokeWidth={1.5} />
@@ -274,27 +274,19 @@ function DailyLogBar({ steps, goal, barMax, colors }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={s_bar.track}>
-        <View style={[s_bar.fill, { width: `${fillPct}%` }]} />
-        <View style={[s_bar.marker, { left: `${goalPct}%`, backgroundColor: '#f97316' }]} />
-        <View style={[s_bar.marker, { left: `${fillPct}%`, backgroundColor: curColor }]} />
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.dim, position: 'relative', marginBottom: 4 }}>
+        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3, backgroundColor: 'rgba(251,191,36,0.22)', width: `${fillPct}%` }} />
+        <View style={{ position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5, left: `${goalPct}%`, backgroundColor: '#f97316' }} />
+        <View style={{ position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5, left: `${fillPct}%`, backgroundColor: curColor }} />
       </View>
-      <View style={s_bar.labelRow}>
-        <Text style={s_bar.labelText}>0</Text>
-        <Text style={[s_bar.labelText, { color: '#f97316' }]}>● {goal.toLocaleString()}</Text>
-        <Text style={s_bar.labelText}>{barMax.toLocaleString()}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.mono }}>0</Text>
+        <Text style={{ fontSize: 9, color: '#f97316', fontFamily: fontFamily.mono }}>● {goal.toLocaleString()}</Text>
+        <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.mono }}>{barMax.toLocaleString()}</Text>
       </View>
     </View>
   );
 }
-
-const s_bar = StyleSheet.create({
-  track: { height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', position: 'relative', marginBottom: 4 },
-  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3, backgroundColor: 'rgba(251,191,36,0.22)' },
-  marker: { position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5 },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  labelText: { fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: fontFamily.mono },
-});
 
 // ─── Monthly Heatmap — ports _renderStepsHeatmap bucket logic ───────────────
 function StepsHeatmap({ year, month, logsByDate, goal, colors }) {
@@ -328,27 +320,27 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors }) {
 
   return (
     <View>
-      <View style={s_hm.dowRow}>
+      <View style={{ flexDirection: 'row', marginBottom: 6 }}>
         {DOW_LABELS.map(d => (
           <View key={d} style={{ width: cellSize, alignItems: 'center' }}>
-            <Text style={s_hm.dowText}>{d}</Text>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted, fontFamily: fontFamily.mono }}>{d}</Text>
           </View>
         ))}
       </View>
-      <View style={s_hm.grid}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {cells.map(cell => {
           if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
           return (
             <View
               key={cell.key}
               style={[
-                s_hm.cell,
+                { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
                 { width: cellSize, height: cellSize, backgroundColor: LVL_COLOR[cell.lvl] },
                 cell.isToday && { borderWidth: 2, borderColor: '#f59e0b' },
               ]}
             >
-              <Text style={[s_hm.dayNum, cell.lvl === 0 && { color: colors.textDim }]}>{cell.day}</Text>
-              <Text style={[s_hm.stepsTxt, cell.lvl === 0 && { color: colors.textDim, opacity: 0.5 }]}>
+              <Text style={{ fontSize: 10, fontWeight: '700', fontFamily: fontFamily.mono, color: cell.lvl === 0 ? colors.textDim : colors.text }}>{cell.day}</Text>
+              <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, marginTop: 1, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: cell.lvl === 0 ? 0.5 : 1 }}>
                 {cell.steps > 0 ? fmtK(cell.steps) : '—'}
               </Text>
             </View>
@@ -358,15 +350,6 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors }) {
     </View>
   );
 }
-
-const s_hm = StyleSheet.create({
-  dowRow: { flexDirection: 'row', marginBottom: 6 },
-  dowText: { fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.mono },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  dayNum: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', fontFamily: fontFamily.mono },
-  stepsTxt: { fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.85)', fontFamily: fontFamily.mono, marginTop: 1 },
-});
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function StepsScreen() {
@@ -569,14 +552,14 @@ export default function StepsScreen() {
               <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
 
               <View style={styles.tileGrid}>
-                <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} />
-                <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} />
-                <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={`${distUnit.toUpperCase()} WALKED`} color={colors.good} />
-                <Tile value={actStats ? actStats.totalCal.toLocaleString() : '—'} label="KCAL BURNED" color={colors.pink} />
-                <Tile value={actStats ? `${actStats.totalFatG.toFixed(1)}g` : '—'} label="🔥 FAT BURNED" color={colors.warn} />
+                <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} colors={colors} />
+                <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} colors={colors} />
+                <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={`${distUnit.toUpperCase()} WALKED`} color={colors.good} colors={colors} />
+                <Tile value={actStats ? actStats.totalCal.toLocaleString() : '—'} label="KCAL BURNED" color={colors.pink} colors={colors} />
+                <Tile value={actStats ? `${actStats.totalFatG.toFixed(1)}g` : '—'} label="🔥 FAT BURNED" color={colors.warn} colors={colors} />
                 <Tile
                   value={actStats ? (actStats.totalMins >= 60 ? `${Math.floor(actStats.totalMins / 60)}h ${actStats.totalMins % 60}m` : `${actStats.totalMins}m`) : '—'}
-                  label="⏱ DURATION" color={colors.text}
+                  label="⏱ DURATION" color={colors.text} colors={colors}
                 />
               </View>
 
@@ -636,10 +619,10 @@ export default function StepsScreen() {
                     ))}
                   </View>
                   <View style={styles.weekStatsRow}>
-                    <WeekStatCell value={`${weekGoalDays}/7`} label="GOAL DAYS" color={colors.good} />
-                    <WeekStatCell value={weekAvg ? weekAvg.toLocaleString() : '—'} label="AVG/DAY" color={colors.accent} />
-                    <WeekStatCell value={weekBest ? weekBest.toLocaleString() : '—'} label="BEST DAY" color="#22d3ee" />
-                    <WeekStatCell value={weekTotal ? weekTotal.toLocaleString() : '—'} label="TOTAL" color={colors.text} />
+                    <WeekStatCell value={`${weekGoalDays}/7`} label="GOAL DAYS" color={colors.good} colors={colors} />
+                    <WeekStatCell value={weekAvg ? weekAvg.toLocaleString() : '—'} label="AVG/DAY" color={colors.accent} colors={colors} />
+                    <WeekStatCell value={weekBest ? weekBest.toLocaleString() : '—'} label="BEST DAY" color="#22d3ee" colors={colors} />
+                    <WeekStatCell value={weekTotal ? weekTotal.toLocaleString() : '—'} label="TOTAL" color={colors.text} colors={colors} />
                   </View>
                 </View>
               </>
@@ -838,29 +821,23 @@ export default function StepsScreen() {
   );
 }
 
-function WeekStatCell({ value, label, color }) {
+function WeekStatCell({ value, label, color, colors }) {
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
       <Text style={{ fontSize: typography.base, fontFamily: fontFamily.monoBold, color }}>{value}</Text>
-      <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 2 }}>{label}</Text>
+      <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 2 }}>{label}</Text>
     </View>
   );
 }
 
-function Tile({ value, label, color }) {
+function Tile({ value, label, color, colors }) {
   return (
-    <View style={s_tile.tile}>
-      <Text style={[s_tile.val, { color }]}>{value}</Text>
-      <Text style={s_tile.label}>{label}</Text>
+    <View style={{ width: '48%', backgroundColor: colors.dim, borderRadius: 12, padding: 12, marginBottom: 8, alignItems: 'center' }}>
+      <Text style={{ fontSize: typography.md, fontFamily: fontFamily.monoBold, color }}>{value}</Text>
+      <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 4 }}>{label}</Text>
     </View>
   );
 }
-
-const s_tile = StyleSheet.create({
-  tile: { width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 12, marginBottom: 8, alignItems: 'center' },
-  val: { fontSize: typography.md, fontFamily: fontFamily.monoBold },
-  label: { fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 4 },
-});
 
 const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
