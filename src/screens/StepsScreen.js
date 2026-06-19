@@ -135,10 +135,10 @@ function TrendChart({ monthData, allLogs, goal, colors, width }) {
 
   // 30-day rolling avg per data point (mirrors reference: window of 30 days ending at e.date, min 3 entries)
   const trendPoints = monthData.map(e => {
-    const end = new Date(e.date + 'T00:00:00');
+    const end = new Date(e.logged_at + 'T00:00:00');
     const start = new Date(end); start.setDate(end.getDate() - 29);
     const startStr = localDateStr(start);
-    const win = allLogs.filter(x => x.steps > 0 && x.logged_at >= startStr && x.logged_at <= e.date);
+    const win = allLogs.filter(x => x.steps > 0 && x.logged_at >= startStr && x.logged_at <= e.logged_at);
     return win.length >= 3 ? Math.round(win.reduce((s, x) => s + x.steps, 0) / win.length) : null;
   });
 
