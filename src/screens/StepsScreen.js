@@ -378,6 +378,7 @@ export default function StepsScreen() {
   const [actType, setActType] = useState('walk');
   const [note, setNote] = useState('');
   const [goalInput, setGoalInput] = useState('');
+  const [showGoalSheet, setShowGoalSheet] = useState(false);
 
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
@@ -408,7 +409,7 @@ export default function StepsScreen() {
 
   const goalMut = useMutation({
     mutationFn: (goal) => updateStepGoal(user.id, parseInt(goal, 10)),
-    onSuccess: () => { qc.invalidateQueries(['steps', user.id]); setGoalInput(''); },
+    onSuccess: () => { qc.invalidateQueries(['steps', user.id]); setGoalInput(''); setShowGoalSheet(false); },
   });
 
   const deleteMut = useMutation({
@@ -545,7 +546,13 @@ export default function StepsScreen() {
           <>
             {/* ── Hero ── */}
             <View style={styles.heroCard}>
-              <Text style={styles.heroEmoji}>🚀</Text>
+              <View style={styles.heroTopRow}>
+                <Text style={styles.heroEmoji}>🚀</Text>
+                <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
+                  <Text style={styles.goalPillBtnText}>🎯 {fmtK(defaultGoal)}</Text>
+                  <Ionicons name="chevron-forward" size={12} color={colors.accent} />
+                </TouchableOpacity>
+              </View>
               <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
               <Text style={styles.heroLabel}>AVG STEPS/DAY · {MONTH_NAMES[month].toUpperCase()} {year}</Text>
               <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
@@ -575,31 +582,6 @@ export default function StepsScreen() {
                     <Text style={styles.pbChipText}>{(lifetimeSteps / 1000000).toFixed(2)}M lifetime</Text>
                   </View>
                 )}
-              </View>
-            </View>
-
-            {/* ── Step Goal ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>STEP GOAL</Text>
-                <Text style={styles.goalCurrentVal}>{defaultGoal.toLocaleString()}</Text>
-              </View>
-              <View style={styles.goalRow}>
-                <TextInput
-                  style={styles.goalInput}
-                  placeholder={defaultGoal.toLocaleString()}
-                  placeholderTextColor={colors.textDim}
-                  value={goalInput}
-                  onChangeText={setGoalInput}
-                  keyboardType="numeric"
-                />
-                <TouchableOpacity
-                  style={styles.setGoalBtn}
-                  onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
-                  disabled={goalMut.isPending}
-                >
-                  {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.setGoalBtnText}>SET</Text>}
-                </TouchableOpacity>
               </View>
             </View>
 
@@ -800,6 +782,49 @@ export default function StepsScreen() {
           {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Steps</Text>}
         </TouchableOpacity>
       </BottomSheet>
+
+      {/* Step Goal bottom sheet */}
+      <BottomSheet visible={showGoalSheet} onClose={() => setShowGoalSheet(false)}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>SET DAILY GOAL</Text>
+          <TouchableOpacity onPress={() => setShowGoalSheet(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.goalBigVal}>{(parseInt(goalInput, 10) || defaultGoal).toLocaleString()}</Text>
+        <Text style={styles.goalBigSub}>steps / day</Text>
+
+        <TextInput
+          style={styles.sheetInput}
+          value={goalInput}
+          onChangeText={setGoalInput}
+          placeholder={defaultGoal.toLocaleString()}
+          placeholderTextColor={colors.textDim}
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.sheetFieldLabel}>QUICK PRESETS</Text>
+        <View style={styles.quickAddRow}>
+          {[5000, 8000, 10000, 12000, 15000].map(n => (
+            <TouchableOpacity
+              key={n}
+              style={[styles.quickAddChip, parseInt(goalInput, 10) === n && { backgroundColor: colors.accent }]}
+              onPress={() => setGoalInput(String(n))}
+            >
+              <Text style={[styles.quickAddChipText, parseInt(goalInput, 10) === n && { color: colors.bg }]}>{fmtK(n)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={styles.saveBtn}
+          onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
+          disabled={goalMut.isPending}
+        >
+          {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Goal</Text>}
+        </TouchableOpacity>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -886,7 +911,14 @@ const createStyles = (colors) => StyleSheet.create({
   weekStatsRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
 
   heroCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroEmoji: { fontSize: 30, marginBottom: 6 },
+  goalPillBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: colors.accent + '44',
+  },
+  goalPillBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
   heroNum: { fontSize: 38, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent },
   heroLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginTop: 2 },
   heroSub: { fontSize: typography.sm, color: colors.textDim, marginTop: 4, marginBottom: 14 },
@@ -904,11 +936,8 @@ const createStyles = (colors) => StyleSheet.create({
   pbChip: { alignSelf: 'flex-start', backgroundColor: colors.dim, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginTop: 6 },
   pbChipText: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.monoBold },
 
-  goalCurrentVal: { fontSize: typography.base, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
-  goalRow: { flexDirection: 'row', gap: 10 },
-  goalInput: { flex: 1, backgroundColor: colors.bgElevated, borderRadius: 12, padding: 12, color: colors.text, fontSize: typography.base, borderWidth: 1, borderColor: colors.border },
-  setGoalBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' },
-  setGoalBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.sm },
+  goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
+  goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },
 
   weekCompareRow: { flexDirection: 'row', gap: 10 },
   weekCompareCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border },
