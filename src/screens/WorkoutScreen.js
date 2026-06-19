@@ -115,6 +115,76 @@ function getSessionType(name) {
   return 'gym';
 }
 
+// Cardio activity types — mirrors CARDIO_TYPES in the web app (addCardioActivity)
+const CARDIO_TYPES = [
+  { label: '🚶 Incline Walk',   val: 'Incline Walk' },
+  { label: '🚴 Air Bike',       val: 'Air Bike' },
+  { label: '🏃 Treadmill Run',  val: 'Treadmill Run' },
+  { label: '🪜 Stairmaster',    val: 'Stairmaster' },
+  { label: '🚣 Rowing',         val: 'Rowing' },
+  { label: '🔄 Elliptical',     val: 'Elliptical' },
+  { label: '🏊 Swimming',       val: 'Swimming' },
+  { label: '🏃 Other',          val: 'Other' },
+];
+
+function getCardioIcon(type) {
+  const t = CARDIO_TYPES.find(c => c.val === type);
+  return t ? t.label.split(' ')[0] : '🏃';
+}
+
+// MET-based estimate, ~78kg body weight assumed — ported from calcCardioKcal() in the web app
+function calcCardioKcal(type, dur, speed, incline, rpm) {
+  const bw = 78;
+  dur = parseFloat(dur) || 0;
+  speed = parseFloat(speed) || 0;
+  incline = parseFloat(incline) || 0;
+  rpm = parseFloat(rpm) || 0;
+  if (!dur) return 0;
+  let met;
+  if (type === 'Incline Walk') {
+    met = 2.5 + (speed > 0 ? speed * 0.9 : 3) + incline * 0.18;
+  } else if (type === 'Air Bike') {
+    met = rpm > 0 ? Math.min(14, 8 + rpm / 30) : 10;
+  } else if (type === 'Treadmill Run') {
+    met = speed > 0 ? Math.min(18, speed * 1.2 + 1) : 8;
+  } else if (type === 'Stairmaster') {
+    met = 9;
+  } else if (type === 'Rowing') {
+    met = 7;
+  } else if (type === 'Elliptical') {
+    met = 6;
+  } else if (type === 'Swimming') {
+    met = 8;
+  } else {
+    met = 5;
+  }
+  return Math.round(met * bw * dur / 60);
+}
+
+// Per-type field mapping onto the sets table's 3 numeric columns (weight_kg, reps, rpe)
+// duration always -> reps; secondary metrics packed into weight_kg/rpe depending on type
+function getCardioFieldDefs(type) {
+  if (type === 'Incline Walk')
+    return { secondary: { key: 'weight_kg', label: 'SPEED (KM/H)', placeholder: '3.5' },
+              tertiary:  { key: 'rpe', label: 'INCLINE (%)', placeholder: '12' } };
+  if (type === 'Air Bike')
+    return { secondary: { key: 'weight_kg', label: 'DISTANCE (KM)', placeholder: 'optional' },
+              tertiary:  { key: 'rpe', label: 'AVG RPM', placeholder: 'optional' } };
+  if (type === 'Treadmill Run')
+    return { secondary: { key: 'weight_kg', label: 'DISTANCE (KM)', placeholder: '5' },
+              tertiary:  { key: 'rpe', label: 'SPEED (KM/H)', placeholder: '10' } };
+  return { secondary: null, tertiary: null };
+}
+
+function calcCardioEntryKcal(type, entry) {
+  const dur = entry.reps;
+  let speed = 0, incline = 0, rpm = 0;
+  if (type === 'Incline Walk') { speed = entry.weight_kg; incline = entry.rpe; }
+  else if (type === 'Air Bike') { rpm = entry.rpe; }
+  else if (type === 'Treadmill Run') { speed = entry.rpe; }
+  return calcCardioKcal(type, dur, speed, incline, rpm);
+}
+
 // Returns { icon, cardBg, cardBorder, iconBg, titleColor }
 function getWorkoutStyle(name, colors) {
   const type = getSessionType(name);
@@ -316,9 +386,11 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   const exercises = (session.workout_exercises ?? []).slice().sort((a, b) => a.order_index - b.order_index);
   const totalSets = exercises.reduce((s, ex) => s + (ex.sets?.length ?? 0), 0);
   const vol = session.total_volume ?? calcSessionVol(session);
-  const kcal = session.calories_burned ?? 0;
   const totalMin = exercises.reduce((s, ex) =>
     s + (ex.sets ?? []).reduce((ss, st) => ss + (st.reps ?? 0), 0), 0);
+  const cardioKcal = exercises.reduce((s, ex) =>
+    s + (ex.sets ?? []).reduce((ss, st) => ss + calcCardioEntryKcal(ex.exercise_name, st), 0), 0);
+  const kcal = session.calories_burned ?? (isCardio ? cardioKcal : 0) ?? 0;
   const pbSet = pbMap[session.id] ?? new Set();
   const muscleGroups = getMuscleGroups(exercises);
   const delta = getVolumeDelta(session, allSessions);
@@ -428,12 +500,12 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
 
             if (isCardio) {
               const exMin = sortedSets.reduce((s, st) => s + (st.reps ?? 0), 0);
-              const exKcal = totalMin > 0 ? Math.round(kcal * (exMin / totalMin)) : 0;
+              const exKcal = sortedSets.reduce((s, st) => s + calcCardioEntryKcal(ex.exercise_name, st), 0);
               return (
                 <View key={ex.id} style={dS.exCard}>
                   <View style={dS.exCardHeader}>
                     <View style={[dS.exIcon, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
-                      <Text style={{ fontSize: 18 }}>{exStyle.icon}</Text>
+                      <Text style={{ fontSize: 18 }}>{getCardioIcon(ex.exercise_name)}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={dS.exName}>{(ex.exercise_name ?? '').toUpperCase()}</Text>
@@ -798,6 +870,7 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
 
   const addExercise = () => {
     const ex = blankEx();
+    if (isCardio) ex.name = CARDIO_TYPES[0].val;
     const newIdx = exercises.length;
     setExercises(prev => [...prev, ex]);
     setActiveExIdx(newIdx);
@@ -953,21 +1026,37 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
 
                     {isActive && (
                       <View style={eS.exExpanded}>
-                        <View style={eS.exNameRow}>
-                          <View style={eS.hashIcon}>
-                            <Text style={eS.hashText}>{isCardio ? '🏃' : '#'}</Text>
+                        {isCardio ? (
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                            style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+                            {CARDIO_TYPES.map(t => {
+                              const active = ex.name === t.val;
+                              return (
+                                <TouchableOpacity key={t.val}
+                                  style={[eS.typeChip, active && eS.typeChipActive]}
+                                  onPress={() => updateExName(exIdx, t.val)}>
+                                  <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>{t.label}</Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        ) : (
+                          <View style={eS.exNameRow}>
+                            <View style={eS.hashIcon}>
+                              <Text style={eS.hashText}>#</Text>
+                            </View>
+                            <TextInput
+                              style={eS.exNameInput}
+                              value={ex.name}
+                              onChangeText={v => { updateExName(exIdx, v); setAcOpenIdx(exIdx); }}
+                              onFocus={() => setAcOpenIdx(exIdx)}
+                              onBlur={() => setTimeout(() => setAcOpenIdx(cur => (cur === exIdx ? null : cur)), 150)}
+                              placeholder="Exercise name"
+                              placeholderTextColor={colors.textDim}
+                              autoFocus
+                            />
                           </View>
-                          <TextInput
-                            style={eS.exNameInput}
-                            value={ex.name}
-                            onChangeText={v => { updateExName(exIdx, v); setAcOpenIdx(exIdx); }}
-                            onFocus={() => setAcOpenIdx(exIdx)}
-                            onBlur={() => setTimeout(() => setAcOpenIdx(cur => (cur === exIdx ? null : cur)), 150)}
-                            placeholder={isCardio ? 'Activity name (e.g. Running)' : 'Exercise name'}
-                            placeholderTextColor={colors.textDim}
-                            autoFocus
-                          />
-                        </View>
+                        )}
 
                         {!isCardio && acOpenIdx === exIdx && (() => {
                           const q = ex.name.trim().toLowerCase();
@@ -994,8 +1083,12 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
 
                         {isCardio ? (
                           (ex.sets ?? []).map((s, sIdx) => {
-                            const durationMin = parseFloat(s.reps) || 0;
-                            const autoKcal = Math.round(durationMin * 8);
+                            const def = getCardioFieldDefs(ex.name);
+                            const autoKcal = calcCardioEntryKcal(ex.name, {
+                              reps: parseFloat(s.reps) || 0,
+                              weight_kg: parseFloat(s.weight_kg) || 0,
+                              rpe: parseFloat(s.rpe) || 0,
+                            });
                             return (
                               <View key={s._key} style={eS.cardioFieldCard}>
                                 <View style={eS.cardioFieldRow}>
@@ -1018,30 +1111,36 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
                                     <Ionicons name="close" size={14} color={colors.textDim} />
                                   </TouchableOpacity>
                                 </View>
-                                <View style={eS.cardioFieldRow}>
-                                  <View style={eS.cardioFieldCol}>
-                                    <Text style={eS.cardioFieldLabel}>AVG RPM</Text>
-                                    <TextInput
-                                      style={eS.setInput}
-                                      value={s.rpe}
-                                      onChangeText={v => updateSet(exIdx, sIdx, 'rpe', v)}
-                                      keyboardType="numeric"
-                                      placeholder="rpm"
-                                      placeholderTextColor={colors.textDim}
-                                    />
+                                {(def.secondary || def.tertiary) && (
+                                  <View style={eS.cardioFieldRow}>
+                                    {def.secondary && (
+                                      <View style={eS.cardioFieldCol}>
+                                        <Text style={eS.cardioFieldLabel}>{def.secondary.label}</Text>
+                                        <TextInput
+                                          style={eS.setInput}
+                                          value={s[def.secondary.key]}
+                                          onChangeText={v => updateSet(exIdx, sIdx, def.secondary.key, v)}
+                                          keyboardType="decimal-pad"
+                                          placeholder={def.secondary.placeholder}
+                                          placeholderTextColor={colors.textDim}
+                                        />
+                                      </View>
+                                    )}
+                                    {def.tertiary && (
+                                      <View style={eS.cardioFieldCol}>
+                                        <Text style={eS.cardioFieldLabel}>{def.tertiary.label}</Text>
+                                        <TextInput
+                                          style={eS.setInput}
+                                          value={s[def.tertiary.key]}
+                                          onChangeText={v => updateSet(exIdx, sIdx, def.tertiary.key, v)}
+                                          keyboardType="decimal-pad"
+                                          placeholder={def.tertiary.placeholder}
+                                          placeholderTextColor={colors.textDim}
+                                        />
+                                      </View>
+                                    )}
                                   </View>
-                                  <View style={eS.cardioFieldCol}>
-                                    <Text style={eS.cardioFieldLabel}>DISTANCE (KM)</Text>
-                                    <TextInput
-                                      style={eS.setInput}
-                                      value={s.weight_kg}
-                                      onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
-                                      keyboardType="decimal-pad"
-                                      placeholder="km"
-                                      placeholderTextColor={colors.textDim}
-                                    />
-                                  </View>
-                                </View>
+                                )}
                               </View>
                             );
                           })
