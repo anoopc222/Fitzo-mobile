@@ -372,7 +372,6 @@ export default function StepsScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
 
-  const [view, setView] = useState('log'); // 'log' | 'activity'
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
   const [stepsInput, setStepsInput] = useState('');
@@ -381,10 +380,9 @@ export default function StepsScreen() {
   const [goalInput, setGoalInput] = useState('');
 
   const now = new Date();
-  const [logMonth, setLogMonth] = useState(now.getMonth());
-  const [logYear, setLogYear] = useState(now.getFullYear());
-  const [actMonth, setActMonth] = useState(now.getMonth());
-  const [actYear, setActYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
+  const isCurrentMonth = month === now.getMonth() && year === now.getFullYear();
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['steps', user?.id],
@@ -418,11 +416,11 @@ export default function StepsScreen() {
     onSuccess: () => { qc.invalidateQueries(['steps', user.id]); qc.invalidateQueries(['home', user.id]); },
   });
 
-  // ── LOG view derived data ──────────────────────────────────────────────
-  const logMk = `${logYear}-${String(logMonth + 1).padStart(2, '0')}`;
+  // ── Month-scoped derived data ────────────────────────────────────────────
+  const mk = `${year}-${String(month + 1).padStart(2, '0')}`;
   const logMonthData = useMemo(() =>
-    logs.filter(l => l.logged_at?.startsWith(logMk) && l.steps).sort((a, b) => a.logged_at.localeCompare(b.logged_at)),
-  [logs, logMk]);
+    logs.filter(l => l.logged_at?.startsWith(mk) && l.steps).sort((a, b) => a.logged_at.localeCompare(b.logged_at)),
+  [logs, mk]);
 
   const logsByDate = useMemo(() => {
     const m = {};
@@ -464,11 +462,7 @@ export default function StepsScreen() {
   const weekAvg = weekLogged.length ? Math.round(weekTotal / weekLogged.length) : 0;
   const weekBest = weekLogged.length ? Math.max(...weekLogged.map(d => d.steps)) : 0;
 
-  // ── ACTIVITY view derived data ──────────────────────────────────────────
-  const actMk = `${actYear}-${String(actMonth + 1).padStart(2, '0')}`;
-  const actMonthData = useMemo(() =>
-    logs.filter(l => l.logged_at?.startsWith(actMk) && l.steps),
-  [logs, actMk]);
+  const actMonthData = logMonthData;
 
   const actStats = useMemo(() => {
     if (!actMonthData.length) return null;
@@ -502,10 +496,8 @@ export default function StepsScreen() {
   const lastWeekAvg = lastWeekLogs.length ? Math.round(lastWeekLogs.reduce((s, l) => s + l.steps, 0) / lastWeekLogs.length) : 0;
   const maxWeek = Math.max(thisWeekAvg, lastWeekAvg, defaultGoal, 1);
 
-  const prevLogMonth = () => { if (logMonth === 0) { setLogMonth(11); setLogYear(y => y - 1); } else setLogMonth(m => m - 1); };
-  const nextLogMonth = () => { if (logMonth === 11) { setLogMonth(0); setLogYear(y => y + 1); } else setLogMonth(m => m + 1); };
-  const prevActMonth = () => { if (actMonth === 0) { setActMonth(11); setActYear(y => y - 1); } else setActMonth(m => m - 1); };
-  const nextActMonth = () => { if (actMonth === 11) { setActMonth(0); setActYear(y => y + 1); } else setActMonth(m => m + 1); };
+  const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
+  const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
   const SCREEN_W = Dimensions.get('window').width;
   const chartWidth = SCREEN_W - 32 - 32;
@@ -530,25 +522,16 @@ export default function StepsScreen() {
         </View>
       </View>
 
-      {/* Month nav + view toggle */}
+      {/* Month nav */}
       <View style={styles.topRow}>
         <View style={styles.monthNav}>
-          <TouchableOpacity onPress={view === 'log' ? prevLogMonth : prevActMonth} style={styles.monthBtn}>
+          <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
             <Text style={styles.monthChevron}>‹</Text>
           </TouchableOpacity>
-          <Text style={styles.monthLabel}>
-            {view === 'log' ? `${MONTH_FULL[logMonth]} ${logYear}` : `${MONTH_NAMES[actMonth]} ${actYear}`}
-          </Text>
-          <TouchableOpacity onPress={view === 'log' ? nextLogMonth : nextActMonth} style={styles.monthBtn}>
+          <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
+          <TouchableOpacity onPress={nextMonth} style={styles.monthBtn}>
             <Text style={styles.monthChevron}>›</Text>
           </TouchableOpacity>
-        </View>
-        <View style={styles.segmentRow}>
-          {['log', 'activity'].map(v => (
-            <TouchableOpacity key={v} onPress={() => setView(v)} style={[styles.segmentBtn, view === v && styles.segmentBtnActive]}>
-              <Text style={[styles.segmentText, view === v && styles.segmentTextActive]}>{v.toUpperCase()}</Text>
-            </TouchableOpacity>
-          ))}
         </View>
       </View>
 
@@ -558,8 +541,68 @@ export default function StepsScreen() {
       >
         {isLoading ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
-        ) : view === 'log' ? (
+        ) : (
           <>
+            {/* ── Hero ── */}
+            <View style={styles.heroCard}>
+              <Text style={styles.heroEmoji}>🚀</Text>
+              <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
+              <Text style={styles.heroLabel}>AVG STEPS/DAY · {MONTH_NAMES[month].toUpperCase()} {year}</Text>
+              <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
+
+              <View style={styles.tileGrid}>
+                <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} />
+                <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} />
+                <Tile value={actStats ? `${actStats.totalKm.toFixed(1)}km` : '—'} label="KM WALKED" color={colors.good} />
+                <Tile value={actStats ? actStats.totalCal.toLocaleString() : '—'} label="KCAL BURNED" color={colors.pink} />
+                <Tile value={actStats ? `${actStats.totalFatG.toFixed(1)}g` : '—'} label="🔥 FAT BURNED" color={colors.warn} />
+                <Tile
+                  value={actStats ? (actStats.totalMins >= 60 ? `${Math.floor(actStats.totalMins / 60)}h ${actStats.totalMins % 60}m` : `${actStats.totalMins}m`) : '—'}
+                  label="⏱ DURATION" color={colors.text}
+                />
+              </View>
+            </View>
+
+            {/* ── Personal Best ── */}
+            <View style={styles.pbCard}>
+              <Text style={styles.pbTrophy}>🏆</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pbLabel}>PERSONAL BEST DAY</Text>
+                <Text style={styles.pbVal}>{personalBest ? `${personalBest.steps.toLocaleString()} steps` : '—'}</Text>
+                <Text style={styles.pbDate}>{personalBest ? fmtDateShort(personalBest.logged_at) : ''}</Text>
+                {lifetimeSteps > 0 && (
+                  <View style={styles.pbChip}>
+                    <Text style={styles.pbChipText}>{(lifetimeSteps / 1000000).toFixed(2)}M lifetime</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* ── Step Goal ── */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>STEP GOAL</Text>
+                <Text style={styles.goalCurrentVal}>{defaultGoal.toLocaleString()}</Text>
+              </View>
+              <View style={styles.goalRow}>
+                <TextInput
+                  style={styles.goalInput}
+                  placeholder={defaultGoal.toLocaleString()}
+                  placeholderTextColor={colors.textDim}
+                  value={goalInput}
+                  onChangeText={setGoalInput}
+                  keyboardType="numeric"
+                />
+                <TouchableOpacity
+                  style={styles.setGoalBtn}
+                  onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
+                  disabled={goalMut.isPending}
+                >
+                  {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.setGoalBtnText}>SET</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {/* ── Trend Chart ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
@@ -623,118 +666,59 @@ export default function StepsScreen() {
                   <Text style={styles.hmLegendLabel}>More</Text>
                 </View>
               </View>
-              <StepsHeatmap year={logYear} month={logMonth} logsByDate={logsByDate} goal={defaultGoal} colors={colors} />
+              <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} />
             </View>
 
-            {/* ── This Week bar chart ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>THIS WEEK — DAILY STEPS</Text>
-                <View style={styles.hmLegend}>
-                  <View style={[styles.hmLegendSwatch, { backgroundColor: '#34d399' }]} />
-                  <Text style={styles.hmLegendLabel}>Goal</Text>
-                  <View style={[styles.hmLegendSwatch, { backgroundColor: '#f59e0b', marginLeft: 8 }]} />
-                  <Text style={styles.hmLegendLabel}>Below</Text>
-                </View>
-              </View>
-              <WeeklyBarChart days={weekDays} goal={defaultGoal} colors={colors} width={chartWidth} />
-              <View style={styles.weekDayLabels}>
-                {weekDays.map(d => (
-                  <View key={d.date} style={{ flex: 1, alignItems: 'center' }}>
-                    <Text style={[styles.weekDayLabel, d.isToday && { color: colors.accent, fontWeight: '700' }]}>{d.label}</Text>
-                    <Text style={styles.weekDayNum}>{d.dayNum}</Text>
+            {/* ── This Week sections — only meaningful for the current real month ── */}
+            {isCurrentMonth && (
+              <>
+                <View style={styles.card}>
+                  <View style={styles.cardTitleRow}>
+                    <Text style={styles.cardTitle}>THIS WEEK — DAILY STEPS</Text>
+                    <View style={styles.hmLegend}>
+                      <View style={[styles.hmLegendSwatch, { backgroundColor: '#34d399' }]} />
+                      <Text style={styles.hmLegendLabel}>Goal</Text>
+                      <View style={[styles.hmLegendSwatch, { backgroundColor: '#f59e0b', marginLeft: 8 }]} />
+                      <Text style={styles.hmLegendLabel}>Below</Text>
+                    </View>
                   </View>
-                ))}
-              </View>
-              <View style={styles.weekStatsRow}>
-                <WeekStatCell value={`${weekGoalDays}/7`} label="GOAL DAYS" color={colors.good} />
-                <WeekStatCell value={weekAvg ? weekAvg.toLocaleString() : '—'} label="AVG/DAY" color={colors.accent} />
-                <WeekStatCell value={weekBest ? weekBest.toLocaleString() : '—'} label="BEST DAY" color="#22d3ee" />
-                <WeekStatCell value={weekTotal ? weekTotal.toLocaleString() : '—'} label="TOTAL" color={colors.text} />
-              </View>
-            </View>
-          </>
-        ) : (
-          <>
-            {/* ── ACTIVITY hero ── */}
-            <View style={styles.heroCard}>
-              <Text style={styles.heroEmoji}>🚀</Text>
-              <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
-              <Text style={styles.heroLabel}>AVG STEPS/DAY · {MONTH_NAMES[actMonth].toUpperCase()} {actYear}</Text>
-              <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
-
-              <View style={styles.tileGrid}>
-                <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} />
-                <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} />
-                <Tile value={actStats ? `${actStats.totalKm.toFixed(1)}km` : '—'} label="KM WALKED" color={colors.good} />
-                <Tile value={actStats ? actStats.totalCal.toLocaleString() : '—'} label="KCAL BURNED" color={colors.pink} />
-                <Tile value={actStats ? `${actStats.totalFatG.toFixed(1)}g` : '—'} label="🔥 FAT BURNED" color={colors.warn} />
-                <Tile
-                  value={actStats ? (actStats.totalMins >= 60 ? `${Math.floor(actStats.totalMins / 60)}h ${actStats.totalMins % 60}m` : `${actStats.totalMins}m`) : '—'}
-                  label="⏱ DURATION" color={colors.text}
-                />
-              </View>
-            </View>
-
-            {/* ── Personal Best ── */}
-            <View style={styles.pbCard}>
-              <Text style={styles.pbTrophy}>🏆</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.pbLabel}>PERSONAL BEST DAY</Text>
-                <Text style={styles.pbVal}>{personalBest ? `${personalBest.steps.toLocaleString()} steps` : '—'}</Text>
-                <Text style={styles.pbDate}>{personalBest ? fmtDateShort(personalBest.logged_at) : ''}</Text>
-                {lifetimeSteps > 0 && (
-                  <View style={styles.pbChip}>
-                    <Text style={styles.pbChipText}>{(lifetimeSteps / 1000000).toFixed(2)}M lifetime</Text>
+                  <WeeklyBarChart days={weekDays} goal={defaultGoal} colors={colors} width={chartWidth} />
+                  <View style={styles.weekDayLabels}>
+                    {weekDays.map(d => (
+                      <View key={d.date} style={{ flex: 1, alignItems: 'center' }}>
+                        <Text style={[styles.weekDayLabel, d.isToday && { color: colors.accent, fontWeight: '700' }]}>{d.label}</Text>
+                        <Text style={styles.weekDayNum}>{d.dayNum}</Text>
+                      </View>
+                    ))}
                   </View>
-                )}
-              </View>
-            </View>
-
-            {/* ── Step Goal ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>STEP GOAL</Text>
-                <Text style={styles.goalCurrentVal}>{defaultGoal.toLocaleString()}</Text>
-              </View>
-              <View style={styles.goalRow}>
-                <TextInput
-                  style={styles.goalInput}
-                  placeholder={defaultGoal.toLocaleString()}
-                  placeholderTextColor={colors.textDim}
-                  value={goalInput}
-                  onChangeText={setGoalInput}
-                  keyboardType="numeric"
-                />
-                <TouchableOpacity
-                  style={styles.setGoalBtn}
-                  onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
-                  disabled={goalMut.isPending}
-                >
-                  {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.setGoalBtnText}>SET</Text>}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* ── This Week / Last Week ── */}
-            <View style={styles.weekCompareRow}>
-              <View style={styles.weekCompareCard}>
-                <Text style={styles.weekCompareTitle}>THIS WEEK</Text>
-                <Text style={[styles.weekCompareVal, { color: colors.accent }]}>{thisWeekAvg ? thisWeekAvg.toLocaleString() : '—'}</Text>
-                <View style={styles.weekCompareBarTrack}>
-                  <View style={[styles.weekCompareBarFill, { width: `${thisWeekAvg ? Math.min(100, (thisWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.accent }]} />
+                  <View style={styles.weekStatsRow}>
+                    <WeekStatCell value={`${weekGoalDays}/7`} label="GOAL DAYS" color={colors.good} />
+                    <WeekStatCell value={weekAvg ? weekAvg.toLocaleString() : '—'} label="AVG/DAY" color={colors.accent} />
+                    <WeekStatCell value={weekBest ? weekBest.toLocaleString() : '—'} label="BEST DAY" color="#22d3ee" />
+                    <WeekStatCell value={weekTotal ? weekTotal.toLocaleString() : '—'} label="TOTAL" color={colors.text} />
+                  </View>
                 </View>
-                <Text style={styles.weekCompareSub}>avg/day · {thisWeekLogs.length}d</Text>
-              </View>
-              <View style={styles.weekCompareCard}>
-                <Text style={styles.weekCompareTitle}>LAST WEEK</Text>
-                <Text style={[styles.weekCompareVal, { color: colors.textMuted }]}>{lastWeekAvg ? lastWeekAvg.toLocaleString() : '—'}</Text>
-                <View style={styles.weekCompareBarTrack}>
-                  <View style={[styles.weekCompareBarFill, { width: `${lastWeekAvg ? Math.min(100, (lastWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.textMuted }]} />
+
+                <View style={styles.weekCompareRow}>
+                  <View style={styles.weekCompareCard}>
+                    <Text style={styles.weekCompareTitle}>THIS WEEK</Text>
+                    <Text style={[styles.weekCompareVal, { color: colors.accent }]}>{thisWeekAvg ? thisWeekAvg.toLocaleString() : '—'}</Text>
+                    <View style={styles.weekCompareBarTrack}>
+                      <View style={[styles.weekCompareBarFill, { width: `${thisWeekAvg ? Math.min(100, (thisWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.accent }]} />
+                    </View>
+                    <Text style={styles.weekCompareSub}>avg/day · {thisWeekLogs.length}d</Text>
+                  </View>
+                  <View style={styles.weekCompareCard}>
+                    <Text style={styles.weekCompareTitle}>LAST WEEK</Text>
+                    <Text style={[styles.weekCompareVal, { color: colors.textMuted }]}>{lastWeekAvg ? lastWeekAvg.toLocaleString() : '—'}</Text>
+                    <View style={styles.weekCompareBarTrack}>
+                      <View style={[styles.weekCompareBarFill, { width: `${lastWeekAvg ? Math.min(100, (lastWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.textMuted }]} />
+                    </View>
+                    <Text style={styles.weekCompareSub}>avg/day · {lastWeekLogs.length}d</Text>
+                  </View>
                 </View>
-                <Text style={styles.weekCompareSub}>avg/day · {lastWeekLogs.length}d</Text>
-              </View>
-            </View>
+              </>
+            )}
           </>
         )}
         <View style={{ height: 90 }} />
