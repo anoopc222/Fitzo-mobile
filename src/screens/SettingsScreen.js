@@ -119,6 +119,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   const handleImportData = () => {
+    if (isRestoring) return;
     Alert.alert(
       'Restore from Backup',
       'This will replace ALL current data (workouts, weight, sleep, food, measurements, diet, health log) with the contents of the backup file. Continue?',
@@ -130,6 +131,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   const pickAndRestoreFile = async () => {
+    if (isRestoring) return;
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
       if (result.canceled) return;
@@ -281,9 +283,9 @@ export default function SettingsScreen({ navigation }) {
             <Text style={styles.syncText}>All data syncs live to Supabase cloud</Text>
           </View>
           <SettingRow icon="cloud-upload-outline" label={isExporting ? 'Exporting…' : 'Export Data'} chevron
-            onPress={handleExportData} />
+            onPress={(isExporting || isRestoring) ? undefined : handleExportData} />
           <SettingRow icon="cloud-download-outline" label={isRestoring ? 'Restoring…' : 'Import / Restore'} chevron last
-            onPress={handleImportData} />
+            onPress={(isExporting || isRestoring) ? undefined : handleImportData} />
         </View>
 
         {/* ── Danger Zone ─────────────────────────────────────────── */}
