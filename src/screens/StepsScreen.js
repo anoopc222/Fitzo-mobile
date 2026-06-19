@@ -603,6 +603,72 @@ export default function StepsScreen() {
               </View>
             </View>
 
+            {/* ── This Week sections — only meaningful for the current real month ── */}
+            {isCurrentMonth && (
+              <>
+                <View style={styles.weekCompareRow}>
+                  <View style={styles.weekCompareCard}>
+                    <Text style={styles.weekCompareTitle}>THIS WEEK</Text>
+                    <Text style={[styles.weekCompareVal, { color: colors.accent }]}>{thisWeekAvg ? thisWeekAvg.toLocaleString() : '—'}</Text>
+                    <View style={styles.weekCompareBarTrack}>
+                      <View style={[styles.weekCompareBarFill, { width: `${thisWeekAvg ? Math.min(100, (thisWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.accent }]} />
+                    </View>
+                    <Text style={styles.weekCompareSub}>avg/day · {thisWeekLogs.length}d</Text>
+                  </View>
+                  <View style={styles.weekCompareCard}>
+                    <Text style={styles.weekCompareTitle}>LAST WEEK</Text>
+                    <Text style={[styles.weekCompareVal, { color: colors.textMuted }]}>{lastWeekAvg ? lastWeekAvg.toLocaleString() : '—'}</Text>
+                    <View style={styles.weekCompareBarTrack}>
+                      <View style={[styles.weekCompareBarFill, { width: `${lastWeekAvg ? Math.min(100, (lastWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.textMuted }]} />
+                    </View>
+                    <Text style={styles.weekCompareSub}>avg/day · {lastWeekLogs.length}d</Text>
+                  </View>
+                </View>
+
+                <View style={styles.card}>
+                  <View style={styles.cardTitleRow}>
+                    <Text style={styles.cardTitle}>THIS WEEK — DAILY STEPS</Text>
+                    <View style={styles.hmLegend}>
+                      <View style={[styles.hmLegendSwatch, { backgroundColor: '#34d399' }]} />
+                      <Text style={styles.hmLegendLabel}>Goal</Text>
+                      <View style={[styles.hmLegendSwatch, { backgroundColor: '#f59e0b', marginLeft: 8 }]} />
+                      <Text style={styles.hmLegendLabel}>Below</Text>
+                    </View>
+                  </View>
+                  <WeeklyBarChart days={weekDays} goal={defaultGoal} colors={colors} width={chartWidth} />
+                  <View style={styles.weekDayLabels}>
+                    {weekDays.map(d => (
+                      <View key={d.date} style={{ flex: 1, alignItems: 'center' }}>
+                        <Text style={[styles.weekDayLabel, d.isToday && { color: colors.accent, fontWeight: '700' }]}>{d.label}</Text>
+                        <Text style={styles.weekDayNum}>{d.dayNum}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.weekStatsRow}>
+                    <WeekStatCell value={`${weekGoalDays}/7`} label="GOAL DAYS" color={colors.good} />
+                    <WeekStatCell value={weekAvg ? weekAvg.toLocaleString() : '—'} label="AVG/DAY" color={colors.accent} />
+                    <WeekStatCell value={weekBest ? weekBest.toLocaleString() : '—'} label="BEST DAY" color="#22d3ee" />
+                    <WeekStatCell value={weekTotal ? weekTotal.toLocaleString() : '—'} label="TOTAL" color={colors.text} />
+                  </View>
+                </View>
+              </>
+            )}
+
+            {/* ── Monthly Heatmap ── */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+                <View style={styles.hmLegend}>
+                  <Text style={styles.hmLegendLabel}>Less</Text>
+                  {['rgba(56,189,248,0.22)', 'rgba(34,211,238,0.42)', 'rgba(20,184,166,0.65)', 'rgba(52,211,153,0.88)'].map((c, i) => (
+                    <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+                  ))}
+                  <Text style={styles.hmLegendLabel}>More</Text>
+                </View>
+              </View>
+              <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} />
+            </View>
+
             {/* ── Trend Chart ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
@@ -653,72 +719,6 @@ export default function StepsScreen() {
                 </View>
               ))}
             </View>
-
-            {/* ── Monthly Heatmap ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
-                <View style={styles.hmLegend}>
-                  <Text style={styles.hmLegendLabel}>Less</Text>
-                  {['rgba(56,189,248,0.22)', 'rgba(34,211,238,0.42)', 'rgba(20,184,166,0.65)', 'rgba(52,211,153,0.88)'].map((c, i) => (
-                    <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
-                  ))}
-                  <Text style={styles.hmLegendLabel}>More</Text>
-                </View>
-              </View>
-              <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} />
-            </View>
-
-            {/* ── This Week sections — only meaningful for the current real month ── */}
-            {isCurrentMonth && (
-              <>
-                <View style={styles.card}>
-                  <View style={styles.cardTitleRow}>
-                    <Text style={styles.cardTitle}>THIS WEEK — DAILY STEPS</Text>
-                    <View style={styles.hmLegend}>
-                      <View style={[styles.hmLegendSwatch, { backgroundColor: '#34d399' }]} />
-                      <Text style={styles.hmLegendLabel}>Goal</Text>
-                      <View style={[styles.hmLegendSwatch, { backgroundColor: '#f59e0b', marginLeft: 8 }]} />
-                      <Text style={styles.hmLegendLabel}>Below</Text>
-                    </View>
-                  </View>
-                  <WeeklyBarChart days={weekDays} goal={defaultGoal} colors={colors} width={chartWidth} />
-                  <View style={styles.weekDayLabels}>
-                    {weekDays.map(d => (
-                      <View key={d.date} style={{ flex: 1, alignItems: 'center' }}>
-                        <Text style={[styles.weekDayLabel, d.isToday && { color: colors.accent, fontWeight: '700' }]}>{d.label}</Text>
-                        <Text style={styles.weekDayNum}>{d.dayNum}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.weekStatsRow}>
-                    <WeekStatCell value={`${weekGoalDays}/7`} label="GOAL DAYS" color={colors.good} />
-                    <WeekStatCell value={weekAvg ? weekAvg.toLocaleString() : '—'} label="AVG/DAY" color={colors.accent} />
-                    <WeekStatCell value={weekBest ? weekBest.toLocaleString() : '—'} label="BEST DAY" color="#22d3ee" />
-                    <WeekStatCell value={weekTotal ? weekTotal.toLocaleString() : '—'} label="TOTAL" color={colors.text} />
-                  </View>
-                </View>
-
-                <View style={styles.weekCompareRow}>
-                  <View style={styles.weekCompareCard}>
-                    <Text style={styles.weekCompareTitle}>THIS WEEK</Text>
-                    <Text style={[styles.weekCompareVal, { color: colors.accent }]}>{thisWeekAvg ? thisWeekAvg.toLocaleString() : '—'}</Text>
-                    <View style={styles.weekCompareBarTrack}>
-                      <View style={[styles.weekCompareBarFill, { width: `${thisWeekAvg ? Math.min(100, (thisWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.accent }]} />
-                    </View>
-                    <Text style={styles.weekCompareSub}>avg/day · {thisWeekLogs.length}d</Text>
-                  </View>
-                  <View style={styles.weekCompareCard}>
-                    <Text style={styles.weekCompareTitle}>LAST WEEK</Text>
-                    <Text style={[styles.weekCompareVal, { color: colors.textMuted }]}>{lastWeekAvg ? lastWeekAvg.toLocaleString() : '—'}</Text>
-                    <View style={styles.weekCompareBarTrack}>
-                      <View style={[styles.weekCompareBarFill, { width: `${lastWeekAvg ? Math.min(100, (lastWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.textMuted }]} />
-                    </View>
-                    <Text style={styles.weekCompareSub}>avg/day · {lastWeekLogs.length}d</Text>
-                  </View>
-                </View>
-              </>
-            )}
           </>
         )}
         <View style={{ height: 90 }} />
