@@ -48,6 +48,13 @@ function getWeekRange(offsetWeeks = 0) {
   return [start.toISOString().split('T')[0], end.toISOString().split('T')[0]];
 }
 
+function getMonthRange() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return [start.toISOString().split('T')[0], end.toISOString().split('T')[0]];
+}
+
 function fmtWeekLabel() {
   const now = new Date();
   const start = new Date(now);
@@ -81,6 +88,7 @@ async function fetchHome(userId) {
   const today = new Date().toISOString().split('T')[0];
   const [thisWeekStart, thisWeekEnd] = getWeekRange(0);
   const [lastWeekStart, lastWeekEnd] = getWeekRange(1);
+  const [monthStart, monthEnd] = getMonthRange();
 
   const [
     profile,
@@ -92,10 +100,13 @@ async function fetchHome(userId) {
     lastWorkout,
     thisWeekWorkouts,
     lastWeekWorkouts,
+    monthWorkouts,
     thisWeekSteps,
     lastWeekSteps,
+    monthSteps,
     thisWeekFood,
     lastWeekFood,
+    monthFood,
   ] = await Promise.all([
     supabase.from('profiles')
       .select('full_name, goal, weight_goal_kg, step_goal, sleep_goal_hours')
@@ -124,18 +135,27 @@ async function fetchHome(userId) {
     supabase.from('workout_sessions')
       .select('id').eq('user_id', userId)
       .gte('date', lastWeekStart).lte('date', lastWeekEnd),
+    supabase.from('workout_sessions')
+      .select('id').eq('user_id', userId)
+      .gte('date', monthStart).lte('date', monthEnd),
     supabase.from('step_logs')
       .select('steps, goal').eq('user_id', userId)
       .gte('logged_at', thisWeekStart).lte('logged_at', thisWeekEnd),
     supabase.from('step_logs')
       .select('steps, goal').eq('user_id', userId)
       .gte('logged_at', lastWeekStart).lte('logged_at', lastWeekEnd),
+    supabase.from('step_logs')
+      .select('steps, goal').eq('user_id', userId)
+      .gte('logged_at', monthStart).lte('logged_at', monthEnd),
     supabase.from('food_logs')
       .select('calories').eq('user_id', userId)
       .gte('logged_at', `${thisWeekStart}T00:00:00`).lte('logged_at', `${thisWeekEnd}T23:59:59`),
     supabase.from('food_logs')
       .select('calories').eq('user_id', userId)
       .gte('logged_at', `${lastWeekStart}T00:00:00`).lte('logged_at', `${lastWeekEnd}T23:59:59`),
+    supabase.from('food_logs')
+      .select('calories').eq('user_id', userId)
+      .gte('logged_at', `${monthStart}T00:00:00`).lte('logged_at', `${monthEnd}T23:59:59`),
   ]);
 
   const weightArr = (weightHist.data ?? []).map(w => w.weight).reverse();
@@ -168,23 +188,33 @@ async function fetchHome(userId) {
   const todayWorkoutName = todaySession?.notes?.trim()
     || (todaySession?.workout_exercises?.[0]?.exercise_name ? 'Workout' : 'Workout');
 
-  // Weekly
+  // Weekly / Monthly
   const thisWeekSessions = thisWeekWorkouts.data?.length ?? 0;
   const lastWeekSessions = lastWeekWorkouts.data?.length ?? 0;
+  const monthSessions    = monthWorkouts.data?.length ?? 0;
   const thisWeekStepsArr = thisWeekSteps.data ?? [];
   const lastWeekStepsArr = lastWeekSteps.data ?? [];
+  const monthStepsArr    = monthSteps.data ?? [];
   const thisWeekStepsTotal = thisWeekStepsArr.reduce((s, r) => s + r.steps, 0);
   const lastWeekStepsTotal = lastWeekStepsArr.reduce((s, r) => s + r.steps, 0);
+  const monthStepsTotal    = monthStepsArr.reduce((s, r) => s + r.steps, 0);
   const thisWeekKcal = (thisWeekFood.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0);
   const lastWeekKcal = (lastWeekFood.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0);
+  const monthKcal    = (monthFood.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0);
   const thisWeekGoalDays = thisWeekStepsArr.filter(l => l.steps >= (l.goal ?? stepGoal)).length;
   const lastWeekGoalDays = lastWeekStepsArr.filter(l => l.steps >= (l.goal ?? stepGoal)).length;
+  const monthGoalDays    = monthStepsArr.filter(l => l.steps >= (l.goal ?? stepGoal)).length;
 
-  // Weight change this week
-  const weekWeightLogs = (weightHist.data ?? []).filter(w => w.logged_at >= thisWeekStart);
-  const weekWeightDelta = weekWeightLogs.length >= 2
-    ? +(weekWeightLogs[0].weight - weekWeightLogs[weekWeightLogs.length - 1].weight).toFixed(1)
-    : null;
+  // Weight change helper: earliest vs latest log within a date range
+  const weightDeltaFor = (startDate, endDate) => {
+    const logs = (weightHist.data ?? []).filter(w => w.logged_at >= startDate && w.logged_at <= `${endDate}T23:59:59`);
+    return logs.length >= 2
+      ? +(logs[0].weight - logs[logs.length - 1].weight).toFixed(1)
+      : null;
+  };
+  const weekWeightDelta  = weightDeltaFor(thisWeekStart, thisWeekEnd);
+  const lastWeekWeightDelta = weightDeltaFor(lastWeekStart, lastWeekEnd);
+  const monthWeightDelta = weightDeltaFor(monthStart, monthEnd);
 
   // Last workout info
   const lastWorkoutDate  = lastWorkout.data?.[0]?.date ?? null;
@@ -222,7 +252,8 @@ async function fetchHome(userId) {
     lastWorkoutDate, lastWorkoutNotes, daysSinceWorkout,
     motivText, streak,
     thisWeek: { sessions: thisWeekSessions, steps: thisWeekStepsTotal, kcal: thisWeekKcal, goalDays: thisWeekGoalDays, weightDelta: weekWeightDelta },
-    lastWeek: { sessions: lastWeekSessions, steps: lastWeekStepsTotal, kcal: lastWeekKcal, goalDays: lastWeekGoalDays },
+    lastWeek: { sessions: lastWeekSessions, steps: lastWeekStepsTotal, kcal: lastWeekKcal, goalDays: lastWeekGoalDays, weightDelta: lastWeekWeightDelta },
+    thisMonth: { sessions: monthSessions, steps: monthStepsTotal, kcal: monthKcal, goalDays: monthGoalDays, weightDelta: monthWeightDelta },
     sessionsLeft,
   };
 }
@@ -593,15 +624,6 @@ function StreakCalendarModal({ visible, userId, onClose }) {
   );
 }
 
-// ─── quick nav ──────────────────────────────────────────────────────────────
-const QUICK_NAV = [
-  { label: 'WEIGHT', icon: 'scale',      color: C_WEIGHT, tab: 'Weight' },
-  { label: 'STEPS',  icon: 'footsteps',  color: C_STEPS,  tab: 'Steps' },
-  { label: 'FOOD',   icon: 'restaurant', color: '#fb923c', tab: 'Log' },
-  { label: 'SLEEP',  icon: 'moon',       color: C_SLEEP,  tab: 'Sleep' },
-  { label: 'STREAK', icon: 'flame',      color: '#ef4444', tab: 'More' },
-];
-
 const WEEK_TABS = ['THIS WEEK', 'LAST WEEK', 'THIS MONTH', 'CUT SCORE'];
 
 // ─── component ──────────────────────────────────────────────────────────────
@@ -642,7 +664,8 @@ export default function HomeScreen() {
   const thisWeekSessions = data?.thisWeek?.sessions ?? 0;
   const sessionsLeft     = data?.sessionsLeft ?? WEEKLY_SESSION_GOAL;
 
-  const tabStats = [data?.thisWeek, data?.lastWeek, data?.thisWeek];
+  const tabStats = [data?.thisWeek, data?.lastWeek, data?.thisMonth];
+  const periodDays = [new Date().getDay() + 1, 7, new Date().getDate()];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -689,16 +712,6 @@ export default function HomeScreen() {
                 <Text style={styles.goalPillText} numberOfLines={2}>{goal}</Text>
               </View>
             </View>
-
-            {/* ── Quick Nav ──────────────────────────────────────── */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRow}>
-              {QUICK_NAV.map(item => (
-                <TouchableOpacity key={item.label} style={styles.quickCard} onPress={() => nav(item.tab)} activeOpacity={0.75}>
-                  <Ionicons name={item.icon} size={26} color={item.color} />
-                  <Text style={[styles.quickLabel, { color: item.color }]}>{item.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
 
             {/* ── Stat Cards Row 1 ───────────────────────────────── */}
             <View style={styles.cardRow}>
@@ -912,21 +925,21 @@ export default function HomeScreen() {
                     <StatTile
                       value={fmtK(tabStats[activeTab]?.steps)}
                       label="STEPS"
-                      sub={activeTab === 0 && data ? `${data.thisWeek.goalDays}/${Math.max(1, (data.thisWeek.goalDays + Math.floor(tabStats[0]?.steps / (data.stepGoal ?? 10000))))} goal days` : null}
+                      sub={`${tabStats[activeTab]?.goalDays ?? 0}/${periodDays[activeTab]} goal days`}
                       color={C_STEPS}
                     />
                     <StatTile
                       value={tabStats[activeTab]?.kcal ? fmtK(tabStats[activeTab].kcal) : '—'}
                       label="KCAL"
-                      sub={activeTab === 0 && !data?.thisWeek?.kcal ? 'not logged' : null}
+                      sub={!tabStats[activeTab]?.kcal ? 'not logged' : null}
                       color={C_KCAL}
                     />
                     <StatTile
-                      value={data?.thisWeek?.weightDelta !== null && data?.thisWeek?.weightDelta !== undefined
-                        ? `${data.thisWeek.weightDelta > 0 ? '+' : ''}${data.thisWeek.weightDelta}kg`
+                      value={tabStats[activeTab]?.weightDelta !== null && tabStats[activeTab]?.weightDelta !== undefined
+                        ? `${tabStats[activeTab].weightDelta > 0 ? '+' : ''}${tabStats[activeTab].weightDelta}kg`
                         : '—'}
                       label="WT Δ"
-                      sub="wk change"
+                      sub={activeTab === 0 ? 'wk change' : activeTab === 1 ? 'wk change' : 'mo change'}
                       color={C_WEIGHT}
                     />
                   </View>
@@ -986,9 +999,6 @@ const createStyles = (colors) => StyleSheet.create({
   motivText: { fontSize: 11, color: colors.accent, fontFamily: fontFamily.bodySemibold, textDecorationLine: 'underline' },
   goalPill: { backgroundColor: colors.dim, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, maxWidth: 96, alignItems: 'center' },
   goalPillText: { fontSize: 10, color: colors.textMuted, textAlign: 'center', fontFamily: fontFamily.bodyMedium, lineHeight: 14 },
-  quickRow: { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
-  quickCard: { alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, minWidth: 70 },
-  quickLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.6 },
   cardRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 10 },
   halfWrap: { flex: 1, borderRadius: 18, overflow: 'hidden' },
   statCard: { padding: 14, borderRadius: 18, minHeight: 158, borderWidth: 1 },
