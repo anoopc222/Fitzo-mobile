@@ -228,6 +228,29 @@ const MUSCLE_KW = [
   { keys: ['stairmaster', 'air bike', 'treadmill', 'cycling', 'running', 'elliptical'], m: ['Cardiovascular'] },
 ];
 
+const STANDARD_EXERCISE_NAMES = [
+  'Bench Press', 'Incline Chest Press Machine', 'Pec Fly', 'Shoulder Press', 'Overhead Press',
+  'Lat Pulldown', 'Pull Up', 'Seated Row', 'Chest Supported Row', 'Cable Row', 'Deadlift',
+  'Squat', 'Leg Press', 'Leg Curl', 'Leg Extension', 'Calf Raise', 'Bicep Curl', 'Hammer Curl',
+  'Preacher Curl', 'Tricep Rope Pushdown', 'Face Pull', 'Dumbbell Shrugs',
+];
+
+// Historical exercise names first, then the standard list, deduped — mirrors qlGetExNames() on web
+function getExerciseNamePool(allSessions) {
+  const seen = new Set();
+  const names = [];
+  for (const s of allSessions ?? []) {
+    for (const ex of s.workout_exercises ?? []) {
+      const n = ex.exercise_name;
+      if (n && !seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); }
+    }
+  }
+  for (const n of STANDARD_EXERCISE_NAMES) {
+    if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); }
+  }
+  return names;
+}
+
 function getExerciseMuscles(exerciseName) {
   const name = (exerciseName ?? '').toLowerCase();
   for (const { keys, m } of MUSCLE_KW) {
@@ -745,7 +768,7 @@ function DatePickerModal({ visible, value, onSelect, onClose }) {
 // Always show these two as default chip suggestions
 const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
 
-function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, onCancel, isSaving }) {
+function EditSessionModal({ visible, isNew, initialData, recentTypes, allSessions, onSave, onCancel, isSaving }) {
   const { colors } = useTheme();
   const eS = useMemo(() => createES(colors), [colors]);
   const [date, setDate] = useState('');
@@ -753,6 +776,9 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
   const [exercises, setExercises] = useState([]);
   const [activeExIdx, setActiveExIdx] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [acOpenIdx, setAcOpenIdx] = useState(null);
+
+  const namePool = useMemo(() => getExerciseNamePool(allSessions), [allSessions]);
 
   // All chips: defaults first, then unique recent types excluding defaults
   const allChips = useMemo(() => {
@@ -934,12 +960,37 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
                           <TextInput
                             style={eS.exNameInput}
                             value={ex.name}
-                            onChangeText={v => updateExName(exIdx, v)}
+                            onChangeText={v => { updateExName(exIdx, v); setAcOpenIdx(exIdx); }}
+                            onFocus={() => setAcOpenIdx(exIdx)}
+                            onBlur={() => setTimeout(() => setAcOpenIdx(cur => (cur === exIdx ? null : cur)), 150)}
                             placeholder={isCardio ? 'Activity name (e.g. Running)' : 'Exercise name'}
                             placeholderTextColor={colors.textDim}
                             autoFocus
                           />
                         </View>
+
+                        {!isCardio && acOpenIdx === exIdx && (() => {
+                          const q = ex.name.trim().toLowerCase();
+                          const matches = namePool.filter(n => !q || n.toLowerCase().includes(q)).slice(0, 8);
+                          if (!matches.length) return null;
+                          return (
+                            <View style={eS.acDropdown}>
+                              {matches.map(n => {
+                                const exStyleAc = getWorkoutStyle(n, colors);
+                                return (
+                                  <TouchableOpacity
+                                    key={n}
+                                    style={eS.acItem}
+                                    onPress={() => { updateExName(exIdx, n); setAcOpenIdx(null); }}
+                                  >
+                                    <Text style={{ fontSize: 14 }}>{exStyleAc.icon}</Text>
+                                    <Text style={eS.acItemText}>{n}</Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          );
+                        })()}
 
                         {isCardio ? (
                           (ex.sets ?? []).map((s, sIdx) => {
@@ -1341,6 +1392,7 @@ export default function WorkoutScreen() {
         isNew={editIsNew}
         initialData={editInitial}
         recentTypes={recentTypes}
+        allSessions={sessions}
         onSave={(data) => saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null })}
         onCancel={() => setShowEdit(false)}
         isSaving={saveMut.isPending}
@@ -1657,6 +1709,10 @@ const createES = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.blue + '55', marginBottom: 10,
   },
   cardioHintText: { fontSize: typography.xs, color: colors.blue, flex: 1 },
+
+  acDropdown: { backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginTop: -8, marginBottom: 12, overflow: 'hidden' },
+  acItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
+  acItemText: { fontFamily: fontFamily.bodyMedium, fontSize: typography.sm, color: colors.text },
 
   cardioFieldCard: { backgroundColor: colors.dim, borderRadius: 10, padding: 10, marginBottom: 8, gap: 8 },
   cardioFieldRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
