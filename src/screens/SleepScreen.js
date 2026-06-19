@@ -103,27 +103,27 @@ function SleepHeatmap({ year, month, logsByDate, goal, colors }) {
 
   return (
     <View>
-      <View style={s_hm.dowRow}>
+      <View style={{ flexDirection: 'row', marginBottom: 6 }}>
         {DOW_LABELS.map(d => (
           <View key={d} style={{ width: cellSize, alignItems: 'center' }}>
-            <Text style={s_hm.dowText}>{d}</Text>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted, fontFamily: fontFamily.mono }}>{d}</Text>
           </View>
         ))}
       </View>
-      <View style={s_hm.grid}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {cells.map(cell => {
           if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
           return (
             <View
               key={cell.key}
               style={[
-                s_hm.cell,
+                { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
                 { width: cellSize, height: cellSize, backgroundColor: LVL_COLOR[cell.lvl] },
                 cell.isToday && { borderWidth: 2, borderColor: '#818cf8' },
               ]}
             >
-              <Text style={[s_hm.dayNum, cell.lvl === 0 && { color: colors.textDim }]}>{cell.day}</Text>
-              <Text style={[s_hm.hrsTxt, cell.lvl === 0 && { color: colors.textDim, opacity: 0.5 }]}>
+              <Text style={{ fontSize: 10, fontWeight: '700', fontFamily: fontFamily.mono, color: cell.lvl === 0 ? colors.textDim : colors.text }}>{cell.day}</Text>
+              <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, marginTop: 1, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: cell.lvl === 0 ? 0.5 : 1 }}>
                 {cell.hrs !== undefined ? `${cell.hrs}h` : '—'}
               </Text>
             </View>
@@ -133,15 +133,6 @@ function SleepHeatmap({ year, month, logsByDate, goal, colors }) {
     </View>
   );
 }
-
-const s_hm = StyleSheet.create({
-  dowRow: { flexDirection: 'row', marginBottom: 6 },
-  dowText: { fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.mono },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  dayNum: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', fontFamily: fontFamily.mono },
-  hrsTxt: { fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.85)', fontFamily: fontFamily.mono, marginTop: 1 },
-});
 
 // ─── Sleep Trend Chart — ports _renderSleepTrendChart ───────────────────────
 function SleepTrendChart({ data, goal, colors, width }) {
@@ -183,7 +174,7 @@ function SleepTrendChart({ data, goal, colors, width }) {
 
       {[minH, (minH + maxH) / 2, maxH].map((v, i) => {
         const y = toY(v);
-        return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />;
+        return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />;
       })}
 
       <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#f59e0b" strokeOpacity={0.5} strokeWidth={1.5} strokeDasharray="4,4" />
@@ -230,19 +221,19 @@ function SleepLogRow({ log, goal, colors, onDelete }) {
   const dayNum = d.getDate();
 
   return (
-    <View style={s_log.row}>
-      <View style={[s_log.sideBar, { backgroundColor: barColor }]} />
-      <View style={s_log.dayBadge}>
-        <Text style={s_log.dayName}>{dayName}</Text>
-        <Text style={s_log.dayNum}>{dayNum}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ width: 3, height: 44, borderRadius: 2, backgroundColor: barColor }} />
+      <View style={{ width: 38, alignItems: 'center' }}>
+        <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{dayName}</Text>
+        <Text style={{ fontSize: 15, color: colors.text, fontFamily: fontFamily.monoBold, fontWeight: '700' }}>{dayNum}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[s_log.hrs, { color: barColor }]}>{log.hours}h</Text>
-        <View style={s_log.progTrack}>
-          <View style={[s_log.progFill, { width: `${pct}%`, backgroundColor: barColor }]} />
+        <Text style={{ fontSize: typography.lg, fontWeight: '800', fontFamily: fontFamily.monoBold, marginBottom: 6, color: barColor }}>{log.hours}h</Text>
+        <View style={{ height: 5, borderRadius: 3, backgroundColor: colors.dim, overflow: 'hidden', marginBottom: 6 }}>
+          <View style={{ height: '100%', borderRadius: 3, width: `${pct}%`, backgroundColor: barColor }} />
         </View>
-        <View style={[s_log.statusPill, { backgroundColor: statusBg }]}>
-          <Text style={[s_log.statusText, { color: statusTxt }]}>{statusLabel}</Text>
+        <View style={{ alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: statusBg }}>
+          <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, letterSpacing: 0.3, color: statusTxt }}>{statusLabel}</Text>
         </View>
       </View>
       <TouchableOpacity onPress={onDelete} style={{ padding: 4 }}>
@@ -251,19 +242,6 @@ function SleepLogRow({ log, goal, colors, onDelete }) {
     </View>
   );
 }
-
-const s_log = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  sideBar: { width: 3, height: 44, borderRadius: 2 },
-  dayBadge: { width: 38, alignItems: 'center' },
-  dayName: { fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.mono, fontWeight: '700' },
-  dayNum: { fontSize: 15, color: 'rgba(255,255,255,0.85)', fontFamily: fontFamily.monoBold, fontWeight: '700' },
-  hrs: { fontSize: typography.lg, fontWeight: '800', fontFamily: fontFamily.monoBold, marginBottom: 6 },
-  progTrack: { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 6 },
-  progFill: { height: '100%', borderRadius: 3 },
-  statusPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  statusText: { fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, letterSpacing: 0.3 },
-});
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function SleepScreen() {
@@ -498,10 +476,10 @@ export default function SleepScreen() {
 
             {/* ── Stat tiles ── */}
             <View style={styles.statTileRow}>
-              <StatTile value={`${avg7}h`} label="7D AVG HRS" />
-              <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} />
-              <StatTile value={`${streak}d`} label="GOAL STREAK" color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} />
-              <StatTile value={consistency} label="CONSISTENCY" />
+              <StatTile value={`${avg7}h`} label="7D AVG HRS" colors={colors} />
+              <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
+              <StatTile value={`${streak}d`} label="GOAL STREAK" color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} colors={colors} />
+              <StatTile value={consistency} label="CONSISTENCY" colors={colors} />
             </View>
 
             {/* ── Insights ── */}
@@ -669,20 +647,14 @@ export default function SleepScreen() {
   );
 }
 
-function StatTile({ value, label, color }) {
+function StatTile({ value, label, color, colors }) {
   return (
-    <View style={s_tile.tile}>
-      <Text style={[s_tile.val, color && { color }]}>{value}</Text>
-      <Text style={s_tile.label}>{label}</Text>
+    <View style={{ flex: 1, backgroundColor: colors.dim, borderRadius: 12, padding: 12, alignItems: 'center' }}>
+      <Text style={{ fontSize: typography.md, fontFamily: fontFamily.monoBold, color: color || colors.text }}>{value}</Text>
+      <Text style={{ fontSize: 8, color: colors.textMuted, fontFamily: fontFamily.bodyBold, letterSpacing: 0.3, marginTop: 4, textAlign: 'center' }}>{label}</Text>
     </View>
   );
 }
-
-const s_tile = StyleSheet.create({
-  tile: { flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 12, alignItems: 'center' },
-  val: { fontSize: typography.md, fontFamily: fontFamily.monoBold, color: '#f5f0e8' },
-  label: { fontSize: 8, color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.bodyBold, letterSpacing: 0.3, marginTop: 4, textAlign: 'center' },
-});
 
 const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },

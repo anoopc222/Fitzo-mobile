@@ -113,27 +113,27 @@ function WeightHeatmap({ year, month, logsByDate, colors, unit }) {
 
   return (
     <View>
-      <View style={s_hm.dowRow}>
+      <View style={{ flexDirection: 'row', marginBottom: 6 }}>
         {DOW_LABELS.map(d => (
           <View key={d} style={{ width: cellSize, alignItems: 'center' }}>
-            <Text style={s_hm.dowText}>{d}</Text>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted, fontFamily: fontFamily.mono }}>{d}</Text>
           </View>
         ))}
       </View>
-      <View style={s_hm.grid}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {cells.map(cell => {
           if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
           return (
             <View
               key={cell.key}
               style={[
-                s_hm.cell,
+                { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
                 { width: cellSize, height: cellSize, backgroundColor: LVL_COLOR[cell.lvl] },
                 cell.isToday && { borderWidth: 2, borderColor: '#f59e0b' },
               ]}
             >
-              <Text style={[s_hm.dayNum, cell.lvl === 0 && { color: colors.textDim }]}>{cell.day}</Text>
-              <Text style={[s_hm.wTxt, cell.lvl === 0 && { color: colors.textDim, opacity: 0.5 }]}>
+              <Text style={{ fontSize: 10, fontWeight: '700', fontFamily: fontFamily.mono, color: cell.lvl === 0 ? colors.textDim : colors.text }}>{cell.day}</Text>
+              <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, marginTop: 1, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: cell.lvl === 0 ? 0.5 : 1 }}>
                 {cell.w !== undefined ? toDisp(cell.w, unit).toFixed(1) : '—'}
               </Text>
             </View>
@@ -143,15 +143,6 @@ function WeightHeatmap({ year, month, logsByDate, colors, unit }) {
     </View>
   );
 }
-
-const s_hm = StyleSheet.create({
-  dowRow: { flexDirection: 'row', marginBottom: 6 },
-  dowText: { fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.mono },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  dayNum: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', fontFamily: fontFamily.mono },
-  wTxt: { fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.85)', fontFamily: fontFamily.mono, marginTop: 1 },
-});
 
 // ─── 30-Day Trend Chart — ports fzRenderWeightTrendChart ────────────────────
 function WeightTrendChart({ data, unit, goalKg, colors, width }) {
@@ -203,7 +194,7 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
 
       {[0, 1, 2, 3].map(i => {
         const y = P.t + (ph / 3) * i;
-        return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />;
+        return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />;
       })}
 
       {goalY != null && (
@@ -283,11 +274,11 @@ function WeeklyAvgChart({ logs, viewMode, unit, colors, width }) {
         {allDisp.map((v, i) => <Circle key={i} cx={toX(i)} cy={toY(v)} r={3} fill="#f59e0b" />)}
       </Svg>
 
-      <View style={s_wk.tableHeader}>
-        <Text style={[s_wk.th, { width: 44 }]}>{viewMode === 'month' ? 'MO' : 'WK'}</Text>
-        <Text style={[s_wk.th, { flex: 1 }]}>AVG WEIGHT</Text>
-        <Text style={[s_wk.th, { width: 60, textAlign: 'right' }]}>TREND</Text>
-        <Text style={[s_wk.th, { width: 70, textAlign: 'right' }]}>LOST</Text>
+      <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 6, marginTop: 14, marginBottom: 4 }}>
+        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, width: 44, color: colors.textMuted }}>{viewMode === 'month' ? 'MO' : 'WK'}</Text>
+        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, flex: 1, color: colors.textMuted }}>AVG WEIGHT</Text>
+        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, width: 60, textAlign: 'right', color: colors.textMuted }}>TREND</Text>
+        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, width: 70, textAlign: 'right', color: colors.textMuted }}>LOST</Text>
       </View>
       {groups.map((g, i) => {
         const dispVal = toDisp(g.avg, unit);
@@ -297,29 +288,29 @@ function WeeklyAvgChart({ logs, viewMode, unit, colors, width }) {
         const pct = Math.min(100, Math.max(0, Math.round((cumLostVal / maxLost) * 100)));
         const gained = cumLostVal < 0;
         return (
-          <View key={g.key} style={s_wk.row}>
-            <Text style={[s_wk.cellLabel, { width: 44 }]}>{viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] : `Wk${i + 1}`}</Text>
+          <View key={g.key} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, width: 44, color: colors.text }}>{viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] : `Wk${i + 1}`}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[s_wk.cellVal, isLast && { color: colors.accent }]}>{dispVal.toFixed(1)}{unit} {isLast ? <Text style={s_wk.nowTag}>NOW</Text> : null}</Text>
+              <Text style={{ fontSize: 12, fontFamily: fontFamily.monoBold, color: isLast ? colors.accent : colors.text }}>{dispVal.toFixed(1)}{unit} {isLast ? <Text style={{ fontSize: 8, color: '#0c0c0f', backgroundColor: '#f59e0b', paddingHorizontal: 4, borderRadius: 4, overflow: 'hidden' }}>NOW</Text> : null}</Text>
             </View>
             <View style={{ width: 60, alignItems: 'flex-end' }}>
               {i === 0 ? (
-                <View style={[s_wk.pill, { backgroundColor: 'rgba(148,163,184,0.12)' }]}><Text style={[s_wk.pillText, { color: colors.textMuted }]}>START</Text></View>
+                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)' }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textMuted }}>START</Text></View>
               ) : Math.abs(delta) < 0.05 ? (
-                <View style={[s_wk.pill, { backgroundColor: 'rgba(148,163,184,0.12)' }]}><Text style={[s_wk.pillText, { color: colors.textMuted }]}>→ 0.0</Text></View>
+                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)' }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textMuted }}>→ 0.0</Text></View>
               ) : delta < 0 ? (
-                <View style={[s_wk.pill, { backgroundColor: 'rgba(52,211,153,0.15)' }]}><Text style={[s_wk.pillText, { color: '#34d399' }]}>▼ {Math.abs(delta).toFixed(1)}</Text></View>
+                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(52,211,153,0.15)' }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: '#34d399' }}>▼ {Math.abs(delta).toFixed(1)}</Text></View>
               ) : (
-                <View style={[s_wk.pill, { backgroundColor: 'rgba(248,113,113,0.15)' }]}><Text style={[s_wk.pillText, { color: '#f87171' }]}>▲ {delta.toFixed(1)}</Text></View>
+                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(248,113,113,0.15)' }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: '#f87171' }}>▲ {delta.toFixed(1)}</Text></View>
               )}
             </View>
             <View style={{ width: 70, alignItems: 'flex-end' }}>
               {gained ? (
-                <Text style={[s_wk.cumText, { color: '#f87171' }]}>+{Math.abs(cumLostVal).toFixed(1)}</Text>
+                <Text style={{ fontSize: 9, fontWeight: '700', textAlign: 'right', paddingRight: 4, fontFamily: fontFamily.mono, color: '#f87171' }}>+{Math.abs(cumLostVal).toFixed(1)}</Text>
               ) : (
-                <View style={s_wk.cumTrack}>
-                  <View style={[s_wk.cumFill, { width: `${pct}%` }]} />
-                  <Text style={s_wk.cumText}>-{cumLostVal.toFixed(1)}</Text>
+                <View style={{ width: 64, height: 16, borderRadius: 8, backgroundColor: colors.dim, justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(52,211,153,0.35)', borderRadius: 8, width: `${pct}%` }} />
+                  <Text style={{ fontSize: 9, fontWeight: '700', textAlign: 'right', paddingRight: 4, fontFamily: fontFamily.mono, color: '#34d399' }}>-{cumLostVal.toFixed(1)}</Text>
                 </View>
               )}
             </View>
@@ -330,20 +321,6 @@ function WeeklyAvgChart({ logs, viewMode, unit, colors, width }) {
   );
 }
 
-const s_wk = StyleSheet.create({
-  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)', paddingBottom: 6, marginTop: 14, marginBottom: 4 },
-  th: { fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5, fontFamily: fontFamily.mono },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-  cellLabel: { fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: fontFamily.mono },
-  cellVal: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontFamily: fontFamily.monoBold },
-  nowTag: { fontSize: 8, color: '#0c0c0f', backgroundColor: '#f59e0b', paddingHorizontal: 4, borderRadius: 4, overflow: 'hidden' },
-  pill: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10 },
-  pillText: { fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono },
-  cumTrack: { width: 64, height: 16, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)', justifyContent: 'center', position: 'relative', overflow: 'hidden' },
-  cumFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(52,211,153,0.35)', borderRadius: 8 },
-  cumText: { fontSize: 9, color: '#34d399', fontWeight: '700', textAlign: 'right', paddingRight: 4, fontFamily: fontFamily.mono },
-});
-
 // ─── History slider bar row — ports renderBody()'s history list ────────────
 function WeightHistoryBar({ value, goalVal, barMax, colors }) {
   const fillPct = Math.min(97, Math.max(2, (value / barMax) * 100));
@@ -351,20 +328,14 @@ function WeightHistoryBar({ value, goalVal, barMax, colors }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={s_bar.track}>
-        <View style={[s_bar.fill, { width: `${fillPct}%` }]} />
-        {goalPct != null && <View style={[s_bar.marker, { left: `${goalPct}%`, backgroundColor: '#34d399' }]} />}
-        <View style={[s_bar.marker, { left: `${fillPct}%`, backgroundColor: '#67e8f9' }]} />
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.dim, position: 'relative' }}>
+        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3, backgroundColor: 'rgba(103,232,249,0.18)', width: `${fillPct}%` }} />
+        {goalPct != null && <View style={{ position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5, left: `${goalPct}%`, backgroundColor: '#34d399' }} />}
+        <View style={{ position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5, left: `${fillPct}%`, backgroundColor: '#67e8f9' }} />
       </View>
     </View>
   );
 }
-
-const s_bar = StyleSheet.create({
-  track: { height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', position: 'relative' },
-  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3, backgroundColor: 'rgba(103,232,249,0.18)' },
-  marker: { position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5 },
-});
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function WeightScreen() {
@@ -599,9 +570,9 @@ export default function WeightScreen() {
                 <View style={styles.dividerLine} />
               </View>
               <View style={styles.statTileRowInline}>
-                <StatCell value={mMax != null ? toDisp(mMax, unit).toFixed(1) : '—'} label="PEAK" />
-                <StatCell value={mMin != null ? toDisp(mMin, unit).toFixed(1) : '—'} label="LOW" color={colors.good} />
-                <StatCell value={mAvg != null ? toDisp(mAvg, unit).toFixed(1) : '—'} label="AVG" />
+                <StatCell value={mMax != null ? toDisp(mMax, unit).toFixed(1) : '—'} label="PEAK" colors={colors} />
+                <StatCell value={mMin != null ? toDisp(mMin, unit).toFixed(1) : '—'} label="LOW" color={colors.good} colors={colors} />
+                <StatCell value={mAvg != null ? toDisp(mAvg, unit).toFixed(1) : '—'} label="AVG" colors={colors} />
               </View>
 
               <View style={styles.sectionDivider}>
@@ -610,14 +581,14 @@ export default function WeightScreen() {
                 <View style={styles.dividerLine} />
               </View>
               <View style={styles.statTileRowInline}>
-                <StatCell value={allTimeStats ? toDisp(allTimeStats.first.weight, unit).toFixed(1) : '—'} label="START" />
+                <StatCell value={allTimeStats ? toDisp(allTimeStats.first.weight, unit).toFixed(1) : '—'} label="START" colors={colors} />
                 <StatCell
                   value={allTimeStats ? `${allTimeStats.lost >= 0 ? '−' : '+'}${Math.abs(toDisp(allTimeStats.lost, unit)).toFixed(1)}` : '—'}
-                  label="CHANGE" color={allTimeStats && allTimeStats.lost >= 0 ? colors.good : colors.danger}
+                  label="CHANGE" color={allTimeStats && allTimeStats.lost >= 0 ? colors.good : colors.danger} colors={colors}
                 />
                 <StatCell
                   value={allTimeStats ? `${toDisp(allTimeStats.rateKgWk, unit).toFixed(2)}` : '—'}
-                  label={`${unit.toUpperCase()}/WK`} color={allTimeStats && allTimeStats.rateKgWk <= 0 ? colors.good : colors.danger}
+                  label={`${unit.toUpperCase()}/WK`} color={allTimeStats && allTimeStats.rateKgWk <= 0 ? colors.good : colors.danger} colors={colors}
                 />
               </View>
             </View>
@@ -657,10 +628,10 @@ export default function WeightScreen() {
               <WeightTrendChart data={trendData} unit={unit} goalKg={goalKg} colors={colors} width={chartWidth} />
               {trendStats && (
                 <View style={styles.trendStatsRow}>
-                  <WeekStatCell value={trendStats.first.toFixed(1)} label="START" color={colors.text} />
-                  <WeekStatCell value={trendStats.lastV.toFixed(1)} label="LATEST" color={colors.accent} />
-                  <WeekStatCell value={`${trendStats.change >= 0 ? '+' : ''}${trendStats.change.toFixed(1)}`} label="CHANGE" color={trendStats.change <= 0 ? colors.good : colors.danger} />
-                  <WeekStatCell value={trendStats.ratePerWk != null ? trendStats.ratePerWk.toFixed(2) : '—'} label={`${unit}/WK`} color={trendStats.ratePerWk != null ? (trendStats.ratePerWk <= 0 ? colors.good : colors.danger) : colors.textMuted} />
+                  <WeekStatCell value={trendStats.first.toFixed(1)} label="START" color={colors.text} colors={colors} />
+                  <WeekStatCell value={trendStats.lastV.toFixed(1)} label="LATEST" color={colors.accent} colors={colors} />
+                  <WeekStatCell value={`${trendStats.change >= 0 ? '+' : ''}${trendStats.change.toFixed(1)}`} label="CHANGE" color={trendStats.change <= 0 ? colors.good : colors.danger} colors={colors} />
+                  <WeekStatCell value={trendStats.ratePerWk != null ? trendStats.ratePerWk.toFixed(2) : '—'} label={`${unit}/WK`} color={trendStats.ratePerWk != null ? (trendStats.ratePerWk <= 0 ? colors.good : colors.danger) : colors.textMuted} colors={colors} />
                 </View>
               )}
             </View>
@@ -835,20 +806,20 @@ export default function WeightScreen() {
   );
 }
 
-function StatCell({ value, label, color }) {
+function StatCell({ value, label, color, colors }) {
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text style={{ fontSize: typography.base, fontFamily: fontFamily.monoBold, color: color || '#f5f0e8' }}>{value}</Text>
-      <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 2, textAlign: 'center' }}>{label}</Text>
+      <Text style={{ fontSize: typography.base, fontFamily: fontFamily.monoBold, color: color || colors.text }}>{value}</Text>
+      <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 2, textAlign: 'center' }}>{label}</Text>
     </View>
   );
 }
 
-function WeekStatCell({ value, label, color }) {
+function WeekStatCell({ value, label, color, colors }) {
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text style={{ fontSize: typography.base, fontFamily: fontFamily.monoBold, color }}>{value}</Text>
-      <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 2 }}>{label}</Text>
+      <Text style={{ fontSize: typography.base, fontFamily: fontFamily.monoBold, color: color || colors.text }}>{value}</Text>
+      <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 2 }}>{label}</Text>
     </View>
   );
 }
