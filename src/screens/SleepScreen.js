@@ -26,12 +26,16 @@ function localDateStr(d) {
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 async function fetchSleep(userId) {
-  const [logs, profile] = await Promise.all([
+  const [logs, profile, sessions, steps] = await Promise.all([
     supabase.from('sleep_logs').select('id, hours, quality, notes, logged_at').eq('user_id', userId).order('logged_at', { ascending: false }).limit(400),
     supabase.from('profiles').select('sleep_goal_hours').eq('id', userId).single(),
+    supabase.from('workout_sessions').select('date, total_volume').eq('user_id', userId).order('date', { ascending: false }).limit(60),
+    supabase.from('step_logs').select('logged_at, steps').eq('user_id', userId).order('logged_at', { ascending: false }).limit(60),
   ]);
   if (logs.error) throw logs.error;
-  return { logs: logs.data ?? [], profile: profile.data };
+  if (sessions.error) throw sessions.error;
+  if (steps.error) throw steps.error;
+  return { logs: logs.data ?? [], profile: profile.data, sessions: sessions.data ?? [], steps: steps.data ?? [] };
 }
 
 async function logSleep(userId, { date, hours }) {
@@ -286,6 +290,8 @@ export default function SleepScreen() {
 
   const logs = data?.logs ?? [];
   const goal = data?.profile?.sleep_goal_hours ?? 7.5;
+  const sessions = data?.sessions ?? [];
+  const steps = data?.steps ?? [];
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
 
@@ -352,10 +358,14 @@ export default function SleepScreen() {
     const lastNightIsRecent = lastNight.logged_at === todayStr || lastNight.logged_at === ydayStr;
     if (lastNightIsRecent) {
       const sleepScore = Math.min(100, Math.round((lastNight.hours / goal) * 70) + (lastNight.quality || 3) * 5);
-      return Math.min(100, Math.max(0, Math.round(sleepScore + 10)));
+      const ydaySessions = sessions.filter(s => s.date === ydayStr || s.date === todayStr);
+      const sessionLoad = ydaySessions.length
+        ? Math.min(30, ydaySessions.reduce((sum, s) => sum + (s.total_volume || 0) / 1000, 0))
+        : 0;
+      return Math.min(100, Math.max(0, Math.round(sleepScore - sessionLoad + 10)));
     }
     return Math.min(100, Math.round((avg7 / goal) * 85));
-  }, [sortedDesc, goal, avg7]);
+  }, [sortedDesc, goal, avg7, sessions]);
 
   const verdict = recoveryScore >= 80 ? 'Excellent — go hard today 💪'
     : recoveryScore >= 65 ? 'Good — train as planned'
@@ -368,11 +378,45 @@ export default function SleepScreen() {
   // Insights
   const insights = useMemo(() => {
     const out = [];
+
+    // Sleep → next-day steps correlation (last 14 nights)
+    const sleepWithSteps = sortedDesc.slice(0, 14).map(e => {
+      const nextDay = localDateStr(new Date(new Date(e.logged_at + 'T00:00:00').getTime() + 86400000));
+      const stepEntry = steps.find(s => s.logged_at === nextDay);
+      return { hrs: e.hours, steps: stepEntry ? stepEntry.steps : null };
+    }).filter(x => x.steps !== null);
+    if (sleepWithSteps.length >= 5) {
+      const goodArr = sleepWithSteps.filter(x => x.hrs >= goal);
+      const poorArr = sleepWithSteps.filter(x => x.hrs < goal);
+      const goodSleepSteps = goodArr.reduce((s, x) => s + x.steps, 0) / Math.max(1, goodArr.length);
+      const poorSleepSteps = poorArr.reduce((s, x) => s + x.steps, 0) / Math.max(1, poorArr.length);
+      if (poorSleepSteps > 0 && goodSleepSteps > poorSleepSteps * 1.1) {
+        out.push({ icon: '👟', text: 'You walk ', bold: `${Math.round(goodSleepSteps - poorSleepSteps).toLocaleString()} more steps`, rest: ` on days after a good night's sleep.` });
+      }
+    }
+
+    // Sleep → next-day workout volume correlation (last 14 nights)
+    const sleepWithWorkout = sortedDesc.slice(0, 14).map(e => {
+      const nextDay = localDateStr(new Date(new Date(e.logged_at + 'T00:00:00').getTime() + 86400000));
+      const sess = sessions.filter(s => s.date === nextDay);
+      const vol = sess.reduce((sum, s) => sum + (s.total_volume || 0), 0);
+      return { hrs: e.hours, vol: sess.length ? vol : null };
+    }).filter(x => x.vol !== null);
+    if (sleepWithWorkout.length >= 4) {
+      const goodArr = sleepWithWorkout.filter(x => x.hrs >= goal);
+      const poorArr = sleepWithWorkout.filter(x => x.hrs < goal);
+      const goodVol = goodArr.reduce((s, x) => s + x.vol, 0) / Math.max(1, goodArr.length);
+      const poorVol = poorArr.reduce((s, x) => s + x.vol, 0) / Math.max(1, poorArr.length);
+      if (poorVol > 0 && goodVol > poorVol * 1.05) {
+        out.push({ icon: '🏋️', text: 'Your workout volume is ', bold: `${Math.round((goodVol / poorVol - 1) * 100)}% higher`, rest: ' after nights you hit your sleep goal.' });
+      }
+    }
+
     if (weekDebt >= 5) out.push({ icon: '⚠️', text: `You have a `, bold: `${weekDebt}h sleep debt`, rest: ` this week. Aim to add 30–60 min earlier bedtime for a few nights.` });
     if (consistency === 'Poor') out.push({ icon: '🕐', text: 'Your sleep duration varies a lot. ', bold: 'Irregular sleep schedules', rest: ' reduce sleep quality even when total hours are the same.' });
     if (avg7 >= goal) out.push({ icon: '✅', text: `You're averaging `, bold: `${avg7}h`, rest: ` — above your ${goal}h goal. Keep it up!` });
     return out;
-  }, [weekDebt, consistency, avg7, goal]);
+  }, [weekDebt, consistency, avg7, goal, sortedDesc, steps, sessions]);
 
   // Trend chart data
   const chartData = useMemo(() => {
