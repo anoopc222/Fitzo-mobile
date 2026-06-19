@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Modal, TextInput,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Modal, TextInput, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
+import { exportBackup, restoreBackup } from '../lib/backupRestore';
 
 const NOTIFICATION_ITEMS = [
   { key: 'weigh_in', label: 'Daily weigh-in reminder', icon: 'scale-outline' },
@@ -79,6 +83,75 @@ export default function SettingsScreen({ navigation }) {
     if (goalsForm.step_goal) fields.step_goal = parseInt(goalsForm.step_goal, 10);
     if (goalsForm.sleep_goal_hours) fields.sleep_goal_hours = parseFloat(goalsForm.sleep_goal_hours);
     updateMut.mutate(fields);
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handleExportData = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const backup = await exportBackup(user.id);
+      const json = JSON.stringify(backup, null, 2);
+      const d = new Date();
+      const fname = `fitzo_backup_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.json`;
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fname; a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const fileUri = FileSystem.documentDirectory + fname;
+        await FileSystem.writeAsStringAsync(fileUri, json, { encoding: FileSystem.EncodingType.UTF8 });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'Save FitZo backup' });
+        }
+      }
+      Alert.alert('Export Complete', 'Your full backup has been saved.');
+    } catch (e) {
+      Alert.alert('Export Failed', e.message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportData = () => {
+    Alert.alert(
+      'Restore from Backup',
+      'This will replace ALL current data (workouts, weight, sleep, food, measurements, diet, health log) with the contents of the backup file. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Choose File', onPress: pickAndRestoreFile },
+      ]
+    );
+  };
+
+  const pickAndRestoreFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
+      if (result.canceled) return;
+      const fileUri = result.assets?.[0]?.uri;
+      if (!fileUri) return;
+
+      setIsRestoring(true);
+      const text = Platform.OS === 'web'
+        ? await (await fetch(fileUri)).text()
+        : await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.UTF8 });
+
+      const backup = JSON.parse(text);
+      const counts = await restoreBackup(user.id, backup);
+      await qc.invalidateQueries();
+
+      const summary = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(' · ');
+      Alert.alert('Restore Complete', `All data restored successfully.\n${summary}`);
+    } catch (e) {
+      Alert.alert('Restore Failed', e.message);
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   const handlePasswordReset = () => {
@@ -207,10 +280,10 @@ export default function SettingsScreen({ navigation }) {
             <View style={styles.syncDot} />
             <Text style={styles.syncText}>All data syncs live to Supabase cloud</Text>
           </View>
-          <SettingRow icon="cloud-upload-outline" label="Export Data" chevron
-            onPress={() => Alert.alert('Export', 'Data export will be available in a future update')} />
-          <SettingRow icon="cloud-download-outline" label="Import / Restore" chevron last
-            onPress={() => Alert.alert('Import', 'Data import will be available in a future update')} />
+          <SettingRow icon="cloud-upload-outline" label={isExporting ? 'Exporting…' : 'Export Data'} chevron
+            onPress={handleExportData} />
+          <SettingRow icon="cloud-download-outline" label={isRestoring ? 'Restoring…' : 'Import / Restore'} chevron last
+            onPress={handleImportData} />
         </View>
 
         {/* ── Danger Zone ─────────────────────────────────────────── */}

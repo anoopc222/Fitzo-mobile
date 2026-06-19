@@ -19,12 +19,15 @@ const SITES = [
   { key: 'right_arm',   label: 'Right Arm',    icon: 'fitness' },
   { key: 'left_thigh',  label: 'Left Thigh',   icon: 'walk' },
   { key: 'right_thigh', label: 'Right Thigh',  icon: 'walk' },
+  { key: 'neck',        label: 'Neck',         icon: 'body' },
+  { key: 'calf_left',   label: 'Left Calf',    icon: 'walk' },
+  { key: 'calf_right',  label: 'Right Calf',   icon: 'walk' },
 ];
 
 async function fetchMeasurements(userId) {
   const { data, error } = await supabase
     .from('body_measurements')
-    .select('id, chest, waist, hips, left_arm, right_arm, left_thigh, right_thigh, logged_at')
+    .select('id, chest, waist, hips, left_arm, right_arm, left_thigh, right_thigh, neck, calf_left, calf_right, logged_at')
     .eq('user_id', userId)
     .order('logged_at', { ascending: false })
     .limit(20);
