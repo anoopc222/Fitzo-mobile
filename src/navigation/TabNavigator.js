@@ -11,6 +11,7 @@ import StepsScreen from '../screens/StepsScreen';
 import WeightScreen from '../screens/WeightScreen';
 import SleepScreen from '../screens/SleepScreen';
 import MoreScreen from '../screens/MoreScreen';
+import DietScreen from '../screens/DietScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import MeasurementsScreen from '../screens/MeasurementsScreen';
 import HealthLogScreen from '../screens/HealthLogScreen';
@@ -35,6 +36,7 @@ function HomeStackNavigator() {
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
       <HomeStack.Screen name="HomeMain" component={HomeScreen} />
       <HomeStack.Screen name="More" component={MoreScreen} />
+      <HomeStack.Screen name="Diet" component={DietScreen} />
       <HomeStack.Screen name="Progress" component={ProgressScreen} />
       <HomeStack.Screen name="Measurements" component={MeasurementsScreen} />
       <HomeStack.Screen name="HealthLog" component={HealthLogScreen} />

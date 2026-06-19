@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { typography, weight } from '../theme/typography';
+import { typography, weight, fontFamily } from '../theme/typography';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -20,7 +20,7 @@ async function fetchSessions(userId) {
       id, date, notes, total_volume, duration_min, calories_burned,
       workout_exercises (
         id, exercise_name, order_index,
-        sets ( id, set_number, weight_kg, reps, rpe )
+        sets ( id, set_number, weight_kg, reps, rpe, duration_min, distance_km, avg_rpm, speed_kmh, incline_pct, calories )
       )
     `)
     .eq('user_id', userId)
@@ -69,15 +69,32 @@ async function saveSession(userId, { sessionId, date, name, exercises }) {
 
     for (let j = 0; j < (ex.sets ?? []).length; j++) {
       const s = ex.sets[j];
-      const w = parseFloat(s.weight_kg);
-      const r = parseInt(s.reps, 10);
-      const wVal = isNaN(w) ? null : w;
-      const rVal = isNaN(r) ? null : r;
-      if (wVal !== null || rVal !== null) {
+      const num = (v) => {
+        const n = parseFloat(v);
+        return isNaN(n) ? null : n;
+      };
+      const wVal = num(s.weight_kg);
+      const rVal = s.reps === '' || s.reps == null ? null : (isNaN(parseInt(s.reps, 10)) ? null : parseInt(s.reps, 10));
+      const rpeVal = num(s.rpe);
+      const durVal = num(s.duration_min);
+      const distVal = num(s.distance_km);
+      const rpmVal = num(s.avg_rpm);
+      const speedVal = num(s.speed_kmh);
+      const inclineVal = num(s.incline_pct);
+      const calVal = num(s.calories) ?? (durVal != null
+        ? calcCardioEntryKcal(ex.name, {
+            duration_min: durVal, speed_kmh: speedVal, incline_pct: inclineVal, avg_rpm: rpmVal,
+          }) || null
+        : null);
+      const hasAny = [wVal, rVal, rpeVal, durVal, distVal, rpmVal, speedVal, inclineVal, calVal]
+        .some(v => v !== null);
+      if (hasAny) {
         if (wVal && rVal) totalVol += wVal * rVal;
         await supabase.from('sets').insert({
           exercise_id: newEx.id, set_number: j + 1,
-          weight_kg: wVal, reps: rVal, rpe: null,
+          weight_kg: wVal, reps: rVal, rpe: rpeVal,
+          duration_min: durVal, distance_km: distVal, avg_rpm: rpmVal,
+          speed_kmh: speedVal, incline_pct: inclineVal, calories: calVal,
         });
       }
     }
@@ -103,40 +120,116 @@ const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const MONTH_FULL  = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
 
+// session "type" — used for cardio/rest-specific UI branches
+function getSessionType(name) {
+  if (!name) return 'gym';
+  const n = name.toLowerCase().trim();
+  if (n === 'rest' || n === 'rest day' || n.startsWith('rest')) return 'rest';
+  if (n.includes('cardio') || n.includes('run') || n.includes('treadmill') || n.includes('cycling') ||
+      n.includes('hiit') || n.includes('swim') || n.includes('stair') || n.includes('air bike') ||
+      n.includes('elliptical') || n.includes('row machine'))
+    return 'cardio';
+  return 'gym';
+}
+
+// Cardio activity types — mirrors CARDIO_TYPES in the web app (addCardioActivity)
+const CARDIO_TYPES = [
+  { label: '🚶 Incline Walk',   val: 'Incline Walk' },
+  { label: '🚴 Air Bike',       val: 'Air Bike' },
+  { label: '🏃 Treadmill Run',  val: 'Treadmill Run' },
+  { label: '🪜 Stairmaster',    val: 'Stairmaster' },
+  { label: '🚣 Rowing',         val: 'Rowing' },
+  { label: '🔄 Elliptical',     val: 'Elliptical' },
+  { label: '🏊 Swimming',       val: 'Swimming' },
+  { label: '🏃 Other',          val: 'Other' },
+];
+
+function getCardioIcon(type) {
+  const t = CARDIO_TYPES.find(c => c.val === type);
+  return t ? t.label.split(' ')[0] : '🏃';
+}
+
+// MET-based estimate, ~78kg body weight assumed — ported from calcCardioKcal() in the web app
+function calcCardioKcal(type, dur, speed, incline, rpm) {
+  const bw = 78;
+  dur = parseFloat(dur) || 0;
+  speed = parseFloat(speed) || 0;
+  incline = parseFloat(incline) || 0;
+  rpm = parseFloat(rpm) || 0;
+  if (!dur) return 0;
+  let met;
+  if (type === 'Incline Walk') {
+    met = 2.5 + (speed > 0 ? speed * 0.9 : 3) + incline * 0.18;
+  } else if (type === 'Air Bike') {
+    met = rpm > 0 ? Math.min(14, 8 + rpm / 30) : 10;
+  } else if (type === 'Treadmill Run') {
+    met = speed > 0 ? Math.min(18, speed * 1.2 + 1) : 8;
+  } else if (type === 'Stairmaster') {
+    met = 9;
+  } else if (type === 'Rowing') {
+    met = 7;
+  } else if (type === 'Elliptical') {
+    met = 6;
+  } else if (type === 'Swimming') {
+    met = 8;
+  } else {
+    met = 5;
+  }
+  return Math.round(met * bw * dur / 60);
+}
+
+// Per-type field mapping onto the sets table's dedicated cardio columns
+function getCardioFieldDefs(type) {
+  if (type === 'Incline Walk')
+    return { secondary: { key: 'speed_kmh', label: 'SPEED (KM/H)', placeholder: '3.5' },
+              tertiary:  { key: 'incline_pct', label: 'INCLINE (%)', placeholder: '12' } };
+  if (type === 'Air Bike')
+    return { secondary: { key: 'distance_km', label: 'DISTANCE (KM)', placeholder: 'optional' },
+              tertiary:  { key: 'avg_rpm', label: 'AVG RPM', placeholder: 'optional' } };
+  if (type === 'Treadmill Run')
+    return { secondary: { key: 'distance_km', label: 'DISTANCE (KM)', placeholder: '5' },
+              tertiary:  { key: 'speed_kmh', label: 'SPEED (KM/H)', placeholder: '10' } };
+  return { secondary: null, tertiary: null };
+}
+
+function calcCardioEntryKcal(type, entry) {
+  const dur = entry.duration_min;
+  const speed = entry.speed_kmh ?? 0;
+  const incline = entry.incline_pct ?? 0;
+  const rpm = entry.avg_rpm ?? 0;
+  return calcCardioKcal(type, dur, speed, incline, rpm);
+}
+
 // Returns { icon, cardBg, cardBorder, iconBg, titleColor }
 function getWorkoutStyle(name, colors) {
-  if (!name) return { icon: '🏋️', cardBg: colors.bgCard, cardBorder: '#404020', iconBg: '#1a1a00', titleColor: colors.text };
-  const n = name.toLowerCase().trim();
+  const type = getSessionType(name);
+  const n = (name ?? '').toLowerCase().trim();
 
-  if (n === 'rest' || n === 'rest day' || n.startsWith('rest'))
-    return { icon: '😴', cardBg: '#001a14', cardBorder: '#006650', iconBg: '#002a1e', titleColor: '#00cc99' };
+  if (type === 'rest')
+    return { icon: '😴', cardBg: colors.good + '14', cardBorder: colors.good + '55', iconBg: colors.good + '22', titleColor: colors.good };
 
-  if (n.includes('cardio') || n.includes('run') || n.includes('treadmill') ||
-      n.includes('cycling') || n.includes('hiit') || n.includes('swim'))
-    return { icon: '🏃', cardBg: '#080d1f', cardBorder: '#1e3a8a', iconBg: '#0a1230', titleColor: '#60a5fa' };
-
-  if (n.includes('stair') || n.includes('air bike') || n.includes('elliptical') || n.includes('row machine'))
-    return { icon: '🏃', cardBg: '#080d1f', cardBorder: '#1e3a8a', iconBg: '#0a1230', titleColor: '#60a5fa' };
+  if (type === 'cardio')
+    return { icon: '🏃', cardBg: colors.blue + '14', cardBorder: colors.blue + '55', iconBg: colors.blue + '22', titleColor: colors.blue };
 
   if (n.includes('leg') || n.includes('squat') || n.includes('glute') || n.includes('hamstring') || n.includes('quad'))
-    return { icon: '🦵', cardBg: colors.bgCard, cardBorder: '#7a4500', iconBg: '#1c0e00', titleColor: colors.text };
+    return { icon: '🦵', cardBg: colors.card, cardBorder: colors.accent + '40', iconBg: colors.accent + '1f', titleColor: colors.text };
 
   if (n.includes('chest') || n.includes('bench') || n.includes('push'))
-    return { icon: '🫁', cardBg: colors.bgCard, cardBorder: '#5c1800', iconBg: '#1a0500', titleColor: colors.text };
+    return { icon: '🫁', cardBg: colors.card, cardBorder: colors.accent2 + '40', iconBg: colors.accent2 + '1f', titleColor: colors.text };
 
   if (n.includes('back') || n.includes('pull') || n.includes('deadlift') || n.includes('row'))
-    return { icon: '🦾', cardBg: colors.bgCard, cardBorder: '#003366', iconBg: '#000d1a', titleColor: colors.text };
+    return { icon: '🦾', cardBg: colors.card, cardBorder: colors.blue + '40', iconBg: colors.blue + '1f', titleColor: colors.text };
 
   if (n.includes('shoulder') || n.includes('delt') || n.includes('overhead') || n.includes('press'))
-    return { icon: '💪', cardBg: colors.bgCard, cardBorder: '#3d0066', iconBg: '#0a001a', titleColor: colors.text };
+    return { icon: '💪', cardBg: colors.card, cardBorder: colors.purple + '40', iconBg: colors.purple + '1f', titleColor: colors.text };
 
   if (n.includes('arm') || n.includes('bicep') || n.includes('tricep') || n.includes('curl'))
-    return { icon: '💪', cardBg: colors.bgCard, cardBorder: '#3d0066', iconBg: '#0a001a', titleColor: colors.text };
+    return { icon: '💪', cardBg: colors.card, cardBorder: colors.purple + '40', iconBg: colors.purple + '1f', titleColor: colors.text };
 
   if (n.includes('full') || n.includes('body'))
-    return { icon: '🏋️', cardBg: colors.bgCard, cardBorder: '#00592d', iconBg: '#001a0d', titleColor: colors.text };
+    return { icon: '🏋️', cardBg: colors.card, cardBorder: colors.good + '40', iconBg: colors.good + '1f', titleColor: colors.text };
 
-  return { icon: '🏋️', cardBg: colors.bgCard, cardBorder: '#404020', iconBg: '#1a1a00', titleColor: colors.text };
+  return { icon: '🏋️', cardBg: colors.card, cardBorder: colors.border, iconBg: colors.dim, titleColor: colors.text };
 }
 
 function calcSessionVol(session) {
@@ -220,6 +313,29 @@ const MUSCLE_KW = [
   { keys: ['stairmaster', 'air bike', 'treadmill', 'cycling', 'running', 'elliptical'], m: ['Cardiovascular'] },
 ];
 
+const STANDARD_EXERCISE_NAMES = [
+  'Bench Press', 'Incline Chest Press Machine', 'Pec Fly', 'Shoulder Press', 'Overhead Press',
+  'Lat Pulldown', 'Pull Up', 'Seated Row', 'Chest Supported Row', 'Cable Row', 'Deadlift',
+  'Squat', 'Leg Press', 'Leg Curl', 'Leg Extension', 'Calf Raise', 'Bicep Curl', 'Hammer Curl',
+  'Preacher Curl', 'Tricep Rope Pushdown', 'Face Pull', 'Dumbbell Shrugs',
+];
+
+// Historical exercise names first, then the standard list, deduped — mirrors qlGetExNames() on web
+function getExerciseNamePool(allSessions) {
+  const seen = new Set();
+  const names = [];
+  for (const s of allSessions ?? []) {
+    for (const ex of s.workout_exercises ?? []) {
+      const n = ex.exercise_name;
+      if (n && !seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); }
+    }
+  }
+  for (const n of STANDARD_EXERCISE_NAMES) {
+    if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); }
+  }
+  return names;
+}
+
 function getExerciseMuscles(exerciseName) {
   const name = (exerciseName ?? '').toLowerCase();
   for (const { keys, m } of MUSCLE_KW) {
@@ -261,13 +377,20 @@ function getRecentTypes(sessions) {
 
 let _tid = 0;
 function tid() { return `_t${++_tid}`; }
-function blankEx() { return { _key: tid(), name: '', sets: [{ _key: tid(), weight_kg: '', reps: '' }] }; }
+function blankSet() {
+  return {
+    _key: tid(), weight_kg: '', reps: '', rpe: '',
+    duration_min: '', distance_km: '', avg_rpm: '', speed_kmh: '', incline_pct: '', calories: '',
+  };
+}
+function blankEx() { return { _key: tid(), name: '', sets: [blankSet()] }; }
 
 // ─── Session Detail Modal ─────────────────────────────────────────────────────
 function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onEdit, onRepeat, onDelete }) {
   const { colors } = useTheme();
   const dS = useMemo(() => createDS(colors), [colors]);
   const [expandedIds, setExpandedIds] = useState(new Set());
+  const [historyEx, setHistoryEx] = useState(null);
 
   useEffect(() => {
     if (visible && session) {
@@ -279,10 +402,16 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   if (!session) return null;
 
   const ws = getWorkoutStyle(session.notes, colors);
+  const sType = getSessionType(session.notes);
+  const isCardio = sType === 'cardio';
   const exercises = (session.workout_exercises ?? []).slice().sort((a, b) => a.order_index - b.order_index);
   const totalSets = exercises.reduce((s, ex) => s + (ex.sets?.length ?? 0), 0);
   const vol = session.total_volume ?? calcSessionVol(session);
-  const kcal = session.calories_burned ?? 0;
+  const totalMin = exercises.reduce((s, ex) =>
+    s + (ex.sets ?? []).reduce((ss, st) => ss + (st.duration_min ?? 0), 0), 0);
+  const cardioKcal = exercises.reduce((s, ex) =>
+    s + (ex.sets ?? []).reduce((ss, st) => ss + calcCardioEntryKcal(ex.exercise_name, st), 0), 0);
+  const kcal = session.calories_burned ?? (isCardio ? cardioKcal : 0) ?? 0;
   const pbSet = pbMap[session.id] ?? new Set();
   const muscleGroups = getMuscleGroups(exercises);
   const delta = getVolumeDelta(session, allSessions);
@@ -300,6 +429,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   };
 
   return (
+    <>
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={dS.container}>
         <View style={dS.handle} />
@@ -320,13 +450,17 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
 
         {/* Stats row */}
         <View style={dS.statsRow}>
-          {[
+          {(isCardio ? [
+            { label: 'ACTIVITIES', icon: '🏃', value: exercises.length },
+            { label: 'MINUTES',    icon: '⏱',  value: totalMin > 0 ? totalMin : '—' },
+            { label: 'KCAL',       icon: '🔥', value: kcal > 0 ? kcal : '—' },
+          ] : [
             { label: 'EXR',    icon: '🏋️', value: exercises.length },
             { label: 'SETS',   icon: '🔄', value: totalSets },
             { label: 'KG VOL', icon: '⚡', value: vol > 0 ? vol.toLocaleString() : '—' },
             { label: 'KCAL',   icon: '🔥', value: kcal > 0 ? kcal : '—' },
-          ].map(({ label, icon, value }, i) => (
-            <View key={label} style={[dS.statCell, i < 3 && dS.statCellBorder]}>
+          ]).map(({ label, icon, value }, i, arr) => (
+            <View key={label} style={[dS.statCell, i < arr.length - 1 && dS.statCellBorder]}>
               <Text style={{ fontSize: 18 }}>{icon}</Text>
               <Text style={dS.statValue}>{value}</Text>
               <Text style={dS.statLabel}>{label}</Text>
@@ -337,8 +471,8 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         {/* Volume comparison */}
         {delta && (
           <View style={[dS.compBanner, {
-            backgroundColor: delta.delta >= 0 ? '#001a00' : '#1a0000',
-            borderColor: delta.delta >= 0 ? '#006600' : '#660000',
+            backgroundColor: delta.delta >= 0 ? colors.good + '1f' : colors.danger + '1f',
+            borderColor: delta.delta >= 0 ? colors.good + '55' : colors.danger + '55',
           }]}>
             <Text style={{ fontSize: 15 }}>📊</Text>
             <Text style={[dS.compText, { color: delta.delta >= 0 ? colors.success : colors.danger }]}>
@@ -362,7 +496,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         {/* Exercises */}
         <ScrollView style={dS.exScroll} keyboardShouldPersistTaps="handled">
           <View style={dS.exSectionHeader}>
-            <Text style={dS.exLabel}>EXERCISES</Text>
+            <Text style={dS.exLabel}>{isCardio ? 'ACTIVITIES' : 'EXERCISES'}</Text>
             <TouchableOpacity onPress={toggleAll} style={dS.collapseToggleWrap}>
               <Text style={dS.collapseToggleText}>{allExpanded ? 'COLLAPSE ALL' : 'EXPAND ALL'}</Text>
               <View style={[dS.toggleSwitch, allExpanded && dS.toggleSwitchOn]}>
@@ -385,6 +519,31 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             const exMuscles = getExerciseMuscles(ex.exercise_name);
             const exStyle = getWorkoutStyle(ex.exercise_name, colors);
 
+            if (isCardio) {
+              const exMin = sortedSets.reduce((s, st) => s + (st.duration_min ?? 0), 0);
+              const exKcal = sortedSets.reduce((s, st) => s + calcCardioEntryKcal(ex.exercise_name, st), 0);
+              return (
+                <View key={ex.id} style={dS.exCard}>
+                  <View style={dS.exCardHeader}>
+                    <View style={[dS.exIcon, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
+                      <Text style={{ fontSize: 18 }}>{getCardioIcon(ex.exercise_name)}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={dS.exName}>{(ex.exercise_name ?? '').toUpperCase()}</Text>
+                      <View style={dS.chipRow}>
+                        <View style={dS.pillChip}>
+                          <Text style={dS.pillChipText}>⏱ {exMin > 0 ? `${exMin} min` : '—'}</Text>
+                        </View>
+                        <View style={dS.pillChip}>
+                          <Text style={dS.pillChipText}>🔥 {exKcal > 0 ? `${exKcal} kcal` : '—'}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            }
+
             return (
               <TouchableOpacity key={ex.id} style={dS.exCard} onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
                 {/* Exercise header */}
@@ -400,6 +559,12 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                           <Text style={dS.pbBadgeText}>🏆 PB</Text>
                         </View>
                       )}
+                      <TouchableOpacity
+                        onPress={(e) => { e.stopPropagation?.(); setHistoryEx(ex.exercise_name); }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="time-outline" size={15} color={colors.textDim} />
+                      </TouchableOpacity>
                     </View>
                     {exMuscles.length > 0 && (
                       <View style={dS.exMuscleRow}>
@@ -430,7 +595,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                         <View key={s.id} style={[dS.setRow, isBest && dS.bestSetRow]}>
                           <Text style={dS.setNum}>S{s.set_number}</Text>
                           <View style={dS.setDotWrap}>
-                            <View style={[dS.dot, { backgroundColor: isBest ? colors.warning : colors.textDim }]} />
+                            <View style={[dS.dot, { backgroundColor: isBest ? colors.accent : colors.textDim }]} />
                           </View>
                           <Text style={dS.setWeight}>{s.weight_kg != null ? `${s.weight_kg}kg` : '—'}</Text>
                           <Text style={dS.setXText}>×</Text>
@@ -462,7 +627,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
               <Text style={dS.editBtnText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={dS.repeatBtn} onPress={onRepeat}>
-              <Ionicons name="refresh" size={16} color="#fff" />
+              <Ionicons name="refresh" size={16} color={colors.bg} />
               <Text style={dS.repeatBtnText}>Repeat</Text>
             </TouchableOpacity>
             <TouchableOpacity style={dS.deleteBtn} onPress={onDelete}>
@@ -474,8 +639,107 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         </ScrollView>
       </View>
     </Modal>
+    <ExerciseHistoryModal
+      exerciseName={historyEx}
+      allSessions={allSessions}
+      visible={!!historyEx}
+      onClose={() => setHistoryEx(null)}
+    />
+    </>
   );
 }
+
+// ─── Exercise History Modal ───────────────────────────────────────────────────
+function ExerciseHistoryModal({ exerciseName, allSessions, visible, onClose }) {
+  const { colors } = useTheme();
+  const ehS = useMemo(() => createEhS(colors), [colors]);
+
+  const entries = useMemo(() => {
+    if (!exerciseName) return [];
+    const needle = exerciseName.toLowerCase();
+    const rows = [];
+    for (const s of allSessions ?? []) {
+      const match = (s.workout_exercises ?? []).find(
+        ex => (ex.exercise_name ?? '').toLowerCase() === needle
+      );
+      if (match) {
+        const sortedSets = (match.sets ?? []).slice().sort((a, b) => a.set_number - b.set_number);
+        const bestKg = sortedSets.reduce((m, st) => Math.max(m, st.weight_kg ?? 0), 0);
+        rows.push({ date: s.date, type: s.notes, sets: sortedSets, bestKg });
+      }
+    }
+    rows.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return rows.map((row, i) => {
+      const prev = rows[i + 1];
+      let delta = null;
+      if (prev) {
+        const diff = row.bestKg - prev.bestKg;
+        delta = diff === 0 ? { same: true } : { same: false, diff };
+      }
+      return { ...row, delta };
+    });
+  }, [exerciseName, allSessions]);
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={ehS.container}>
+        <View style={ehS.handle} />
+        <View style={ehS.header}>
+          <Text style={ehS.title}>{(exerciseName ?? '').toUpperCase()}</Text>
+          <TouchableOpacity onPress={onClose} style={ehS.closeBtn}>
+            <Ionicons name="close" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+          {entries.length === 0 && (
+            <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+              <Text style={{ color: colors.textDim, fontSize: typography.sm }}>No history yet</Text>
+            </View>
+          )}
+          {entries.map((row, i) => (
+            <View key={i} style={ehS.entryCard}>
+              <Text style={ehS.entryDate}>{fmtDateShort(row.date)} · {(row.type ?? '').toUpperCase()}</Text>
+              <View style={ehS.chipRow}>
+                {row.sets.map(st => (
+                  <View key={st.id} style={ehS.chip}>
+                    <Text style={ehS.chipText}>
+                      S{st.set_number}: {st.weight_kg != null ? `${st.weight_kg}kg` : '—'}×{st.reps ?? '—'}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              {row.delta && (
+                row.delta.same ? (
+                  <Text style={ehS.deltaMuted}>— same as prev</Text>
+                ) : (
+                  <Text style={[ehS.deltaText, { color: row.delta.diff > 0 ? colors.good : colors.danger }]}>
+                    {row.delta.diff > 0 ? '▲' : '▼'} {row.delta.diff > 0 ? '+' : ''}{row.delta.diff}kg vs prev
+                  </Text>
+                )
+              )}
+            </View>
+          ))}
+          <View style={{ height: 30 }} />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+const createEhS = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border2, alignSelf: 'center', marginTop: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  title: { fontFamily: fontFamily.displayItalic, fontStyle: 'italic', fontSize: typography.lg, color: colors.text },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
+  entryCard: { backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 10 },
+  entryDate: { fontFamily: fontFamily.bodyBold, fontSize: typography.xs, color: colors.textDim, marginBottom: 8, letterSpacing: 0.3 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: { backgroundColor: colors.dim, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  chipText: { fontFamily: fontFamily.monoBold, fontSize: typography.xs, color: colors.text },
+  deltaText: { fontFamily: fontFamily.bodyBold, fontSize: typography.xs, marginTop: 8 },
+  deltaMuted: { fontFamily: fontFamily.bodyMedium, fontSize: typography.xs, color: colors.textDim, marginTop: 8 },
+});
 
 // ─── Custom Date Picker Modal ────────────────────────────────────────────────
 const CAL_DAY_NAMES   = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -597,7 +861,7 @@ function DatePickerModal({ visible, value, onSelect, onClose }) {
 // Always show these two as default chip suggestions
 const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
 
-function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, onCancel, isSaving }) {
+function EditSessionModal({ visible, isNew, initialData, recentTypes, allSessions, onSave, onCancel, isSaving }) {
   const { colors } = useTheme();
   const eS = useMemo(() => createES(colors), [colors]);
   const [date, setDate] = useState('');
@@ -605,6 +869,9 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
   const [exercises, setExercises] = useState([]);
   const [activeExIdx, setActiveExIdx] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [acOpenIdx, setAcOpenIdx] = useState(null);
+
+  const namePool = useMemo(() => getExerciseNamePool(allSessions), [allSessions]);
 
   // All chips: defaults first, then unique recent types excluding defaults
   const allChips = useMemo(() => {
@@ -624,6 +891,7 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
 
   const addExercise = () => {
     const ex = blankEx();
+    if (isCardio) ex.name = CARDIO_TYPES[0].val;
     const newIdx = exercises.length;
     setExercises(prev => [...prev, ex]);
     setActiveExIdx(newIdx);
@@ -640,7 +908,7 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
 
   const addSet = (exIdx) =>
     setExercises(prev => prev.map((ex, i) => i !== exIdx ? ex : {
-      ...ex, sets: [...(ex.sets ?? []), { _key: tid(), weight_kg: '', reps: '' }],
+      ...ex, sets: [...(ex.sets ?? []), blankSet()],
     }));
 
   const removeSet = (exIdx, sIdx) =>
@@ -709,7 +977,7 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
             <View style={eS.fieldCol}>
               <Text style={eS.fieldLabel}>DATE</Text>
               <TouchableOpacity style={eS.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Ionicons name="calendar-outline" size={16} color={colors.warning} />
+                <Ionicons name="calendar-outline" size={16} color={colors.accent} />
                 <Text style={[eS.dateBtnText, !date && { color: colors.textDim }]}>
                   {date ? fmtDisplayDate(date) : 'Pick date'}
                 </Text>
@@ -749,7 +1017,7 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
             <ScrollView style={eS.exScroll} keyboardShouldPersistTaps="handled">
               {isCardio && (
                 <View style={eS.cardioHint}>
-                  <Ionicons name="fitness-outline" size={14} color="#60a5fa" />
+                  <Ionicons name="fitness-outline" size={14} color={colors.blue} />
                   <Text style={eS.cardioHintText}>Add activities — Distance (km) × Duration (min)</Text>
                 </View>
               )}
@@ -766,59 +1034,168 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
                       <Text style={[eS.exCardName, isActive && eS.exCardNameActive]} numberOfLines={1}>
                         {ex.name.trim() || (isCardio ? 'New Activity' : 'New Exercise')}
                       </Text>
-                      <Text style={eS.exSetsCount}>{(ex.sets ?? []).length} sets</Text>
+                      <Text style={eS.exSetsCount}>
+                        {isCardio ? `${(ex.sets ?? []).length} entr${(ex.sets ?? []).length === 1 ? 'y' : 'ies'}` : `${(ex.sets ?? []).length} sets`}
+                      </Text>
                       <TouchableOpacity onPress={() => removeExercise(exIdx)} style={eS.exDeleteBtn}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                         <View style={eS.exDeleteX}>
-                          <Ionicons name="close" size={12} color="#ff4444" />
+                          <Ionicons name="close" size={12} color={colors.danger} />
                         </View>
                       </TouchableOpacity>
                     </TouchableOpacity>
 
                     {isActive && (
                       <View style={eS.exExpanded}>
-                        <View style={eS.exNameRow}>
-                          <View style={eS.hashIcon}>
-                            <Text style={eS.hashText}>{isCardio ? '🏃' : '#'}</Text>
+                        {isCardio ? (
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                            style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+                            {CARDIO_TYPES.map(t => {
+                              const active = ex.name === t.val;
+                              return (
+                                <TouchableOpacity key={t.val}
+                                  style={[eS.typeChip, active && eS.typeChipActive]}
+                                  onPress={() => updateExName(exIdx, t.val)}>
+                                  <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>{t.label}</Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        ) : (
+                          <View style={eS.exNameRow}>
+                            <View style={eS.hashIcon}>
+                              <Text style={eS.hashText}>#</Text>
+                            </View>
+                            <TextInput
+                              style={eS.exNameInput}
+                              value={ex.name}
+                              onChangeText={v => { updateExName(exIdx, v); setAcOpenIdx(exIdx); }}
+                              onFocus={() => setAcOpenIdx(exIdx)}
+                              onBlur={() => setTimeout(() => setAcOpenIdx(cur => (cur === exIdx ? null : cur)), 150)}
+                              placeholder="Exercise name"
+                              placeholderTextColor={colors.textDim}
+                              autoFocus
+                            />
                           </View>
-                          <TextInput
-                            style={eS.exNameInput}
-                            value={ex.name}
-                            onChangeText={v => updateExName(exIdx, v)}
-                            placeholder={isCardio ? 'Activity name (e.g. Running)' : 'Exercise name'}
-                            placeholderTextColor={colors.textDim}
-                            autoFocus
-                          />
-                        </View>
+                        )}
 
-                        {(ex.sets ?? []).map((s, sIdx) => (
-                          <View key={s._key} style={eS.setRow}>
-                            <Text style={eS.setNumLabel}>{sIdx + 1}</Text>
-                            <TextInput
-                              style={eS.setInput}
-                              value={s.weight_kg}
-                              onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
-                              keyboardType="decimal-pad"
-                              placeholder={isCardio ? 'km' : 'kg'}
-                              placeholderTextColor={colors.textDim}
-                            />
-                            <Text style={eS.setX}>×</Text>
-                            <TextInput
-                              style={eS.setInput}
-                              value={s.reps}
-                              onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
-                              keyboardType="numeric"
-                              placeholder={isCardio ? 'min' : 'reps'}
-                              placeholderTextColor={colors.textDim}
-                            />
-                            <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
-                              <Ionicons name="close" size={14} color={colors.textDim} />
-                            </TouchableOpacity>
-                          </View>
-                        ))}
+                        {!isCardio && acOpenIdx === exIdx && (() => {
+                          const q = ex.name.trim().toLowerCase();
+                          const matches = namePool.filter(n => !q || n.toLowerCase().includes(q)).slice(0, 8);
+                          if (!matches.length) return null;
+                          return (
+                            <View style={eS.acDropdown}>
+                              {matches.map(n => {
+                                const exStyleAc = getWorkoutStyle(n, colors);
+                                return (
+                                  <TouchableOpacity
+                                    key={n}
+                                    style={eS.acItem}
+                                    onPress={() => { updateExName(exIdx, n); setAcOpenIdx(null); }}
+                                  >
+                                    <Text style={{ fontSize: 14 }}>{exStyleAc.icon}</Text>
+                                    <Text style={eS.acItemText}>{n}</Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          );
+                        })()}
+
+                        {isCardio ? (
+                          (ex.sets ?? []).map((s, sIdx) => {
+                            const def = getCardioFieldDefs(ex.name);
+                            const autoKcal = calcCardioEntryKcal(ex.name, {
+                              duration_min: parseFloat(s.duration_min) || 0,
+                              speed_kmh: parseFloat(s.speed_kmh) || 0,
+                              incline_pct: parseFloat(s.incline_pct) || 0,
+                              avg_rpm: parseFloat(s.avg_rpm) || 0,
+                            });
+                            return (
+                              <View key={s._key} style={eS.cardioFieldCard}>
+                                <View style={eS.cardioFieldRow}>
+                                  <View style={eS.cardioFieldCol}>
+                                    <Text style={eS.cardioFieldLabel}>DURATION (MIN)</Text>
+                                    <TextInput
+                                      style={eS.setInput}
+                                      value={s.duration_min}
+                                      onChangeText={v => updateSet(exIdx, sIdx, 'duration_min', v)}
+                                      keyboardType="numeric"
+                                      placeholder="min"
+                                      placeholderTextColor={colors.textDim}
+                                    />
+                                  </View>
+                                  <View style={eS.cardioFieldCol}>
+                                    <Text style={eS.cardioFieldLabel}>CALORIES (AUTO)</Text>
+                                    <Text style={eS.cardioAutoValue}>{autoKcal > 0 ? `${autoKcal} kcal` : '—'}</Text>
+                                  </View>
+                                  <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
+                                    <Ionicons name="close" size={14} color={colors.textDim} />
+                                  </TouchableOpacity>
+                                </View>
+                                {(def.secondary || def.tertiary) && (
+                                  <View style={eS.cardioFieldRow}>
+                                    {def.secondary && (
+                                      <View style={eS.cardioFieldCol}>
+                                        <Text style={eS.cardioFieldLabel}>{def.secondary.label}</Text>
+                                        <TextInput
+                                          style={eS.setInput}
+                                          value={s[def.secondary.key]}
+                                          onChangeText={v => updateSet(exIdx, sIdx, def.secondary.key, v)}
+                                          keyboardType="decimal-pad"
+                                          placeholder={def.secondary.placeholder}
+                                          placeholderTextColor={colors.textDim}
+                                        />
+                                      </View>
+                                    )}
+                                    {def.tertiary && (
+                                      <View style={eS.cardioFieldCol}>
+                                        <Text style={eS.cardioFieldLabel}>{def.tertiary.label}</Text>
+                                        <TextInput
+                                          style={eS.setInput}
+                                          value={s[def.tertiary.key]}
+                                          onChangeText={v => updateSet(exIdx, sIdx, def.tertiary.key, v)}
+                                          keyboardType="decimal-pad"
+                                          placeholder={def.tertiary.placeholder}
+                                          placeholderTextColor={colors.textDim}
+                                        />
+                                      </View>
+                                    )}
+                                  </View>
+                                )}
+                              </View>
+                            );
+                          })
+                        ) : (
+                          (ex.sets ?? []).map((s, sIdx) => (
+                            <View key={s._key} style={eS.setRow}>
+                              <Text style={eS.setNumLabel}>{sIdx + 1}</Text>
+                              <TextInput
+                                style={eS.setInput}
+                                value={s.weight_kg}
+                                onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
+                                keyboardType="decimal-pad"
+                                placeholder="kg"
+                                placeholderTextColor={colors.textDim}
+                              />
+                              <Text style={eS.setX}>×</Text>
+                              <TextInput
+                                style={eS.setInput}
+                                value={s.reps}
+                                onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
+                                keyboardType="numeric"
+                                placeholder="reps"
+                                placeholderTextColor={colors.textDim}
+                              />
+                              <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
+                                <Ionicons name="close" size={14} color={colors.textDim} />
+                              </TouchableOpacity>
+                            </View>
+                          ))
+                        )}
 
                         <TouchableOpacity style={eS.addSetBtn} onPress={() => addSet(exIdx)}>
-                          <Text style={eS.addSetText}>+ Add Set</Text>
+                          <Text style={eS.addSetText}>{isCardio ? '+ Add Entry' : '+ Add Set'}</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -827,7 +1204,7 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, onSave, on
               })}
 
               <TouchableOpacity style={eS.addExBtn} onPress={addExercise}>
-                <Ionicons name="add" size={18} color={colors.warning} />
+                <Ionicons name="add" size={18} color={colors.accent} />
                 <Text style={eS.addExText}>{isCardio ? 'Add Activity' : 'Add Exercise'}</Text>
               </TouchableOpacity>
               <View style={{ height: 20 }} />
@@ -940,7 +1317,18 @@ export default function WorkoutScreen() {
           _key: ex.id,
           name: ex.exercise_name,
           sets: (ex.sets ?? []).slice().sort((a, b) => a.set_number - b.set_number)
-            .map(s => ({ _key: s.id, weight_kg: s.weight_kg != null ? String(s.weight_kg) : '', reps: s.reps != null ? String(s.reps) : '' })),
+            .map(s => ({
+              _key: s.id,
+              weight_kg: s.weight_kg != null ? String(s.weight_kg) : '',
+              reps: s.reps != null ? String(s.reps) : '',
+              rpe: s.rpe != null ? String(s.rpe) : '',
+              duration_min: s.duration_min != null ? String(s.duration_min) : '',
+              distance_km: s.distance_km != null ? String(s.distance_km) : '',
+              avg_rpm: s.avg_rpm != null ? String(s.avg_rpm) : '',
+              speed_kmh: s.speed_kmh != null ? String(s.speed_kmh) : '',
+              incline_pct: s.incline_pct != null ? String(s.incline_pct) : '',
+              calories: s.calories != null ? String(s.calories) : '',
+            })),
         })),
     });
     setShowDetail(false);
@@ -1057,7 +1445,7 @@ export default function WorkoutScreen() {
                   <Text style={s.restTitle}>Rest Day</Text>
                   <Text style={s.restSub}>{fmtDate(item.date)} · Recovery · no workout</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={14} color="#008866" />
+                <Ionicons name="chevron-forward" size={14} color={colors.good} />
               </TouchableOpacity>
             );
           }
@@ -1098,7 +1486,7 @@ export default function WorkoutScreen() {
                     {sess.notes || 'Workout'}
                   </Text>
                   {delta && (
-                    <View style={[s.deltaBadge, { backgroundColor: delta.delta >= 0 ? '#003d00' : '#3d0000' }]}>
+                    <View style={[s.deltaBadge, { backgroundColor: delta.delta >= 0 ? colors.good + '22' : colors.danger + '22' }]}>
                       <Text style={[s.deltaText, { color: delta.delta >= 0 ? colors.success : colors.danger }]}>
                         {delta.delta >= 0 ? '▲' : '▼'}{Math.abs(delta.delta).toLocaleString()}kg
                       </Text>
@@ -1136,6 +1524,7 @@ export default function WorkoutScreen() {
         isNew={editIsNew}
         initialData={editInitial}
         recentTypes={recentTypes}
+        allSessions={sessions}
         onSave={(data) => saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null })}
         onCancel={() => setShowEdit(false)}
         isSaving={saveMut.isPending}
@@ -1152,20 +1541,20 @@ const createS = (colors) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 12, paddingBottom: 6,
   },
-  logoText: { fontSize: typography.lg, fontWeight: weight.black, fontStyle: 'italic', color: colors.text },
-  logoDot: { color: colors.warning },
+  logoText: { fontSize: typography.lg, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.text },
+  logoDot: { color: colors.accent },
   screenLabel: { fontSize: typography.xs, fontWeight: weight.bold, letterSpacing: 2, color: colors.textMuted },
   onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
 
   titleRow: { paddingHorizontal: 20, paddingBottom: 10 },
-  pageTitle: { fontSize: typography.xxxl, fontWeight: weight.black, color: colors.text, letterSpacing: -0.5 },
+  pageTitle: { fontSize: typography.xxxl, fontFamily: fontFamily.displayItalic, color: colors.text, letterSpacing: -0.5, fontStyle: 'italic' },
   pageTitleAccent: { color: colors.accent },
-  sessionCount: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5, marginTop: 2 },
+  sessionCount: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.textMuted, letterSpacing: 1.5, marginTop: 2 },
 
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginBottom: 8,
-    backgroundColor: colors.bgCard, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11,
+    backgroundColor: colors.card, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11,
     borderWidth: 1, borderColor: colors.border,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: typography.sm },
@@ -1176,7 +1565,7 @@ const createS = (colors) => StyleSheet.create({
   },
   monthBtn: { padding: 10 },
   monthChevron: { fontSize: 26, color: colors.text, fontWeight: '300' },
-  monthLabel: { fontSize: typography.base, fontWeight: weight.bold, color: colors.text, fontStyle: 'italic' },
+  monthLabel: { fontSize: typography.base, fontFamily: fontFamily.displayItalic, color: colors.text, fontStyle: 'italic' },
 
   content: { paddingHorizontal: 16, paddingBottom: 32 },
 
@@ -1186,15 +1575,15 @@ const createS = (colors) => StyleSheet.create({
 
   restCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#001815', borderWidth: 1, borderColor: '#006650',
+    backgroundColor: colors.good + '14', borderWidth: 1, borderColor: colors.good + '55',
     borderRadius: 14, padding: 12, marginBottom: 8,
   },
   restIcon: {
-    width: 44, height: 44, borderRadius: 11, backgroundColor: '#002820',
-    borderWidth: 1, borderColor: '#006650', alignItems: 'center', justifyContent: 'center',
+    width: 44, height: 44, borderRadius: 11, backgroundColor: colors.good + '22',
+    borderWidth: 1, borderColor: colors.good + '55', alignItems: 'center', justifyContent: 'center',
   },
-  restTitle: { fontSize: typography.sm, fontWeight: weight.bold, color: '#00cc99' },
-  restSub: { fontSize: typography.xs, color: '#008866', marginTop: 2 },
+  restTitle: { fontSize: typography.sm, fontFamily: fontFamily.bodyBold, color: colors.good },
+  restSub: { fontSize: typography.xs, color: colors.good, marginTop: 2 },
 
   sessionCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -1213,14 +1602,14 @@ const createS = (colors) => StyleSheet.create({
   fab: {
     position: 'absolute', bottom: 24, right: 24,
     width: 56, height: 56, borderRadius: 28,
-    backgroundColor: colors.warning, alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.warning, shadowOffset: { width: 0, height: 4 },
+    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.45, shadowRadius: 10, elevation: 10,
   },
 });
 
 const createDS = (colors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0c0c18' },
+  container: { flex: 1, backgroundColor: colors.bg },
   handle: { width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
 
   header: {
@@ -1230,12 +1619,12 @@ const createDS = (colors) => StyleSheet.create({
   typeIconBox: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   headerName: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text },
   headerDate: { fontSize: typography.xs, color: colors.textMuted, marginTop: 2 },
-  closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.bgElevated },
+  closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.surface },
 
   statsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
   statCell: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   statCellBorder: { borderRightWidth: 1, borderRightColor: colors.border },
-  statValue: { fontSize: typography.lg, fontWeight: weight.black, color: colors.text, marginTop: 2 },
+  statValue: { fontSize: typography.lg, fontFamily: fontFamily.monoBold, color: colors.text, marginTop: 2 },
   statLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginTop: 1 },
 
   compBanner: {
@@ -1246,10 +1635,10 @@ const createDS = (colors) => StyleSheet.create({
 
   tagRow: { paddingHorizontal: 16, gap: 6, paddingVertical: 4 },
   muscleTag: {
-    backgroundColor: '#1a1a00', borderWidth: 1, borderColor: '#404020',
+    backgroundColor: colors.accent + '14', borderWidth: 1, borderColor: colors.accent + '40',
     borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
   },
-  muscleTagText: { fontSize: 11, color: colors.warning, fontWeight: weight.medium },
+  muscleTagText: { fontSize: 11, color: colors.accent, fontWeight: weight.medium },
 
   exScroll: { flex: 1, paddingHorizontal: 16 },
   exSectionHeader: {
@@ -1260,60 +1649,63 @@ const createDS = (colors) => StyleSheet.create({
   collapseToggleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   collapseToggleText: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1 },
   toggleSwitch: {
-    width: 34, height: 18, borderRadius: 9, backgroundColor: colors.bgElevated,
+    width: 34, height: 18, borderRadius: 9, backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.border, justifyContent: 'center', paddingHorizontal: 2,
   },
-  toggleSwitchOn: { backgroundColor: colors.warning, borderColor: colors.warning },
+  toggleSwitchOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   toggleKnob: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.textDim },
   toggleKnobOn: { backgroundColor: colors.bg, alignSelf: 'flex-end' },
 
   exCard: {
-    backgroundColor: colors.bgCard, borderRadius: 14, padding: 14,
+    backgroundColor: colors.card, borderRadius: 14, padding: 14,
     marginBottom: 10, borderWidth: 1, borderColor: colors.border,
   },
   exCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   exIcon: { width: 36, height: 36, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  exName: { fontSize: typography.sm, fontWeight: weight.black, color: colors.text, letterSpacing: 0.3 },
+  exName: { fontSize: typography.sm, fontFamily: fontFamily.bodyExtraBold, color: colors.text, letterSpacing: 0.3 },
   exMuscleRow: { flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' },
   exMuscleTag: { fontSize: 10, color: colors.textDim, fontWeight: weight.medium },
+  chipRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  pillChip: { backgroundColor: colors.dim, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  pillChipText: { fontFamily: fontFamily.bodyBold, fontSize: typography.xs, color: colors.text },
   pbBadge: {
-    backgroundColor: '#1a1000', borderWidth: 1, borderColor: '#6b4800',
+    backgroundColor: colors.accent + '14', borderWidth: 1, borderColor: colors.accent + '55',
     borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2,
   },
-  pbBadgeText: { fontSize: 10, color: colors.warning, fontWeight: weight.bold },
+  pbBadgeText: { fontSize: 10, color: colors.accent, fontWeight: weight.bold },
 
   setTableHdr: {
     flexDirection: 'row', alignItems: 'center', paddingTop: 10, paddingBottom: 4,
-    borderBottomWidth: 1, borderBottomColor: colors.bgElevated, marginBottom: 4,
+    borderBottomWidth: 1, borderBottomColor: colors.surface, marginBottom: 4,
   },
   setTH: { fontSize: 9, color: colors.textDim, fontWeight: weight.bold, letterSpacing: 1, textAlign: 'center' },
   setRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5 },
-  bestSetRow: { backgroundColor: '#1a1100', borderRadius: 8, marginHorizontal: -4, paddingHorizontal: 4 },
+  bestSetRow: { backgroundColor: colors.accent + '14', borderRadius: 8, marginHorizontal: -4, paddingHorizontal: 4 },
   setNum: { width: 32, fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.bold },
   setDotWrap: { width: 20, alignItems: 'center' },
   dot: { width: 7, height: 7, borderRadius: 4 },
-  setWeight: { flex: 1, fontSize: typography.sm, color: colors.text, fontWeight: weight.semibold, textAlign: 'center' },
+  setWeight: { flex: 1, fontSize: typography.sm, color: colors.text, fontFamily: fontFamily.monoBold, textAlign: 'center' },
   setXText: { fontSize: typography.xs, color: colors.textDim, marginHorizontal: 4 },
-  setReps: { flex: 1, fontSize: typography.sm, color: colors.text, fontWeight: weight.semibold, textAlign: 'center' },
-  bestBadge: { backgroundColor: '#2a1f00', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, alignItems: 'center' },
-  bestBadgeText: { fontSize: 10, color: colors.warning, fontWeight: weight.bold },
+  setReps: { flex: 1, fontSize: typography.sm, color: colors.text, fontFamily: fontFamily.monoBold, textAlign: 'center' },
+  bestBadge: { backgroundColor: colors.accent + '22', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, alignItems: 'center' },
+  bestBadgeText: { fontSize: 10, color: colors.accent, fontWeight: weight.bold },
 
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
   editBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, padding: 13, borderRadius: 12,
-    backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
   },
   editBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text },
   repeatBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, padding: 13, borderRadius: 12, backgroundColor: '#006633',
+    gap: 6, padding: 13, borderRadius: 12, backgroundColor: colors.good,
   },
-  repeatBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: '#ffffff' },
+  repeatBtnText: { fontSize: typography.sm, fontFamily: fontFamily.bodyBold, color: colors.bg },
   deleteBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, padding: 13, borderRadius: 12, backgroundColor: '#3d0000',
-    borderWidth: 1, borderColor: '#660000',
+    gap: 6, padding: 13, borderRadius: 12, backgroundColor: colors.danger + '1f',
+    borderWidth: 1, borderColor: colors.danger + '55',
   },
   deleteBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.danger },
 });
@@ -1328,48 +1720,48 @@ const createES = (colors) => StyleSheet.create({
   },
   headerTop: { fontSize: typography.xl },
   headerLOG: { fontWeight: weight.black, fontStyle: 'italic', color: colors.text },
-  headerSub: { fontWeight: weight.bold, fontStyle: 'italic', color: colors.warning },
+  headerSub: { fontWeight: weight.bold, fontStyle: 'italic', color: colors.accent },
   trackLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 2, marginTop: 4 },
-  closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.bgCard, marginTop: 2 },
+  closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.card, marginTop: 2 },
 
   typeScroll: { maxHeight: 52 },
   typeRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center', paddingVertical: 8 },
   typeChip: {
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
   },
-  typeChipActive: { borderColor: colors.warning, backgroundColor: '#1a0d00' },
-  typeChipDefault: { borderColor: colors.warning + '55', backgroundColor: '#120a00' },
+  typeChipActive: { borderColor: colors.accent, backgroundColor: colors.accent + '1a' },
+  typeChipDefault: { borderColor: colors.accent + '55', backgroundColor: colors.accent + '12' },
   typeChipText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.medium },
-  typeChipTextActive: { color: colors.warning, fontWeight: weight.bold },
-  typeChipTextDefault: { color: colors.warning + 'aa', fontWeight: weight.medium },
+  typeChipTextActive: { color: colors.accent, fontWeight: weight.bold },
+  typeChipTextDefault: { color: colors.accent + 'aa', fontWeight: weight.medium },
 
   fieldRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: 10 },
   fieldCol: { flex: 1 },
   fieldLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginBottom: 4 },
   dateBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.warning + '66',
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.accent + '66',
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 11,
   },
   dateBtnText: { fontSize: typography.sm, color: colors.text, fontWeight: weight.medium },
   fieldInput: {
-    backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 10, color: colors.text, fontSize: typography.sm,
   },
 
   exScroll: { flex: 1, paddingHorizontal: 16, marginTop: 12 },
   exCard: {
-    backgroundColor: colors.bgCard, borderRadius: 14, marginBottom: 10,
+    backgroundColor: colors.card, borderRadius: 14, marginBottom: 10,
     overflow: 'hidden', borderWidth: 1, borderColor: colors.border,
   },
-  exCardActive: { borderColor: colors.warning, borderWidth: 1.5 },
+  exCardActive: { borderColor: colors.accent, borderWidth: 1.5 },
   exCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
   exNumBadge: {
     width: 26, height: 26, borderRadius: 8,
-    backgroundColor: colors.bgElevated, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
   },
-  exNumBadgeActive: { backgroundColor: colors.warning },
+  exNumBadgeActive: { backgroundColor: colors.accent },
   exNumText: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted },
   exNumTextActive: { color: colors.bg },
   exCardName: { flex: 1, fontSize: typography.sm, fontWeight: weight.semibold, color: colors.textMuted },
@@ -1377,19 +1769,19 @@ const createES = (colors) => StyleSheet.create({
   exSetsCount: { fontSize: typography.xs, color: colors.textDim },
   exDeleteBtn: { padding: 4 },
   exDeleteX: {
-    width: 20, height: 20, borderRadius: 10, backgroundColor: '#2a0000',
-    borderWidth: 1, borderColor: '#660000', alignItems: 'center', justifyContent: 'center',
+    width: 20, height: 20, borderRadius: 10, backgroundColor: colors.danger + '1f',
+    borderWidth: 1, borderColor: colors.danger + '55', alignItems: 'center', justifyContent: 'center',
   },
 
   exExpanded: { borderTopWidth: 1, borderTopColor: colors.border, padding: 12 },
   exNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   hashIcon: {
-    width: 32, height: 40, borderRadius: 8, backgroundColor: colors.bgElevated,
+    width: 32, height: 40, borderRadius: 8, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
   hashText: { fontSize: typography.base, color: colors.textDim, fontWeight: weight.bold },
   exNameInput: {
-    flex: 1, backgroundColor: colors.bgElevated, borderRadius: 10,
+    flex: 1, backgroundColor: colors.surface, borderRadius: 10,
     paddingHorizontal: 10, paddingVertical: 10, color: colors.text, fontSize: typography.sm,
     borderWidth: 1, borderColor: colors.border,
   },
@@ -1397,7 +1789,7 @@ const createES = (colors) => StyleSheet.create({
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   setNumLabel: { width: 20, fontSize: typography.xs, color: colors.textDim, textAlign: 'center', fontWeight: weight.bold },
   setInput: {
-    flex: 1, backgroundColor: colors.bgElevated, borderRadius: 8,
+    flex: 1, backgroundColor: colors.surface, borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 9, color: colors.text, fontSize: typography.sm,
     textAlign: 'center', borderWidth: 1, borderColor: colors.border,
   },
@@ -1412,10 +1804,10 @@ const createES = (colors) => StyleSheet.create({
 
   addExBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.warning,
+    borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.accent,
     borderRadius: 14, padding: 14, marginTop: 4, marginBottom: 8,
   },
-  addExText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.warning },
+  addExText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent },
 
   bottomRow: {
     flexDirection: 'row', gap: 10, padding: 16,
@@ -1426,7 +1818,7 @@ const createES = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
   cancelText: { fontSize: typography.sm, fontWeight: weight.semibold, color: colors.textMuted },
-  saveBtn: { flex: 2, padding: 14, borderRadius: 14, backgroundColor: colors.warning, alignItems: 'center' },
+  saveBtn: { flex: 2, padding: 14, borderRadius: 14, backgroundColor: colors.accent, alignItems: 'center' },
   saveBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg },
 
   restDayWrap: {
@@ -1434,21 +1826,31 @@ const createES = (colors) => StyleSheet.create({
     paddingHorizontal: 32, gap: 12,
   },
   restDayEmoji: { fontSize: 64 },
-  restDayTitle: { fontSize: typography.xl, fontWeight: weight.black, color: '#00cc99', textAlign: 'center' },
+  restDayTitle: { fontSize: typography.xl, fontFamily: fontFamily.bodyExtraBold, color: colors.good, textAlign: 'center' },
   restDaySub: { fontSize: typography.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
   restDayBadges: { flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' },
   restBadge: {
-    backgroundColor: '#001815', borderWidth: 1, borderColor: '#006650',
+    backgroundColor: colors.good + '14', borderWidth: 1, borderColor: colors.good + '55',
     borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
   },
-  restBadgeText: { fontSize: typography.xs, color: '#00cc99', fontWeight: weight.medium },
+  restBadgeText: { fontSize: typography.xs, color: colors.good, fontFamily: fontFamily.bodyMedium },
 
   cardioHint: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#080d1f', borderRadius: 10, padding: 10,
-    borderWidth: 1, borderColor: '#1e3a8a', marginBottom: 10,
+    backgroundColor: colors.blue + '14', borderRadius: 10, padding: 10,
+    borderWidth: 1, borderColor: colors.blue + '55', marginBottom: 10,
   },
-  cardioHintText: { fontSize: typography.xs, color: '#60a5fa', flex: 1 },
+  cardioHintText: { fontSize: typography.xs, color: colors.blue, flex: 1 },
+
+  acDropdown: { backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginTop: -8, marginBottom: 12, overflow: 'hidden' },
+  acItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
+  acItemText: { fontFamily: fontFamily.bodyMedium, fontSize: typography.sm, color: colors.text },
+
+  cardioFieldCard: { backgroundColor: colors.dim, borderRadius: 10, padding: 10, marginBottom: 8, gap: 8 },
+  cardioFieldRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  cardioFieldCol: { flex: 1 },
+  cardioFieldLabel: { fontFamily: fontFamily.bodyBold, fontSize: 9, color: colors.textDim, letterSpacing: 0.4, marginBottom: 4 },
+  cardioAutoValue: { fontFamily: fontFamily.monoBold, fontSize: typography.sm, color: colors.pink, paddingVertical: 6 },
 });
 
 const createDpS = (colors) => StyleSheet.create({
@@ -1457,7 +1859,7 @@ const createDpS = (colors) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   sheet: {
-    width: 308, backgroundColor: colors.bgCard,
+    width: 308, backgroundColor: colors.card,
     borderRadius: 18, padding: 16,
     borderWidth: 1, borderColor: colors.border,
   },
@@ -1473,16 +1875,16 @@ const createDpS = (colors) => StyleSheet.create({
   dayNameText: { fontSize: 11, color: colors.textMuted, fontWeight: weight.bold },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   dayCell: { width: '14.285714%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
-  dayCellSelected: { backgroundColor: colors.warning },
-  dayCellToday: { borderWidth: 1, borderColor: colors.warning },
+  dayCellSelected: { backgroundColor: colors.accent },
+  dayCellToday: { borderWidth: 1, borderColor: colors.accent },
   dayText: { fontSize: typography.sm, color: colors.text },
   dayTextFuture: { color: colors.textDim, opacity: 0.35 },
-  dayTextToday: { color: colors.warning, fontWeight: weight.bold },
+  dayTextToday: { color: colors.accent, fontWeight: weight.bold },
   dayTextSelected: { color: colors.bg, fontWeight: weight.bold },
   todayBtn: {
     marginTop: 12, padding: 10, borderRadius: 10,
-    backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center',
   },
-  todayBtnText: { fontSize: typography.sm, color: colors.warning, fontWeight: weight.bold },
+  todayBtnText: { fontSize: typography.sm, color: colors.accent, fontWeight: weight.bold },
 });

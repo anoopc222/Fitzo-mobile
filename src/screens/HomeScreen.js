@@ -16,14 +16,14 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { typography, weight } from '../theme/typography';
+import { typography, weight, fontFamily } from '../theme/typography';
 import Sparkline from '../components/Sparkline';
 
-// ─── accent palette ────────────────────────────────────────────────────────
-const C_WEIGHT = '#f472b6';
-const C_STEPS  = '#fbbf24';
-const C_KCAL   = '#f87171';
-const C_SLEEP  = '#a78bfa';
+// ─── accent palette (matches ActivityTracker web app) ──────────────────────
+const C_WEIGHT = '#fb7185'; // rose
+const C_STEPS  = '#f59e0b'; // amber gold
+const C_KCAL   = '#fb7185'; // rose
+const C_SLEEP  = '#c4b5fd'; // soft violet
 const C_GREEN  = '#34d399';
 const WEEKLY_SESSION_GOAL = 4;
 
@@ -670,15 +670,11 @@ export default function HomeScreen() {
           <>
             {/* ── Profile ────────────────────────────────────────── */}
             <View style={styles.profileRow}>
-              <LinearGradient
-                colors={['#f97316', '#d4ff00', '#9d4edd']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={styles.avatarRing}
-              >
+              <View style={styles.avatarRing}>
                 <View style={styles.avatarInner}>
                   <Text style={styles.avatarText}>{initial}</Text>
                 </View>
-              </LinearGradient>
+              </View>
 
               <View style={styles.profileInfo}>
                 <Text style={styles.greeting}>{getGreeting()} ⚡</Text>
@@ -708,7 +704,7 @@ export default function HomeScreen() {
             <View style={styles.cardRow}>
               {/* Weight */}
               <TouchableOpacity style={styles.halfWrap} onPress={() => nav('Weight')} activeOpacity={0.85}>
-                <LinearGradient colors={['#2d0a1f', '#0f0f1a']} style={styles.statCard}>
+                <LinearGradient colors={[colors.card, colors.surface]} style={[styles.statCard, { borderColor: C_WEIGHT + '40' }]}>
                   <View style={styles.cardTopRow}>
                     <Ionicons name="scale-outline" size={12} color={C_WEIGHT} />
                     <Text style={[styles.cardLabel, { color: C_WEIGHT }]}>WEIGHT</Text>
@@ -728,7 +724,7 @@ export default function HomeScreen() {
 
               {/* Steps */}
               <TouchableOpacity style={styles.halfWrap} onPress={() => nav('Steps')} activeOpacity={0.85}>
-                <LinearGradient colors={['#2a1900', '#0f0f1a']} style={styles.statCard}>
+                <LinearGradient colors={[colors.card, colors.surface]} style={[styles.statCard, { borderColor: C_STEPS + '40' }]}>
                   <View style={styles.cardTopRow}>
                     <Ionicons name="footsteps-outline" size={12} color={C_STEPS} />
                     <Text style={[styles.cardLabel, { color: C_STEPS }]}>YESTERDAY</Text>
@@ -752,7 +748,7 @@ export default function HomeScreen() {
             <View style={styles.cardRow}>
               {/* KCAL */}
               <TouchableOpacity style={styles.halfWrap} onPress={() => nav('Log')} activeOpacity={0.85}>
-                <LinearGradient colors={['#2d0808', '#0f0f1a']} style={styles.statCard}>
+                <LinearGradient colors={[colors.card, colors.surface]} style={[styles.statCard, { borderColor: C_KCAL + '40' }]}>
                   <View style={styles.cardTopRow}>
                     <Ionicons name="flame-outline" size={12} color={C_KCAL} />
                     <Text style={[styles.cardLabel, { color: C_KCAL }]}>TODAY KCAL</Text>
@@ -779,7 +775,7 @@ export default function HomeScreen() {
 
               {/* Sleep */}
               <TouchableOpacity style={styles.halfWrap} onPress={() => nav('Sleep')} activeOpacity={0.85}>
-                <LinearGradient colors={['#130d2d', '#0f0f1a']} style={styles.statCard}>
+                <LinearGradient colors={[colors.card, colors.surface]} style={[styles.statCard, { borderColor: C_SLEEP + '40' }]}>
                   <View style={styles.cardTopRow}>
                     <Ionicons name="moon-outline" size={12} color={C_SLEEP} />
                     <Text style={[styles.cardLabel, { color: C_SLEEP }]}>SLEEP</Text>
@@ -808,7 +804,7 @@ export default function HomeScreen() {
 
             {/* ── Workout Banner ─────────────────────────────────── */}
             {data?.hasTodayWorkout ? (
-              <LinearGradient colors={['#064e3b', '#0a1a0f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.banner}>
+              <LinearGradient colors={[colors.card, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.banner, { borderColor: C_GREEN + '40' }]}>
                 <Text style={styles.bannerEmoji}>✅</Text>
                 <View style={styles.bannerBody}>
                   <Text style={styles.bannerTitle}>{data.todayWorkoutName} done today!</Text>
@@ -820,7 +816,7 @@ export default function HomeScreen() {
               </LinearGradient>
             ) : (
               <TouchableOpacity onPress={() => navigation.navigate('Workout')} activeOpacity={0.85}>
-                <LinearGradient colors={['#1c1000', '#0f0f1a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.banner}>
+                <LinearGradient colors={[colors.card, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.banner, { borderColor: colors.warning + '40' }]}>
                   <Ionicons name="barbell-outline" size={22} color={colors.warning} />
                   <View style={styles.bannerBody}>
                     <Text style={[styles.bannerTitle, { color: colors.warning }]}>No workout today</Text>
@@ -835,7 +831,7 @@ export default function HomeScreen() {
 
             {/* ── Goal Progress Banner ───────────────────────────── */}
             {sessionsLeft > 0 ? (
-              <LinearGradient colors={['#1e1050', '#0f0f1a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.banner}>
+              <LinearGradient colors={[colors.card, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.banner, { borderColor: '#9d4edd40' }]}>
                 <View style={[styles.goalIconWrap, { backgroundColor: '#ef444433' }]}>
                   <Ionicons name="trophy" size={18} color="#ef4444" />
                 </View>
@@ -854,7 +850,7 @@ export default function HomeScreen() {
                 </View>
               </LinearGradient>
             ) : (
-              <LinearGradient colors={['#064e3b', '#0f0f1a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.banner}>
+              <LinearGradient colors={[colors.card, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.banner, { borderColor: C_GREEN + '40' }]}>
                 <View style={[styles.goalIconWrap, { backgroundColor: '#34d39933' }]}>
                   <Ionicons name="trophy" size={18} color={C_GREEN} />
                 </View>
@@ -973,63 +969,63 @@ const createStyles = (colors) => StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: 40 },
   appHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
-  logo: { fontSize: 22, fontWeight: '900', fontStyle: 'italic', color: colors.text, letterSpacing: -0.5 },
-  logoDot: { color: '#f97316' },
-  screenLabel: { fontSize: 11, fontWeight: '700', color: colors.textDim, letterSpacing: 2 },
+  logo: { fontSize: 22, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.text, letterSpacing: -0.5 },
+  logoDot: { color: colors.accent },
+  screenLabel: { fontSize: 11, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' },
-  menuBtn: { padding: 4 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.good },
+  menuBtn: { padding: 4, width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim, borderWidth: 1, borderColor: colors.border },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
-  avatarRing: { width: 68, height: 68, borderRadius: 34, padding: 2.5, justifyContent: 'center', alignItems: 'center' },
-  avatarInner: { width: 63, height: 63, borderRadius: 31.5, backgroundColor: '#1a1a2e', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 26, fontWeight: '900', color: colors.text },
+  avatarRing: { width: 68, height: 68, borderRadius: 34, padding: 2.5, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.accent },
+  avatarInner: { width: 63, height: 63, borderRadius: 31.5, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 26, fontFamily: fontFamily.bodyExtraBold, color: colors.text },
   profileInfo: { flex: 1 },
-  greeting: { fontSize: 10, color: colors.textMuted, fontWeight: '600', letterSpacing: 0.8, marginBottom: 2 },
-  profileName: { fontSize: 22, fontWeight: '900', fontStyle: 'italic', color: colors.text, lineHeight: 26, letterSpacing: -0.5 },
+  greeting: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.bodySemibold, letterSpacing: 0.8, marginBottom: 2, textTransform: 'uppercase' },
+  profileName: { fontSize: 22, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.text, lineHeight: 26, letterSpacing: -0.5 },
   motivRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  motivText: { fontSize: 11, color: colors.accent, fontWeight: '600', textDecorationLine: 'underline' },
-  goalPill: { backgroundColor: colors.bgElevated, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, maxWidth: 96, alignItems: 'center' },
-  goalPillText: { fontSize: 10, color: colors.textMuted, textAlign: 'center', fontWeight: '500', lineHeight: 14 },
+  motivText: { fontSize: 11, color: colors.accent, fontFamily: fontFamily.bodySemibold, textDecorationLine: 'underline' },
+  goalPill: { backgroundColor: colors.dim, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, maxWidth: 96, alignItems: 'center' },
+  goalPillText: { fontSize: 10, color: colors.textMuted, textAlign: 'center', fontFamily: fontFamily.bodyMedium, lineHeight: 14 },
   quickRow: { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
-  quickCard: { alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: colors.bgElevated, borderRadius: 14, borderWidth: 1, borderColor: colors.border, minWidth: 70 },
-  quickLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6 },
+  quickCard: { alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, minWidth: 70 },
+  quickLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.6 },
   cardRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 10 },
   halfWrap: { flex: 1, borderRadius: 18, overflow: 'hidden' },
-  statCard: { padding: 14, borderRadius: 18, minHeight: 158, borderWidth: 1, borderColor: '#ffffff10' },
+  statCard: { padding: 14, borderRadius: 18, minHeight: 158, borderWidth: 1 },
   cardTopRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 8 },
-  cardLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8 },
+  cardLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.8, textTransform: 'uppercase' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6 },
-  chipText: { fontSize: 8, fontWeight: '700' },
-  bigNum: { fontSize: 34, fontWeight: '900', lineHeight: 38, marginBottom: 2 },
-  cardSub: { fontSize: 9, color: colors.textDim, marginBottom: 4 },
+  chipText: { fontSize: 8, fontFamily: fontFamily.bodyBold },
+  bigNum: { fontSize: 34, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', lineHeight: 38, marginBottom: 2 },
+  cardSub: { fontSize: 9, color: colors.textDim, marginBottom: 4, fontFamily: fontFamily.body },
   dashBar: { width: 20, height: 2, backgroundColor: C_KCAL, marginVertical: 10 },
-  tapLog: { fontSize: 10, color: colors.textDim, marginTop: 2 },
-  banner: { marginHorizontal: 16, marginBottom: 10, borderRadius: 16, flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderWidth: 1, borderColor: '#ffffff12' },
+  tapLog: { fontSize: 10, color: colors.textDim, marginTop: 2, fontFamily: fontFamily.body },
+  banner: { marginHorizontal: 16, marginBottom: 10, borderRadius: 16, flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderWidth: 1, borderColor: colors.border },
   bannerEmoji: { fontSize: 22 },
   bannerBody: { flex: 1 },
-  bannerTitle: { fontSize: 13, fontWeight: '700', color: colors.text, lineHeight: 17 },
-  bannerSub: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
-  viewBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#34d39920', borderWidth: 1, borderColor: C_GREEN },
-  viewBtnText: { fontSize: 12, color: C_GREEN, fontWeight: '700' },
+  bannerTitle: { fontSize: 13, fontFamily: fontFamily.bodyBold, color: colors.text, lineHeight: 17 },
+  bannerSub: { fontSize: 10, color: colors.textMuted, marginTop: 2, fontFamily: fontFamily.body },
+  viewBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: `${C_GREEN}20`, borderWidth: 1, borderColor: C_GREEN },
+  viewBtnText: { fontSize: 12, color: C_GREEN, fontFamily: fontFamily.bodyBold },
   goalIconWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   goalCount: { alignItems: 'center' },
-  goalCountNum: { fontSize: 24, fontWeight: '900', lineHeight: 26 },
-  goalCountLabel: { fontSize: 7, color: colors.textDim, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
-  tabsCard: { marginHorizontal: 16, backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  goalCountNum: { fontSize: 24, fontFamily: fontFamily.monoBold, lineHeight: 26 },
+  goalCountLabel: { fontSize: 7, color: colors.textDim, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, textAlign: 'center' },
+  tabsCard: { marginHorizontal: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   tabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative' },
-  tabLabel: { fontSize: 8, fontWeight: '700', color: colors.textDim, letterSpacing: 0.5 },
+  tabLabel: { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.5 },
   tabLabelActive: { color: colors.accent },
   tabUnderline: { position: 'absolute', bottom: 0, left: '15%', right: '15%', height: 2, backgroundColor: colors.accent, borderRadius: 1 },
   weekHdr: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   weekHdrLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  weekHdrLabel: { fontSize: 10, fontWeight: '700', color: colors.accent, letterSpacing: 1 },
-  weekHdrDate: { fontSize: 10, color: colors.textDim },
+  weekHdrLabel: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1 },
+  weekHdrDate: { fontSize: 10, color: colors.textDim, fontFamily: fontFamily.mono },
   statsRow: { flexDirection: 'row', paddingHorizontal: 8, paddingBottom: 16 },
   statTile: { flex: 1, alignItems: 'center', paddingVertical: 4, paddingHorizontal: 2 },
-  statTileNum: { fontSize: 20, fontWeight: '900', lineHeight: 24 },
-  statTileLabel: { fontSize: 8, color: colors.textDim, fontWeight: '700', letterSpacing: 0.5, marginTop: 2 },
-  statTileSub: { fontSize: 8, color: colors.textMuted, marginTop: 3, textAlign: 'center' },
+  statTileNum: { fontSize: 20, fontFamily: fontFamily.monoBold, lineHeight: 24 },
+  statTileLabel: { fontSize: 8, color: colors.textDim, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 2 },
+  statTileSub: { fontSize: 8, color: colors.textMuted, marginTop: 3, textAlign: 'center', fontFamily: fontFamily.body },
   cutRow: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16 },
   cutGauge: { width: 70, height: 70, borderRadius: 35, borderWidth: 2.5, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   cutNum: { fontSize: 22, fontWeight: '900', color: colors.accent },
