@@ -130,13 +130,13 @@ async function fetchHome(userId) {
       .select('date, notes').eq('user_id', userId)
       .order('date', { ascending: false }).limit(1),
     supabase.from('workout_sessions')
-      .select('id').eq('user_id', userId)
+      .select('id, notes').eq('user_id', userId)
       .gte('date', thisWeekStart).lte('date', thisWeekEnd),
     supabase.from('workout_sessions')
-      .select('id').eq('user_id', userId)
+      .select('id, notes').eq('user_id', userId)
       .gte('date', lastWeekStart).lte('date', lastWeekEnd),
     supabase.from('workout_sessions')
-      .select('id').eq('user_id', userId)
+      .select('id, notes').eq('user_id', userId)
       .gte('date', monthStart).lte('date', monthEnd),
     supabase.from('step_logs')
       .select('steps, goal').eq('user_id', userId)
@@ -189,9 +189,9 @@ async function fetchHome(userId) {
     || (todaySession?.workout_exercises?.[0]?.exercise_name ? 'Workout' : 'Workout');
 
   // Weekly / Monthly
-  const thisWeekSessions = thisWeekWorkouts.data?.length ?? 0;
-  const lastWeekSessions = lastWeekWorkouts.data?.length ?? 0;
-  const monthSessions    = monthWorkouts.data?.length ?? 0;
+  const thisWeekSessions = (thisWeekWorkouts.data ?? []).filter(s => classifySession(s.notes) === 'gym').length;
+  const lastWeekSessions = (lastWeekWorkouts.data ?? []).filter(s => classifySession(s.notes) === 'gym').length;
+  const monthSessions    = (monthWorkouts.data ?? []).filter(s => classifySession(s.notes) === 'gym').length;
   const thisWeekStepsArr = thisWeekSteps.data ?? [];
   const lastWeekStepsArr = lastWeekSteps.data ?? [];
   const monthStepsArr    = monthSteps.data ?? [];
