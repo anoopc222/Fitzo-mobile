@@ -550,7 +550,7 @@ export default function StepsScreen() {
                 <Text style={styles.heroEmoji}>🚀</Text>
                 <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
                   <Text style={styles.goalPillBtnText}>🎯 {fmtK(defaultGoal)}</Text>
-                  <Ionicons name="chevron-forward" size={12} color={colors.accent} />
+                  <Ionicons name="pencil" size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
               <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
@@ -568,15 +568,13 @@ export default function StepsScreen() {
                   label="⏱ DURATION" color={colors.text}
                 />
               </View>
-            </View>
 
-            {/* ── Personal Best ── */}
-            <View style={styles.pbCard}>
-              <Text style={styles.pbTrophy}>🏆</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.pbLabel}>PERSONAL BEST DAY</Text>
-                <Text style={styles.pbVal}>{personalBest ? `${personalBest.steps.toLocaleString()} steps` : '—'}</Text>
-                <Text style={styles.pbDate}>{personalBest ? fmtDateShort(personalBest.logged_at) : ''}</Text>
+              <View style={styles.pbInlineRow}>
+                <Text style={styles.pbInlineTrophy}>🏆</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.pbInlineLabel}>PERSONAL BEST DAY</Text>
+                  <Text style={styles.pbInlineVal}>{personalBest ? `${personalBest.steps.toLocaleString()} steps` : '—'}{personalBest ? ` · ${fmtDateShort(personalBest.logged_at)}` : ''}</Text>
+                </View>
                 {lifetimeSteps > 0 && (
                   <View style={styles.pbChip}>
                     <Text style={styles.pbChipText}>{(lifetimeSteps / 1000000).toFixed(2)}M lifetime</Text>
@@ -914,9 +912,9 @@ const createStyles = (colors) => StyleSheet.create({
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroEmoji: { fontSize: 30, marginBottom: 6 },
   goalPillBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 1, borderColor: colors.accent + '44',
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.accent + '66',
   },
   goalPillBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
   heroNum: { fontSize: 38, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent },
@@ -924,22 +922,20 @@ const createStyles = (colors) => StyleSheet.create({
   heroSub: { fontSize: typography.sm, color: colors.textDim, marginTop: 4, marginBottom: 14 },
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
 
-  pbCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: colors.accent + '14', borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: colors.accent + '44', marginBottom: 12,
+  pbInlineRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderTopWidth: 1, borderTopColor: colors.border, marginTop: 14, paddingTop: 14,
   },
-  pbTrophy: { fontSize: 28 },
-  pbLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5, fontFamily: fontFamily.mono, marginBottom: 2 },
-  pbVal: { fontSize: typography.lg, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent },
-  pbDate: { fontSize: typography.xs, color: colors.textDim, marginTop: 2 },
-  pbChip: { alignSelf: 'flex-start', backgroundColor: colors.dim, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginTop: 6 },
+  pbInlineTrophy: { fontSize: 22 },
+  pbInlineLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5, fontFamily: fontFamily.mono, marginBottom: 2 },
+  pbInlineVal: { fontSize: typography.sm, fontFamily: fontFamily.monoBold, color: colors.accent },
+  pbChip: { alignSelf: 'flex-start', backgroundColor: colors.dim, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   pbChipText: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.monoBold },
 
   goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
   goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },
 
-  weekCompareRow: { flexDirection: 'row', gap: 10 },
+  weekCompareRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   weekCompareCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border },
   weekCompareTitle: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, fontFamily: fontFamily.mono, marginBottom: 8 },
   weekCompareVal: { fontSize: typography.xl, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', marginBottom: 8 },

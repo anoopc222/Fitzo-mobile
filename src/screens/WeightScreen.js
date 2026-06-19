@@ -567,7 +567,7 @@ export default function WeightScreen() {
                   onPress={() => { setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
                 >
                   <Text style={styles.goalPillBtnText}>Edit Goal</Text>
-                  <Ionicons name="chevron-forward" size={12} color={colors.accent} />
+                  <Ionicons name="pencil" size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
               <View style={styles.goalProgressRow}>
@@ -919,9 +919,9 @@ const createStyles = (colors) => StyleSheet.create({
   goalRate: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
 
   goalPillBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 1, borderColor: colors.accent + '44',
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.accent + '66',
   },
   goalPillBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
   goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },

@@ -484,7 +484,7 @@ export default function SleepScreen() {
               <View style={styles.recoveryTopRow}>
                 <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(goal)); setShowGoalSheet(true); }}>
                   <Text style={styles.goalPillBtnText}>🌙 {goal}h</Text>
-                  <Ionicons name="chevron-forward" size={12} color={colors.accent} />
+                  <Ionicons name="pencil" size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
               <View style={styles.recoveryRow}>
@@ -727,9 +727,9 @@ const createStyles = (colors) => StyleSheet.create({
   recoveryGradientBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#818cf8' },
   recoveryTopRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 },
   goalPillBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 1, borderColor: colors.accent + '44',
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.accent + '66',
   },
   goalPillBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
   recoveryRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
