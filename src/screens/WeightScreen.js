@@ -82,7 +82,10 @@ function WeightHeatmap({ year, month, logsByDate, colors }) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayStr = localDateStr(new Date());
 
-  const vals = Object.values(logsByDate);
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const vals = Object.entries(logsByDate)
+    .filter(([ds]) => ds.startsWith(monthPrefix))
+    .map(([, w]) => w);
   const minW = vals.length ? Math.min(...vals) : 0;
   const maxW = vals.length ? Math.max(...vals) : 0;
   const rangeW = maxW - minW || 0.001;
