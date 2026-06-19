@@ -52,14 +52,14 @@ function fmtDateShort(iso) {
 
 async function fetchSteps(userId) {
   const [logs, profile] = await Promise.all([
-    supabase.from('step_logs').select('id, steps, goal, distance_km, calories_burned, logged_at').eq('user_id', userId).order('logged_at', { ascending: false }).limit(400),
+    supabase.from('step_logs').select('id, steps, goal, distance_km, calories_burned, activity_type, note, logged_at').eq('user_id', userId).order('logged_at', { ascending: false }).limit(400),
     supabase.from('profiles').select('step_goal').eq('id', userId).single(),
   ]);
   if (logs.error) throw logs.error;
   return { logs: logs.data ?? [], profile: profile.data };
 }
 
-async function logSteps(userId, { date, steps, goal }) {
+async function logSteps(userId, { date, steps, goal, activityType, note }) {
   const distance_km = +(steps * KM_PER_STEP).toFixed(3);
   const calories_burned = Math.round(steps * KCAL_PER_STEP);
   // No unique constraint on (user_id, logged_at) in the real schema, so we
@@ -74,16 +74,20 @@ async function logSteps(userId, { date, steps, goal }) {
     .maybeSingle();
   if (existing.error) throw existing.error;
 
+  const fields = {
+    steps, goal: goal ?? 10000, distance_km, calories_burned,
+    activity_type: activityType || 'walk', note: note || null,
+  };
+
   if (existing.data) {
     const { error } = await supabase
       .from('step_logs')
-      .update({ steps, goal: goal ?? 10000, distance_km, calories_burned })
+      .update(fields)
       .eq('id', existing.data.id);
     if (error) throw error;
   } else {
     const { error } = await supabase.from('step_logs').insert({
-      user_id: userId, steps, goal: goal ?? 10000, distance_km, calories_burned,
-      logged_at: date,
+      ...fields, user_id: userId, logged_at: date,
     });
     if (error) throw error;
   }
@@ -393,7 +397,8 @@ export default function StepsScreen() {
   const defaultGoal = data?.profile?.step_goal ?? logs[0]?.goal ?? 10000;
 
   const logMut = useMutation({
-    mutationFn: ({ date, steps }) => logSteps(user.id, { date, steps, goal: defaultGoal }),
+    mutationFn: ({ date, steps, activityType, note: logNote }) =>
+      logSteps(user.id, { date, steps, goal: defaultGoal, activityType, note: logNote }),
     onSuccess: () => {
       qc.invalidateQueries(['steps', user.id]);
       qc.invalidateQueries(['home', user.id]);
@@ -580,24 +585,27 @@ export default function StepsScreen() {
               <Text style={styles.cardTitle}>DAILY LOG</Text>
               {allMonthSorted.length === 0 && <Text style={styles.emptyText}>No step entries for this month.</Text>}
               {allMonthSorted.map(log => (
-                <View key={log.id} style={styles.logRow}>
-                  <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
-                  <View style={styles.logActIcon}>
-                    <Text style={{ fontSize: 13 }}>{ACT_ICON.walk}</Text>
+                <View key={log.id} style={styles.logRowWrap}>
+                  <View style={styles.logRow}>
+                    <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
+                    <View style={styles.logActIcon}>
+                      <Text style={{ fontSize: 13 }}>{ACT_ICON[log.activity_type] || ACT_ICON.walk}</Text>
+                    </View>
+                    <DailyLogBar steps={log.steps} goal={log.goal ?? defaultGoal} barMax={allTimeMaxSteps} colors={colors} />
+                    <Text style={[styles.logSteps, { color: log.steps >= (log.goal ?? defaultGoal) ? colors.good : colors.warn }]}>
+                      {log.steps.toLocaleString()}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => Alert.alert('Delete entry', `Remove ${fmtDateShort(log.logged_at)}?`, [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                      ])}
+                      style={styles.logDelBtn}
+                    >
+                      <Ionicons name="close" size={14} color={colors.textDim} />
+                    </TouchableOpacity>
                   </View>
-                  <DailyLogBar steps={log.steps} goal={log.goal ?? defaultGoal} barMax={allTimeMaxSteps} colors={colors} />
-                  <Text style={[styles.logSteps, { color: log.steps >= (log.goal ?? defaultGoal) ? colors.good : colors.warn }]}>
-                    {log.steps.toLocaleString()}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => Alert.alert('Delete entry', `Remove ${fmtDateShort(log.logged_at)}?`, [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
-                    ])}
-                    style={styles.logDelBtn}
-                  >
-                    <Ionicons name="close" size={14} color={colors.textDim} />
-                  </TouchableOpacity>
+                  {log.note ? <Text style={styles.logNote}>{log.note}</Text> : null}
                 </View>
               ))}
             </View>
@@ -801,7 +809,7 @@ export default function StepsScreen() {
 
         <TouchableOpacity
           style={styles.saveBtn}
-          onPress={() => { if (stepsInput) logMut.mutate({ date: logDate, steps: parseInt(stepsInput, 10) }); }}
+          onPress={() => { if (stepsInput) logMut.mutate({ date: logDate, steps: parseInt(stepsInput, 10), activityType: actType, note }); }}
           disabled={logMut.isPending}
         >
           {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Steps</Text>}
@@ -875,9 +883,11 @@ const createStyles = (colors) => StyleSheet.create({
 
   emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
 
-  logRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 10 },
+  logRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   logDate: { width: 44, fontSize: 11, color: colors.text, fontFamily: fontFamily.bodyMedium },
   logActIcon: { width: 26, height: 26, borderRadius: 8, backgroundColor: colors.dim, alignItems: 'center', justifyContent: 'center' },
+  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 78, paddingTop: 6 },
   logSteps: { fontSize: typography.sm, fontWeight: weight.bold, minWidth: 56, textAlign: 'right', fontFamily: fontFamily.monoBold },
   logDelBtn: { padding: 4 },
 
