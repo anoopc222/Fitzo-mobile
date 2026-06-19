@@ -542,26 +542,17 @@ export default function WeightScreen() {
           <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
         ) : (
           <>
-            {/* ── Hero ── */}
+            {/* ── Hero + Goal Progress + Stats (merged) ── */}
             <View style={styles.heroCard}>
               <View style={styles.heroGradientBar} />
-              <Text style={styles.heroNum}>{latest ? toDisp(latest.weight, unit).toFixed(1) : '—'}</Text>
-              <Text style={styles.heroLabel}>{unit.toUpperCase()} · LATEST ENTRY</Text>
-              <Text style={styles.heroSub}>
-                {vsPrev != null ? `${vsPrev <= 0 ? '▼' : '▲'} ${Math.abs(toDisp(vsPrev, unit)).toFixed(1)} vs prev` : '— vs prev'}
-              </Text>
-              <View style={styles.tileGrid}>
-                <Tile value={mMax != null ? toDisp(mMax, unit).toFixed(1) : '—'} label="PEAK" color={colors.text} />
-                <Tile value={mMin != null ? toDisp(mMin, unit).toFixed(1) : '—'} label="LOWEST" color={colors.good} />
-                <Tile value={mChange != null ? `${mChange >= 0 ? '−' : '+'}${Math.abs(toDisp(mChange, unit)).toFixed(1)}` : '—'} label="LOST" color={mChange != null && mChange >= 0 ? colors.good : colors.danger} />
-                <Tile value={mAvg != null ? toDisp(mAvg, unit).toFixed(1) : '—'} label="MO.AVG" color={colors.text} />
-              </View>
-            </View>
-
-            {/* ── Goal Progress ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>GOAL PROGRESS</Text>
+              <View style={styles.heroTopRow}>
+                <View>
+                  <Text style={styles.heroNum}>{latest ? toDisp(latest.weight, unit).toFixed(1) : '—'}</Text>
+                  <Text style={styles.heroLabel}>{unit.toUpperCase()} · LATEST ENTRY</Text>
+                  <Text style={styles.heroSub}>
+                    {vsPrev != null ? `${vsPrev <= 0 ? '▼' : '▲'} ${Math.abs(toDisp(vsPrev, unit)).toFixed(1)} vs prev` : '— vs prev'}
+                  </Text>
+                </View>
                 <TouchableOpacity
                   style={styles.goalPillBtn}
                   onPress={() => { setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
@@ -570,10 +561,11 @@ export default function WeightScreen() {
                   <Ionicons name="pencil" size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
+
               <View style={styles.goalProgressRow}>
                 <CircularGauge
                   percent={goalProgress ? goalProgress.pct : 0}
-                  size={110} strokeWidth={10} color={colors.accent}
+                  size={80} strokeWidth={8} color={colors.accent}
                   value={goalProgress ? `${Math.round(goalProgress.pct)}%` : '—'}
                   label="DONE"
                 />
@@ -594,19 +586,34 @@ export default function WeightScreen() {
                   {goalProgress?.rateText && <Text style={styles.goalRate}>{goalProgress.rateText}</Text>}
                 </View>
               </View>
-            </View>
 
-            {/* ── All-time tiles ── */}
-            <View style={styles.statTileRow}>
-              <StatCell value={allTimeStats ? toDisp(allTimeStats.first.weight, unit).toFixed(1) : '—'} label="START" />
-              <StatCell
-                value={allTimeStats ? `${allTimeStats.lost >= 0 ? '−' : '+'}${Math.abs(toDisp(allTimeStats.lost, unit)).toFixed(1)}` : '—'}
-                label="TOTAL CHANGE" color={allTimeStats && allTimeStats.lost >= 0 ? colors.good : colors.danger}
-              />
-              <StatCell
-                value={allTimeStats ? `${toDisp(allTimeStats.rateKgWk, unit).toFixed(2)}` : '—'}
-                label={`${unit.toUpperCase()}/WEEK`} color={allTimeStats && allTimeStats.rateKgWk <= 0 ? colors.good : colors.danger}
-              />
+              <View style={styles.sectionDivider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerLabel}>{MONTH_FULL[month].toUpperCase()} {year}</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <View style={styles.statTileRowInline}>
+                <StatCell value={mMax != null ? toDisp(mMax, unit).toFixed(1) : '—'} label={`${MONTH_NAMES[month].toUpperCase()} PEAK`} />
+                <StatCell value={mMin != null ? toDisp(mMin, unit).toFixed(1) : '—'} label={`${MONTH_NAMES[month].toUpperCase()} LOW`} color={colors.good} />
+                <StatCell value={mAvg != null ? toDisp(mAvg, unit).toFixed(1) : '—'} label={`${MONTH_NAMES[month].toUpperCase()} AVG`} />
+              </View>
+
+              <View style={styles.sectionDivider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerLabel}>ALL-TIME</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <View style={styles.statTileRowInline}>
+                <StatCell value={allTimeStats ? toDisp(allTimeStats.first.weight, unit).toFixed(1) : '—'} label="START" />
+                <StatCell
+                  value={allTimeStats ? `${allTimeStats.lost >= 0 ? '−' : '+'}${Math.abs(toDisp(allTimeStats.lost, unit)).toFixed(1)}` : '—'}
+                  label="CHANGE" color={allTimeStats && allTimeStats.lost >= 0 ? colors.good : colors.danger}
+                />
+                <StatCell
+                  value={allTimeStats ? `${toDisp(allTimeStats.rateKgWk, unit).toFixed(2)}` : '—'}
+                  label={`${unit.toUpperCase()}/WK`} color={allTimeStats && allTimeStats.rateKgWk <= 0 ? colors.good : colors.danger}
+                />
+              </View>
             </View>
 
             {/* ── Monthly Heatmap ── */}
@@ -822,21 +829,6 @@ export default function WeightScreen() {
   );
 }
 
-function Tile({ value, label, color }) {
-  return (
-    <View style={s_tile.tile}>
-      <Text style={[s_tile.val, { color }]}>{value}</Text>
-      <Text style={s_tile.label}>{label}</Text>
-    </View>
-  );
-}
-
-const s_tile = StyleSheet.create({
-  tile: { width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 12, marginBottom: 8, alignItems: 'center' },
-  val: { fontSize: typography.md, fontFamily: fontFamily.monoBold },
-  label: { fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 4 },
-});
-
 function StatCell({ value, label, color }) {
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
@@ -906,12 +898,17 @@ const createStyles = (colors) => StyleSheet.create({
 
   heroCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, marginBottom: 12, position: 'relative', overflow: 'hidden' },
   heroGradientBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#fb7185' },
+  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   heroNum: { fontSize: 38, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent },
   heroLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginTop: 2 },
-  heroSub: { fontSize: typography.sm, color: colors.textDim, marginTop: 4, marginBottom: 14 },
-  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  heroSub: { fontSize: typography.sm, color: colors.textDim, marginTop: 4 },
 
-  goalProgressRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  sectionDivider: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 10 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, fontFamily: fontFamily.mono },
+  statTileRowInline: { flexDirection: 'row' },
+
+  goalProgressRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
   goalStatRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   goalStatLabel: { fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.mono },
   goalStatVal: { fontSize: typography.base, fontWeight: weight.bold, color: colors.text, fontFamily: fontFamily.monoBold },
@@ -930,7 +927,6 @@ const createStyles = (colors) => StyleSheet.create({
   quickAddChip: { backgroundColor: colors.bgElevated, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.border },
   quickAddChipText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text },
 
-  statTileRow: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
 
   trendStatsRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 8 },
 
