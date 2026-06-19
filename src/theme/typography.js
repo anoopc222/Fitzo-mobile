@@ -16,3 +16,17 @@ export const weight = {
   bold: '700',
   black: '900',
 };
+
+// Web app uses Playfair Display (display), Plus Jakarta Sans (body), Space Mono (data).
+// Family names below match the @expo-google-fonts/* loaded family keys — see useAppFonts().
+export const fontFamily = {
+  display:      'PlayfairDisplay_700Bold',
+  displayItalic: 'PlayfairDisplay_700Bold_Italic',
+  body:         'PlusJakartaSans_400Regular',
+  bodyMedium:   'PlusJakartaSans_500Medium',
+  bodySemibold: 'PlusJakartaSans_600SemiBold',
+  bodyBold:     'PlusJakartaSans_700Bold',
+  bodyExtraBold: 'PlusJakartaSans_800ExtraBold',
+  mono:         'SpaceMono_400Regular',
+  monoBold:     'SpaceMono_700Bold',
+};
