@@ -155,6 +155,7 @@ export async function restoreBackup(userId, backup) {
         .select('id')
         .single();
       if (sErr) throw sErr;
+      if (!sessionRow?.id) throw new Error('workout_sessions insert did not return an id');
       for (let i = 0; i < (s.exercises ?? []).length; i++) {
         const ex = s.exercises[i];
         const { data: exRow, error: exErr } = await supabase
@@ -163,6 +164,7 @@ export async function restoreBackup(userId, backup) {
           .select('id')
           .single();
         if (exErr) throw exErr;
+        if (!exRow?.id) throw new Error('workout_exercises insert did not return an id');
         const setRows = (ex.sets ?? []).map((set, idx) => ({
           exercise_id: exRow.id, set_number: idx + 1, weight_kg: set.w ?? null, reps: set.r ?? null,
         }));
