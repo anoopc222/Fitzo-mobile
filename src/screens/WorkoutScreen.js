@@ -484,7 +484,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         {/* Session muscle tags */}
         {muscleGroups.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            style={{ marginTop: 10 }} contentContainerStyle={dS.tagRow}>
+            style={[{ marginTop: 10 }, dS.tagScroll]} contentContainerStyle={dS.tagRow}>
             {muscleGroups.map(m => (
               <View key={m} style={dS.muscleTag}>
                 <Text style={dS.muscleTagText}>{m}</Text>
@@ -1633,7 +1633,8 @@ const createDS = (colors) => StyleSheet.create({
   },
   compText: { fontSize: typography.xs, fontWeight: weight.semibold, flex: 1 },
 
-  tagRow: { paddingHorizontal: 16, gap: 6, paddingVertical: 4 },
+  tagScroll: { maxHeight: 36 },
+  tagRow: { paddingHorizontal: 16, gap: 6, paddingVertical: 4, alignItems: 'center' },
   muscleTag: {
     backgroundColor: colors.accent + '14', borderWidth: 1, borderColor: colors.accent + '40',
     borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
