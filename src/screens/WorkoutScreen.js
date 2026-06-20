@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -424,6 +425,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
     <>
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={dS.overlay}>
+        <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFillObject} />
         <View style={dS.popup}>
         {/* Header */}
         <View style={dS.header}>
@@ -776,6 +778,7 @@ function DatePickerModal({ visible, value, onSelect, onClose }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={dpS.overlay} onPress={onClose}>
+        <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFillObject} />
         <Pressable style={dpS.sheet} onPress={() => {}}>
           {/* Month / Year nav */}
           <View style={dpS.calHeader}>
@@ -1588,7 +1591,7 @@ const createS = (colors) => StyleSheet.create({
 const createDS = (colors) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   popup: {
-    width: '100%', maxWidth: 420, maxHeight: '85%',
+    width: '100%', maxWidth: 420, height: '85%',
     backgroundColor: colors.bgElevated, borderRadius: 28,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
   },
