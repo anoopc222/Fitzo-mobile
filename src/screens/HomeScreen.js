@@ -620,24 +620,22 @@ function StreakCalendarModal({ visible, userId, onClose }) {
                   const isToday = iso === todayStr;
                   const isFuture = iso > todayStr;
 
-                  const borderColor = isToday
-                    ? '#3b82f6'
-                    : entry?.type === 'gym'    ? '#34d399'
-                    : entry?.type === 'cardio' ? '#3b82f6'
-                    : entry?.type === 'rest'   ? '#f59e0b'
-                    : 'transparent';
-
-                  const dotColor = entry?.type === 'gym'    ? '#34d399'
+                  const typeColor = entry?.type === 'gym'    ? '#34d399'
                     : entry?.type === 'cardio' ? '#3b82f6'
                     : entry?.type === 'rest'   ? '#f59e0b'
                     : null;
+
+                  const fillColor = entry?.type === 'gym'    ? 'rgba(52,211,153,0.2)'
+                    : entry?.type === 'cardio' ? 'rgba(59,130,246,0.2)'
+                    : entry?.type === 'rest'   ? 'rgba(245,158,11,0.2)'
+                    : colors.bgElevated;
 
                   return (
                     <TouchableOpacity
                       key={day}
                       style={[
                         scS.dayCell,
-                        { borderColor, borderWidth: borderColor !== 'transparent' ? 1.5 : 0 },
+                        { backgroundColor: fillColor },
                         isToday && scS.dayCellToday,
                         isFuture && { opacity: 0.25 },
                       ]}
@@ -648,8 +646,7 @@ function StreakCalendarModal({ visible, userId, onClose }) {
                       }}
                       activeOpacity={0.7}
                     >
-                      <Text style={[scS.dayNum, isToday && scS.dayNumToday]}>{day}</Text>
-                      {dotColor && <View style={[scS.dot, { backgroundColor: dotColor }]} />}
+                      <Text style={[scS.dayNum, typeColor && { color: typeColor, fontWeight: '800' }, isToday && scS.dayNumToday]}>{day}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -1208,10 +1205,9 @@ const createScS = (colors) => StyleSheet.create({
   dayNameText: { fontSize: 11, color: colors.textMuted, fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: CAL_GAP },
   dayCell: { width: CAL_CELL, height: CAL_CELL, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
-  dayCellToday: { backgroundColor: '#0a1535', borderColor: '#3b82f6', borderWidth: 2 },
+  dayCellToday: { borderColor: colors.text, borderWidth: 2 },
   dayNum: { fontSize: 13, color: colors.text, fontWeight: '500' },
-  dayNumToday: { color: '#60a5fa', fontWeight: '800' },
-  dot: { width: 5, height: 5, borderRadius: 3, marginTop: 2 },
+  dayNumToday: { color: colors.text },
   legend: { flexDirection: 'row', gap: 20, justifyContent: 'center', marginTop: 14, marginBottom: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 9, height: 9, borderRadius: 5 },
