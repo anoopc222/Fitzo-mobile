@@ -846,8 +846,8 @@ export default function HomeScreen() {
         <Text style={styles.screenLabel}>HOME</Text>
         <View style={styles.headerRight}>
           <View style={styles.onlineDot} />
-          <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('More')}>
-            <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
+          <TouchableOpacity style={styles.headerAvatarBtn} onPress={() => navigation.navigate('More')}>
+            <Text style={styles.headerAvatarText}>{initial}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1206,7 +1206,8 @@ const createStyles = (colors) => StyleSheet.create({
   screenLabel: { fontSize: 11, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.good },
-  menuBtn: { padding: 4, width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim, borderWidth: 1, borderColor: colors.border },
+  headerAvatarBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
+  headerAvatarText: { fontSize: 13, fontWeight: weight.black, color: colors.bg },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
   avatarRing: { width: 68, height: 68, borderRadius: 34, padding: 2.5, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.accent },
   avatarInner: { width: 63, height: 63, borderRadius: 31.5, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
