@@ -24,6 +24,27 @@ function localDateStr(d) {
   return `${y}-${m}-${day}`;
 }
 
+function weekKeyOf(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const dow = d.getDay();
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return localDateStr(d);
+}
+
+function groupByWeek(items, getDate) {
+  const groups = [];
+  let cur = null;
+  for (const item of items) {
+    const wk = weekKeyOf(getDate(item));
+    if (!cur || cur.key !== wk) {
+      cur = { key: wk, items: [] };
+      groups.push(cur);
+    }
+    cur.items.push(item);
+  }
+  return groups;
+}
+
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 async function fetchSleep(userId) {
   const [logs, profile, sessions, steps] = await Promise.all([
@@ -198,7 +219,7 @@ function SleepTrendChart({ data, goal, colors, width }) {
 }
 
 // ─── History row — ports renderSleep()'s log list ───────────────────────────
-function SleepLogRow({ log, goal, colors, onDelete }) {
+function SleepLogRow({ log, goal, colors, onDelete, isLast }) {
   const diff = +(log.hours - goal).toFixed(1);
   const hitGoal = log.hours >= goal;
   const pct = Math.min(100, Math.round((log.hours / goal) * 100));
@@ -221,18 +242,18 @@ function SleepLogRow({ log, goal, colors, onDelete }) {
   const dayNum = d.getDate();
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-      <View style={{ width: 3, height: 26, borderRadius: 2, backgroundColor: barColor }} />
-      <Text style={{ width: 40, fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{dayName} {dayNum}</Text>
-      <Text style={{ fontSize: typography.sm, fontWeight: '800', fontFamily: fontFamily.monoBold, color: barColor }}>{log.hours}h</Text>
-      <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, overflow: 'hidden' }}>
-        <View style={{ height: '100%', borderRadius: 2, width: `${pct}%`, backgroundColor: barColor }} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 10, borderBottomWidth: isLast ? 0 : 1, borderBottomColor: colors.border }}>
+      <View style={{ width: 3, height: 30, borderRadius: 2, backgroundColor: barColor }} />
+      <Text style={{ width: 44, fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{dayName} {dayNum}</Text>
+      <Text style={{ fontSize: typography.base, fontWeight: '800', fontFamily: fontFamily.monoBold, color: barColor }}>{log.hours}h</Text>
+      <View style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.dim, overflow: 'hidden' }}>
+        <View style={{ height: '100%', borderRadius: 3, width: `${pct}%`, backgroundColor: barColor }} />
       </View>
-      <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, backgroundColor: statusBg }}>
-        <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, letterSpacing: 0.2, color: statusTxt }}>{statusLabel}</Text>
+      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: statusBg }}>
+        <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, letterSpacing: 0.2, color: statusTxt }}>{statusLabel}</Text>
       </View>
-      <TouchableOpacity onPress={onDelete} style={{ padding: 2 }}>
-        <Ionicons name="close" size={13} color={colors.textDim} />
+      <TouchableOpacity onPress={onDelete} style={{ padding: 3 }}>
+        <Ionicons name="close" size={14} color={colors.textDim} />
       </TouchableOpacity>
     </View>
   );
@@ -536,17 +557,22 @@ export default function SleepScreen() {
                 <Text style={styles.cardTitle}>SLEEP LOG</Text>
               </View>
               {monthLogs.length === 0 && <Text style={styles.emptyText}>No sleep entries for this month.</Text>}
-              {monthLogs.map(log => (
-                <SleepLogRow
-                  key={log.id}
-                  log={log}
-                  goal={goal}
-                  colors={colors}
-                  onDelete={() => Alert.alert('Delete entry', 'Remove this entry?', [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
-                  ])}
-                />
+              {groupByWeek(monthLogs, l => l.logged_at).map(week => (
+                <View key={week.key} style={styles.weekGroupBox}>
+                  {week.items.map((log, i) => (
+                    <SleepLogRow
+                      key={log.id}
+                      log={log}
+                      goal={goal}
+                      colors={colors}
+                      isLast={i === week.items.length - 1}
+                      onDelete={() => Alert.alert('Delete entry', 'Remove this entry?', [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                      ])}
+                    />
+                  ))}
+                </View>
               ))}
             </View>
           </>
@@ -710,6 +736,8 @@ const createStyles = (colors) => StyleSheet.create({
   recoveryDividerLine: { height: 1, backgroundColor: colors.border, marginTop: 16, marginBottom: 14 },
   statTileRow: { flexDirection: 'row', alignItems: 'center' },
   statTileDivider: { width: 1, height: 24, backgroundColor: colors.border },
+
+  weekGroupBox: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 8, marginBottom: 10 },
 
   goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
   goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },
