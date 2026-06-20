@@ -13,6 +13,8 @@ import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
+import ExportCardTemplate from '../components/ui/ExportCardTemplate';
+import { useExportCard } from '../hooks/useExportCard';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -386,6 +388,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   const dS = useMemo(() => createDS(colors), [colors]);
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [historyEx, setHistoryEx] = useState(null);
+  const sessionExport = useExportCard();
 
   useEffect(() => {
     if (visible && session) {
@@ -436,6 +439,19 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             <Text style={dS.headerName}>{session.notes || 'Workout'}</Text>
             <Text style={dS.headerDate}>{fmtDate(session.date)}</Text>
           </View>
+          {!isRestDay && (
+            <TouchableOpacity
+              onPress={sessionExport.exportCard}
+              disabled={sessionExport.exporting}
+              style={dS.closeBtn}
+            >
+              {sessionExport.exporting ? (
+                <ActivityIndicator size="small" color={colors.textMuted} />
+              ) : (
+                <Ionicons name="share-outline" size={18} color={colors.textMuted} />
+              )}
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={onClose} style={dS.closeBtn}>
             <Ionicons name="close" size={20} color={colors.textMuted} />
           </TouchableOpacity>
@@ -508,6 +524,38 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             ))}
           </ScrollView>
         )}
+
+        <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+          <ExportCardTemplate ref={sessionExport.ref} title={session.notes || 'Workout'} subtitle={fmtDate(session.date)} colors={colors} width={340}>
+            <View style={dS.statsRow}>
+              {(isCardio ? [
+                { label: 'ACTIVITIES', icon: '🏃', value: exercises.length },
+                { label: 'MINUTES',    icon: '⏱',  value: totalMin > 0 ? totalMin : '—' },
+                { label: 'KCAL',       icon: '🔥', value: kcal > 0 ? kcal : '—' },
+              ] : [
+                { label: 'EXR',    icon: '🏋️', value: exercises.length },
+                { label: 'SETS',   icon: '🔄', value: totalSets },
+                { label: 'KG VOL', icon: '⚡', value: vol > 0 ? vol.toLocaleString() : '—' },
+                { label: 'KCAL',   icon: '🔥', value: kcal > 0 ? kcal : '—' },
+              ]).map(({ label, icon, value }, i, arr) => (
+                <View key={label} style={[dS.statCell, i < arr.length - 1 && dS.statCellBorder]}>
+                  <Text style={{ fontSize: 18 }}>{icon}</Text>
+                  <Text style={dS.statValue}>{value}</Text>
+                  <Text style={dS.statLabel}>{label}</Text>
+                </View>
+              ))}
+            </View>
+            {muscleGroups.length > 0 && (
+              <View style={[dS.tagRow, { marginTop: 10, flexWrap: 'wrap' }]}>
+                {muscleGroups.map(m => (
+                  <View key={m} style={dS.muscleTag}>
+                    <Text style={dS.muscleTagText}>{m}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </ExportCardTemplate>
+        </View>
 
         {/* Exercises */}
         <View style={dS.exScroll}>

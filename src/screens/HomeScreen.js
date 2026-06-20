@@ -20,6 +20,8 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
 import Svg, { Polyline, Line } from 'react-native-svg';
 import Sparkline from '../components/Sparkline';
+import ExportCardTemplate from '../components/ui/ExportCardTemplate';
+import { useExportCard } from '../hooks/useExportCard';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -758,6 +760,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const [activeTab,   setActiveTab]   = useState(0);
   const [showStreak,  setShowStreak]  = useState(false);
+  const consistencyExport = useExportCard();
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['home', user?.id],
@@ -1029,21 +1032,55 @@ export default function HomeScreen() {
             </View>
 
             {/* ── Consistency (replaces old goal-progress banner) ── */}
-            <View style={styles.consistencyCard}>
-              <View style={styles.consistencyTile}>
-                <Text style={[styles.consistencyNum, { color: colors.accent }]}>{data?.streak ?? 0}</Text>
-                <Text style={styles.consistencyLabel}>DAY{'\n'}STREAK</Text>
+            <View style={{ position: 'relative' }}>
+              <View style={styles.consistencyCard}>
+                <View style={styles.consistencyTile}>
+                  <Text style={[styles.consistencyNum, { color: colors.accent }]}>{data?.streak ?? 0}</Text>
+                  <Text style={styles.consistencyLabel}>DAY{'\n'}STREAK</Text>
+                </View>
+                <View style={styles.consistencyDivider} />
+                <View style={styles.consistencyTile}>
+                  <Text style={[styles.consistencyNum, { color: C_STEPS }]}>{data?.thisWeek?.goalDays ?? 0}/7</Text>
+                  <Text style={styles.consistencyLabel}>STEP GOAL{'\n'}DAYS</Text>
+                </View>
+                <View style={styles.consistencyDivider} />
+                <View style={styles.consistencyTile}>
+                  <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{WEEKLY_SESSION_GOAL}</Text>
+                  <Text style={styles.consistencyLabel}>WORKOUT{'\n'}SESSIONS</Text>
+                </View>
               </View>
-              <View style={styles.consistencyDivider} />
-              <View style={styles.consistencyTile}>
-                <Text style={[styles.consistencyNum, { color: C_STEPS }]}>{data?.thisWeek?.goalDays ?? 0}/7</Text>
-                <Text style={styles.consistencyLabel}>STEP GOAL{'\n'}DAYS</Text>
-              </View>
-              <View style={styles.consistencyDivider} />
-              <View style={styles.consistencyTile}>
-                <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{WEEKLY_SESSION_GOAL}</Text>
-                <Text style={styles.consistencyLabel}>WORKOUT{'\n'}SESSIONS</Text>
-              </View>
+              <TouchableOpacity
+                onPress={consistencyExport.exportCard}
+                disabled={consistencyExport.exporting}
+                style={styles.cardExportBtn}
+              >
+                {consistencyExport.exporting ? (
+                  <ActivityIndicator size="small" color={colors.textMuted ?? colors.textDim} />
+                ) : (
+                  <Ionicons name="share-outline" size={13} color={colors.textMuted ?? colors.textDim} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate ref={consistencyExport.ref} title="Consistency" colors={colors} width={340}>
+                <View style={[styles.consistencyCard, { marginHorizontal: 0, marginBottom: 0 }]}>
+                  <View style={styles.consistencyTile}>
+                    <Text style={[styles.consistencyNum, { color: colors.accent }]}>{data?.streak ?? 0}</Text>
+                    <Text style={styles.consistencyLabel}>DAY{'\n'}STREAK</Text>
+                  </View>
+                  <View style={styles.consistencyDivider} />
+                  <View style={styles.consistencyTile}>
+                    <Text style={[styles.consistencyNum, { color: C_STEPS }]}>{data?.thisWeek?.goalDays ?? 0}/7</Text>
+                    <Text style={styles.consistencyLabel}>STEP GOAL{'\n'}DAYS</Text>
+                  </View>
+                  <View style={styles.consistencyDivider} />
+                  <View style={styles.consistencyTile}>
+                    <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{WEEKLY_SESSION_GOAL}</Text>
+                    <Text style={styles.consistencyLabel}>WORKOUT{'\n'}SESSIONS</Text>
+                  </View>
+                </View>
+              </ExportCardTemplate>
             </View>
 
             {/* ── Workout Banner ─────────────────────────────────── */}
@@ -1252,6 +1289,7 @@ const createStyles = (colors) => StyleSheet.create({
   consistencyNum: { fontSize: 18, fontFamily: fontFamily.monoBold },
   consistencyLabel: { fontSize: 7, color: colors.textDim, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, textAlign: 'center', marginTop: 4 },
   consistencyDivider: { width: 1, backgroundColor: colors.border },
+  cardExportBtn: { position: 'absolute', top: 8, right: 24, padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated ?? colors.bgCard },
   overviewCard: { backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   overviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   overviewIconWrap: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },

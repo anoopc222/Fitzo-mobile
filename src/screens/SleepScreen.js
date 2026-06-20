@@ -14,6 +14,8 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import CircularGauge from '../components/CircularGauge';
+import ExportCardTemplate from '../components/ui/ExportCardTemplate';
+import { useExportCard } from '../hooks/useExportCard';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -265,6 +267,7 @@ export default function SleepScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
+  const recoveryExport = useExportCard();
 
   const [chartRange, setChartRange] = useState('1M'); // 1M | 3M | 6M | ALL
   const [showLogSheet, setShowLogSheet] = useState(false);
@@ -479,6 +482,17 @@ export default function SleepScreen() {
             <View style={styles.recoveryCard}>
               <View style={styles.recoveryGradientBar} />
               <View style={styles.recoveryTopRow}>
+                <TouchableOpacity
+                  onPress={recoveryExport.exportCard}
+                  disabled={recoveryExport.exporting}
+                  style={styles.cardExportBtn}
+                >
+                  {recoveryExport.exporting ? (
+                    <ActivityIndicator size="small" color={colors.textMuted} />
+                  ) : (
+                    <Ionicons name="share-outline" size={13} color={colors.textMuted} />
+                  )}
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(goal)); setShowGoalSheet(true); }}>
                   <Text style={styles.goalPillBtnText}>🌙 {goal}h</Text>
                   <Ionicons name="pencil" size={11} color={colors.accent} />
@@ -504,6 +518,30 @@ export default function SleepScreen() {
                 <View style={styles.statTileDivider} />
                 <StatTile value={consistency} label="CONSISTENCY" colors={colors} />
               </View>
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate ref={recoveryExport.ref} title="Sleep Recovery" colors={colors} width={340}>
+                <View style={{ alignItems: 'center' }}>
+                  <View style={styles.recoveryRow}>
+                    <CircularGauge
+                      percent={recoveryScore} size={92} strokeWidth={9} color={recoveryColor}
+                      value={recoveryScore || '—'} label="RECOVERY"
+                    />
+                    <Text style={styles.recoveryVerdict}>{verdict}</Text>
+                  </View>
+                  <View style={[styles.recoveryDividerLine, { width: '100%' }]} />
+                  <View style={styles.statTileRow}>
+                    <StatTile value={`${avg7}h`} label="7D AVG HRS" colors={colors} />
+                    <View style={styles.statTileDivider} />
+                    <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
+                    <View style={styles.statTileDivider} />
+                    <StatTile value={`${streak}d`} label="GOAL STREAK" color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} colors={colors} />
+                    <View style={styles.statTileDivider} />
+                    <StatTile value={consistency} label="CONSISTENCY" colors={colors} />
+                  </View>
+                </View>
+              </ExportCardTemplate>
             </View>
 
             {/* ── Insights ── */}
@@ -734,7 +772,8 @@ const createStyles = (colors) => StyleSheet.create({
 
   recoveryCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, marginBottom: 12, position: 'relative', overflow: 'hidden' },
   recoveryGradientBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#818cf8' },
-  recoveryTopRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 },
+  recoveryTopRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 10 },
+  cardExportBtn: { padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated },
   goalPillBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
