@@ -302,7 +302,7 @@ function DailyLogBar({ steps, goal, barMax, colors }) {
 }
 
 // ─── Monthly Heatmap — ports _renderStepsHeatmap bucket logic ───────────────
-function StepsHeatmap({ year, month, logsByDate, goal, colors, distUnit }) {
+function StepsHeatmap({ year, month, logsByDate, goal, colors }) {
   const SCREEN_W = Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
   const firstDay = new Date(year, month, 1).getDay();
@@ -354,7 +354,7 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors, distUnit }) {
             >
               <Text style={{ fontSize: 10, fontWeight: '700', fontFamily: fontFamily.mono, color: cell.lvl === 0 ? colors.textDim : colors.text }}>{cell.day}</Text>
               <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, marginTop: 1, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: cell.lvl === 0 ? 0.5 : 1 }}>
-                {cell.steps > 0 ? `${toDispKm(cell.steps * KM_PER_STEP, distUnit)}${distUnit}` : '—'}
+                {cell.steps > 0 ? fmtK(cell.steps) : '—'}
               </Text>
             </View>
           );
@@ -673,7 +673,7 @@ export default function StepsScreen() {
                   <Text style={styles.hmLegendLabel}>More</Text>
                 </View>
               </View>
-              <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} distUnit={distUnit} />
+              <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} />
             </View>
 
             {/* ── Trend Chart ── */}
@@ -710,7 +710,7 @@ export default function StepsScreen() {
                         <Text style={styles.logActEmoji}>{ACT_ICON[log.activity_type] || ACT_ICON.walk}</Text>
                         <DailyLogBar steps={log.steps} goal={log.goal ?? defaultGoal} barMax={allTimeMaxSteps} colors={colors} />
                         <Text style={[styles.logSteps, { color: log.steps >= (log.goal ?? defaultGoal) ? colors.good : colors.warn }]}>
-                          {toDispKm(log.distance_km ?? log.steps * KM_PER_STEP, distUnit)}{distUnit}
+                          {fmtK(log.steps)}
                         </Text>
                         <TouchableOpacity
                           onPress={() => Alert.alert('Delete entry', `Remove ${fmtDateShort(log.logged_at)}?`, [
