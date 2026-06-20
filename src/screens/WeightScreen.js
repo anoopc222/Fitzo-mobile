@@ -247,7 +247,7 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
 }
 
 // ─── Weekly Avg Chart + horizontal bar strip ────────────────────────────────
-function WeeklyAvgChart({ logs, viewMode, unit, colors, width }) {
+function WeeklyAvgChart({ logs, viewMode, viewType, unit, colors, width }) {
   const scrollRef = useRef(null);
   const [selIdx, setSelIdx] = useState(null);
   const groups = useMemo(() => {
@@ -278,6 +278,39 @@ function WeeklyAvgChart({ logs, viewMode, unit, colors, width }) {
 
   const allDisp = groups.map(g => toDisp(g.avg, unit));
   const maxLost = Math.max(...allDisp.map((_, i, a) => +(a[0] - a[i]).toFixed(1)), 0.001);
+
+  if (viewType === 'list') {
+    const rows = groups.map((g, i) => {
+      const dispVal = allDisp[i];
+      const delta = i === 0 ? null : +(dispVal - allDisp[i - 1]).toFixed(1);
+      const periodLabel = viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] : `Wk${i + 1}`;
+      return { key: g.key, periodLabel, dispVal, delta, isLast: i === groups.length - 1 };
+    }).reverse();
+    return (
+      <View>
+        {rows.map(r => (
+          <View key={r.key} style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border,
+          }}>
+            <Text style={{ fontSize: 12, fontFamily: fontFamily.mono, fontWeight: '700', color: colors.textMuted }}>
+              {r.periodLabel.toUpperCase()}{r.isLast ? ' · NOW' : ''}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              {r.delta != null && (
+                <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, fontWeight: '700', color: Math.abs(r.delta) < 0.05 ? colors.textMuted : r.delta < 0 ? '#34d399' : '#f87171' }}>
+                  {r.delta > 0 ? '+' : ''}{r.delta.toFixed(1)}
+                </Text>
+              )}
+              <Text style={{ fontSize: 14, fontFamily: fontFamily.monoBold, color: r.isLast ? colors.accent : colors.text }}>
+                {r.dispVal.toFixed(1)}{unit}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  }
 
   const H = 110;
   const P = { t: 12, r: 8, b: 8, l: 8 };
@@ -393,6 +426,7 @@ export default function WeightScreen() {
 
   const [unit, setUnit] = useState('kg');
   const [wkViewMode, setWkViewMode] = useState('week'); // 'week' | 'month'
+  const [avgViewType, setAvgViewType] = useState('list'); // 'list' | 'chart'
   const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
 
   const [showLogSheet, setShowLogSheet] = useState(false);
@@ -692,15 +726,23 @@ export default function WeightScreen() {
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>AVG WEIGHT</Text>
-                <View style={styles.segmentRow}>
-                  {['week', 'month'].map(v => (
-                    <TouchableOpacity key={v} onPress={() => setWkViewMode(v)} style={[styles.segmentBtn, wkViewMode === v && styles.segmentBtnActive]}>
-                      <Text style={[styles.segmentText, wkViewMode === v && styles.segmentTextActive]}>BY {v.toUpperCase()}</Text>
-                    </TouchableOpacity>
-                  ))}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => setAvgViewType(v => (v === 'list' ? 'chart' : 'list'))}
+                    style={styles.avgViewToggleBtn}
+                  >
+                    <Ionicons name={avgViewType === 'list' ? 'stats-chart' : 'list'} size={14} color={colors.textMuted} />
+                  </TouchableOpacity>
+                  <View style={styles.segmentRow}>
+                    {['week', 'month'].map(v => (
+                      <TouchableOpacity key={v} onPress={() => setWkViewMode(v)} style={[styles.segmentBtn, wkViewMode === v && styles.segmentBtnActive]}>
+                        <Text style={[styles.segmentText, wkViewMode === v && styles.segmentTextActive]}>BY {v.toUpperCase()}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
               </View>
-              <WeeklyAvgChart key={wkViewMode} logs={logs} viewMode={wkViewMode} unit={unit} colors={colors} width={chartWidth} />
+              <WeeklyAvgChart key={wkViewMode} logs={logs} viewMode={wkViewMode} viewType={avgViewType} unit={unit} colors={colors} width={chartWidth} />
             </View>
 
             {/* ── History ── */}
@@ -908,6 +950,7 @@ const createStyles = (colors) => StyleSheet.create({
   monthChevron: { fontSize: 22, color: colors.text, fontWeight: '300' },
   monthLabel: { fontSize: typography.base, fontFamily: fontFamily.displayItalic, color: colors.text, fontStyle: 'italic' },
 
+  avgViewToggleBtn: { padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated },
   segmentRow: { flexDirection: 'row', backgroundColor: colors.bgElevated, borderRadius: 20, padding: 2 },
   segmentBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 18 },
   segmentBtnActive: { backgroundColor: colors.accent },
