@@ -571,7 +571,9 @@ export default function WeightScreen() {
               </View>
               <View style={styles.statTileRowInline}>
                 <StatCell value={mMax != null ? toDisp(mMax, unit).toFixed(1) : '—'} label="PEAK" colors={colors} />
+                <View style={styles.statDividerInline} />
                 <StatCell value={mMin != null ? toDisp(mMin, unit).toFixed(1) : '—'} label="LOW" color={colors.good} colors={colors} />
+                <View style={styles.statDividerInline} />
                 <StatCell value={mAvg != null ? toDisp(mAvg, unit).toFixed(1) : '—'} label="AVG" colors={colors} />
               </View>
 
@@ -582,10 +584,12 @@ export default function WeightScreen() {
               </View>
               <View style={styles.statTileRowInline}>
                 <StatCell value={allTimeStats ? toDisp(allTimeStats.first.weight, unit).toFixed(1) : '—'} label="START" colors={colors} />
+                <View style={styles.statDividerInline} />
                 <StatCell
                   value={allTimeStats ? `${allTimeStats.lost >= 0 ? '−' : '+'}${Math.abs(toDisp(allTimeStats.lost, unit)).toFixed(1)}` : '—'}
                   label="CHANGE" color={allTimeStats && allTimeStats.lost >= 0 ? colors.good : colors.danger} colors={colors}
                 />
+                <View style={styles.statDividerInline} />
                 <StatCell
                   value={allTimeStats ? `${toDisp(allTimeStats.rateKgWk, unit).toFixed(2)}` : '—'}
                   label={`${unit.toUpperCase()}/WK`} color={allTimeStats && allTimeStats.rateKgWk <= 0 ? colors.good : colors.danger} colors={colors}
@@ -629,8 +633,11 @@ export default function WeightScreen() {
               {trendStats && (
                 <View style={styles.trendStatsRow}>
                   <WeekStatCell value={trendStats.first.toFixed(1)} label="START" color={colors.text} colors={colors} />
+                  <View style={styles.statDividerInline} />
                   <WeekStatCell value={trendStats.lastV.toFixed(1)} label="LATEST" color={colors.accent} colors={colors} />
+                  <View style={styles.statDividerInline} />
                   <WeekStatCell value={`${trendStats.change >= 0 ? '+' : ''}${trendStats.change.toFixed(1)}`} label="CHANGE" color={trendStats.change <= 0 ? colors.good : colors.danger} colors={colors} />
+                  <View style={styles.statDividerInline} />
                   <WeekStatCell value={trendStats.ratePerWk != null ? trendStats.ratePerWk.toFixed(2) : '—'} label={`${unit}/WK`} color={trendStats.ratePerWk != null ? (trendStats.ratePerWk <= 0 ? colors.good : colors.danger) : colors.textMuted} colors={colors} />
                 </View>
               )}
@@ -883,7 +890,8 @@ const createStyles = (colors) => StyleSheet.create({
   sectionDivider: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 10 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   dividerLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, fontFamily: fontFamily.mono },
-  statTileRowInline: { flexDirection: 'row' },
+  statTileRowInline: { flexDirection: 'row', alignItems: 'center' },
+  statDividerInline: { width: 1, height: 24, backgroundColor: colors.border },
 
   goalProgressRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
   goalStatRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
@@ -905,7 +913,7 @@ const createStyles = (colors) => StyleSheet.create({
   quickAddChipText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text },
 
 
-  trendStatsRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 8 },
+  trendStatsRow: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 8 },
 
   fab: {
     position: 'absolute', bottom: 24, right: 24,
