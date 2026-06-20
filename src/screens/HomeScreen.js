@@ -11,8 +11,8 @@ import { useQuery } from '@tanstack/react-query';
 const SCREEN_W  = Dimensions.get('window').width;
 const CAL_PAD   = 16;  // horizontal padding inside the calendar section
 const CAL_GAP   = 3;   // gap between cells
-const MODAL_W   = Math.min(SCREEN_W - 40, 420); // overlay padding(20*2) + popup maxWidth
-const CAL_CELL  = (MODAL_W - CAL_PAD * 2 - CAL_GAP * 6) / 7;
+const MODAL_W   = Math.min(SCREEN_W - 40, 420) - 2; // overlay padding(20*2) + popup maxWidth - popup border(1*2)
+const CAL_CELL  = Math.floor((MODAL_W - CAL_PAD * 2 - CAL_GAP * 6) / 7);
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -1201,8 +1201,8 @@ const createScS = (colors) => StyleSheet.create({
   calNavBtns: { flexDirection: 'row', gap: 6 },
   calNavBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: colors.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
   calNavText: { fontSize: 20, color: colors.text, lineHeight: 24, fontWeight: '300' },
-  dayNamesRow: { flexDirection: 'row', marginBottom: 6 },
-  dayNameCell: { width: CAL_CELL + CAL_GAP, alignItems: 'center', paddingVertical: 4 },
+  dayNamesRow: { flexDirection: 'row', gap: CAL_GAP, marginBottom: 6 },
+  dayNameCell: { width: CAL_CELL, alignItems: 'center', paddingVertical: 4 },
   dayNameText: { fontSize: 11, color: colors.textMuted, fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: CAL_GAP },
   dayCell: { width: CAL_CELL, height: CAL_CELL, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
