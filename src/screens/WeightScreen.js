@@ -561,17 +561,12 @@ export default function WeightScreen() {
                   label="DONE"
                 />
                 <View style={{ flex: 1, marginLeft: 16 }}>
-                  <View style={styles.goalStatRow}>
-                    <Text style={styles.goalStatLabel}>NOW</Text>
-                    <Text style={styles.goalStatVal}>{goalProgress ? toDisp(goalProgress.curKg, unit).toFixed(1) : '—'}{unit}</Text>
-                  </View>
-                  <View style={styles.goalStatRow}>
-                    <Text style={styles.goalStatLabel}>TARGET</Text>
-                    <Text style={styles.goalStatVal}>{goalKg ? toDisp(goalKg, unit).toFixed(1) : '—'}{unit}</Text>
-                  </View>
-                  <View style={styles.goalStatRow}>
-                    <Text style={styles.goalStatLabel}>TO GO</Text>
-                    <Text style={styles.goalStatVal}>{goalProgress ? Math.abs(toDisp(goalProgress.toGo, unit)).toFixed(1) : '—'}{unit}</Text>
+                  <View style={styles.statTileRowInline}>
+                    <StatCell value={goalProgress ? `${toDisp(goalProgress.curKg, unit).toFixed(1)}${unit}` : '—'} label="NOW" colors={colors} />
+                    <View style={styles.statDividerInline} />
+                    <StatCell value={goalKg ? `${toDisp(goalKg, unit).toFixed(1)}${unit}` : '—'} label="TARGET" colors={colors} />
+                    <View style={styles.statDividerInline} />
+                    <StatCell value={goalProgress ? `${Math.abs(toDisp(goalProgress.toGo, unit)).toFixed(1)}${unit}` : '—'} label="TO GO" colors={colors} />
                   </View>
                   {(goalProgress?.etaText || goalProgress?.rateText) && (
                     <Text style={styles.goalEta}>
@@ -918,9 +913,6 @@ const createStyles = (colors) => StyleSheet.create({
   statDividerInline: { width: 1, height: 24, backgroundColor: colors.border },
 
   goalProgressRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
-  goalStatRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  goalStatLabel: { fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.mono },
-  goalStatVal: { fontSize: typography.base, fontWeight: weight.bold, color: colors.text, fontFamily: fontFamily.monoBold },
   goalEta: { fontSize: 11, color: colors.accent, marginTop: 4 },
   goalRate: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
 
