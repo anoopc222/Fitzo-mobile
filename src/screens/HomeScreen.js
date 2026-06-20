@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useQuery } from '@tanstack/react-query';
 
 const SCREEN_W  = Dimensions.get('window').width;
@@ -367,6 +368,7 @@ function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={ddS.overlay}>
+        <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFillObject} />
         <View style={ddS.sheet}>
           {/* Header */}
           <View style={[ddS.header, { backgroundColor: typeInfo.bg }]}>
@@ -561,6 +563,7 @@ function StreakCalendarModal({ visible, userId, onClose }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={scS.overlay}>
+        <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFillObject} />
         <View style={scS.popup}>
         {/* Header */}
         <View style={scS.header}>
