@@ -571,16 +571,18 @@ function StreakCalendarModal({ visible, userId, onClose }) {
             ))}
           </View>
 
-          {/* Square stats grid */}
-          <View style={scS.statsGrid}>
-            {STATS.map((item, idx) => (
-              <View key={idx} style={scS.statCell}>
-                <Ionicons name={item.icon} size={16} color={item.color} style={{ marginBottom: 4 }} />
-                <Text style={[scS.statVal, { color: item.color }]}>{item.val}</Text>
-                <Text style={scS.statLbl}>{item.lbl}</Text>
-                {item.sub && <Text style={scS.statSub}>{item.sub}</Text>}
-              </View>
-            ))}
+          {/* Compact secondary stats — dense text, no scroll needed */}
+          <View style={scS.statsStrip}>
+            <Text style={scS.statsStripText}>
+              {STATS.map((item, idx) => (
+                <Text key={idx}>
+                  <Text style={scS.statsStripLabel}>{item.lbl} </Text>
+                  <Text style={[scS.statsStripVal, { color: item.color }]}>{item.val}</Text>
+                  {item.sub ? <Text style={scS.statsStripSub}> ({item.sub})</Text> : null}
+                  {idx < STATS.length - 1 ? <Text style={scS.statsStripDot}>  ·  </Text> : null}
+                </Text>
+              ))}
+            </Text>
           </View>
 
           {/* Calendar section */}
@@ -1187,11 +1189,14 @@ const createScS = (colors) => StyleSheet.create({
   topCard: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: 14, marginHorizontal: 16, marginTop: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   topCell: { flex: 1, alignItems: 'center', paddingVertical: 14 },
   topDivider: { width: 1, backgroundColor: colors.border },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingVertical: 14 },
-  statCell: { width: '31.5%', aspectRatio: 1, backgroundColor: colors.bgCard, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   statVal: { fontSize: 20, fontWeight: '900' },
   statLbl: { fontSize: 9, color: colors.textDim, fontWeight: '700', letterSpacing: 0.8, marginTop: 3, textAlign: 'center' },
-  statSub: { fontSize: 8, color: colors.textMuted, marginTop: 2, textAlign: 'center' },
+  statsStrip: { backgroundColor: colors.bgCard, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginHorizontal: 16, marginTop: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  statsStripText: { lineHeight: 18 },
+  statsStripLabel: { fontSize: 10, color: colors.textDim, fontWeight: '700', letterSpacing: 0.4 },
+  statsStripVal: { fontSize: 11, fontWeight: '900' },
+  statsStripSub: { fontSize: 9, color: colors.textMuted },
+  statsStripDot: { fontSize: 10, color: colors.textDim },
   calSection: { paddingHorizontal: CAL_PAD, marginTop: 4 },
   calNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   calMonthTitle: { fontSize: 20, fontWeight: '900', color: colors.text },
