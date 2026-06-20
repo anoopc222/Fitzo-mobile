@@ -1187,6 +1187,13 @@ export default function HomeScreen() {
                       value={String(tabStats[activeTab]?.sessions ?? 0)}
                       label="SESSIONS"
                       sub={activeTab === 0 && data ? deltaStr(data.thisWeek.sessions - data.lastWeek.sessions) + ' vs last wk' : null}
+                      subColor={activeTab === 0 && data
+                        ? ((data.thisWeek.sessions - data.lastWeek.sessions) > 0
+                          ? C_GREEN
+                          : (data.thisWeek.sessions - data.lastWeek.sessions) < 0
+                            ? '#f87171'
+                            : null)
+                        : null}
                       color={colors.accent}
                     />
                     <StatTile
@@ -1207,7 +1214,9 @@ export default function HomeScreen() {
                         : '—'}
                       label="WT Δ"
                       sub={activeTab === 0 ? 'wk change' : activeTab === 1 ? 'wk change' : 'mo change'}
-                      color={C_WEIGHT}
+                      color={tabStats[activeTab]?.weightDelta == null
+                        ? C_WEIGHT
+                        : tabStats[activeTab].weightDelta > 0 ? '#f87171' : C_GREEN}
                       last
                     />
                   </View>
@@ -1233,14 +1242,14 @@ function deltaStr(n) {
   return (n > 0 ? '+' : '') + n;
 }
 
-function StatTile({ value, label, sub, color, last }) {
+function StatTile({ value, label, sub, subColor, color, last }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={[styles.statTile, !last && styles.statTileDivider]}>
       <Text style={[styles.statTileNum, { color }]}>{value}</Text>
       <Text style={styles.statTileLabel}>{label}</Text>
-      {sub ? <Text style={styles.statTileSub}>{sub}</Text> : null}
+      {sub ? <Text style={[styles.statTileSub, subColor && { color: subColor }]}>{sub}</Text> : null}
     </View>
   );
 }
