@@ -558,33 +558,42 @@ function StreakCalendarModal({ visible, userId, onClose }) {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Gym/Cardio/Rest tiles */}
-          <View style={[scS.statGrid, { marginTop: 14 }]}>
+          {/* Gym/Cardio/Rest — single card, line-separated */}
+          <View style={[scS.statCard, { marginTop: 14 }]}>
             {TOP_STATS.map((item, idx) => (
-              <View key={idx} style={[scS.statBox, { borderColor: item.color }]}>
-                <Ionicons name={item.icon} size={16} color={item.color} style={{ marginBottom: 4 }} />
-                <Text style={[scS.statBoxVal, { color: item.color }]}>{item.val}</Text>
-                <Text style={scS.statBoxLbl}>{item.lbl}</Text>
-              </View>
+              <React.Fragment key={idx}>
+                <View style={scS.statCell}>
+                  <Ionicons name={item.icon} size={14} color={item.color} style={{ marginBottom: 3 }} />
+                  <Text style={[scS.statCellVal, { color: item.color }]}>{item.val}</Text>
+                  <Text style={scS.statCellLbl}>{item.lbl}</Text>
+                </View>
+                {idx < TOP_STATS.length - 1 && <View style={scS.statDivider} />}
+              </React.Fragment>
             ))}
           </View>
 
-          {/* Secondary stat tiles */}
-          <View style={scS.statGrid}>
+          {/* Secondary stats — single card per row, line-separated */}
+          <View style={scS.statCard}>
             {STATS.slice(0, 3).map((item, idx) => (
-              <View key={idx} style={scS.statBoxNeutral}>
-                <Text style={[scS.statBoxVal, { color: item.color }]}>{item.val}</Text>
-                <Text style={scS.statBoxLbl}>{item.lbl}</Text>
-              </View>
+              <React.Fragment key={idx}>
+                <View style={scS.statCell}>
+                  <Text style={[scS.statCellVal, { color: item.color }]}>{item.val}</Text>
+                  <Text style={scS.statCellLbl}>{item.lbl}</Text>
+                </View>
+                {idx < 2 && <View style={scS.statDivider} />}
+              </React.Fragment>
             ))}
           </View>
-          <View style={scS.statGrid}>
+          <View style={scS.statCard}>
             {STATS.slice(3, 6).map((item, idx) => (
-              <View key={idx} style={scS.statBoxNeutral}>
-                <Text style={[scS.statBoxVal, { color: item.color }]}>{item.val}</Text>
-                <Text style={scS.statBoxLbl}>{item.lbl}</Text>
-                {item.sub ? <Text style={scS.statBoxSub}>{item.sub}</Text> : null}
-              </View>
+              <React.Fragment key={idx}>
+                <View style={scS.statCell}>
+                  <Text style={[scS.statCellVal, { color: item.color }]}>{item.val}</Text>
+                  <Text style={scS.statCellLbl}>{item.lbl}</Text>
+                  {item.sub ? <Text style={scS.statCellSub}>{item.sub}</Text> : null}
+                </View>
+                {idx < 2 && <View style={scS.statDivider} />}
+              </React.Fragment>
             ))}
           </View>
 
@@ -617,7 +626,7 @@ function StreakCalendarModal({ visible, userId, onClose }) {
             ) : (
               <View style={scS.grid}>
                 {cells.map((day, idx) => {
-                  if (!day) return <View key={`e${idx}`} style={scS.dayCell} />;
+                  if (!day) return <View key={`e${idx}`} style={{ width: CAL_CELL, height: CAL_CELL }} />;
                   const iso     = isoForDay(day);
                   const entry   = dayMap[iso];
                   const isToday = iso === todayStr;
@@ -1177,12 +1186,12 @@ const createScS = (colors) => StyleSheet.create({
   title: { fontSize: 20, fontWeight: '900', color: colors.text },
   subtitle: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
   closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.bgCard },
-  statGrid: { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginTop: 8 },
-  statBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, backgroundColor: colors.bgCard },
-  statBoxNeutral: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard },
-  statBoxVal: { fontSize: 18, fontWeight: '900' },
-  statBoxLbl: { fontSize: 9, color: colors.textDim, fontWeight: '700', letterSpacing: 0.6, marginTop: 2, textAlign: 'center' },
-  statBoxSub: { fontSize: 8, color: colors.textMuted, marginTop: 1, textAlign: 'center' },
+  statCard: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: 14, marginHorizontal: 16, marginTop: 8, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  statCell: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 9 },
+  statDivider: { width: 1, backgroundColor: colors.border },
+  statCellVal: { fontSize: 16, fontWeight: '900' },
+  statCellLbl: { fontSize: 9, color: colors.textDim, fontWeight: '700', letterSpacing: 0.5, marginTop: 2, textAlign: 'center' },
+  statCellSub: { fontSize: 8, color: colors.textMuted, marginTop: 1, textAlign: 'center' },
   calSection: { paddingHorizontal: CAL_PAD, marginTop: 12 },
   calNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   calMonthTitle: { fontSize: 20, fontWeight: '900', color: colors.text },
