@@ -30,6 +30,7 @@ const KM_TO_MI = 0.621371;
 function toDispKm(km, unit) { return unit === 'mi' ? +(km * KM_TO_MI).toFixed(2) : +km.toFixed(2); }
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
 const ACT_TYPES = [
@@ -70,7 +71,7 @@ function fmtK(n) {
 }
 function fmtDateShort(iso) {
   const d = new Date(iso + 'T00:00:00');
-  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} (${DOW_SHORT[d.getDay()]})`;
 }
 
 async function fetchSteps(userId) {
@@ -923,7 +924,7 @@ const createStyles = (colors) => StyleSheet.create({
 
   logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 9 },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  logDate: { width: 44, fontSize: 11, color: colors.text, fontFamily: fontFamily.bodyMedium },
+  logDate: { width: 76, fontSize: 10, color: colors.text, fontFamily: fontFamily.bodyMedium },
   logActEmoji: { fontSize: 13, width: 18, textAlign: 'center' },
   logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 70, paddingTop: 4 },
   logSteps: { fontSize: 12, fontWeight: weight.bold, minWidth: 54, textAlign: 'right', fontFamily: fontFamily.monoBold },

@@ -18,6 +18,7 @@ import CircularGauge from '../components/CircularGauge';
 // ─── Constants ──────────────────────────────────────────────────────────────
 const KG_TO_LBS = 2.20462;
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
 
@@ -46,7 +47,7 @@ function groupByWeek(items, getDate) {
 }
 function fmtDateShort(iso) {
   const d = new Date(iso + 'T00:00:00');
-  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} (${DOW_SHORT[d.getDay()]})`;
 }
 function toDisp(kg, unit) { return unit === 'lbs' ? +(kg * KG_TO_LBS).toFixed(1) : +kg.toFixed(1); }
 function fromDisp(val, unit) { return unit === 'lbs' ? +(val / KG_TO_LBS).toFixed(2) : +val.toFixed(2); }
@@ -928,7 +929,7 @@ const createStyles = (colors) => StyleSheet.create({
 
   logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 9 },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  logDate: { width: 44, fontSize: 11, color: colors.text, fontFamily: fontFamily.bodyMedium },
+  logDate: { width: 76, fontSize: 10, color: colors.text, fontFamily: fontFamily.bodyMedium },
   logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 52, paddingTop: 4 },
   logVal: { fontSize: 12, fontWeight: weight.bold, minWidth: 40, textAlign: 'right', fontFamily: fontFamily.monoBold, color: '#67e8f9' },
   logDelta: { fontSize: 10, fontWeight: weight.bold, minWidth: 36, textAlign: 'right', fontFamily: fontFamily.mono },

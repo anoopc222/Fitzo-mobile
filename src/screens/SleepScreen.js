@@ -239,13 +239,12 @@ function SleepLogRow({ log, goal, colors, onDelete, isLast }) {
   }
 
   const d = new Date(log.logged_at + 'T12:00:00');
-  const dayName = DAY_NAMES[d.getDay()];
-  const dayNum = d.getDate();
+  const dateLabel = `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} (${DAY_NAMES[d.getDay()].slice(0, 1)}${DAY_NAMES[d.getDay()].slice(1).toLowerCase()})`;
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 10, borderBottomWidth: isLast ? 0 : 1, borderBottomColor: colors.border }}>
       <View style={{ width: 3, height: 30, borderRadius: 2, backgroundColor: barColor }} />
-      <Text style={{ width: 44, fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{dayName} {dayNum}</Text>
+      <Text style={{ width: 78, fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{dateLabel}</Text>
       <Text style={{ fontSize: typography.base, fontWeight: '800', fontFamily: fontFamily.monoBold, color: barColor }}>{log.hours}h</Text>
       <View style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.dim, overflow: 'hidden' }}>
         <View style={{ height: '100%', borderRadius: 3, width: `${pct}%`, backgroundColor: barColor }} />
