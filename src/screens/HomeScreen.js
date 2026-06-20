@@ -11,7 +11,8 @@ import { useQuery } from '@tanstack/react-query';
 const SCREEN_W  = Dimensions.get('window').width;
 const CAL_PAD   = 16;  // horizontal padding inside the calendar section
 const CAL_GAP   = 3;   // gap between cells
-const CAL_CELL  = (SCREEN_W - CAL_PAD * 2 - CAL_GAP * 6) / 7;
+const MODAL_W   = Math.min(SCREEN_W - 40, 420); // overlay padding(20*2) + popup maxWidth
+const CAL_CELL  = (MODAL_W - CAL_PAD * 2 - CAL_GAP * 6) / 7;
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
