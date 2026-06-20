@@ -151,15 +151,15 @@ async function fetchHome(userId) {
       .gte('date', monthStart).lte('date', monthEnd),
     supabase.from('step_logs')
       .select('steps, goal, logged_at').eq('user_id', userId)
-      .gte('logged_at', thisWeekStart).lte('logged_at', thisWeekEnd)
+      .gte('logged_at', `${thisWeekStart}T00:00:00`).lte('logged_at', `${thisWeekEnd}T23:59:59`)
       .order('logged_at', { ascending: true }),
     supabase.from('step_logs')
       .select('steps, goal, logged_at').eq('user_id', userId)
-      .gte('logged_at', lastWeekStart).lte('logged_at', lastWeekEnd)
+      .gte('logged_at', `${lastWeekStart}T00:00:00`).lte('logged_at', `${lastWeekEnd}T23:59:59`)
       .order('logged_at', { ascending: true }),
     supabase.from('step_logs')
       .select('steps, goal').eq('user_id', userId)
-      .gte('logged_at', monthStart).lte('logged_at', monthEnd),
+      .gte('logged_at', `${monthStart}T00:00:00`).lte('logged_at', `${monthEnd}T23:59:59`),
     supabase.from('food_logs')
       .select('calories').eq('user_id', userId)
       .gte('logged_at', `${thisWeekStart}T00:00:00`).lte('logged_at', `${thisWeekEnd}T23:59:59`),
@@ -769,7 +769,7 @@ export default function HomeScreen() {
 
   const tabStats = [data?.thisWeek, data?.lastWeek, data?.thisMonth];
   const todayIsoDow = (() => { const d = new Date().getDay(); return d === 0 ? 7 : d; })();
-  const periodDays = [Math.max(1, todayIsoDow - 1), 7, new Date().getDate()];
+  const periodDays = [todayIsoDow, 7, new Date().getDate()];
 
   const stepGoalForWeek = data?.stepGoal ?? 10000;
   const stepsPct    = Math.min(100, Math.round(((data?.thisWeek?.steps ?? 0) / (stepGoalForWeek * periodDays[0])) * 100));
