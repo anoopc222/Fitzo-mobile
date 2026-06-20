@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 
 const SCREEN_W  = Dimensions.get('window').width;
@@ -785,108 +784,100 @@ export default function HomeScreen() {
             {/* ── Stat Cards Row 1 ───────────────────────────────── */}
             <View style={styles.cardRow}>
               {/* Weight */}
-              <TouchableOpacity style={styles.halfWrap} onPress={() => nav('Weight')} activeOpacity={0.85}>
-                <LinearGradient colors={[colors.card, colors.surface]} style={[styles.statCard, { borderColor: C_WEIGHT + '40' }]}>
-                  <View style={styles.cardTopRow}>
-                    <Ionicons name="scale-outline" size={12} color={C_WEIGHT} />
-                    <Text style={[styles.cardLabel, { color: C_WEIGHT }]}>WEIGHT</Text>
-                    {data?.weightDeltaVsYday !== null && data?.weightDeltaVsYday !== undefined && (
-                      <View style={[styles.chip, { backgroundColor: data.weightDeltaVsYday <= 0 ? '#064e3b' : '#4a1010' }]}>
-                        <Text style={[styles.chipText, { color: data.weightDeltaVsYday <= 0 ? C_GREEN : '#f87171' }]}>
-                          {data.weightDeltaVsYday > 0 ? '+' : ''}{data.weightDeltaVsYday} kg vs yday
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[styles.bigNum, { color: C_WEIGHT }]}>{data?.latestWeight?.weight ?? '—'}</Text>
-                  <Text style={styles.cardSub}>kg · body weight</Text>
-                  <Sparkline data={data?.weightArr ?? []} color={C_WEIGHT} width={136} height={42} filled />
-                </LinearGradient>
+              <TouchableOpacity style={[styles.halfWrap, styles.statCard]} onPress={() => nav('Weight')} activeOpacity={0.85}>
+                <View style={styles.cardTopRow}>
+                  <Ionicons name="scale-outline" size={12} color={C_WEIGHT} />
+                  <Text style={[styles.cardLabel, { color: C_WEIGHT }]}>WEIGHT</Text>
+                  {data?.weightDeltaVsYday !== null && data?.weightDeltaVsYday !== undefined && (
+                    <View style={[styles.chip, { backgroundColor: data.weightDeltaVsYday <= 0 ? '#064e3b' : '#4a1010' }]}>
+                      <Text style={[styles.chipText, { color: data.weightDeltaVsYday <= 0 ? C_GREEN : '#f87171' }]}>
+                        {data.weightDeltaVsYday > 0 ? '+' : ''}{data.weightDeltaVsYday} kg vs yday
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.bigNum, { color: colors.text }]}>{data?.latestWeight?.weight ?? '—'}</Text>
+                <Text style={styles.cardSub}>kg · body weight</Text>
+                <Sparkline data={data?.weightArr ?? []} color={C_WEIGHT} width={136} height={42} filled />
               </TouchableOpacity>
 
               {/* Steps */}
-              <TouchableOpacity style={styles.halfWrap} onPress={() => nav('Steps')} activeOpacity={0.85}>
-                <LinearGradient colors={[colors.card, colors.surface]} style={[styles.statCard, { borderColor: C_STEPS + '40' }]}>
-                  <View style={styles.cardTopRow}>
-                    <Ionicons name="footsteps-outline" size={12} color={C_STEPS} />
-                    <Text style={[styles.cardLabel, { color: C_STEPS }]}>YESTERDAY</Text>
-                    {data?.stepGoalMet && (
-                      <View style={[styles.chip, { backgroundColor: '#064e3b' }]}>
-                        <Ionicons name="checkmark" size={9} color={C_GREEN} />
-                        <Text style={[styles.chipText, { color: C_GREEN }]}>Goal met!</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[styles.bigNum, { color: C_STEPS }]}>
-                    {data?.latestSteps?.steps?.toLocaleString() ?? '—'}
-                  </Text>
-                  <Text style={styles.cardSub}>steps yesterday</Text>
-                  <Sparkline data={data?.stepsArr ?? []} color={C_STEPS} width={136} height={42} filled />
-                </LinearGradient>
+              <TouchableOpacity style={[styles.halfWrap, styles.statCard]} onPress={() => nav('Steps')} activeOpacity={0.85}>
+                <View style={styles.cardTopRow}>
+                  <Ionicons name="footsteps-outline" size={12} color={C_STEPS} />
+                  <Text style={[styles.cardLabel, { color: C_STEPS }]}>YESTERDAY</Text>
+                  {data?.stepGoalMet && (
+                    <View style={[styles.chip, { backgroundColor: '#064e3b' }]}>
+                      <Ionicons name="checkmark" size={9} color={C_GREEN} />
+                      <Text style={[styles.chipText, { color: C_GREEN }]}>Goal met!</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.bigNum, { color: colors.text }]}>
+                  {data?.latestSteps?.steps?.toLocaleString() ?? '—'}
+                </Text>
+                <Text style={styles.cardSub}>steps yesterday</Text>
+                <Sparkline data={data?.stepsArr ?? []} color={C_STEPS} width={136} height={42} filled />
               </TouchableOpacity>
             </View>
 
             {/* ── Stat Cards Row 2 ───────────────────────────────── */}
             <View style={styles.cardRow}>
               {/* KCAL */}
-              <TouchableOpacity style={styles.halfWrap} onPress={() => nav('Log')} activeOpacity={0.85}>
-                <LinearGradient colors={[colors.card, colors.surface]} style={[styles.statCard, { borderColor: C_KCAL + '40' }]}>
-                  <View style={styles.cardTopRow}>
-                    <Ionicons name="flame-outline" size={12} color={C_KCAL} />
-                    <Text style={[styles.cardLabel, { color: C_KCAL }]}>TODAY KCAL</Text>
-                  </View>
-                  {(data?.todayKcal ?? 0) === 0 ? (
-                    <>
-                      <View style={styles.dashBar} />
-                      <Text style={styles.cardSub}>not logged today</Text>
-                      <Text style={styles.tapLog}>Tap to log food</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={[styles.bigNum, { color: C_KCAL }]}>{data.todayKcal}</Text>
-                      <Text style={styles.cardSub}>kcal today</Text>
-                      {(data?.todayProtein ?? 0) > 0 && (
-                        <Text style={[styles.cardSub, { color: colors.success }]}>
-                          {Math.round(data.todayProtein)}g protein
-                        </Text>
-                      )}
-                    </>
-                  )}
-                </LinearGradient>
+              <TouchableOpacity style={[styles.halfWrap, styles.statCard]} onPress={() => nav('Log')} activeOpacity={0.85}>
+                <View style={styles.cardTopRow}>
+                  <Ionicons name="flame-outline" size={12} color={C_KCAL} />
+                  <Text style={[styles.cardLabel, { color: C_KCAL }]}>TODAY KCAL</Text>
+                </View>
+                {(data?.todayKcal ?? 0) === 0 ? (
+                  <>
+                    <View style={styles.dashBar} />
+                    <Text style={styles.cardSub}>not logged today</Text>
+                    <Text style={styles.tapLog}>Tap to log food</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={[styles.bigNum, { color: colors.text }]}>{data.todayKcal}</Text>
+                    <Text style={styles.cardSub}>kcal today</Text>
+                    {(data?.todayProtein ?? 0) > 0 && (
+                      <Text style={[styles.cardSub, { color: colors.success }]}>
+                        {Math.round(data.todayProtein)}g protein
+                      </Text>
+                    )}
+                  </>
+                )}
               </TouchableOpacity>
 
               {/* Sleep */}
-              <TouchableOpacity style={styles.halfWrap} onPress={() => nav('Sleep')} activeOpacity={0.85}>
-                <LinearGradient colors={[colors.card, colors.surface]} style={[styles.statCard, { borderColor: C_SLEEP + '40' }]}>
-                  <View style={styles.cardTopRow}>
-                    <Ionicons name="moon-outline" size={12} color={C_SLEEP} />
-                    <Text style={[styles.cardLabel, { color: C_SLEEP }]}>SLEEP</Text>
-                    {data?.sleepGoalMet && (
-                      <View style={[styles.chip, { backgroundColor: '#064e3b' }]}>
-                        <Ionicons name="checkmark" size={9} color={C_GREEN} />
-                        <Text style={[styles.chipText, { color: C_GREEN }]}>Goal met</Text>
-                      </View>
-                    )}
-                  </View>
-                  {data?.latestSleep ? (
-                    <>
-                      <Text style={[styles.bigNum, { color: C_SLEEP }]}>{data.latestSleep.hours}h</Text>
-                      <Text style={styles.cardSub}>logged today</Text>
-                    </>
-                  ) : (
-                    <>
-                      <View style={styles.dashBar} />
-                      <Text style={styles.cardSub}>not logged</Text>
-                    </>
+              <TouchableOpacity style={[styles.halfWrap, styles.statCard]} onPress={() => nav('Sleep')} activeOpacity={0.85}>
+                <View style={styles.cardTopRow}>
+                  <Ionicons name="moon-outline" size={12} color={C_SLEEP} />
+                  <Text style={[styles.cardLabel, { color: C_SLEEP }]}>SLEEP</Text>
+                  {data?.sleepGoalMet && (
+                    <View style={[styles.chip, { backgroundColor: '#064e3b' }]}>
+                      <Ionicons name="checkmark" size={9} color={C_GREEN} />
+                      <Text style={[styles.chipText, { color: C_GREEN }]}>Goal met</Text>
+                    </View>
                   )}
-                  <Sparkline data={data?.sleepArr ?? []} color={C_SLEEP} width={136} height={42} filled />
-                </LinearGradient>
+                </View>
+                {data?.latestSleep ? (
+                  <>
+                    <Text style={[styles.bigNum, { color: colors.text }]}>{data.latestSleep.hours}h</Text>
+                    <Text style={styles.cardSub}>logged today</Text>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.dashBar} />
+                    <Text style={styles.cardSub}>not logged</Text>
+                  </>
+                )}
+                <Sparkline data={data?.sleepArr ?? []} color={C_SLEEP} width={136} height={42} filled />
               </TouchableOpacity>
             </View>
 
             {/* ── Workout Banner ─────────────────────────────────── */}
             {data?.hasTodayWorkout ? (
-              <LinearGradient colors={[colors.card, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.banner, { borderColor: C_GREEN + '40' }]}>
+              <View style={styles.banner}>
                 <Text style={styles.bannerEmoji}>✅</Text>
                 <View style={styles.bannerBody}>
                   <Text style={styles.bannerTitle}>{data.todayWorkoutName} done today!</Text>
@@ -895,25 +886,23 @@ export default function HomeScreen() {
                 <TouchableOpacity style={styles.viewBtn} onPress={() => navigation.navigate('Workout')}>
                   <Text style={styles.viewBtnText}>View</Text>
                 </TouchableOpacity>
-              </LinearGradient>
+              </View>
             ) : (
-              <TouchableOpacity onPress={() => navigation.navigate('Workout')} activeOpacity={0.85}>
-                <LinearGradient colors={[colors.card, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.banner, { borderColor: colors.warning + '40' }]}>
-                  <Ionicons name="barbell-outline" size={22} color={colors.warning} />
-                  <View style={styles.bannerBody}>
-                    <Text style={[styles.bannerTitle, { color: colors.warning }]}>No workout today</Text>
-                    <Text style={styles.bannerSub}>Tap to start a new session</Text>
-                  </View>
-                  <View style={[styles.viewBtn, { borderColor: colors.warning, backgroundColor: colors.warning + '22' }]}>
-                    <Text style={[styles.viewBtnText, { color: colors.warning }]}>Start</Text>
-                  </View>
-                </LinearGradient>
+              <TouchableOpacity style={styles.banner} onPress={() => navigation.navigate('Workout')} activeOpacity={0.85}>
+                <Ionicons name="barbell-outline" size={22} color={colors.warning} />
+                <View style={styles.bannerBody}>
+                  <Text style={[styles.bannerTitle, { color: colors.warning }]}>No workout today</Text>
+                  <Text style={styles.bannerSub}>Tap to start a new session</Text>
+                </View>
+                <View style={[styles.viewBtn, { borderColor: colors.warning, backgroundColor: colors.warning + '22' }]}>
+                  <Text style={[styles.viewBtnText, { color: colors.warning }]}>Start</Text>
+                </View>
               </TouchableOpacity>
             )}
 
             {/* ── Goal Progress Banner ───────────────────────────── */}
             {sessionsLeft > 0 ? (
-              <LinearGradient colors={[colors.card, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.banner, { borderColor: '#9d4edd40' }]}>
+              <View style={styles.banner}>
                 <View style={[styles.goalIconWrap, { backgroundColor: '#ef444433' }]}>
                   <Ionicons name="trophy" size={18} color="#ef4444" />
                 </View>
@@ -930,9 +919,9 @@ export default function HomeScreen() {
                   <Text style={[styles.goalCountNum, { color: colors.accent }]}>{thisWeekSessions}</Text>
                   <Text style={styles.goalCountLabel}>THIS{'\n'}WEEK</Text>
                 </View>
-              </LinearGradient>
+              </View>
             ) : (
-              <LinearGradient colors={[colors.card, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.banner, { borderColor: C_GREEN + '40' }]}>
+              <View style={styles.banner}>
                 <View style={[styles.goalIconWrap, { backgroundColor: '#34d39933' }]}>
                   <Ionicons name="trophy" size={18} color={C_GREEN} />
                 </View>
@@ -944,7 +933,7 @@ export default function HomeScreen() {
                   <Text style={[styles.goalCountNum, { color: C_GREEN }]}>{thisWeekSessions}</Text>
                   <Text style={styles.goalCountLabel}>THIS{'\n'}WEEK</Text>
                 </View>
-              </LinearGradient>
+              </View>
             )}
 
             {/* ── Weekly Tabs ────────────────────────────────────── */}
@@ -1107,8 +1096,8 @@ const createStyles = (colors) => StyleSheet.create({
   goalPill: { backgroundColor: colors.dim, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, maxWidth: 96, alignItems: 'center' },
   goalPillText: { fontSize: 10, color: colors.textMuted, textAlign: 'center', fontFamily: fontFamily.bodyMedium, lineHeight: 14 },
   cardRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 10 },
-  halfWrap: { flex: 1, borderRadius: 18, overflow: 'hidden' },
-  statCard: { padding: 14, borderRadius: 18, minHeight: 158, borderWidth: 1 },
+  halfWrap: { flex: 1 },
+  statCard: { backgroundColor: colors.bgCard, padding: 14, borderRadius: 18, minHeight: 158, borderWidth: 1, borderColor: colors.border },
   cardTopRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 8 },
   cardLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.8, textTransform: 'uppercase' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6 },
@@ -1117,7 +1106,7 @@ const createStyles = (colors) => StyleSheet.create({
   cardSub: { fontSize: 9, color: colors.textDim, marginBottom: 4, fontFamily: fontFamily.body },
   dashBar: { width: 20, height: 2, backgroundColor: C_KCAL, marginVertical: 10 },
   tapLog: { fontSize: 10, color: colors.textDim, marginTop: 2, fontFamily: fontFamily.body },
-  banner: { marginHorizontal: 16, marginBottom: 10, borderRadius: 16, flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderWidth: 1, borderColor: colors.border },
+  banner: { backgroundColor: colors.bgCard, marginHorizontal: 16, marginBottom: 10, borderRadius: 16, flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderWidth: 1, borderColor: colors.border },
   bannerEmoji: { fontSize: 22 },
   bannerBody: { flex: 1 },
   bannerTitle: { fontSize: 13, fontFamily: fontFamily.bodyBold, color: colors.text, lineHeight: 17 },
@@ -1146,17 +1135,17 @@ const createStyles = (colors) => StyleSheet.create({
   cutRow: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16 },
   cutGauge: { width: 70, height: 70, borderRadius: 35, borderWidth: 2.5, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   cutRing: { width: 70, height: 70, borderRadius: 35, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },
-  cutNum: { fontSize: 22, fontWeight: '900', color: colors.accent },
-  cutOf: { fontSize: 9, color: colors.textMuted },
+  cutNum: { fontSize: 22, fontFamily: fontFamily.monoBold, color: colors.accent },
+  cutOf: { fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.mono },
   cutDetails: { flex: 1 },
-  cutTitle: { fontSize: 16, fontWeight: '900', color: colors.text },
-  cutSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  cutTitle: { fontSize: 16, fontFamily: fontFamily.bodyExtraBold, color: colors.text },
+  cutSub: { fontSize: 11, color: colors.textMuted, marginTop: 2, fontFamily: fontFamily.body },
   cutTrack: { flex: 1, height: 5, backgroundColor: colors.bgElevated, borderRadius: 3, overflow: 'hidden' },
   cutFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 3 },
   cutBreakdown: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
   cutBreakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  cutBreakdownLabel: { width: 64, fontSize: 12, color: colors.textMuted },
-  cutBreakdownValue: { width: 28, fontSize: 12, color: colors.text, textAlign: 'right' },
+  cutBreakdownLabel: { width: 64, fontSize: 12, color: colors.textMuted, fontFamily: fontFamily.body },
+  cutBreakdownValue: { width: 28, fontSize: 12, color: colors.text, textAlign: 'right', fontFamily: fontFamily.monoBold },
   restCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#001815', borderWidth: 1, borderColor: '#006650', borderRadius: 14, padding: 12, marginBottom: 8 },
   restIcon: { width: 44, height: 44, borderRadius: 11, backgroundColor: '#002820', borderWidth: 1, borderColor: '#006650', alignItems: 'center', justifyContent: 'center' },
   restTitle: { fontSize: typography.sm, fontWeight: weight.bold, color: '#00cc99' },
