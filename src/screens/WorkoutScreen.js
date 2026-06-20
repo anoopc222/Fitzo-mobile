@@ -457,7 +457,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             </View>
 
             <View style={dS.restCallout}>
-              <Text style={{ fontSize: 56 }}>😴</Text>
+              <Text style={{ fontSize: 40 }}>😴</Text>
               <Text style={dS.restCalloutTitle}>Recovery Day</Text>
               <Text style={dS.restCalloutSub}>Muscles grow during rest.{'\n'}Good call.</Text>
             </View>
@@ -472,7 +472,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                 <Text style={dS.deleteBtnText}>Delete</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ height: 24 }} />
+            <View style={{ height: 12 }} />
           </View>
         ) : (
         <>
@@ -650,7 +650,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
               <Text style={dS.deleteBtnText}>Delete</Text>
             </TouchableOpacity>
           </View>
-          <View style={{ height: 24 }} />
+          <View style={{ height: 12 }} />
         </View>
         </>
         )}
@@ -1623,46 +1623,46 @@ const createDS = (colors) => StyleSheet.create({
   popup: {},
 
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginHorizontal: -16, paddingHorizontal: 20, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: -16, paddingHorizontal: 16, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  typeIconBox: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  typeIconBox: { width: 40, height: 40, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   headerName: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text },
-  headerDate: { fontSize: typography.xs, color: colors.textMuted, marginTop: 2 },
-  closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.surface },
+  headerDate: { fontSize: typography.xs, color: colors.textMuted, marginTop: 1 },
+  closeBtn: { padding: 6, borderRadius: 18, backgroundColor: colors.surface },
 
   statsRow: { flexDirection: 'row', marginHorizontal: -16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  statCell: { flex: 1, alignItems: 'center', paddingVertical: 12 },
+  statCell: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   statCellBorder: { borderRightWidth: 1, borderRightColor: colors.border },
-  statValue: { fontSize: typography.lg, fontFamily: fontFamily.monoBold, color: colors.text, marginTop: 2 },
+  statValue: { fontSize: typography.md, fontFamily: fontFamily.monoBold, color: colors.text, marginTop: 1 },
   statLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginTop: 1 },
 
   restInfoRow: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
-    borderRadius: 14, marginTop: 14, paddingVertical: 14,
+    borderRadius: 14, marginTop: 10, paddingVertical: 10,
   },
   restInfoCell: { flex: 1, alignItems: 'center' },
-  restInfoValue: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text, marginTop: 4 },
-  restInfoDivider: { width: 1, height: 36, backgroundColor: colors.border },
-  restCallout: { alignItems: 'center', paddingVertical: 32 },
-  restCalloutTitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.good, marginTop: 12 },
+  restInfoValue: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text, marginTop: 2 },
+  restInfoDivider: { width: 1, height: 30, backgroundColor: colors.border },
+  restCallout: { alignItems: 'center', paddingVertical: 18 },
+  restCalloutTitle: { fontSize: typography.md, fontWeight: weight.bold, color: colors.good, marginTop: 8 },
   restCalloutSub: {
-    fontSize: typography.sm, color: colors.textMuted, marginTop: 8, textAlign: 'center', lineHeight: 20,
+    fontSize: typography.sm, color: colors.textMuted, marginTop: 4, textAlign: 'center', lineHeight: 19,
   },
 
-  tagScroll: { maxHeight: 36 },
-  tagRow: { paddingHorizontal: 16, gap: 6, paddingVertical: 4, alignItems: 'center' },
+  tagScroll: { maxHeight: 30 },
+  tagRow: { paddingHorizontal: 16, gap: 6, paddingVertical: 2, alignItems: 'center' },
   muscleTag: {
     backgroundColor: colors.accent + '14', borderWidth: 1, borderColor: colors.accent + '40',
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3,
   },
   muscleTagText: { fontSize: 11, color: colors.accent, fontWeight: weight.medium },
 
   exScroll: { paddingHorizontal: 16 },
   exSectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginTop: 14, marginBottom: 10,
+    marginTop: 10, marginBottom: 6,
   },
   exLabel: { fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5 },
   collapseToggleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -1676,11 +1676,11 @@ const createDS = (colors) => StyleSheet.create({
   toggleKnobOn: { backgroundColor: colors.bg, alignSelf: 'flex-end' },
 
   exCard: {
-    backgroundColor: colors.card, borderRadius: 14, padding: 14,
-    marginBottom: 10, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.card, borderRadius: 12, padding: 10,
+    marginBottom: 8, borderWidth: 1, borderColor: colors.border,
   },
   exCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  exIcon: { width: 36, height: 36, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  exIcon: { width: 32, height: 32, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   exName: { fontSize: typography.sm, fontFamily: fontFamily.bodyExtraBold, color: colors.text, letterSpacing: 0.3 },
   exMuscleRow: { flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' },
   exMuscleTag: { fontSize: 10, color: colors.textDim, fontWeight: weight.medium },
@@ -1709,21 +1709,21 @@ const createDS = (colors) => StyleSheet.create({
   bestBadge: { backgroundColor: colors.accent + '22', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, alignItems: 'center' },
   bestBadgeText: { fontSize: 10, color: colors.accent, fontWeight: weight.bold },
 
-  actionRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   editBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, padding: 13, borderRadius: 12,
+    gap: 6, padding: 11, borderRadius: 12,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
   },
   editBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text },
   repeatBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, padding: 13, borderRadius: 12, backgroundColor: colors.good,
+    gap: 6, padding: 11, borderRadius: 12, backgroundColor: colors.good,
   },
   repeatBtnText: { fontSize: typography.sm, fontFamily: fontFamily.bodyBold, color: colors.bg },
   deleteBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, padding: 13, borderRadius: 12, backgroundColor: colors.danger + '1f',
+    gap: 6, padding: 11, borderRadius: 12, backgroundColor: colors.danger + '1f',
     borderWidth: 1, borderColor: colors.danger + '55',
   },
   deleteBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.danger },
