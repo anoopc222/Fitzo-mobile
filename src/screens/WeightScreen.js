@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -244,8 +244,10 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
   );
 }
 
-// ─── Weekly Avg Chart + Table — ports _renderWeeklyAvgChart / _wkTrendPill / _wkCumBar ─
+// ─── Weekly Avg Chart + horizontal bar strip ────────────────────────────────
 function WeeklyAvgChart({ logs, viewMode, unit, colors, width }) {
+  const scrollRef = useRef(null);
+  const [selIdx, setSelIdx] = useState(null);
   const groups = useMemo(() => {
     const sorted = [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at));
     const map = {};
@@ -293,49 +295,75 @@ function WeeklyAvgChart({ logs, viewMode, unit, colors, width }) {
         {allDisp.map((v, i) => <Circle key={i} cx={toX(i)} cy={toY(v)} r={3} fill="#f59e0b" />)}
       </Svg>
 
-      <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 6, marginTop: 14, marginBottom: 4 }}>
-        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, width: 44, color: colors.textMuted }}>{viewMode === 'month' ? 'MO' : 'WK'}</Text>
-        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, flex: 1, color: colors.textMuted }}>AVG WEIGHT</Text>
-        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, width: 60, textAlign: 'right', color: colors.textMuted }}>TREND</Text>
-        <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, width: 70, textAlign: 'right', color: colors.textMuted }}>LOST</Text>
-      </View>
-      {groups.map((g, i) => {
+      {(() => {
+        const sel = Math.min(selIdx == null ? groups.length - 1 : selIdx, groups.length - 1);
+        const g = groups[sel];
         const dispVal = toDisp(g.avg, unit);
-        const delta = i === 0 ? null : +(dispVal - toDisp(groups[i - 1].avg, unit)).toFixed(1);
+        const delta = sel === 0 ? null : +(dispVal - toDisp(groups[sel - 1].avg, unit)).toFixed(1);
         const cumLostVal = +(allDisp[0] - dispVal).toFixed(1);
-        const isLast = i === groups.length - 1;
-        const pct = Math.min(100, Math.max(0, Math.round((cumLostVal / maxLost) * 100)));
         const gained = cumLostVal < 0;
+        const isLast = sel === groups.length - 1;
+        const periodLabel = viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] : `Wk${sel + 1}`;
         return (
-          <View key={g.key} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, width: 44, color: colors.text }}>{viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] : `Wk${i + 1}`}</Text>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', marginTop: 14, padding: 12,
+            borderRadius: 12, backgroundColor: colors.dim, borderWidth: 1, borderColor: colors.border,
+          }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 12, fontFamily: fontFamily.monoBold, color: isLast ? colors.accent : colors.text }}>{dispVal.toFixed(1)}{unit} {isLast ? <Text style={{ fontSize: 8, color: '#0c0c0f', backgroundColor: '#f59e0b', paddingHorizontal: 4, borderRadius: 4, overflow: 'hidden' }}>NOW</Text> : null}</Text>
+              <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textMuted }}>{periodLabel.toUpperCase()}</Text>
+              <Text style={{ fontSize: 16, fontFamily: fontFamily.monoBold, color: isLast ? colors.accent : colors.text, marginTop: 2 }}>
+                {dispVal.toFixed(1)}{unit} {isLast ? <Text style={{ fontSize: 8, color: '#0c0c0f', backgroundColor: '#f59e0b', paddingHorizontal: 4, borderRadius: 4, overflow: 'hidden' }}>NOW</Text> : null}
+              </Text>
             </View>
-            <View style={{ width: 60, alignItems: 'flex-end' }}>
-              {i === 0 ? (
-                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)' }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textMuted }}>START</Text></View>
-              ) : Math.abs(delta) < 0.05 ? (
-                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)' }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textMuted }}>→ 0.0</Text></View>
-              ) : delta < 0 ? (
-                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(52,211,153,0.15)' }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: '#34d399' }}>▼ {Math.abs(delta).toFixed(1)}</Text></View>
-              ) : (
-                <View style={{ paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(248,113,113,0.15)' }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: '#f87171' }}>▲ {delta.toFixed(1)}</Text></View>
-              )}
-            </View>
-            <View style={{ width: 70, alignItems: 'flex-end' }}>
-              {gained ? (
-                <Text style={{ fontSize: 9, fontWeight: '700', textAlign: 'right', paddingRight: 4, fontFamily: fontFamily.mono, color: '#f87171' }}>+{Math.abs(cumLostVal).toFixed(1)}</Text>
-              ) : (
-                <View style={{ width: 64, height: 16, borderRadius: 8, backgroundColor: colors.dim, justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(52,211,153,0.35)', borderRadius: 8, width: `${pct}%` }} />
-                  <Text style={{ fontSize: 9, fontWeight: '700', textAlign: 'right', paddingRight: 4, fontFamily: fontFamily.mono, color: '#34d399' }}>-{cumLostVal.toFixed(1)}</Text>
-                </View>
-              )}
-            </View>
+            {sel === 0 ? (
+              <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)', marginRight: 8 }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textMuted }}>START</Text></View>
+            ) : Math.abs(delta) < 0.05 ? (
+              <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)', marginRight: 8 }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textMuted }}>→ 0.0</Text></View>
+            ) : delta < 0 ? (
+              <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: 'rgba(52,211,153,0.15)', marginRight: 8 }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: '#34d399' }}>▼ {Math.abs(delta).toFixed(1)}</Text></View>
+            ) : (
+              <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: 'rgba(248,113,113,0.15)', marginRight: 8 }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: '#f87171' }}>▲ {delta.toFixed(1)}</Text></View>
+            )}
+            <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, fontWeight: '700', color: gained ? '#f87171' : '#34d399' }}>
+              {gained ? '+' : '-'}{Math.abs(cumLostVal).toFixed(1)} lost
+            </Text>
           </View>
         );
-      })}
+      })()}
+
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        onLayout={() => scrollRef.current?.scrollToEnd({ animated: false })}
+        contentContainerStyle={{ alignItems: 'flex-end', paddingTop: 14, paddingBottom: 4, gap: 10 }}
+      >
+        {groups.map((g, i) => {
+          const dispVal = toDisp(g.avg, unit);
+          const cumLostVal = +(allDisp[0] - dispVal).toFixed(1);
+          const gained = cumLostVal < 0;
+          const sel = Math.min(selIdx == null ? groups.length - 1 : selIdx, groups.length - 1);
+          const isSel = i === sel;
+          const barH = i === 0 ? 6 : Math.max(6, Math.min(48, (Math.abs(cumLostVal) / maxLost) * 48));
+          const barColor = i === 0 ? colors.textDim : gained ? '#f87171' : '#34d399';
+          return (
+            <TouchableOpacity key={g.key} onPress={() => setSelIdx(i)} style={{ alignItems: 'center', width: 28 }}>
+              <View style={{ height: 48, justifyContent: 'flex-end' }}>
+                <View style={{
+                  width: 14, height: barH, borderRadius: 4,
+                  backgroundColor: isSel ? barColor : barColor + '66',
+                }} />
+              </View>
+              <Text style={{
+                fontSize: 9, fontFamily: fontFamily.mono, marginTop: 4,
+                color: isSel ? colors.text : colors.textDim, fontWeight: isSel ? '700' : '400',
+              }}>
+                {viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1].slice(0, 3) : `W${i + 1}`}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -667,7 +695,7 @@ export default function WeightScreen() {
                   ))}
                 </View>
               </View>
-              <WeeklyAvgChart logs={logs} viewMode={wkViewMode} unit={unit} colors={colors} width={chartWidth} />
+              <WeeklyAvgChart key={wkViewMode} logs={logs} viewMode={wkViewMode} unit={unit} colors={colors} width={chartWidth} />
             </View>
 
             {/* ── History ── */}
