@@ -14,6 +14,8 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import Chip from '../components/ui/Chip';
+import ExportCardTemplate from '../components/ui/ExportCardTemplate';
+import { useExportCard } from '../hooks/useExportCard';
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 // Steps km/kcal are derived on the fly (matches reference app: totalKm =
@@ -370,6 +372,7 @@ export default function StepsScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
+  const heroExport = useExportCard();
 
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
@@ -565,10 +568,23 @@ export default function StepsScreen() {
                   <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
                   <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
                 </View>
-                <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
-                  <Text style={styles.goalPillBtnText}>🎯 {fmtK(defaultGoal)}</Text>
-                  <Ionicons name="pencil" size={11} color={colors.accent} />
-                </TouchableOpacity>
+                <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={heroExport.exportCard}
+                    disabled={heroExport.exporting}
+                    style={styles.cardExportBtn}
+                  >
+                    {heroExport.exporting ? (
+                      <ActivityIndicator size="small" color={colors.textMuted} />
+                    ) : (
+                      <Ionicons name="share-outline" size={13} color={colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
+                    <Text style={styles.goalPillBtnText}>🎯 {fmtK(defaultGoal)}</Text>
+                    <Ionicons name="pencil" size={11} color={colors.accent} />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.tileCard}>
@@ -604,6 +620,24 @@ export default function StepsScreen() {
                   </View>
                 )}
               </View>
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate ref={heroExport.ref} title="Steps" subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
+                <View>
+                  <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
+                  <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
+                  <View style={[styles.tileCard, { marginTop: 14 }]}>
+                    <View style={styles.tileRow}>
+                      <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} colors={colors} />
+                      <View style={styles.tileColDivider} />
+                      <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} colors={colors} />
+                      <View style={styles.tileColDivider} />
+                      <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={`${distUnit.toUpperCase()} WALKED`} color={colors.good} colors={colors} />
+                    </View>
+                  </View>
+                </View>
+              </ExportCardTemplate>
             </View>
 
             {/* ── This Week sections — only meaningful for the current real month ── */}
@@ -945,6 +979,7 @@ const createStyles = (colors) => StyleSheet.create({
   heroTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   heroLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   heroEmojiInline: { fontSize: 14 },
+  cardExportBtn: { padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated },
   goalPillBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,

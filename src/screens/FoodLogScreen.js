@@ -11,6 +11,8 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import ExportCardTemplate from '../components/ui/ExportCardTemplate';
+import { useExportCard } from '../hooks/useExportCard';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -78,6 +80,7 @@ export default function FoodLogScreen() {
     Breakfast: '#fb923c', Lunch: '#22d3ee', Dinner: colors.purple, Snack: colors.success,
   }), [colors]);
   const qc = useQueryClient();
+  const summaryExport = useExportCard();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState('Breakfast');
@@ -167,31 +170,71 @@ export default function FoodLogScreen() {
         {isLoading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} /> : (
           <>
             {/* Calorie summary */}
-            <View style={styles.summaryCard}>
-              <View style={styles.calorieRing}>
-                <View style={[styles.ringOuter, { borderColor: calPct >= 100 ? colors.danger : colors.accent }]}>
-                  <Text style={[styles.ringNum, { color: calPct >= 100 ? colors.danger : colors.accent }]}>
-                    {totals.calories.toFixed(0)}
-                  </Text>
-                  <Text style={styles.ringLabel}>kcal</Text>
+            <View style={{ position: 'relative' }}>
+              <View style={styles.summaryCard}>
+                <View style={styles.calorieRing}>
+                  <View style={[styles.ringOuter, { borderColor: calPct >= 100 ? colors.danger : colors.accent }]}>
+                    <Text style={[styles.ringNum, { color: calPct >= 100 ? colors.danger : colors.accent }]}>
+                      {totals.calories.toFixed(0)}
+                    </Text>
+                    <Text style={styles.ringLabel}>kcal</Text>
+                  </View>
+                  <View style={styles.ringRight}>
+                    <Text style={styles.ringTarget}>Goal: {targets.calories} kcal</Text>
+                    <Text style={[styles.ringRemain, { color: calPct >= 100 ? colors.danger : colors.success }]}>
+                      {calPct >= 100
+                        ? `+${(totals.calories - targets.calories).toFixed(0)} over`
+                        : `${(targets.calories - totals.calories).toFixed(0)} remaining`
+                      }
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.ringRight}>
-                  <Text style={styles.ringTarget}>Goal: {targets.calories} kcal</Text>
-                  <Text style={[styles.ringRemain, { color: calPct >= 100 ? colors.danger : colors.success }]}>
-                    {calPct >= 100
-                      ? `+${(totals.calories - targets.calories).toFixed(0)} over`
-                      : `${(targets.calories - totals.calories).toFixed(0)} remaining`
-                    }
-                  </Text>
-                </View>
-              </View>
 
-              {/* Macro bars */}
-              <View style={styles.macroBars}>
-                <MacroBar label="Protein" value={Math.round(totals.protein)} target={targets.protein} color={colors.success} />
-                <MacroBar label="Carbs" value={Math.round(totals.carbs)} target={targets.carbs} color="#fb923c" />
-                <MacroBar label="Fats" value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
+                {/* Macro bars */}
+                <View style={styles.macroBars}>
+                  <MacroBar label="Protein" value={Math.round(totals.protein)} target={targets.protein} color={colors.success} />
+                  <MacroBar label="Carbs" value={Math.round(totals.carbs)} target={targets.carbs} color="#fb923c" />
+                  <MacroBar label="Fats" value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
+                </View>
               </View>
+              <TouchableOpacity
+                onPress={summaryExport.exportCard}
+                disabled={summaryExport.exporting}
+                style={styles.cardExportBtn}
+              >
+                {summaryExport.exporting ? (
+                  <ActivityIndicator size="small" color={colors.textMuted} />
+                ) : (
+                  <Ionicons name="share-outline" size={13} color={colors.textMuted} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate ref={summaryExport.ref} title="Today's Nutrition" colors={colors} width={340}>
+                <View style={styles.calorieRing}>
+                  <View style={[styles.ringOuter, { borderColor: calPct >= 100 ? colors.danger : colors.accent }]}>
+                    <Text style={[styles.ringNum, { color: calPct >= 100 ? colors.danger : colors.accent }]}>
+                      {totals.calories.toFixed(0)}
+                    </Text>
+                    <Text style={styles.ringLabel}>kcal</Text>
+                  </View>
+                  <View style={styles.ringRight}>
+                    <Text style={styles.ringTarget}>Goal: {targets.calories} kcal</Text>
+                    <Text style={[styles.ringRemain, { color: calPct >= 100 ? colors.danger : colors.success }]}>
+                      {calPct >= 100
+                        ? `+${(totals.calories - targets.calories).toFixed(0)} over`
+                        : `${(targets.calories - totals.calories).toFixed(0)} remaining`
+                      }
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.macroBars}>
+                  <MacroBar label="Protein" value={Math.round(totals.protein)} target={targets.protein} color={colors.success} />
+                  <MacroBar label="Carbs" value={Math.round(totals.carbs)} target={targets.carbs} color="#fb923c" />
+                  <MacroBar label="Fats" value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
+                </View>
+              </ExportCardTemplate>
             </View>
 
             {/* Add food button */}
@@ -317,6 +360,7 @@ const createStyles = (colors) => StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 12 },
 
   summaryCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
+  cardExportBtn: { position: 'absolute', top: 8, right: 8, padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated, zIndex: 1 },
   calorieRing: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
   ringOuter: { width: 90, height: 90, borderRadius: 45, borderWidth: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
   ringNum: { fontSize: typography.xl, fontWeight: weight.black },
