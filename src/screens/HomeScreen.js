@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   RefreshControl, ActivityIndicator, Modal, Dimensions,
@@ -17,6 +17,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
+import Svg, { Polyline, Line } from 'react-native-svg';
+import Sparkline from '../components/Sparkline';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -148,11 +150,13 @@ async function fetchHome(userId) {
       .select('id, notes').eq('user_id', userId)
       .gte('date', monthStart).lte('date', monthEnd),
     supabase.from('step_logs')
-      .select('steps, goal').eq('user_id', userId)
-      .gte('logged_at', thisWeekStart).lte('logged_at', thisWeekEnd),
+      .select('steps, goal, logged_at').eq('user_id', userId)
+      .gte('logged_at', thisWeekStart).lte('logged_at', thisWeekEnd)
+      .order('logged_at', { ascending: true }),
     supabase.from('step_logs')
-      .select('steps, goal').eq('user_id', userId)
-      .gte('logged_at', lastWeekStart).lte('logged_at', lastWeekEnd),
+      .select('steps, goal, logged_at').eq('user_id', userId)
+      .gte('logged_at', lastWeekStart).lte('logged_at', lastWeekEnd)
+      .order('logged_at', { ascending: true }),
     supabase.from('step_logs')
       .select('steps, goal').eq('user_id', userId)
       .gte('logged_at', monthStart).lte('logged_at', monthEnd),
@@ -258,6 +262,20 @@ async function fetchHome(userId) {
 
   const sessionsLeft = Math.max(0, WEEKLY_SESSION_GOAL - thisWeekSessions);
 
+  // Steps trend: this week vs last week, bucketed Mon..Sun for the chart
+  const buildWeekSeries = (weekStartStr, rows) => {
+    const series = Array(7).fill(null);
+    (rows ?? []).forEach(r => {
+      const dayIdx = Math.floor((new Date(r.logged_at) - new Date(`${weekStartStr}T00:00:00`)) / 86400000);
+      if (dayIdx >= 0 && dayIdx < 7) series[dayIdx] = r.steps;
+    });
+    return series;
+  };
+  const stepsWeekSeries = {
+    current:  buildWeekSeries(thisWeekStart, thisWeekStepsArr),
+    previous: buildWeekSeries(lastWeekStart, lastWeekStepsArr),
+  };
+
   return {
     profile: profile.data,
     weightArr, stepsArr, sleepArr,
@@ -269,7 +287,7 @@ async function fetchHome(userId) {
     hasTodayWorkout, todaySession,
     todayExCount, todaySetCount, todayWorkoutName,
     lastWorkoutDate, lastWorkoutNotes, daysSinceWorkout,
-    motivText, streak,
+    motivText, streak, stepsWeekSeries,
     thisWeek: { sessions: thisWeekSessions, steps: thisWeekStepsTotal, kcal: thisWeekKcal, goalDays: thisWeekGoalDays, weightDelta: weekWeightDelta },
     lastWeek: { sessions: lastWeekSessions, steps: lastWeekStepsTotal, kcal: lastWeekKcal, goalDays: lastWeekGoalDays, weightDelta: lastWeekWeightDelta },
     thisMonth: {
@@ -685,6 +703,38 @@ function StreakCalendarModal({ visible, userId, onClose }) {
 
 const WEEK_TABS = ['THIS WEEK', 'LAST WEEK', 'THIS MONTH', 'CUT SCORE'];
 
+// ─── Steps trend chart (this week vs last week, with goal line) ────────────
+function StepsTrendChart({ current, previous, goal, colors, width }) {
+  const H = 90;
+  const P = { t: 10, r: 6, b: 6, l: 6 };
+  const pw = width - P.l - P.r;
+  const ph = H - P.t - P.b;
+  const allVals = [...current, ...previous, goal].filter(v => v != null);
+  const maxV = Math.max(...allVals, 1) * 1.15;
+  const n = 7;
+  const xs = pw / (n - 1);
+  const toX = i => P.l + i * xs;
+  const toY = v => P.t + ph - (v / maxV) * ph;
+  const toLine = arr => arr.map((v, i) => (v == null ? null : `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`)).filter(Boolean).join(' ');
+  const curLine  = toLine(current);
+  const prevLine = toLine(previous);
+  const goalY = goal != null ? toY(goal) : null;
+
+  return (
+    <Svg width={width} height={H}>
+      {goalY != null && (
+        <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke={colors.accent} strokeOpacity={0.5} strokeWidth={1.5} strokeDasharray="4,4" />
+      )}
+      {prevLine ? (
+        <Polyline points={prevLine} fill="none" stroke={colors.textDim} strokeWidth={2} strokeDasharray="4,3" strokeLinecap="round" strokeLinejoin="round" />
+      ) : null}
+      {curLine ? (
+        <Polyline points={curLine} fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      ) : null}
+    </Svg>
+  );
+}
+
 // ─── component ──────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -734,6 +784,57 @@ export default function HomeScreen() {
     ? 'Steps or calories off target this week.'
     : 'Based on this week\'s consistency.';
 
+  // ── Insight cards (auto-rotating carousel) ───────────────────────────────
+  const stepsTrendPct = (data?.lastWeek?.steps ?? 0) > 0
+    ? Math.round(((data.thisWeek.steps - data.lastWeek.steps) / data.lastWeek.steps) * 100)
+    : null;
+  const insights = [];
+  if (stepsTrendPct !== null) {
+    insights.push({
+      icon: 'footsteps-outline', color: C_STEPS,
+      text: stepsTrendPct >= 0
+        ? `Steps up ${stepsTrendPct}% vs last week — nice momentum.`
+        : `Steps down ${Math.abs(stepsTrendPct)}% vs last week — a short walk would close the gap.`,
+    });
+  }
+  if (weightDelta != null) {
+    insights.push({
+      icon: 'scale-outline', color: C_WEIGHT,
+      text: weightDelta <= 0
+        ? `Weight trending down ${Math.abs(weightDelta)}kg this week — on pace.`
+        : `Weight up ${weightDelta}kg this week — keep an eye on it.`,
+    });
+  }
+  if (data?.streak >= 2) {
+    insights.push({
+      icon: 'flame-outline', color: C_GREEN,
+      text: `${data.streak}-day logging streak — keep it going!`,
+    });
+  }
+  if (sessionsLeft > 0) {
+    insights.push({
+      icon: 'barbell-outline', color: colors.accent,
+      text: `${sessionsLeft} more session${sessionsLeft !== 1 ? 's' : ''} to hit your weekly goal of ${WEEKLY_SESSION_GOAL}.`,
+    });
+  }
+  if (insights.length === 0) {
+    insights.push({ icon: 'sparkles-outline', color: colors.accent, text: 'Log today\'s stats to see personalized insights here.' });
+  }
+
+  const insightScrollRef = useRef(null);
+  const [insightIdx, setInsightIdx] = useState(0);
+  useEffect(() => {
+    if (insights.length <= 1) return;
+    const id = setInterval(() => {
+      setInsightIdx(prev => {
+        const next = (prev + 1) % insights.length;
+        insightScrollRef.current?.scrollTo({ x: next * 246, animated: true });
+        return next;
+      });
+    }, 2000);
+    return () => clearInterval(id);
+  }, [insights.length]);
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* ── App Header ─────────────────────────────────────────── */}
@@ -773,12 +874,35 @@ export default function HomeScreen() {
                   <Ionicons name="walk" size={12} color={colors.accent} />
                   <Text style={styles.motivText}>{data?.motivText}</Text>
                 </TouchableOpacity>
-              </View>
-
-              <View style={styles.goalPill}>
-                <Text style={styles.goalPillText} numberOfLines={2}>{goal}</Text>
+                <View style={styles.goalProgressRow}>
+                  <Text style={styles.goalProgressLabel} numberOfLines={1}>{goal}</Text>
+                  <View style={styles.goalProgressTrack}>
+                    <View style={[styles.goalProgressFill, { width: `${cutScore}%` }]} />
+                  </View>
+                  <Text style={styles.goalProgressPct}>{cutScore}%</Text>
+                </View>
               </View>
             </View>
+
+            {/* ── Insight Cards (auto-rotating) ──────────────────── */}
+            <ScrollView
+              ref={insightScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.insightScroll}
+              contentContainerStyle={styles.insightScrollContent}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / 246);
+                setInsightIdx(idx);
+              }}
+            >
+              {insights.map((ins, i) => (
+                <View key={i} style={styles.insightCard}>
+                  <Ionicons name={ins.icon} size={14} color={ins.color} />
+                  <Text style={styles.insightText}>{ins.text}</Text>
+                </View>
+              ))}
+            </ScrollView>
 
             {/* ── Stat Overview (merged, line-separated) ─────────── */}
             <View style={styles.overviewCard}>
@@ -798,6 +922,9 @@ export default function HomeScreen() {
                     </Text>
                   )}
                 </View>
+                {(data?.weightArr?.length ?? 0) >= 2 && (
+                  <Sparkline data={data.weightArr} color={C_WEIGHT} width={48} height={26} />
+                )}
               </TouchableOpacity>
 
               <View style={styles.overviewDivider} />
@@ -814,6 +941,9 @@ export default function HomeScreen() {
                   <Text style={styles.overviewVal}>{data?.latestSteps?.steps?.toLocaleString() ?? '—'}</Text>
                   {data?.stepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met!</Text>}
                 </View>
+                {(data?.stepsArr?.length ?? 0) >= 2 && (
+                  <Sparkline data={data.stepsArr} color={C_STEPS} width={48} height={26} />
+                )}
               </TouchableOpacity>
 
               <View style={styles.overviewDivider} />
@@ -850,7 +980,55 @@ export default function HomeScreen() {
                   <Text style={styles.overviewVal}>{data?.latestSleep ? `${data.latestSleep.hours}h` : '—'}</Text>
                   {data?.sleepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met</Text>}
                 </View>
+                {(data?.sleepArr?.length ?? 0) >= 2 && (
+                  <Sparkline data={data.sleepArr} color={C_SLEEP} width={48} height={26} />
+                )}
               </TouchableOpacity>
+            </View>
+
+            {/* ── 7-Day Steps Trend (vs last week, with goal line) ─ */}
+            <Text style={styles.sectionLabel}>7-DAY TREND</Text>
+            <View style={styles.chartCard}>
+              <View style={styles.chartHdr}>
+                <Text style={styles.chartTitle}>Steps vs last week</Text>
+                <View style={styles.chartLegend}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: colors.text }]} />
+                    <Text style={styles.legendText}>This wk</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: colors.textDim }]} />
+                    <Text style={styles.legendText}>Last wk</Text>
+                  </View>
+                </View>
+              </View>
+              {data?.stepsWeekSeries && (
+                <StepsTrendChart
+                  current={data.stepsWeekSeries.current}
+                  previous={data.stepsWeekSeries.previous}
+                  goal={data.stepGoal}
+                  colors={colors}
+                  width={SCREEN_W - 32 - 28}
+                />
+              )}
+            </View>
+
+            {/* ── Consistency (replaces old goal-progress banner) ── */}
+            <View style={styles.consistencyCard}>
+              <View style={styles.consistencyTile}>
+                <Text style={[styles.consistencyNum, { color: colors.accent }]}>{data?.streak ?? 0}</Text>
+                <Text style={styles.consistencyLabel}>DAY{'\n'}STREAK</Text>
+              </View>
+              <View style={styles.consistencyDivider} />
+              <View style={styles.consistencyTile}>
+                <Text style={[styles.consistencyNum, { color: C_STEPS }]}>{data?.thisWeek?.goalDays ?? 0}/7</Text>
+                <Text style={styles.consistencyLabel}>STEP GOAL{'\n'}DAYS</Text>
+              </View>
+              <View style={styles.consistencyDivider} />
+              <View style={styles.consistencyTile}>
+                <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{WEEKLY_SESSION_GOAL}</Text>
+                <Text style={styles.consistencyLabel}>WORKOUT{'\n'}SESSIONS</Text>
+              </View>
             </View>
 
             {/* ── Workout Banner ─────────────────────────────────── */}
@@ -876,42 +1054,6 @@ export default function HomeScreen() {
                   <Text style={[styles.viewBtnText, { color: colors.warning }]}>Start</Text>
                 </View>
               </TouchableOpacity>
-            )}
-
-            {/* ── Goal Progress Banner ───────────────────────────── */}
-            {sessionsLeft > 0 ? (
-              <View style={styles.banner}>
-                <View style={[styles.goalIconWrap, { backgroundColor: '#ef444433' }]}>
-                  <Ionicons name="trophy" size={18} color="#ef4444" />
-                </View>
-                <View style={styles.bannerBody}>
-                  <Text style={styles.bannerTitle}>
-                    Almost there! — {sessionsLeft} more session{sessionsLeft !== 1 ? 's' : ''} this week
-                  </Text>
-                  <Text style={styles.bannerSub}>
-                    {thisWeekSessions}/{WEEKLY_SESSION_GOAL} gym sessions
-                    {data?.lastWorkoutDate ? ` · Last: ${fmtDate(data.lastWorkoutDate)}` : ''}
-                  </Text>
-                </View>
-                <View style={styles.goalCount}>
-                  <Text style={[styles.goalCountNum, { color: colors.accent }]}>{thisWeekSessions}</Text>
-                  <Text style={styles.goalCountLabel}>THIS{'\n'}WEEK</Text>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.banner}>
-                <View style={[styles.goalIconWrap, { backgroundColor: '#34d39933' }]}>
-                  <Ionicons name="trophy" size={18} color={C_GREEN} />
-                </View>
-                <View style={styles.bannerBody}>
-                  <Text style={[styles.bannerTitle, { color: C_GREEN }]}>Weekly goal achieved! 🎯</Text>
-                  <Text style={styles.bannerSub}>{thisWeekSessions}/{WEEKLY_SESSION_GOAL} sessions completed</Text>
-                </View>
-                <View style={styles.goalCount}>
-                  <Text style={[styles.goalCountNum, { color: C_GREEN }]}>{thisWeekSessions}</Text>
-                  <Text style={styles.goalCountLabel}>THIS{'\n'}WEEK</Text>
-                </View>
-              </View>
             )}
 
             {/* ── Weekly Tabs ────────────────────────────────────── */}
@@ -1071,8 +1213,28 @@ const createStyles = (colors) => StyleSheet.create({
   profileName: { fontSize: 22, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.text, lineHeight: 26, letterSpacing: -0.5 },
   motivRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   motivText: { fontSize: 11, color: colors.accent, fontFamily: fontFamily.bodySemibold, textDecorationLine: 'underline' },
-  goalPill: { backgroundColor: colors.dim, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, maxWidth: 96, alignItems: 'center' },
-  goalPillText: { fontSize: 10, color: colors.textMuted, textAlign: 'center', fontFamily: fontFamily.bodyMedium, lineHeight: 14 },
+  goalProgressRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  goalProgressLabel: { fontSize: 10, color: colors.textMuted, width: 76, fontFamily: fontFamily.body },
+  goalProgressTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, overflow: 'hidden' },
+  goalProgressFill: { height: '100%', borderRadius: 2, backgroundColor: colors.accent },
+  goalProgressPct: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono },
+  insightScroll: { marginBottom: 10 },
+  insightScrollContent: { paddingHorizontal: 16, gap: 10 },
+  insightCard: { width: 236, flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border },
+  insightText: { flex: 1, fontSize: 11, color: colors.textMuted, lineHeight: 15, fontFamily: fontFamily.body },
+  sectionLabel: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase', paddingHorizontal: 16, marginBottom: 8 },
+  chartCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, marginHorizontal: 16, marginBottom: 10, padding: 14 },
+  chartHdr: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  chartTitle: { fontSize: 12, fontFamily: fontFamily.bodyBold, color: colors.textMuted },
+  chartLegend: { flexDirection: 'row', gap: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 6, height: 6, borderRadius: 3 },
+  legendText: { fontSize: 9, color: colors.textDim, fontFamily: fontFamily.body },
+  consistencyCard: { flexDirection: 'row', backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, marginHorizontal: 16, marginBottom: 10, overflow: 'hidden' },
+  consistencyTile: { flex: 1, alignItems: 'center', paddingVertical: 12 },
+  consistencyNum: { fontSize: 18, fontFamily: fontFamily.monoBold },
+  consistencyLabel: { fontSize: 7, color: colors.textDim, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, textAlign: 'center', marginTop: 4 },
+  consistencyDivider: { width: 1, backgroundColor: colors.border },
   overviewCard: { backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   overviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   overviewIconWrap: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
@@ -1090,10 +1252,6 @@ const createStyles = (colors) => StyleSheet.create({
   bannerSub: { fontSize: 10, color: colors.textMuted, marginTop: 2, fontFamily: fontFamily.body },
   viewBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: `${C_GREEN}20`, borderWidth: 1, borderColor: C_GREEN },
   viewBtnText: { fontSize: 12, color: C_GREEN, fontFamily: fontFamily.bodyBold },
-  goalIconWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  goalCount: { alignItems: 'center' },
-  goalCountNum: { fontSize: 24, fontFamily: fontFamily.monoBold, lineHeight: 26 },
-  goalCountLabel: { fontSize: 7, color: colors.textDim, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, textAlign: 'center' },
   tabsCard: { marginHorizontal: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   tabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative' },
