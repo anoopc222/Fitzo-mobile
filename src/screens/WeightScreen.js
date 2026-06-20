@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import MonthYearPicker from '../components/ui/MonthYearPicker';
 import CircularGauge from '../components/CircularGauge';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -403,6 +404,7 @@ export default function WeightScreen() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['weight', user?.id],
@@ -539,7 +541,9 @@ export default function WeightScreen() {
           <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
             <Text style={styles.monthChevron}>‹</Text>
           </TouchableOpacity>
-          <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
+          <TouchableOpacity onPress={() => setShowMonthPicker(true)}>
+            <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={nextMonth} style={styles.monthBtn}>
             <Text style={styles.monthChevron}>›</Text>
           </TouchableOpacity>
@@ -746,6 +750,14 @@ export default function WeightScreen() {
       <TouchableOpacity style={styles.fab} onPress={openLogSheet}>
         <Ionicons name="add" size={28} color={colors.bg} />
       </TouchableOpacity>
+
+      <MonthYearPicker
+        visible={showMonthPicker}
+        month={month}
+        year={year}
+        onSelect={(m, y) => { setMonth(m); setYear(y); }}
+        onClose={() => setShowMonthPicker(false)}
+      />
 
       {/* Log Weight bottom sheet */}
       <BottomSheet visible={showLogSheet} onClose={() => setShowLogSheet(false)}>

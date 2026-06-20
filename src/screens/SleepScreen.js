@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import MonthYearPicker from '../components/ui/MonthYearPicker';
 import CircularGauge from '../components/CircularGauge';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -276,6 +277,7 @@ export default function SleepScreen() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['sleep', user?.id],
@@ -456,7 +458,9 @@ export default function SleepScreen() {
           <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
             <Text style={styles.monthChevron}>‹</Text>
           </TouchableOpacity>
-          <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
+          <TouchableOpacity onPress={() => setShowMonthPicker(true)}>
+            <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={nextMonth} style={styles.monthBtn}>
             <Text style={styles.monthChevron}>›</Text>
           </TouchableOpacity>
@@ -584,6 +588,14 @@ export default function SleepScreen() {
       <TouchableOpacity style={styles.fab} onPress={openLogSheet}>
         <Text style={styles.fabIcon}>🌙</Text>
       </TouchableOpacity>
+
+      <MonthYearPicker
+        visible={showMonthPicker}
+        month={month}
+        year={year}
+        onSelect={(m, y) => { setMonth(m); setYear(y); }}
+        onClose={() => setShowMonthPicker(false)}
+      />
 
       {/* Log Sleep bottom sheet */}
       <BottomSheet visible={showLogSheet} onClose={() => setShowLogSheet(false)}>
