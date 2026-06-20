@@ -37,7 +37,11 @@ export default function BottomSheet({ visible, onClose, children, style }) {
         <Animated.View
           style={[
             styles.sheet,
-            { backgroundColor: colors.surface, borderColor: colors.border, transform: [{ translateY }] },
+            {
+              backgroundColor: colors.surface,
+              borderColor: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.12)',
+              transform: [{ translateY }],
+            },
             style,
           ]}
         >
@@ -52,9 +56,10 @@ export default function BottomSheet({ visible, onClose, children, style }) {
 const styles = StyleSheet.create({
   bottomWrap: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    borderWidth: 1,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1.5,
+    borderBottomWidth: 0,
     paddingHorizontal: 16,
     paddingBottom: 24,
     maxHeight: '92%',
