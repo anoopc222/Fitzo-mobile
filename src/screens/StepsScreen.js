@@ -44,6 +44,25 @@ function localDateStr(d) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+function weekKeyOf(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const dow = d.getDay();
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return localDateStr(d);
+}
+function groupByWeek(items, getDate) {
+  const groups = [];
+  let cur = null;
+  for (const item of items) {
+    const wk = weekKeyOf(getDate(item));
+    if (!cur || cur.key !== wk) {
+      cur = { key: wk, items: [] };
+      groups.push(cur);
+    }
+    cur.items.push(item);
+  }
+  return groups;
+}
 function fmtK(n) {
   if (n == null) return '—';
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -677,26 +696,30 @@ export default function StepsScreen() {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>DAILY LOG</Text>
               {allMonthSorted.length === 0 && <Text style={styles.emptyText}>No step entries for this month.</Text>}
-              {allMonthSorted.map(log => (
-                <View key={log.id} style={styles.logRowWrap}>
-                  <View style={styles.logRow}>
-                    <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
-                    <Text style={styles.logActEmoji}>{ACT_ICON[log.activity_type] || ACT_ICON.walk}</Text>
-                    <DailyLogBar steps={log.steps} goal={log.goal ?? defaultGoal} barMax={allTimeMaxSteps} colors={colors} />
-                    <Text style={[styles.logSteps, { color: log.steps >= (log.goal ?? defaultGoal) ? colors.good : colors.warn }]}>
-                      {log.steps.toLocaleString()}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => Alert.alert('Delete entry', `Remove ${fmtDateShort(log.logged_at)}?`, [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
-                      ])}
-                      style={styles.logDelBtn}
-                    >
-                      <Ionicons name="close" size={14} color={colors.textDim} />
-                    </TouchableOpacity>
-                  </View>
-                  {log.note ? <Text style={styles.logNote}>{log.note}</Text> : null}
+              {groupByWeek(allMonthSorted, l => l.logged_at).map(week => (
+                <View key={week.key} style={styles.weekGroupBox}>
+                  {week.items.map((log, i) => (
+                    <View key={log.id} style={[styles.logRowWrap, i === week.items.length - 1 && { borderBottomWidth: 0 }]}>
+                      <View style={styles.logRow}>
+                        <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
+                        <Text style={styles.logActEmoji}>{ACT_ICON[log.activity_type] || ACT_ICON.walk}</Text>
+                        <DailyLogBar steps={log.steps} goal={log.goal ?? defaultGoal} barMax={allTimeMaxSteps} colors={colors} />
+                        <Text style={[styles.logSteps, { color: log.steps >= (log.goal ?? defaultGoal) ? colors.good : colors.warn }]}>
+                          {log.steps.toLocaleString()}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => Alert.alert('Delete entry', `Remove ${fmtDateShort(log.logged_at)}?`, [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                          ])}
+                          style={styles.logDelBtn}
+                        >
+                          <Ionicons name="close" size={14} color={colors.textDim} />
+                        </TouchableOpacity>
+                      </View>
+                      {log.note ? <Text style={styles.logNote}>{log.note}</Text> : null}
+                    </View>
+                  ))}
                 </View>
               ))}
             </View>
@@ -886,13 +909,14 @@ const createStyles = (colors) => StyleSheet.create({
 
   emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
 
-  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 6 },
-  logRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logDate: { width: 40, fontSize: 10, color: colors.text, fontFamily: fontFamily.bodyMedium },
-  logActEmoji: { fontSize: 12, width: 16, textAlign: 'center' },
-  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 64, paddingTop: 4 },
-  logSteps: { fontSize: 11, fontWeight: weight.bold, minWidth: 50, textAlign: 'right', fontFamily: fontFamily.monoBold },
-  logDelBtn: { padding: 2 },
+  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 9 },
+  logRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  logDate: { width: 44, fontSize: 11, color: colors.text, fontFamily: fontFamily.bodyMedium },
+  logActEmoji: { fontSize: 13, width: 18, textAlign: 'center' },
+  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 70, paddingTop: 4 },
+  logSteps: { fontSize: 12, fontWeight: weight.bold, minWidth: 54, textAlign: 'right', fontFamily: fontFamily.monoBold },
+  logDelBtn: { padding: 3 },
+  weekGroupBox: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 8, marginBottom: 10 },
 
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   hmLegendLabel: { fontSize: 9, color: colors.textDim },

@@ -24,6 +24,25 @@ function localDateStr(d) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+function weekKeyOf(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const dow = d.getDay();
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return localDateStr(d);
+}
+function groupByWeek(items, getDate) {
+  const groups = [];
+  let cur = null;
+  for (const item of items) {
+    const wk = weekKeyOf(getDate(item));
+    if (!cur || cur.key !== wk) {
+      cur = { key: wk, items: [] };
+      groups.push(cur);
+    }
+    cur.items.push(item);
+  }
+  return groups;
+}
 function fmtDateShort(iso) {
   const d = new Date(iso + 'T00:00:00');
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
@@ -660,34 +679,40 @@ export default function WeightScreen() {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>HISTORY</Text>
               {mWeights.length === 0 && <Text style={styles.emptyText}>No weight entries for this month.</Text>}
-              {mWeights.map((log, idx) => {
-                const nextLog = mWeights[idx + 1];
-                const delta = nextLog ? +(log.weight - nextLog.weight).toFixed(2) : null;
-                return (
-                  <View key={log.id} style={styles.logRowWrap}>
-                    <View style={styles.logRow}>
-                      <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
-                      <WeightHistoryBar value={toDisp(log.weight, unit)} goalVal={goalKg ? toDisp(goalKg, unit) : null} barMax={toDisp(allTimeMaxKg, unit)} colors={colors} />
-                      <Text style={styles.logVal}>{toDisp(log.weight, unit).toFixed(1)}</Text>
-                      {delta != null && (
-                        <Text style={[styles.logDelta, { color: delta > 0 ? colors.danger : colors.good }]}>
-                          {delta > 0 ? '+' : ''}{toDisp(delta, unit).toFixed(1)}
-                        </Text>
-                      )}
-                      <TouchableOpacity
-                        onPress={() => Alert.alert('Delete entry', `Remove ${fmtDateShort(log.logged_at)}?`, [
-                          { text: 'Cancel', style: 'cancel' },
-                          { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
-                        ])}
-                        style={styles.logDelBtn}
-                      >
-                        <Ionicons name="close" size={14} color={colors.textDim} />
-                      </TouchableOpacity>
+              {groupByWeek(
+                mWeights.map((log, idx) => {
+                  const nextLog = mWeights[idx + 1];
+                  return { log, delta: nextLog ? +(log.weight - nextLog.weight).toFixed(2) : null };
+                }),
+                e => e.log.logged_at
+              ).map(week => (
+                <View key={week.key} style={styles.weekGroupBox}>
+                  {week.items.map(({ log, delta }, i) => (
+                    <View key={log.id} style={[styles.logRowWrap, i === week.items.length - 1 && { borderBottomWidth: 0 }]}>
+                      <View style={styles.logRow}>
+                        <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
+                        <WeightHistoryBar value={toDisp(log.weight, unit)} goalVal={goalKg ? toDisp(goalKg, unit) : null} barMax={toDisp(allTimeMaxKg, unit)} colors={colors} />
+                        <Text style={styles.logVal}>{toDisp(log.weight, unit).toFixed(1)}</Text>
+                        {delta != null && (
+                          <Text style={[styles.logDelta, { color: delta > 0 ? colors.danger : colors.good }]}>
+                            {delta > 0 ? '+' : ''}{toDisp(delta, unit).toFixed(1)}
+                          </Text>
+                        )}
+                        <TouchableOpacity
+                          onPress={() => Alert.alert('Delete entry', `Remove ${fmtDateShort(log.logged_at)}?`, [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                          ])}
+                          style={styles.logDelBtn}
+                        >
+                          <Ionicons name="close" size={14} color={colors.textDim} />
+                        </TouchableOpacity>
+                      </View>
+                      {log.notes ? <Text style={styles.logNote}>{log.notes}</Text> : null}
                     </View>
-                    {log.notes ? <Text style={styles.logNote}>{log.notes}</Text> : null}
-                  </View>
-                );
-              })}
+                  ))}
+                </View>
+              ))}
             </View>
           </>
         )}
@@ -866,13 +891,14 @@ const createStyles = (colors) => StyleSheet.create({
 
   emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
 
-  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 6 },
-  logRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logDate: { width: 40, fontSize: 10, color: colors.text, fontFamily: fontFamily.bodyMedium },
-  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 48, paddingTop: 4 },
-  logVal: { fontSize: 11, fontWeight: weight.bold, minWidth: 36, textAlign: 'right', fontFamily: fontFamily.monoBold, color: '#67e8f9' },
-  logDelta: { fontSize: 9, fontWeight: weight.bold, minWidth: 32, textAlign: 'right', fontFamily: fontFamily.mono },
-  logDelBtn: { padding: 2 },
+  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 9 },
+  logRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  logDate: { width: 44, fontSize: 11, color: colors.text, fontFamily: fontFamily.bodyMedium },
+  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 52, paddingTop: 4 },
+  logVal: { fontSize: 12, fontWeight: weight.bold, minWidth: 40, textAlign: 'right', fontFamily: fontFamily.monoBold, color: '#67e8f9' },
+  logDelta: { fontSize: 10, fontWeight: weight.bold, minWidth: 36, textAlign: 'right', fontFamily: fontFamily.mono },
+  logDelBtn: { padding: 3 },
+  weekGroupBox: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 8, marginBottom: 10 },
 
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   hmLegendLabel: { fontSize: 9, color: colors.textDim },
