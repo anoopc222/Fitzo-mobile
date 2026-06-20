@@ -247,7 +247,7 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
 }
 
 // ─── Weekly Avg Chart + horizontal bar strip ────────────────────────────────
-function WeeklyAvgChart({ logs, viewMode, viewType, unit, colors, width }) {
+function WeeklyAvgChart({ logs, viewMode, viewType, unit, goalKg, colors, width }) {
   const scrollRef = useRef(null);
   const [selIdx, setSelIdx] = useState(null);
   const groups = useMemo(() => {
@@ -280,31 +280,50 @@ function WeeklyAvgChart({ logs, viewMode, viewType, unit, colors, width }) {
   const maxLost = Math.max(...allDisp.map((_, i, a) => +(a[0] - a[i]).toFixed(1)), 0.001);
 
   if (viewType === 'list') {
+    const goalDisp = goalKg ? toDisp(goalKg, unit) : null;
+    const rangeMin = Math.min(...allDisp, goalDisp ?? Infinity);
+    const rangeMax = Math.max(...allDisp, goalDisp ?? -Infinity);
+    const span = rangeMax - rangeMin || 1;
+    const pctOf = v => Math.min(98, Math.max(2, ((v - rangeMin) / span) * 100));
+    const goalPct = goalDisp != null ? pctOf(goalDisp) : null;
+
     const rows = groups.map((g, i) => {
       const dispVal = allDisp[i];
       const delta = i === 0 ? null : +(dispVal - allDisp[i - 1]).toFixed(1);
       const periodLabel = viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] : `Wk${i + 1}`;
-      return { key: g.key, periodLabel, dispVal, delta, isLast: i === groups.length - 1 };
+      return { key: g.key, periodLabel, dispVal, delta, isLast: i === groups.length - 1, fillPct: pctOf(dispVal) };
     });
     return (
       <View>
         {rows.map(r => (
-          <View key={r.key} style={{
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-            paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border,
-          }}>
-            <Text style={{ fontSize: 12, fontFamily: fontFamily.mono, fontWeight: '700', color: colors.textMuted }}>
-              {r.periodLabel.toUpperCase()}{r.isLast ? ' · NOW' : ''}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              {r.delta != null && (
-                <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, fontWeight: '700', color: Math.abs(r.delta) < 0.05 ? colors.textMuted : r.delta < 0 ? '#34d399' : '#f87171' }}>
-                  {r.delta > 0 ? '+' : ''}{r.delta.toFixed(1)}
-                </Text>
-              )}
-              <Text style={{ fontSize: 14, fontFamily: fontFamily.monoBold, color: r.isLast ? colors.accent : colors.text }}>
-                {r.dispVal.toFixed(1)}{unit}
+          <View key={r.key} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <Text style={{ fontSize: 12, fontFamily: fontFamily.mono, fontWeight: '700', color: colors.textMuted }}>
+                {r.periodLabel.toUpperCase()}{r.isLast ? ' · NOW' : ''}
               </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                {r.delta != null && (
+                  <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, fontWeight: '700', color: Math.abs(r.delta) < 0.05 ? colors.textMuted : r.delta < 0 ? '#34d399' : '#f87171' }}>
+                    {r.delta > 0 ? '+' : ''}{r.delta.toFixed(1)}
+                  </Text>
+                )}
+                <Text style={{ fontSize: 14, fontFamily: fontFamily.monoBold, color: r.isLast ? colors.accent : colors.text }}>
+                  {r.dispVal.toFixed(1)}{unit}
+                </Text>
+              </View>
+            </View>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.dim, position: 'relative' }}>
+              <View style={{
+                position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3,
+                width: `${r.fillPct}%`,
+                backgroundColor: r.isLast ? colors.accent : 'rgba(245,158,11,0.45)',
+              }} />
+              {goalPct != null && (
+                <View style={{
+                  position: 'absolute', top: -2, width: 2, height: 10, left: `${goalPct}%`,
+                  backgroundColor: '#34d399',
+                }} />
+              )}
             </View>
           </View>
         ))}
@@ -742,7 +761,7 @@ export default function WeightScreen() {
                   </View>
                 </View>
               </View>
-              <WeeklyAvgChart key={wkViewMode} logs={logs} viewMode={wkViewMode} viewType={avgViewType} unit={unit} colors={colors} width={chartWidth} />
+              <WeeklyAvgChart key={wkViewMode} logs={logs} viewMode={wkViewMode} viewType={avgViewType} unit={unit} goalKg={goalKg} colors={colors} width={chartWidth} />
             </View>
 
             {/* ── History ── */}
