@@ -13,7 +13,9 @@ import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
+import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import CircularGauge from '../components/CircularGauge';
+import { useExportCard } from '../hooks/useExportCard';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const KG_TO_LBS = 2.20462;
@@ -446,6 +448,7 @@ export default function WeightScreen() {
   const [unit, setUnit] = useState('kg');
   const [wkViewMode, setWkViewMode] = useState('week'); // 'week' | 'month'
   const [avgViewType, setAvgViewType] = useState('list'); // 'list' | 'chart'
+  const avgWeightExport = useExportCard();
   const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
 
   const [showLogSheet, setShowLogSheet] = useState(false);
@@ -747,6 +750,17 @@ export default function WeightScreen() {
                 <Text style={styles.cardTitle}>AVG WEIGHT</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <TouchableOpacity
+                    onPress={avgWeightExport.exportCard}
+                    disabled={avgWeightExport.exporting}
+                    style={styles.avgViewToggleBtn}
+                  >
+                    {avgWeightExport.exporting ? (
+                      <ActivityIndicator size="small" color={colors.textMuted} />
+                    ) : (
+                      <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     onPress={() => setAvgViewType(v => (v === 'list' ? 'chart' : 'list'))}
                     style={styles.avgViewToggleBtn}
                   >
@@ -762,6 +776,18 @@ export default function WeightScreen() {
                 </View>
               </View>
               <WeeklyAvgChart key={wkViewMode} logs={logs} viewMode={wkViewMode} viewType={avgViewType} unit={unit} goalKg={goalKg} colors={colors} width={chartWidth} />
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate
+                ref={avgWeightExport.ref}
+                title="Avg Weight"
+                subtitle={`${wkViewMode === 'month' ? 'Monthly' : 'Weekly'} averages`}
+                colors={colors}
+                width={340}
+              >
+                <WeeklyAvgChart key={`export-${wkViewMode}`} logs={logs} viewMode={wkViewMode} viewType={avgViewType} unit={unit} goalKg={goalKg} colors={colors} width={300} />
+              </ExportCardTemplate>
             </View>
 
             {/* ── History ── */}
