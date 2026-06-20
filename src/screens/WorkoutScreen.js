@@ -352,18 +352,11 @@ function getMuscleGroups(exercises) {
   return [...groups].slice(0, 7);
 }
 
-function generateDayList(sessions, year, month, hasSearch) {
-  const today = new Date(); today.setHours(23, 59, 59, 999);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const result = [];
-  for (let d = daysInMonth; d >= 1; d--) {
-    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    if (new Date(dateStr) > today) continue;
-    const session = sessions.find(s => s.date === dateStr);
-    if (session) result.push({ type: 'session', session, date: dateStr });
-    else if (!hasSearch) result.push({ type: 'rest', date: dateStr });
-  }
-  return result;
+function generateDayList(sessions) {
+  return sessions
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .map(session => ({ type: 'session', session, date: session.date }));
 }
 
 function getRecentTypes(sessions) {
@@ -1282,9 +1275,7 @@ export default function WorkoutScreen() {
     );
   }, [sessions, viewYear, viewMonth, search]);
 
-  const dayList = useMemo(() =>
-    generateDayList(filteredSessions, viewYear, viewMonth, search.trim().length > 0),
-    [filteredSessions, viewYear, viewMonth, search]);
+  const dayList = useMemo(() => generateDayList(filteredSessions), [filteredSessions]);
 
   const canGoNext = viewYear < today.getFullYear() ||
     (viewYear === today.getFullYear() && viewMonth < today.getMonth() + 1);
