@@ -223,9 +223,12 @@ async function fetchHome(userId) {
   const thisWeekStepsArr = thisWeekSteps.data ?? [];
   const lastWeekStepsArr = lastWeekSteps.data ?? [];
   const monthStepsArr    = monthSteps.data ?? [];
-  const thisWeekStepsTotal = thisWeekStepsArr.reduce((s, r) => s + r.steps, 0);
-  const lastWeekStepsTotal = lastWeekStepsArr.reduce((s, r) => s + r.steps, 0);
-  const monthStepsTotal    = monthStepsArr.reduce((s, r) => s + r.steps, 0);
+  const thisWeekStepsSum = thisWeekStepsArr.reduce((s, r) => s + r.steps, 0);
+  const lastWeekStepsSum = lastWeekStepsArr.reduce((s, r) => s + r.steps, 0);
+  const monthStepsTotal  = monthStepsArr.reduce((s, r) => s + r.steps, 0);
+  // The "STEPS" stat tile shows the average daily steps for the period, not the raw sum.
+  const thisWeekStepsAvg = thisWeekStepsArr.length ? Math.round(thisWeekStepsSum / thisWeekStepsArr.length) : 0;
+  const lastWeekStepsAvg = lastWeekStepsArr.length ? Math.round(lastWeekStepsSum / lastWeekStepsArr.length) : 0;
   const thisWeekKcal = (thisWeekFood.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0);
   const lastWeekKcal = (lastWeekFood.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0);
   const monthKcal    = (monthFood.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0);
@@ -298,8 +301,8 @@ async function fetchHome(userId) {
     todayExCount, todaySetCount, todayWorkoutName,
     lastWorkoutDate, lastWorkoutNotes, daysSinceWorkout,
     motivText, streak, stepsWeekSeries,
-    thisWeek: { sessions: thisWeekSessions, steps: thisWeekStepsTotal, kcal: thisWeekKcal, goalDays: thisWeekGoalDays, weightDelta: weekWeightDelta },
-    lastWeek: { sessions: lastWeekSessions, steps: lastWeekStepsTotal, kcal: lastWeekKcal, goalDays: lastWeekGoalDays, weightDelta: lastWeekWeightDelta },
+    thisWeek: { sessions: thisWeekSessions, steps: thisWeekStepsAvg, kcal: thisWeekKcal, goalDays: thisWeekGoalDays, weightDelta: weekWeightDelta },
+    lastWeek: { sessions: lastWeekSessions, steps: lastWeekStepsAvg, kcal: lastWeekKcal, goalDays: lastWeekGoalDays, weightDelta: lastWeekWeightDelta },
     thisMonth: {
       sessions: monthSessions, steps: monthStepsTotal, kcal: monthKcal, goalDays: monthGoalDays, weightDelta: monthWeightDelta,
       gymCount: monthSessions, cardioCount: monthCardioCount, restCount: monthRestCount,
