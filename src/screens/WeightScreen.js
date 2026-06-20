@@ -285,7 +285,7 @@ function WeeklyAvgChart({ logs, viewMode, viewType, unit, colors, width }) {
       const delta = i === 0 ? null : +(dispVal - allDisp[i - 1]).toFixed(1);
       const periodLabel = viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] : `Wk${i + 1}`;
       return { key: g.key, periodLabel, dispVal, delta, isLast: i === groups.length - 1 };
-    }).reverse();
+    });
     return (
       <View>
         {rows.map(r => (
