@@ -1476,7 +1476,7 @@ export default function WorkoutScreen() {
           const sess = item.session;
           const ws   = getWorkoutStyle(sess.notes, colors);
           const vol  = sess.total_volume ?? calcSessionVol(sess);
-          const delta = getVolumeDelta(sess, sessions);
+          const delta = vol > 0 ? getVolumeDelta(sess, sessions) : null;
           const exs  = sess.workout_exercises ?? [];
 
           // Subtitle: cardio (vol=0) → show ex names; weighted → show count + vol
