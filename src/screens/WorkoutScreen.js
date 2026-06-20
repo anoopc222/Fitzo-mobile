@@ -407,7 +407,6 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   const kcal = session.calories_burned ?? (isCardio ? cardioKcal : 0) ?? 0;
   const pbSet = pbMap[session.id] ?? new Set();
   const muscleGroups = getMuscleGroups(exercises);
-  const delta = getVolumeDelta(session, allSessions);
   const allExpanded = exercises.every(ex => expandedIds.has(ex.id));
 
   const toggleEx = (id) => setExpandedIds(prev => {
@@ -423,10 +422,9 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
 
   return (
     <>
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={dS.container}>
-        <View style={dS.handle} />
-
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={dS.overlay}>
+        <View style={dS.popup}>
         {/* Header */}
         <View style={dS.header}>
           <View style={[dS.typeIconBox, { backgroundColor: ws.iconBg, borderColor: ws.cardBorder }]}>
@@ -460,19 +458,6 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             </View>
           ))}
         </View>
-
-        {/* Volume comparison */}
-        {delta && (
-          <View style={[dS.compBanner, {
-            backgroundColor: delta.delta >= 0 ? colors.good + '1f' : colors.danger + '1f',
-            borderColor: delta.delta >= 0 ? colors.good + '55' : colors.danger + '55',
-          }]}>
-            <Text style={{ fontSize: 15 }}>📊</Text>
-            <Text style={[dS.compText, { color: delta.delta >= 0 ? colors.success : colors.danger }]}>
-              {' '}vs last {session.notes} ({fmtDateShort(delta.prevDate)}): {delta.delta >= 0 ? '+' : ''}{delta.delta.toLocaleString()}kg ({delta.pct}% {delta.delta >= 0 ? 'more' : 'less'})
-            </Text>
-          </View>
-        )}
 
         {/* Session muscle tags */}
         {muscleGroups.length > 0 && (
@@ -628,8 +613,9 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
               <Text style={dS.deleteBtnText}>Delete</Text>
             </TouchableOpacity>
           </View>
-          <View style={{ height: 50 }} />
+          <View style={{ height: 24 }} />
         </ScrollView>
+        </View>
       </View>
     </Modal>
     <ExerciseHistoryModal
@@ -1600,8 +1586,12 @@ const createS = (colors) => StyleSheet.create({
 });
 
 const createDS = (colors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  handle: { width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  popup: {
+    width: '100%', maxWidth: 420, maxHeight: '85%',
+    backgroundColor: colors.bgElevated, borderRadius: 28,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+  },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -1617,12 +1607,6 @@ const createDS = (colors) => StyleSheet.create({
   statCellBorder: { borderRightWidth: 1, borderRightColor: colors.border },
   statValue: { fontSize: typography.lg, fontFamily: fontFamily.monoBold, color: colors.text, marginTop: 2 },
   statLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginTop: 1 },
-
-  compBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginHorizontal: 16, marginTop: 12, padding: 10, borderRadius: 10, borderWidth: 1,
-  },
-  compText: { fontSize: typography.xs, fontWeight: weight.semibold, flex: 1 },
 
   tagScroll: { maxHeight: 36 },
   tagRow: { paddingHorizontal: 16, gap: 6, paddingVertical: 4, alignItems: 'center' },
