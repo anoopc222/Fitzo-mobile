@@ -6,21 +6,36 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 
-const getMenuItems = (colors) => [
-  { label: 'Diet Plan',    icon: 'restaurant',  screen: 'Diet',         color: colors.warning, sub: 'Weekly macros & cardio plan' },
-  { label: 'Progress',     icon: 'trending-up', screen: 'Progress',     color: colors.success, sub: 'Exercise PRs & trends' },
-  { label: 'Measurements', icon: 'body',        screen: 'Measurements', color: colors.accent,  sub: 'Body measurements (7 sites)' },
-  { label: 'Health Log',   icon: 'heart-half',  screen: 'HealthLog',    color: colors.danger,  sub: 'Blood tests & vitals' },
-  { label: 'Calculators',  icon: 'calculator',  screen: 'Calculators',  color: colors.warning, sub: '20+ fitness calculators' },
-  { label: 'Profile',      icon: 'person',      screen: 'Profile',      color: colors.blue,    sub: 'Edit profile & goals' },
-  { label: 'Settings',     icon: 'settings',    screen: 'Settings',     color: colors.textMuted, sub: 'App preferences' },
+const getSections = (colors) => [
+  {
+    title: 'BODY & HEALTH',
+    items: [
+      { label: 'Diet Plan',     icon: 'restaurant',  screen: 'Diet',         color: colors.warning },
+      { label: 'Progress',      icon: 'trending-up', screen: 'Progress',     color: colors.success },
+      { label: 'Measurements',  icon: 'body',        screen: 'Measurements', color: colors.accent },
+      { label: 'Health Log',    icon: 'heart-half',  screen: 'HealthLog',    color: colors.danger },
+    ],
+  },
+  {
+    title: 'TOOLS',
+    items: [
+      { label: 'Calculators',   icon: 'calculator',  screen: 'Calculators',  color: colors.warning },
+    ],
+  },
+  {
+    title: 'ACCOUNT',
+    items: [
+      { label: 'Profile',       icon: 'person',      screen: 'Profile',      color: colors.blue },
+      { label: 'Settings',      icon: 'settings',    screen: 'Settings',     color: colors.textMuted },
+    ],
+  },
 ];
 
 export default function MoreScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const MENU_ITEMS = useMemo(() => getMenuItems(colors), [colors]);
+  const SECTIONS = useMemo(() => getSections(colors), [colors]);
   const name    = user?.user_metadata?.full_name?.split(' ')[0] ?? 'there';
   const initial = (name[0] ?? 'F').toUpperCase();
 
@@ -51,22 +66,25 @@ export default function MoreScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {MENU_ITEMS.map(item => (
-          <TouchableOpacity
-            key={item.screen}
-            style={styles.card}
-            onPress={() => navigation.navigate(item.screen)}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.iconWrap, { backgroundColor: item.color + '20' }]}>
-              <Ionicons name={item.icon} size={22} color={item.color} />
+        {SECTIONS.map(section => (
+          <View key={section.title} style={styles.section}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <View style={styles.grid}>
+              {section.items.map(item => (
+                <TouchableOpacity
+                  key={item.screen}
+                  style={styles.tile}
+                  onPress={() => navigation.navigate(item.screen)}
+                  activeOpacity={0.75}
+                >
+                  <View style={[styles.iconWrap, { backgroundColor: item.color + '20' }]}>
+                    <Ionicons name={item.icon} size={22} color={item.color} />
+                  </View>
+                  <Text style={styles.tileLabel}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-            <View style={styles.cardText}>
-              <Text style={styles.cardLabel}>{item.label}</Text>
-              <Text style={styles.cardSub}>{item.sub}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-          </TouchableOpacity>
+          </View>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -97,14 +115,18 @@ const createStyles = (colors) => StyleSheet.create({
   profileEmail: { fontSize: typography.xs, color: colors.textMuted, marginTop: 2 },
   editBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.accent + '18' },
 
-  content: { paddingHorizontal: 16, paddingBottom: 32, gap: 8 },
-  card: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: colors.bgCard, borderRadius: 16, padding: 16,
+  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  section: { marginBottom: 20 },
+  sectionTitle: {
+    fontSize: 11, fontWeight: weight.bold, color: colors.textDim,
+    letterSpacing: 1, marginBottom: 10,
+  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tile: {
+    width: '47%', alignItems: 'center', gap: 8,
+    backgroundColor: colors.bgCard, borderRadius: 16, paddingVertical: 18,
     borderWidth: 1, borderColor: colors.border,
   },
   iconWrap: { width: 46, height: 46, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  cardText: { flex: 1 },
-  cardLabel: { fontSize: typography.base, fontWeight: weight.medium, color: colors.text },
-  cardSub: { fontSize: typography.xs, color: colors.textDim, marginTop: 2 },
+  tileLabel: { fontSize: typography.sm, fontWeight: weight.medium, color: colors.text, textAlign: 'center' },
 });
