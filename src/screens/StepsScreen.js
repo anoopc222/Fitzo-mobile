@@ -266,24 +266,16 @@ function WeeklyBarChart({ days, goal, colors, width }) {
 
 // ─── Daily Log slider row — ports the track-bar / track-bar-marker markup ──
 function DailyLogBar({ steps, goal, barMax, colors }) {
-  const W = 100;
   const fillPct = Math.min(97, Math.max(2, (steps / barMax) * 100));
   const goalPct = Math.max(1, Math.min(99, (goal / barMax) * 100));
   const met = steps >= goal;
   const curColor = met ? '#34d399' : '#fbbf24';
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.dim, position: 'relative', marginBottom: 4 }}>
-        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3, backgroundColor: 'rgba(251,191,36,0.22)', width: `${fillPct}%` }} />
-        <View style={{ position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5, left: `${goalPct}%`, backgroundColor: '#f97316' }} />
-        <View style={{ position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5, left: `${fillPct}%`, backgroundColor: curColor }} />
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.mono }}>0</Text>
-        <Text style={{ fontSize: 9, color: '#f97316', fontFamily: fontFamily.mono }}>● {goal.toLocaleString()}</Text>
-        <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.mono }}>{barMax.toLocaleString()}</Text>
-      </View>
+    <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, position: 'relative' }}>
+      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2, backgroundColor: 'rgba(251,191,36,0.22)', width: `${fillPct}%` }} />
+      <View style={{ position: 'absolute', top: -1, width: 6, height: 6, borderRadius: 3, marginLeft: -3, left: `${goalPct}%`, backgroundColor: '#f97316' }} />
+      <View style={{ position: 'absolute', top: -1, width: 6, height: 6, borderRadius: 3, marginLeft: -3, left: `${fillPct}%`, backgroundColor: curColor }} />
     </View>
   );
 }
@@ -689,9 +681,7 @@ export default function StepsScreen() {
                 <View key={log.id} style={styles.logRowWrap}>
                   <View style={styles.logRow}>
                     <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
-                    <View style={styles.logActIcon}>
-                      <Text style={{ fontSize: 13 }}>{ACT_ICON[log.activity_type] || ACT_ICON.walk}</Text>
-                    </View>
+                    <Text style={styles.logActEmoji}>{ACT_ICON[log.activity_type] || ACT_ICON.walk}</Text>
                     <DailyLogBar steps={log.steps} goal={log.goal ?? defaultGoal} barMax={allTimeMaxSteps} colors={colors} />
                     <Text style={[styles.logSteps, { color: log.steps >= (log.goal ?? defaultGoal) ? colors.good : colors.warn }]}>
                       {log.steps.toLocaleString()}
@@ -896,13 +886,13 @@ const createStyles = (colors) => StyleSheet.create({
 
   emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
 
-  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 10 },
+  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 6 },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logDate: { width: 44, fontSize: 11, color: colors.text, fontFamily: fontFamily.bodyMedium },
-  logActIcon: { width: 26, height: 26, borderRadius: 8, backgroundColor: colors.dim, alignItems: 'center', justifyContent: 'center' },
-  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 78, paddingTop: 6 },
-  logSteps: { fontSize: typography.sm, fontWeight: weight.bold, minWidth: 56, textAlign: 'right', fontFamily: fontFamily.monoBold },
-  logDelBtn: { padding: 4 },
+  logDate: { width: 40, fontSize: 10, color: colors.text, fontFamily: fontFamily.bodyMedium },
+  logActEmoji: { fontSize: 12, width: 16, textAlign: 'center' },
+  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 64, paddingTop: 4 },
+  logSteps: { fontSize: 11, fontWeight: weight.bold, minWidth: 50, textAlign: 'right', fontFamily: fontFamily.monoBold },
+  logDelBtn: { padding: 2 },
 
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   hmLegendLabel: { fontSize: 9, color: colors.textDim },

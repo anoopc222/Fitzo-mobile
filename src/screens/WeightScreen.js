@@ -327,12 +327,10 @@ function WeightHistoryBar({ value, goalVal, barMax, colors }) {
   const goalPct = goalVal != null ? Math.min(99, Math.max(1, (goalVal / barMax) * 100)) : null;
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.dim, position: 'relative' }}>
-        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3, backgroundColor: 'rgba(103,232,249,0.18)', width: `${fillPct}%` }} />
-        {goalPct != null && <View style={{ position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5, left: `${goalPct}%`, backgroundColor: '#34d399' }} />}
-        <View style={{ position: 'absolute', top: -3, width: 10, height: 10, borderRadius: 5, marginLeft: -5, left: `${fillPct}%`, backgroundColor: '#67e8f9' }} />
-      </View>
+    <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, position: 'relative' }}>
+      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2, backgroundColor: 'rgba(103,232,249,0.18)', width: `${fillPct}%` }} />
+      {goalPct != null && <View style={{ position: 'absolute', top: -1, width: 6, height: 6, borderRadius: 3, marginLeft: -3, left: `${goalPct}%`, backgroundColor: '#34d399' }} />}
+      <View style={{ position: 'absolute', top: -1, width: 6, height: 6, borderRadius: 3, marginLeft: -3, left: `${fillPct}%`, backgroundColor: '#67e8f9' }} />
     </View>
   );
 }
@@ -868,13 +866,13 @@ const createStyles = (colors) => StyleSheet.create({
 
   emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
 
-  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 10 },
+  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 6 },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logDate: { width: 44, fontSize: 11, color: colors.text, fontFamily: fontFamily.bodyMedium },
-  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 52, paddingTop: 6 },
-  logVal: { fontSize: typography.sm, fontWeight: weight.bold, minWidth: 40, textAlign: 'right', fontFamily: fontFamily.monoBold, color: '#67e8f9' },
-  logDelta: { fontSize: typography.xs, fontWeight: weight.bold, minWidth: 36, textAlign: 'right', fontFamily: fontFamily.mono },
-  logDelBtn: { padding: 4 },
+  logDate: { width: 40, fontSize: 10, color: colors.text, fontFamily: fontFamily.bodyMedium },
+  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 48, paddingTop: 4 },
+  logVal: { fontSize: 11, fontWeight: weight.bold, minWidth: 36, textAlign: 'right', fontFamily: fontFamily.monoBold, color: '#67e8f9' },
+  logDelta: { fontSize: 9, fontWeight: weight.bold, minWidth: 32, textAlign: 'right', fontFamily: fontFamily.mono },
+  logDelBtn: { padding: 2 },
 
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   hmLegendLabel: { fontSize: 9, color: colors.textDim },
