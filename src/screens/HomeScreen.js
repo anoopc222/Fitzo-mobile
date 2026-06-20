@@ -11,8 +11,8 @@ import { useQuery } from '@tanstack/react-query';
 const SCREEN_W  = Dimensions.get('window').width;
 const CAL_PAD   = 16;  // horizontal padding inside the calendar section
 const CAL_GAP   = 3;   // gap between cells
-const MODAL_W   = Math.min(SCREEN_W - 40, 420); // overlay padding(20*2) + popup maxWidth
-const CAL_CELL  = (MODAL_W - CAL_PAD * 2 - CAL_GAP * 6) / 7;
+const MODAL_W   = Math.min(SCREEN_W - 40, 420) - 2; // overlay padding(20*2) + popup maxWidth - popup border(1*2)
+const CAL_CELL  = Math.floor((MODAL_W - CAL_PAD * 2 - CAL_GAP * 6) / 7);
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -558,32 +558,34 @@ function StreakCalendarModal({ visible, userId, onClose }) {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Merged Gym/Cardio/Rest row */}
-          <View style={scS.topCard}>
+          {/* Gym/Cardio/Rest tiles */}
+          <View style={[scS.statGrid, { marginTop: 14 }]}>
             {TOP_STATS.map((item, idx) => (
-              <React.Fragment key={idx}>
-                <View style={scS.topCell}>
-                  <Ionicons name={item.icon} size={16} color={item.color} style={{ marginBottom: 4 }} />
-                  <Text style={[scS.statVal, { color: item.color }]}>{item.val}</Text>
-                  <Text style={scS.statLbl}>{item.lbl}</Text>
-                </View>
-                {idx < TOP_STATS.length - 1 && <View style={scS.topDivider} />}
-              </React.Fragment>
+              <View key={idx} style={[scS.statBox, { borderColor: item.color }]}>
+                <Ionicons name={item.icon} size={16} color={item.color} style={{ marginBottom: 4 }} />
+                <Text style={[scS.statBoxVal, { color: item.color }]}>{item.val}</Text>
+                <Text style={scS.statBoxLbl}>{item.lbl}</Text>
+              </View>
             ))}
           </View>
 
-          {/* Compact secondary stats — dense text, no scroll needed */}
-          <View style={scS.statsStrip}>
-            <Text style={scS.statsStripText}>
-              {STATS.map((item, idx) => (
-                <Text key={idx}>
-                  <Text style={scS.statsStripLabel}>{item.lbl} </Text>
-                  <Text style={[scS.statsStripVal, { color: item.color }]}>{item.val}</Text>
-                  {item.sub ? <Text style={scS.statsStripSub}> ({item.sub})</Text> : null}
-                  {idx < STATS.length - 1 ? <Text style={scS.statsStripDot}>  ·  </Text> : null}
-                </Text>
-              ))}
-            </Text>
+          {/* Secondary stat tiles */}
+          <View style={scS.statGrid}>
+            {STATS.slice(0, 3).map((item, idx) => (
+              <View key={idx} style={scS.statBoxNeutral}>
+                <Text style={[scS.statBoxVal, { color: item.color }]}>{item.val}</Text>
+                <Text style={scS.statBoxLbl}>{item.lbl}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={scS.statGrid}>
+            {STATS.slice(3, 6).map((item, idx) => (
+              <View key={idx} style={scS.statBoxNeutral}>
+                <Text style={[scS.statBoxVal, { color: item.color }]}>{item.val}</Text>
+                <Text style={scS.statBoxLbl}>{item.lbl}</Text>
+                {item.sub ? <Text style={scS.statBoxSub}>{item.sub}</Text> : null}
+              </View>
+            ))}
           </View>
 
           {/* Calendar section */}
@@ -636,7 +638,7 @@ function StreakCalendarModal({ visible, userId, onClose }) {
                       key={day}
                       style={[
                         scS.dayCell,
-                        { backgroundColor: fillColor },
+                        { backgroundColor: fillColor, borderColor: typeColor || colors.border },
                         isToday && scS.dayCellToday,
                         isFuture && { opacity: 0.25 },
                       ]}
@@ -647,22 +649,13 @@ function StreakCalendarModal({ visible, userId, onClose }) {
                       }}
                       activeOpacity={0.7}
                     >
-                      <Text style={[scS.dayNum, typeColor && { color: typeColor, fontWeight: '800' }, isToday && scS.dayNumToday]}>{day}</Text>
+                      <Text style={[scS.dayNum, isToday && scS.dayNumToday]}>{day}</Text>
+                      {typeColor && <View style={[scS.dayDot, { backgroundColor: typeColor }]} />}
                     </TouchableOpacity>
                   );
                 })}
               </View>
             )}
-
-            {/* Legend */}
-            <View style={scS.legend}>
-              {[{ color: '#34d399', label: 'Gym' }, { color: '#3b82f6', label: 'Cardio' }, { color: '#f59e0b', label: 'Rest' }].map(l => (
-                <View key={l.label} style={scS.legendItem}>
-                  <View style={[scS.legendDot, { backgroundColor: l.color }]} />
-                  <Text style={scS.legendText}>{l.label}</Text>
-                </View>
-              ))}
-            </View>
           </View>
 
           <View style={{ height: 40 }} />
@@ -1184,35 +1177,27 @@ const createScS = (colors) => StyleSheet.create({
   title: { fontSize: 20, fontWeight: '900', color: colors.text },
   subtitle: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
   closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.bgCard },
-  topCard: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: 14, marginHorizontal: 16, marginTop: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  topCell: { flex: 1, alignItems: 'center', paddingVertical: 14 },
-  topDivider: { width: 1, backgroundColor: colors.border },
-  statVal: { fontSize: 20, fontWeight: '900' },
-  statLbl: { fontSize: 9, color: colors.textDim, fontWeight: '700', letterSpacing: 0.8, marginTop: 3, textAlign: 'center' },
-  statsStrip: { backgroundColor: colors.bgCard, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginHorizontal: 16, marginTop: 10, paddingHorizontal: 12, paddingVertical: 10 },
-  statsStripText: { lineHeight: 18 },
-  statsStripLabel: { fontSize: 10, color: colors.textDim, fontWeight: '700', letterSpacing: 0.4 },
-  statsStripVal: { fontSize: 11, fontWeight: '900' },
-  statsStripSub: { fontSize: 9, color: colors.textMuted },
-  statsStripDot: { fontSize: 10, color: colors.textDim },
-  calSection: { paddingHorizontal: CAL_PAD, marginTop: 4 },
+  statGrid: { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginTop: 8 },
+  statBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, backgroundColor: colors.bgCard },
+  statBoxNeutral: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard },
+  statBoxVal: { fontSize: 18, fontWeight: '900' },
+  statBoxLbl: { fontSize: 9, color: colors.textDim, fontWeight: '700', letterSpacing: 0.6, marginTop: 2, textAlign: 'center' },
+  statBoxSub: { fontSize: 8, color: colors.textMuted, marginTop: 1, textAlign: 'center' },
+  calSection: { paddingHorizontal: CAL_PAD, marginTop: 12 },
   calNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   calMonthTitle: { fontSize: 20, fontWeight: '900', color: colors.text },
   calNavBtns: { flexDirection: 'row', gap: 6 },
   calNavBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: colors.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
   calNavText: { fontSize: 20, color: colors.text, lineHeight: 24, fontWeight: '300' },
-  dayNamesRow: { flexDirection: 'row', marginBottom: 6 },
-  dayNameCell: { width: CAL_CELL + CAL_GAP, alignItems: 'center', paddingVertical: 4 },
+  dayNamesRow: { flexDirection: 'row', gap: CAL_GAP, marginBottom: 6 },
+  dayNameCell: { width: CAL_CELL, alignItems: 'center', paddingVertical: 4 },
   dayNameText: { fontSize: 11, color: colors.textMuted, fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: CAL_GAP },
-  dayCell: { width: CAL_CELL, height: CAL_CELL, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
+  dayCell: { width: CAL_CELL, height: CAL_CELL, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
   dayCellToday: { borderColor: colors.text, borderWidth: 2 },
-  dayNum: { fontSize: 13, color: colors.text, fontWeight: '500' },
+  dayNum: { fontSize: 13, color: colors.text, fontWeight: '700' },
   dayNumToday: { color: colors.text },
-  legend: { flexDirection: 'row', gap: 20, justifyContent: 'center', marginTop: 14, marginBottom: 4 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 9, height: 9, borderRadius: 5 },
-  legendText: { fontSize: 11, color: colors.textMuted },
+  dayDot: { width: 4, height: 4, borderRadius: 2, marginTop: 2 },
 });
 
 const createDdS = (colors) => StyleSheet.create({
