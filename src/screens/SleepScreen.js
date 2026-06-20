@@ -221,23 +221,18 @@ function SleepLogRow({ log, goal, colors, onDelete }) {
   const dayNum = d.getDate();
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-      <View style={{ width: 3, height: 44, borderRadius: 2, backgroundColor: barColor }} />
-      <View style={{ width: 38, alignItems: 'center' }}>
-        <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{dayName}</Text>
-        <Text style={{ fontSize: 15, color: colors.text, fontFamily: fontFamily.monoBold, fontWeight: '700' }}>{dayNum}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ width: 3, height: 26, borderRadius: 2, backgroundColor: barColor }} />
+      <Text style={{ width: 40, fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{dayName} {dayNum}</Text>
+      <Text style={{ fontSize: typography.sm, fontWeight: '800', fontFamily: fontFamily.monoBold, color: barColor }}>{log.hours}h</Text>
+      <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, overflow: 'hidden' }}>
+        <View style={{ height: '100%', borderRadius: 2, width: `${pct}%`, backgroundColor: barColor }} />
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: typography.lg, fontWeight: '800', fontFamily: fontFamily.monoBold, marginBottom: 6, color: barColor }}>{log.hours}h</Text>
-        <View style={{ height: 5, borderRadius: 3, backgroundColor: colors.dim, overflow: 'hidden', marginBottom: 6 }}>
-          <View style={{ height: '100%', borderRadius: 3, width: `${pct}%`, backgroundColor: barColor }} />
-        </View>
-        <View style={{ alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: statusBg }}>
-          <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, letterSpacing: 0.3, color: statusTxt }}>{statusLabel}</Text>
-        </View>
+      <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, backgroundColor: statusBg }}>
+        <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, letterSpacing: 0.2, color: statusTxt }}>{statusLabel}</Text>
       </View>
-      <TouchableOpacity onPress={onDelete} style={{ padding: 4 }}>
-        <Ionicons name="close" size={14} color={colors.textDim} />
+      <TouchableOpacity onPress={onDelete} style={{ padding: 2 }}>
+        <Ionicons name="close" size={13} color={colors.textDim} />
       </TouchableOpacity>
     </View>
   );
