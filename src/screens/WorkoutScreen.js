@@ -397,6 +397,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
 
   const ws = getWorkoutStyle(session.notes, colors);
   const sType = getSessionType(session.notes);
+  const isRestDay = (session.notes ?? '').toLowerCase() === 'rest day';
   const isCardio = sType === 'cardio';
   const exercises = (session.workout_exercises ?? []).slice().sort((a, b) => a.order_index - b.order_index);
   const totalSets = exercises.reduce((s, ex) => s + (ex.sets?.length ?? 0), 0);
@@ -439,6 +440,42 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
           </TouchableOpacity>
         </View>
 
+        {isRestDay ? (
+          <View style={dS.exScroll}>
+            <View style={dS.restInfoRow}>
+              <View style={dS.restInfoCell}>
+                <Text style={{ fontSize: 18 }}>😴</Text>
+                <Text style={dS.restInfoValue}>Rest</Text>
+                <Text style={dS.statLabel}>DAY TYPE</Text>
+              </View>
+              <View style={dS.restInfoDivider} />
+              <View style={dS.restInfoCell}>
+                <Text style={{ fontSize: 18 }}>💚</Text>
+                <Text style={dS.restInfoValue}>Recovery</Text>
+                <Text style={dS.statLabel}>MODE</Text>
+              </View>
+            </View>
+
+            <View style={dS.restCallout}>
+              <Text style={{ fontSize: 56 }}>😴</Text>
+              <Text style={dS.restCalloutTitle}>Recovery Day</Text>
+              <Text style={dS.restCalloutSub}>Muscles grow during rest.{'\n'}Good call.</Text>
+            </View>
+
+            <View style={dS.actionRow}>
+              <TouchableOpacity style={dS.editBtn} onPress={onEdit}>
+                <Text style={{ fontSize: 14 }}>✏️</Text>
+                <Text style={dS.editBtnText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={dS.deleteBtn} onPress={onDelete}>
+                <Text style={{ fontSize: 14 }}>🗑️</Text>
+                <Text style={dS.deleteBtnText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ height: 24 }} />
+          </View>
+        ) : (
+        <>
         {/* Stats row */}
         <View style={dS.statsRow}>
           {(isCardio ? [
@@ -615,6 +652,8 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
           </View>
           <View style={{ height: 24 }} />
         </View>
+        </>
+        )}
       </ScrollView>
     </BottomSheet>
     <ExerciseHistoryModal
@@ -1598,6 +1637,19 @@ const createDS = (colors) => StyleSheet.create({
   statCellBorder: { borderRightWidth: 1, borderRightColor: colors.border },
   statValue: { fontSize: typography.lg, fontFamily: fontFamily.monoBold, color: colors.text, marginTop: 2 },
   statLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginTop: 1 },
+
+  restInfoRow: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+    borderRadius: 14, marginTop: 14, paddingVertical: 14,
+  },
+  restInfoCell: { flex: 1, alignItems: 'center' },
+  restInfoValue: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text, marginTop: 4 },
+  restInfoDivider: { width: 1, height: 36, backgroundColor: colors.border },
+  restCallout: { alignItems: 'center', paddingVertical: 32 },
+  restCalloutTitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.good, marginTop: 12 },
+  restCalloutSub: {
+    fontSize: typography.sm, color: colors.textMuted, marginTop: 8, textAlign: 'center', lineHeight: 20,
+  },
 
   tagScroll: { maxHeight: 36 },
   tagRow: { paddingHorizontal: 16, gap: 6, paddingVertical: 4, alignItems: 'center' },
