@@ -1581,18 +1581,19 @@ const createS = (colors) => StyleSheet.create({
 });
 
 const createDS = (colors) => StyleSheet.create({
-  popup: { marginHorizontal: -16, paddingHorizontal: 0 },
+  popup: {},
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border,
+    marginHorizontal: -16, paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   typeIconBox: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   headerName: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text },
   headerDate: { fontSize: typography.xs, color: colors.textMuted, marginTop: 2 },
   closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.surface },
 
-  statsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
+  statsRow: { flexDirection: 'row', marginHorizontal: -16, borderBottomWidth: 1, borderBottomColor: colors.border },
   statCell: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   statCellBorder: { borderRightWidth: 1, borderRightColor: colors.border },
   statValue: { fontSize: typography.lg, fontFamily: fontFamily.monoBold, color: colors.text, marginTop: 2 },
