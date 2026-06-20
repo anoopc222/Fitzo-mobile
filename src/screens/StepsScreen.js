@@ -541,15 +541,19 @@ export default function StepsScreen() {
             {/* ── Hero ── */}
             <View style={styles.heroCard}>
               <View style={styles.heroTopRow}>
-                <Text style={styles.heroEmoji}>🚀</Text>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.heroLabelRow}>
+                    <Text style={styles.heroEmojiInline}>🚀</Text>
+                    <Text style={styles.heroLabel}>AVG STEPS/DAY · {MONTH_NAMES[month].toUpperCase()} {year}</Text>
+                  </View>
+                  <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
+                  <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
+                </View>
                 <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
                   <Text style={styles.goalPillBtnText}>🎯 {fmtK(defaultGoal)}</Text>
                   <Ionicons name="pencil" size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
-              <Text style={styles.heroLabel}>AVG STEPS/DAY · {MONTH_NAMES[month].toUpperCase()} {year}</Text>
-              <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
 
               <View style={styles.tileCard}>
                 <View style={styles.tileRow}>
@@ -589,8 +593,8 @@ export default function StepsScreen() {
             {/* ── This Week sections — only meaningful for the current real month ── */}
             {isCurrentMonth && (
               <>
-                <View style={styles.weekCompareRow}>
-                  <View style={styles.weekCompareCard}>
+                <View style={styles.weekCompareCardMerged}>
+                  <View style={styles.weekCompareCell}>
                     <Text style={styles.weekCompareTitle}>THIS WEEK</Text>
                     <Text style={[styles.weekCompareVal, { color: colors.accent }]}>{thisWeekAvg ? thisWeekAvg.toLocaleString() : '—'}</Text>
                     <View style={styles.weekCompareBarTrack}>
@@ -598,7 +602,8 @@ export default function StepsScreen() {
                     </View>
                     <Text style={styles.weekCompareSub}>avg/day · {thisWeekLogs.length}d</Text>
                   </View>
-                  <View style={styles.weekCompareCard}>
+                  <View style={styles.weekCompareDivider} />
+                  <View style={styles.weekCompareCell}>
                     <Text style={styles.weekCompareTitle}>LAST WEEK</Text>
                     <Text style={[styles.weekCompareVal, { color: colors.textMuted }]}>{lastWeekAvg ? lastWeekAvg.toLocaleString() : '—'}</Text>
                     <View style={styles.weekCompareBarTrack}>
@@ -629,8 +634,11 @@ export default function StepsScreen() {
                   </View>
                   <View style={styles.weekStatsRow}>
                     <WeekStatCell value={`${weekGoalDays}/7`} label="GOAL DAYS" color={colors.good} colors={colors} />
+                    <View style={styles.weekStatDivider} />
                     <WeekStatCell value={weekAvg ? weekAvg.toLocaleString() : '—'} label="AVG/DAY" color={colors.accent} colors={colors} />
+                    <View style={styles.weekStatDivider} />
                     <WeekStatCell value={weekBest ? weekBest.toLocaleString() : '—'} label="BEST DAY" color="#22d3ee" colors={colors} />
+                    <View style={styles.weekStatDivider} />
                     <WeekStatCell value={weekTotal ? weekTotal.toLocaleString() : '—'} label="TOTAL" color={colors.text} colors={colors} />
                   </View>
                 </View>
@@ -903,19 +911,21 @@ const createStyles = (colors) => StyleSheet.create({
   weekDayLabels: { flexDirection: 'row', marginTop: 2, marginBottom: 8 },
   weekDayLabel: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono },
   weekDayNum: { fontSize: 8, color: colors.textDim, fontFamily: fontFamily.mono, marginTop: 1 },
-  weekStatsRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
+  weekStatsRow: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
+  weekStatDivider: { width: 1, height: 24, backgroundColor: colors.border },
 
   heroCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroEmoji: { fontSize: 30, marginBottom: 6 },
+  heroTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  heroLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  heroEmojiInline: { fontSize: 14 },
   goalPillBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
     borderWidth: 1, borderStyle: 'dashed', borderColor: colors.accent + '66',
   },
   goalPillBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
-  heroNum: { fontSize: 38, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent },
-  heroLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginTop: 2 },
+  heroNum: { fontSize: 38, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, marginTop: 4 },
+  heroLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1 },
   heroSub: { fontSize: typography.sm, color: colors.textDim, marginTop: 4, marginBottom: 14 },
   tileCard: { borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden', marginTop: 4 },
   tileRow: { flexDirection: 'row' },
@@ -935,8 +945,9 @@ const createStyles = (colors) => StyleSheet.create({
   goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
   goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },
 
-  weekCompareRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  weekCompareCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border },
+  weekCompareCardMerged: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12, overflow: 'hidden' },
+  weekCompareCell: { flex: 1, padding: 14 },
+  weekCompareDivider: { width: 1, backgroundColor: colors.border },
   weekCompareTitle: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, fontFamily: fontFamily.mono, marginBottom: 8 },
   weekCompareVal: { fontSize: typography.xl, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', marginBottom: 8 },
   weekCompareBarTrack: { height: 5, borderRadius: 3, backgroundColor: colors.bgElevated, overflow: 'hidden', marginBottom: 6 },
