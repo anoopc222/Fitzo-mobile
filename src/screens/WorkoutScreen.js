@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import MonthYearPicker from '../components/ui/MonthYearPicker';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -1258,6 +1259,7 @@ export default function WorkoutScreen() {
   const [showEdit, setShowEdit]           = useState(false);
   const [editIsNew, setEditIsNew]         = useState(false);
   const [editInitial, setEditInitial]     = useState(null);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   const { data: sessions = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['sessions', user?.id],
@@ -1415,11 +1417,21 @@ export default function WorkoutScreen() {
         <TouchableOpacity onPress={prevMonth} style={s.monthBtn}>
           <Text style={s.monthChevron}>‹</Text>
         </TouchableOpacity>
-        <Text style={s.monthLabel}>{MONTH_FULL[viewMonth - 1]} {viewYear}</Text>
+        <TouchableOpacity onPress={() => setShowMonthPicker(true)}>
+          <Text style={s.monthLabel}>{MONTH_FULL[viewMonth - 1]} {viewYear}</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={nextMonth} style={s.monthBtn} disabled={!canGoNext}>
           <Text style={[s.monthChevron, !canGoNext && { color: colors.textDim }]}>›</Text>
         </TouchableOpacity>
       </View>
+
+      <MonthYearPicker
+        visible={showMonthPicker}
+        month={viewMonth - 1}
+        year={viewYear}
+        onSelect={(m, y) => { setViewMonth(m + 1); setViewYear(y); }}
+        onClose={() => setShowMonthPicker(false)}
+      />
 
       {/* List */}
       <ScrollView
