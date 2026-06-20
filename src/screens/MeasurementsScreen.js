@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Modal, Alert, ActivityIndicator, RefreshControl,
+  TextInput, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+import BottomSheet from '../components/ui/BottomSheet';
 
 const SITES = [
   { key: 'chest',       label: 'Chest',        icon: 'body' },
@@ -206,45 +207,41 @@ export default function MeasurementsScreen({ navigation }) {
       </ScrollView>
 
       {/* Log Modal */}
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Log Measurements</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.sheetSub}>Enter values in centimetres (cm)</Text>
-            <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled">
-              {SITES.map(site => (
-                <View key={site.key} style={styles.fieldRow}>
-                  <Text style={styles.fieldLabel}>{site.label}</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder={`cm (optional)`}
-                    placeholderTextColor={colors.textDim}
-                    value={form[site.key] ?? ''}
-                    onChangeText={v => setForm(p => ({ ...p, [site.key]: v }))}
-                    keyboardType="numeric"
-                  />
-                </View>
-              ))}
-            </ScrollView>
-            <View style={styles.sheetBtns}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={logMut.isPending}>
-                {logMut.isPending
-                  ? <ActivityIndicator color={colors.bg} />
-                  : <Text style={styles.saveBtnText}>Save</Text>
-                }
-              </TouchableOpacity>
-            </View>
-          </View>
+      <BottomSheet visible={showModal} onClose={() => setShowModal(false)} style={styles.sheet}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>Log Measurements</Text>
+          <TouchableOpacity onPress={() => setShowModal(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
-      </Modal>
+        <Text style={styles.sheetSub}>Enter values in centimetres (cm)</Text>
+        <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled">
+          {SITES.map(site => (
+            <View key={site.key} style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>{site.label}</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder={`cm (optional)`}
+                placeholderTextColor={colors.textDim}
+                value={form[site.key] ?? ''}
+                onChangeText={v => setForm(p => ({ ...p, [site.key]: v }))}
+                keyboardType="numeric"
+              />
+            </View>
+          ))}
+        </ScrollView>
+        <View style={styles.sheetBtns}>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={logMut.isPending}>
+            {logMut.isPending
+              ? <ActivityIndicator color={colors.bg} />
+              : <Text style={styles.saveBtnText}>Save</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -302,11 +299,7 @@ const createStyles = (colors) => StyleSheet.create({
   historyValueNum: { color: colors.text, fontWeight: weight.semibold },
   deleteBtn: { padding: 4 },
 
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000088' },
-  sheet: {
-    backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 20, paddingBottom: 8, maxHeight: '80%',
-  },
+  sheet: { paddingBottom: 8 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   sheetTitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
   sheetSub: { fontSize: typography.xs, color: colors.textDim, marginBottom: 14 },

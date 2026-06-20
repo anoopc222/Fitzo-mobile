@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Modal, TextInput, Platform,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, TextInput, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import { exportBackup, restoreBackup } from '../lib/backupRestore';
+import BottomSheet from '../components/ui/BottomSheet';
 
 const NOTIFICATION_ITEMS = [
   { key: 'weigh_in', label: 'Daily weigh-in reminder', icon: 'scale-outline' },
@@ -305,51 +306,47 @@ export default function SettingsScreen({ navigation }) {
       </ScrollView>
 
       {/* Goals Modal */}
-      <Modal visible={showGoalsModal} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Edit Daily Goals</Text>
-              <TouchableOpacity onPress={() => setShowGoalsModal(false)}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              {[
-                { key: 'calorie_target', label: 'Calorie Target', unit: 'kcal', numeric: true },
-                { key: 'protein_target', label: 'Protein Target', unit: 'g', numeric: true },
-                { key: 'carbs_target', label: 'Carbs Target', unit: 'g', numeric: true },
-                { key: 'fats_target', label: 'Fats Target', unit: 'g', numeric: true },
-                { key: 'step_goal', label: 'Step Goal', unit: 'steps', numeric: true },
-                { key: 'sleep_goal_hours', label: 'Sleep Goal', unit: 'hours', numeric: true },
-              ].map(field => (
-                <View key={field.key} style={styles.goalField}>
-                  <Text style={styles.goalFieldLabel}>{field.label}</Text>
-                  <View style={styles.goalFieldRow}>
-                    <TextInput
-                      style={styles.goalFieldInput}
-                      placeholder="0"
-                      placeholderTextColor={colors.textDim}
-                      value={goalsForm[field.key] ?? ''}
-                      onChangeText={v => setGoalsForm(p => ({ ...p, [field.key]: v }))}
-                      keyboardType="numeric"
-                    />
-                    <Text style={styles.goalFieldUnit}>{field.unit}</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-            <View style={styles.sheetBtns}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowGoalsModal(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveGoals} disabled={updateMut.isPending}>
-                <Text style={styles.saveBtnText}>{updateMut.isPending ? 'Saving…' : 'Save Goals'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+      <BottomSheet visible={showGoalsModal} onClose={() => setShowGoalsModal(false)} style={styles.sheet}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>Edit Daily Goals</Text>
+          <TouchableOpacity onPress={() => setShowGoalsModal(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
-      </Modal>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          {[
+            { key: 'calorie_target', label: 'Calorie Target', unit: 'kcal', numeric: true },
+            { key: 'protein_target', label: 'Protein Target', unit: 'g', numeric: true },
+            { key: 'carbs_target', label: 'Carbs Target', unit: 'g', numeric: true },
+            { key: 'fats_target', label: 'Fats Target', unit: 'g', numeric: true },
+            { key: 'step_goal', label: 'Step Goal', unit: 'steps', numeric: true },
+            { key: 'sleep_goal_hours', label: 'Sleep Goal', unit: 'hours', numeric: true },
+          ].map(field => (
+            <View key={field.key} style={styles.goalField}>
+              <Text style={styles.goalFieldLabel}>{field.label}</Text>
+              <View style={styles.goalFieldRow}>
+                <TextInput
+                  style={styles.goalFieldInput}
+                  placeholder="0"
+                  placeholderTextColor={colors.textDim}
+                  value={goalsForm[field.key] ?? ''}
+                  onChangeText={v => setGoalsForm(p => ({ ...p, [field.key]: v }))}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.goalFieldUnit}>{field.unit}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+        <View style={styles.sheetBtns}>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowGoalsModal(false)}>
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSaveGoals} disabled={updateMut.isPending}>
+            <Text style={styles.saveBtnText}>{updateMut.isPending ? 'Saving…' : 'Save Goals'}</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -421,11 +418,7 @@ const createStyles = (colors) => StyleSheet.create({
 
   version: { textAlign: 'center', fontSize: typography.xs, color: colors.textDim, marginTop: 24 },
 
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000088' },
-  sheet: {
-    backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 20, paddingBottom: 8, maxHeight: '80%',
-  },
+  sheet: { paddingBottom: 8 },
   sheetHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
   },

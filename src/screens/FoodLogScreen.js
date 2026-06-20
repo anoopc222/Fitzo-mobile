@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Modal, TextInput, Alert, ActivityIndicator, RefreshControl,
+  TextInput, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
+import BottomSheet from '../components/ui/BottomSheet';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -247,43 +248,39 @@ export default function FoodLogScreen() {
       </ScrollView>
 
       {/* Add Food Modal */}
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Add Food</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Meal type chips */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mealChips}>
-              {MEAL_TYPES.map(m => (
-                <TouchableOpacity key={m} style={[styles.mealChip, selectedMeal === m && { backgroundColor: MEAL_COLORS[m], borderColor: MEAL_COLORS[m] }]}
-                  onPress={() => setSelectedMeal(m)}>
-                  <Text style={[styles.mealChipText, selectedMeal === m && { color: '#fff' }]}>{m}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <TextInput style={styles.inputFull} placeholder="Food name (e.g. Chicken breast 100g)"
-              placeholderTextColor={colors.textDim} value={form.food_name}
-              onChangeText={v => setForm(p => ({ ...p, food_name: v }))} />
-
-            <View style={styles.macroInputRow}>
-              <MacroInput label="Calories" value={form.calories} onChange={v => setForm(p => ({ ...p, calories: v }))} color={colors.accent} />
-              <MacroInput label="Protein" value={form.protein} onChange={v => setForm(p => ({ ...p, protein: v }))} color={colors.success} />
-              <MacroInput label="Carbs" value={form.carbs} onChange={v => setForm(p => ({ ...p, carbs: v }))} color="#fb923c" />
-              <MacroInput label="Fats" value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
-            </View>
-
-            <TouchableOpacity style={styles.saveBtn} onPress={handleAdd} disabled={addMut.isPending}>
-              {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Food</Text>}
-            </TouchableOpacity>
-          </View>
+      <BottomSheet visible={showModal} onClose={() => setShowModal(false)} style={styles.sheet}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>Add Food</Text>
+          <TouchableOpacity onPress={() => setShowModal(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
-      </Modal>
+
+        {/* Meal type chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mealChips}>
+          {MEAL_TYPES.map(m => (
+            <TouchableOpacity key={m} style={[styles.mealChip, selectedMeal === m && { backgroundColor: MEAL_COLORS[m], borderColor: MEAL_COLORS[m] }]}
+              onPress={() => setSelectedMeal(m)}>
+              <Text style={[styles.mealChipText, selectedMeal === m && { color: '#fff' }]}>{m}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <TextInput style={styles.inputFull} placeholder="Food name (e.g. Chicken breast 100g)"
+          placeholderTextColor={colors.textDim} value={form.food_name}
+          onChangeText={v => setForm(p => ({ ...p, food_name: v }))} />
+
+        <View style={styles.macroInputRow}>
+          <MacroInput label="Calories" value={form.calories} onChange={v => setForm(p => ({ ...p, calories: v }))} color={colors.accent} />
+          <MacroInput label="Protein" value={form.protein} onChange={v => setForm(p => ({ ...p, protein: v }))} color={colors.success} />
+          <MacroInput label="Carbs" value={form.carbs} onChange={v => setForm(p => ({ ...p, carbs: v }))} color="#fb923c" />
+          <MacroInput label="Fats" value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
+        </View>
+
+        <TouchableOpacity style={styles.saveBtn} onPress={handleAdd} disabled={addMut.isPending}>
+          {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Food</Text>}
+        </TouchableOpacity>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -353,8 +350,7 @@ const createStyles = (colors) => StyleSheet.create({
   macroChip: { fontSize: 10, fontWeight: weight.bold },
   foodCals: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, minWidth: 60, textAlign: 'right' },
 
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000088' },
-  sheet: { backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40, maxHeight: '85%' },
+  sheet: { paddingBottom: 16 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sheetTitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
   mealChips: { flexDirection: 'row', gap: 8, paddingBottom: 14 },
