@@ -17,7 +17,6 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
-import Sparkline from '../components/Sparkline';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -781,97 +780,76 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* ── Stat Cards Row 1 ───────────────────────────────── */}
-            <View style={styles.cardRow}>
-              {/* Weight */}
-              <TouchableOpacity style={[styles.halfWrap, styles.statCard]} onPress={() => nav('Weight')} activeOpacity={0.85}>
-                <View style={styles.cardTopRow}>
-                  <Ionicons name="scale-outline" size={12} color={C_WEIGHT} />
-                  <Text style={[styles.cardLabel, { color: C_WEIGHT }]}>WEIGHT</Text>
+            {/* ── Stat Overview (merged, line-separated) ─────────── */}
+            <View style={styles.overviewCard}>
+              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Weight')} activeOpacity={0.7}>
+                <View style={styles.overviewIconWrap}>
+                  <Ionicons name="scale-outline" size={15} color={C_WEIGHT} />
+                </View>
+                <View style={styles.overviewBody}>
+                  <Text style={[styles.overviewLabel, { color: C_WEIGHT }]}>WEIGHT</Text>
+                  <Text style={styles.overviewSub}>kg · body weight</Text>
+                </View>
+                <View style={styles.overviewRight}>
+                  <Text style={styles.overviewVal}>{data?.latestWeight?.weight ?? '—'}</Text>
                   {data?.weightDeltaVsYday !== null && data?.weightDeltaVsYday !== undefined && (
-                    <View style={[styles.chip, { backgroundColor: data.weightDeltaVsYday <= 0 ? '#064e3b' : '#4a1010' }]}>
-                      <Text style={[styles.chipText, { color: data.weightDeltaVsYday <= 0 ? C_GREEN : '#f87171' }]}>
-                        {data.weightDeltaVsYday > 0 ? '+' : ''}{data.weightDeltaVsYday} kg vs yday
-                      </Text>
-                    </View>
+                    <Text style={[styles.overviewDelta, { color: data.weightDeltaVsYday <= 0 ? C_GREEN : '#f87171' }]}>
+                      {data.weightDeltaVsYday > 0 ? '+' : ''}{data.weightDeltaVsYday}kg vs yday
+                    </Text>
                   )}
                 </View>
-                <Text style={[styles.bigNum, { color: colors.text }]}>{data?.latestWeight?.weight ?? '—'}</Text>
-                <Text style={styles.cardSub}>kg · body weight</Text>
-                <Sparkline data={data?.weightArr ?? []} color={C_WEIGHT} width={136} height={42} filled />
               </TouchableOpacity>
 
-              {/* Steps */}
-              <TouchableOpacity style={[styles.halfWrap, styles.statCard]} onPress={() => nav('Steps')} activeOpacity={0.85}>
-                <View style={styles.cardTopRow}>
-                  <Ionicons name="footsteps-outline" size={12} color={C_STEPS} />
-                  <Text style={[styles.cardLabel, { color: C_STEPS }]}>YESTERDAY</Text>
-                  {data?.stepGoalMet && (
-                    <View style={[styles.chip, { backgroundColor: '#064e3b' }]}>
-                      <Ionicons name="checkmark" size={9} color={C_GREEN} />
-                      <Text style={[styles.chipText, { color: C_GREEN }]}>Goal met!</Text>
-                    </View>
+              <View style={styles.overviewDivider} />
+
+              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Steps')} activeOpacity={0.7}>
+                <View style={styles.overviewIconWrap}>
+                  <Ionicons name="footsteps-outline" size={15} color={C_STEPS} />
+                </View>
+                <View style={styles.overviewBody}>
+                  <Text style={[styles.overviewLabel, { color: C_STEPS }]}>STEPS</Text>
+                  <Text style={styles.overviewSub}>steps yesterday</Text>
+                </View>
+                <View style={styles.overviewRight}>
+                  <Text style={styles.overviewVal}>{data?.latestSteps?.steps?.toLocaleString() ?? '—'}</Text>
+                  {data?.stepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met!</Text>}
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.overviewDivider} />
+
+              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Log')} activeOpacity={0.7}>
+                <View style={styles.overviewIconWrap}>
+                  <Ionicons name="flame-outline" size={15} color={C_KCAL} />
+                </View>
+                <View style={styles.overviewBody}>
+                  <Text style={[styles.overviewLabel, { color: C_KCAL }]}>TODAY KCAL</Text>
+                  <Text style={styles.overviewSub}>
+                    {(data?.todayKcal ?? 0) === 0 ? 'not logged · tap to log food' : 'kcal today'}
+                  </Text>
+                </View>
+                <View style={styles.overviewRight}>
+                  <Text style={styles.overviewVal}>{(data?.todayKcal ?? 0) === 0 ? '—' : data.todayKcal}</Text>
+                  {(data?.todayProtein ?? 0) > 0 && (
+                    <Text style={[styles.overviewDelta, { color: colors.success }]}>{Math.round(data.todayProtein)}g protein</Text>
                   )}
                 </View>
-                <Text style={[styles.bigNum, { color: colors.text }]}>
-                  {data?.latestSteps?.steps?.toLocaleString() ?? '—'}
-                </Text>
-                <Text style={styles.cardSub}>steps yesterday</Text>
-                <Sparkline data={data?.stepsArr ?? []} color={C_STEPS} width={136} height={42} filled />
-              </TouchableOpacity>
-            </View>
-
-            {/* ── Stat Cards Row 2 ───────────────────────────────── */}
-            <View style={styles.cardRow}>
-              {/* KCAL */}
-              <TouchableOpacity style={[styles.halfWrap, styles.statCard]} onPress={() => nav('Log')} activeOpacity={0.85}>
-                <View style={styles.cardTopRow}>
-                  <Ionicons name="flame-outline" size={12} color={C_KCAL} />
-                  <Text style={[styles.cardLabel, { color: C_KCAL }]}>TODAY KCAL</Text>
-                </View>
-                {(data?.todayKcal ?? 0) === 0 ? (
-                  <>
-                    <View style={styles.dashBar} />
-                    <Text style={styles.cardSub}>not logged today</Text>
-                    <Text style={styles.tapLog}>Tap to log food</Text>
-                  </>
-                ) : (
-                  <>
-                    <Text style={[styles.bigNum, { color: colors.text }]}>{data.todayKcal}</Text>
-                    <Text style={styles.cardSub}>kcal today</Text>
-                    {(data?.todayProtein ?? 0) > 0 && (
-                      <Text style={[styles.cardSub, { color: colors.success }]}>
-                        {Math.round(data.todayProtein)}g protein
-                      </Text>
-                    )}
-                  </>
-                )}
               </TouchableOpacity>
 
-              {/* Sleep */}
-              <TouchableOpacity style={[styles.halfWrap, styles.statCard]} onPress={() => nav('Sleep')} activeOpacity={0.85}>
-                <View style={styles.cardTopRow}>
-                  <Ionicons name="moon-outline" size={12} color={C_SLEEP} />
-                  <Text style={[styles.cardLabel, { color: C_SLEEP }]}>SLEEP</Text>
-                  {data?.sleepGoalMet && (
-                    <View style={[styles.chip, { backgroundColor: '#064e3b' }]}>
-                      <Ionicons name="checkmark" size={9} color={C_GREEN} />
-                      <Text style={[styles.chipText, { color: C_GREEN }]}>Goal met</Text>
-                    </View>
-                  )}
+              <View style={styles.overviewDivider} />
+
+              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Sleep')} activeOpacity={0.7}>
+                <View style={styles.overviewIconWrap}>
+                  <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
                 </View>
-                {data?.latestSleep ? (
-                  <>
-                    <Text style={[styles.bigNum, { color: colors.text }]}>{data.latestSleep.hours}h</Text>
-                    <Text style={styles.cardSub}>logged today</Text>
-                  </>
-                ) : (
-                  <>
-                    <View style={styles.dashBar} />
-                    <Text style={styles.cardSub}>not logged</Text>
-                  </>
-                )}
-                <Sparkline data={data?.sleepArr ?? []} color={C_SLEEP} width={136} height={42} filled />
+                <View style={styles.overviewBody}>
+                  <Text style={[styles.overviewLabel, { color: C_SLEEP }]}>SLEEP</Text>
+                  <Text style={styles.overviewSub}>{data?.latestSleep ? 'logged today' : 'not logged'}</Text>
+                </View>
+                <View style={styles.overviewRight}>
+                  <Text style={styles.overviewVal}>{data?.latestSleep ? `${data.latestSleep.hours}h` : '—'}</Text>
+                  {data?.sleepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met</Text>}
+                </View>
               </TouchableOpacity>
             </View>
 
@@ -1095,17 +1073,16 @@ const createStyles = (colors) => StyleSheet.create({
   motivText: { fontSize: 11, color: colors.accent, fontFamily: fontFamily.bodySemibold, textDecorationLine: 'underline' },
   goalPill: { backgroundColor: colors.dim, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: colors.border, maxWidth: 96, alignItems: 'center' },
   goalPillText: { fontSize: 10, color: colors.textMuted, textAlign: 'center', fontFamily: fontFamily.bodyMedium, lineHeight: 14 },
-  cardRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 10 },
-  halfWrap: { flex: 1 },
-  statCard: { backgroundColor: colors.bgCard, padding: 14, borderRadius: 18, minHeight: 158, borderWidth: 1, borderColor: colors.border },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 8 },
-  cardLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.8, textTransform: 'uppercase' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6 },
-  chipText: { fontSize: 8, fontFamily: fontFamily.bodyBold },
-  bigNum: { fontSize: 34, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', lineHeight: 38, marginBottom: 2 },
-  cardSub: { fontSize: 9, color: colors.textDim, marginBottom: 4, fontFamily: fontFamily.body },
-  dashBar: { width: 20, height: 2, backgroundColor: C_KCAL, marginVertical: 10 },
-  tapLog: { fontSize: 10, color: colors.textDim, marginTop: 2, fontFamily: fontFamily.body },
+  overviewCard: { backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  overviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
+  overviewIconWrap: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
+  overviewBody: { flex: 1 },
+  overviewLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.8, textTransform: 'uppercase' },
+  overviewSub: { fontSize: 10, color: colors.textDim, marginTop: 2, fontFamily: fontFamily.body },
+  overviewRight: { alignItems: 'flex-end' },
+  overviewVal: { fontSize: 17, fontFamily: fontFamily.monoBold, color: colors.text },
+  overviewDelta: { fontSize: 9, fontFamily: fontFamily.bodyBold, marginTop: 2 },
+  overviewDivider: { height: 1, backgroundColor: colors.border, marginLeft: 54 },
   banner: { backgroundColor: colors.bgCard, marginHorizontal: 16, marginBottom: 10, borderRadius: 16, flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderWidth: 1, borderColor: colors.border },
   bannerEmoji: { fontSize: 22 },
   bannerBody: { flex: 1 },
