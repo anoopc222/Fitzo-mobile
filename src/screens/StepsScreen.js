@@ -551,16 +551,25 @@ export default function StepsScreen() {
               <Text style={styles.heroLabel}>AVG STEPS/DAY · {MONTH_NAMES[month].toUpperCase()} {year}</Text>
               <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
 
-              <View style={styles.tileGrid}>
-                <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} colors={colors} />
-                <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} colors={colors} />
-                <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={`${distUnit.toUpperCase()} WALKED`} color={colors.good} colors={colors} />
-                <Tile value={actStats ? actStats.totalCal.toLocaleString() : '—'} label="KCAL BURNED" color={colors.pink} colors={colors} />
-                <Tile value={actStats ? `${actStats.totalFatG.toFixed(1)}g` : '—'} label="🔥 FAT BURNED" color={colors.warn} colors={colors} />
-                <Tile
-                  value={actStats ? (actStats.totalMins >= 60 ? `${Math.floor(actStats.totalMins / 60)}h ${actStats.totalMins % 60}m` : `${actStats.totalMins}m`) : '—'}
-                  label="⏱ DURATION" color={colors.text} colors={colors}
-                />
+              <View style={styles.tileCard}>
+                <View style={styles.tileRow}>
+                  <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} colors={colors} />
+                  <View style={styles.tileColDivider} />
+                  <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} colors={colors} />
+                  <View style={styles.tileColDivider} />
+                  <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={`${distUnit.toUpperCase()} WALKED`} color={colors.good} colors={colors} />
+                </View>
+                <View style={styles.tileRowDivider} />
+                <View style={styles.tileRow}>
+                  <Tile value={actStats ? actStats.totalCal.toLocaleString() : '—'} label="KCAL BURNED" color={colors.pink} colors={colors} />
+                  <View style={styles.tileColDivider} />
+                  <Tile value={actStats ? `${actStats.totalFatG.toFixed(1)}g` : '—'} label="🔥 FAT BURNED" color={colors.warn} colors={colors} />
+                  <View style={styles.tileColDivider} />
+                  <Tile
+                    value={actStats ? (actStats.totalMins >= 60 ? `${Math.floor(actStats.totalMins / 60)}h ${actStats.totalMins % 60}m` : `${actStats.totalMins}m`) : '—'}
+                    label="⏱ DURATION" color={colors.text} colors={colors}
+                  />
+                </View>
               </View>
 
               <View style={styles.pbInlineRow}>
@@ -832,9 +841,9 @@ function WeekStatCell({ value, label, color, colors }) {
 
 function Tile({ value, label, color, colors }) {
   return (
-    <View style={{ width: '48%', backgroundColor: colors.dim, borderRadius: 12, padding: 12, marginBottom: 8, alignItems: 'center' }}>
-      <Text style={{ fontSize: typography.md, fontFamily: fontFamily.monoBold, color }}>{value}</Text>
-      <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 4 }}>{label}</Text>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10 }}>
+      <Text style={{ fontSize: typography.sm, fontFamily: fontFamily.monoBold, color, textAlign: 'center' }}>{value}</Text>
+      <Text style={{ fontSize: 8.5, color: colors.textMuted, fontFamily: fontFamily.bodyBold, letterSpacing: 0.4, marginTop: 3, textAlign: 'center' }}>{label}</Text>
     </View>
   );
 }
@@ -908,7 +917,10 @@ const createStyles = (colors) => StyleSheet.create({
   heroNum: { fontSize: 38, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent },
   heroLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginTop: 2 },
   heroSub: { fontSize: typography.sm, color: colors.textDim, marginTop: 4, marginBottom: 14 },
-  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  tileCard: { borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden', marginTop: 4 },
+  tileRow: { flexDirection: 'row' },
+  tileColDivider: { width: 1, backgroundColor: colors.border },
+  tileRowDivider: { height: 1, backgroundColor: colors.border },
 
   pbInlineRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
