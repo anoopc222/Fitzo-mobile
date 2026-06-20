@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
   Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
+import BottomSheet from '../components/ui/BottomSheet';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -380,8 +381,8 @@ function blankEx() { return { _key: tid(), name: '', sets: [blankSet()] }; }
 
 // ─── Session Detail Modal ─────────────────────────────────────────────────────
 function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onEdit, onRepeat, onDelete }) {
-  const { colors, isDark } = useTheme();
-  const dS = useMemo(() => createDS(colors, isDark), [colors, isDark]);
+  const { colors } = useTheme();
+  const dS = useMemo(() => createDS(colors), [colors]);
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [historyEx, setHistoryEx] = useState(null);
 
@@ -422,9 +423,8 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
 
   return (
     <>
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={dS.overlay}>
-        <View style={dS.popup}>
+    <BottomSheet visible={visible} onClose={onClose} style={dS.popup}>
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={dS.header}>
           <View style={[dS.typeIconBox, { backgroundColor: ws.iconBg, borderColor: ws.cardBorder }]}>
@@ -472,7 +472,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         )}
 
         {/* Exercises */}
-        <ScrollView style={dS.exScroll} keyboardShouldPersistTaps="handled">
+        <View style={dS.exScroll}>
           <View style={dS.exSectionHeader}>
             <Text style={dS.exLabel}>{isCardio ? 'ACTIVITIES' : 'EXERCISES'}</Text>
             <TouchableOpacity onPress={toggleAll} style={dS.collapseToggleWrap}>
@@ -614,10 +614,9 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             </TouchableOpacity>
           </View>
           <View style={{ height: 24 }} />
-        </ScrollView>
         </View>
-      </View>
-    </Modal>
+      </ScrollView>
+    </BottomSheet>
     <ExerciseHistoryModal
       exerciseName={historyEx}
       allSessions={allSessions}
@@ -725,8 +724,8 @@ const CAL_DAY_NAMES   = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const CAL_MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function DatePickerModal({ visible, value, onSelect, onClose }) {
-  const { colors, isDark } = useTheme();
-  const dpS = useMemo(() => createDpS(colors, isDark), [colors, isDark]);
+  const { colors } = useTheme();
+  const dpS = useMemo(() => createDpS(colors), [colors]);
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
@@ -774,9 +773,7 @@ function DatePickerModal({ visible, value, onSelect, onClose }) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={dpS.overlay} onPress={onClose}>
-        <Pressable style={dpS.sheet} onPress={() => {}}>
+    <BottomSheet visible={visible} onClose={onClose} style={dpS.sheet}>
           {/* Month / Year nav */}
           <View style={dpS.calHeader}>
             <TouchableOpacity onPress={prevCal} style={dpS.calNavBtn}>
@@ -830,9 +827,7 @@ function DatePickerModal({ visible, value, onSelect, onClose }) {
           <TouchableOpacity style={dpS.todayBtn} onPress={() => { onSelect(todayStr); onClose(); }}>
             <Text style={dpS.todayBtnText}>Today</Text>
           </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -1585,13 +1580,8 @@ const createS = (colors) => StyleSheet.create({
   },
 });
 
-const createDS = (colors, isDark) => StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  popup: {
-    width: '100%', maxWidth: 420, height: '85%',
-    backgroundColor: colors.bgElevated, borderRadius: 28,
-    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
-  },
+const createDS = (colors) => StyleSheet.create({
+  popup: { marginHorizontal: -16, paddingHorizontal: 0 },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -1616,7 +1606,7 @@ const createDS = (colors, isDark) => StyleSheet.create({
   },
   muscleTagText: { fontSize: 11, color: colors.accent, fontWeight: weight.medium },
 
-  exScroll: { flex: 1, paddingHorizontal: 16 },
+  exScroll: { paddingHorizontal: 16 },
   exSectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginTop: 14, marginBottom: 10,
@@ -1829,16 +1819,8 @@ const createES = (colors) => StyleSheet.create({
   cardioAutoValue: { fontFamily: fontFamily.monoBold, fontSize: typography.sm, color: colors.pink, paddingVertical: 6 },
 });
 
-const createDpS = (colors, isDark) => StyleSheet.create({
-  overlay: {
-    flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  sheet: {
-    width: 308, backgroundColor: colors.card,
-    borderRadius: 18, padding: 16,
-    borderWidth: 1, borderColor: colors.border,
-  },
+const createDpS = (colors) => StyleSheet.create({
+  sheet: { paddingTop: 4 },
   calHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 10,
