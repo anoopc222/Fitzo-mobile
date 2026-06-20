@@ -40,6 +40,15 @@ function getGreeting() {
   return 'GOOD NIGHT';
 }
 
+// Local calendar date as YYYY-MM-DD — never use Date#toISOString() for this,
+// it converts through UTC and shifts the date for non-UTC timezones.
+function localDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getWeekRange(offsetWeeks = 0) {
   const now = new Date();
   const dow = now.getDay();
@@ -49,14 +58,14 @@ function getWeekRange(offsetWeeks = 0) {
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
-  return [start.toISOString().split('T')[0], end.toISOString().split('T')[0]];
+  return [localDateStr(start), localDateStr(end)];
 }
 
 function getMonthRange() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return [start.toISOString().split('T')[0], end.toISOString().split('T')[0]];
+  return [localDateStr(start), localDateStr(end)];
 }
 
 function fmtWeekLabel() {
@@ -96,7 +105,7 @@ const CAL_DAY_MON      = ['Mo','Tu','We','Th','Fr','Sa','Su'];
 
 // ─── data fetch ─────────────────────────────────────────────────────────────
 async function fetchHome(userId) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr(new Date());
   const [thisWeekStart, thisWeekEnd] = getWeekRange(0);
   const [lastWeekStart, lastWeekEnd] = getWeekRange(1);
   const [monthStart, monthEnd] = getMonthRange();
@@ -249,7 +258,7 @@ async function fetchHome(userId) {
   // Streak (consecutive days with step logs)
   let streak = 0;
   for (let i = 0; i < 60; i++) {
-    const d = new Date(Date.now() - i * 86400000).toISOString().split('T')[0];
+    const d = localDateStr(new Date(Date.now() - i * 86400000));
     if (stepsHist.data?.some(s => s.logged_at?.startsWith(d))) streak++;
     else if (i > 0) break;
   }
@@ -514,7 +523,7 @@ function StreakCalendarModal({ visible, userId, onClose }) {
       const offset = dow === 0 ? -6 : 1 - dow;
       const mon = new Date(d);
       mon.setDate(d.getDate() + offset);
-      const key = mon.toISOString().split('T')[0];
+      const key = localDateStr(mon);
       wm[key] = (wm[key] ?? 0) + 1;
     });
     return Object.values(wm);
@@ -1125,11 +1134,11 @@ export default function HomeScreen() {
                         <StatTile value={String(tabStats[2]?.gymCount ?? 0)} label="GYM" color={C_GREEN} />
                         <StatTile value={String(tabStats[2]?.cardioCount ?? 0)} label="CARDIO" color="#60a5fa" />
                         <StatTile value={tabStats[2]?.kcal ? fmtK(tabStats[2].kcal) : '—'} label="KCAL" color={C_KCAL} />
-                        <StatTile value={tabStats[2]?.avgWeight != null ? tabStats[2].avgWeight.toFixed(1) : '—'} label="AVG WT" color={C_WEIGHT} />
+                        <StatTile value={tabStats[2]?.avgWeight != null ? tabStats[2].avgWeight.toFixed(1) : '—'} label="AVG WT" color={C_WEIGHT} last />
                       </View>
                       <View style={styles.statsRow}>
                         <StatTile value={fmtK(tabStats[2]?.avgSteps)} label="AVG STEPS" color={C_STEPS} />
-                        <StatTile value={String(tabStats[2]?.restCount ?? 0)} label="REST DAYS" color="#f59e0b" />
+                        <StatTile value={String(tabStats[2]?.restCount ?? 0)} label="REST DAYS" color="#f59e0b" last />
                       </View>
                     </>
                   ) : (
@@ -1159,6 +1168,7 @@ export default function HomeScreen() {
                       label="WT Δ"
                       sub={activeTab === 0 ? 'wk change' : activeTab === 1 ? 'wk change' : 'mo change'}
                       color={C_WEIGHT}
+                      last
                     />
                   </View>
                   )}
@@ -1183,11 +1193,11 @@ function deltaStr(n) {
   return (n > 0 ? '+' : '') + n;
 }
 
-function StatTile({ value, label, sub, color }) {
+function StatTile({ value, label, sub, color, last }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <View style={styles.statTile}>
+    <View style={[styles.statTile, !last && styles.statTileDivider]}>
       <Text style={[styles.statTileNum, { color }]}>{value}</Text>
       <Text style={styles.statTileLabel}>{label}</Text>
       {sub ? <Text style={styles.statTileSub}>{sub}</Text> : null}
@@ -1268,6 +1278,7 @@ const createStyles = (colors) => StyleSheet.create({
   weekHdrDate: { fontSize: 10, color: colors.textDim, fontFamily: fontFamily.mono },
   statsRow: { flexDirection: 'row', paddingHorizontal: 8, paddingBottom: 16 },
   statTile: { flex: 1, alignItems: 'center', paddingVertical: 4, paddingHorizontal: 2 },
+  statTileDivider: { borderRightWidth: 1, borderRightColor: colors.border },
   statTileNum: { fontSize: 20, fontFamily: fontFamily.monoBold, lineHeight: 24 },
   statTileLabel: { fontSize: 8, color: colors.textDim, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 2 },
   statTileSub: { fontSize: 8, color: colors.textMuted, marginTop: 3, textAlign: 'center', fontFamily: fontFamily.body },

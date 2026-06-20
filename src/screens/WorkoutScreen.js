@@ -1501,7 +1501,7 @@ export default function WorkoutScreen() {
               activeOpacity={0.82}
             >
               <View style={[s.sessionIcon, { backgroundColor: ws.iconBg, borderColor: ws.cardBorder }]}>
-                <Text style={{ fontSize: 22 }}>{ws.icon}</Text>
+                <Text style={{ fontSize: 18 }}>{ws.icon}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <View style={s.sessionNameRow}>
@@ -1584,11 +1584,11 @@ const createS = (colors) => StyleSheet.create({
 
   monthNav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 10, marginBottom: 8,
+    paddingHorizontal: 10, marginBottom: 4,
   },
-  monthBtn: { padding: 10 },
-  monthChevron: { fontSize: 26, color: colors.text, fontWeight: '300' },
-  monthLabel: { fontSize: typography.base, fontFamily: fontFamily.displayItalic, color: colors.text, fontStyle: 'italic' },
+  monthBtn: { padding: 6 },
+  monthChevron: { fontSize: 22, color: colors.text, fontWeight: '300' },
+  monthLabel: { fontSize: typography.sm, fontFamily: fontFamily.displayItalic, color: colors.text, fontStyle: 'italic' },
 
   content: { paddingHorizontal: 16, paddingBottom: 32 },
 
@@ -1609,18 +1609,18 @@ const createS = (colors) => StyleSheet.create({
   restSub: { fontSize: typography.xs, color: colors.good, marginTop: 2 },
 
   sessionCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderRadius: 12, padding: 9, marginBottom: 6,
   },
   sessionIcon: {
-    width: 44, height: 44, borderRadius: 11, borderWidth: 1,
+    width: 36, height: 36, borderRadius: 9, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
-  sessionNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' },
-  sessionName: { fontSize: typography.base, fontWeight: weight.bold },
-  deltaBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  deltaText: { fontSize: 11, fontWeight: weight.bold },
-  sessionSub: { fontSize: typography.xs, color: colors.textDim },
+  sessionNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1, flexWrap: 'wrap' },
+  sessionName: { fontSize: typography.sm, fontWeight: weight.bold },
+  deltaBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 },
+  deltaText: { fontSize: 10, fontWeight: weight.bold },
+  sessionSub: { fontSize: 11, color: colors.textDim },
 
   fab: {
     position: 'absolute', bottom: 24, right: 24,
