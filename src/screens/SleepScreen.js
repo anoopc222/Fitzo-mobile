@@ -472,14 +472,19 @@ export default function SleepScreen() {
                 />
                 <Text style={styles.recoveryVerdict}>{verdict}</Text>
               </View>
-            </View>
 
-            {/* ── Stat tiles ── */}
-            <View style={styles.statTileRow}>
-              <StatTile value={`${avg7}h`} label="7D AVG HRS" colors={colors} />
-              <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
-              <StatTile value={`${streak}d`} label="GOAL STREAK" color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} colors={colors} />
-              <StatTile value={consistency} label="CONSISTENCY" colors={colors} />
+              <View style={styles.recoveryDividerLine} />
+
+              {/* ── Stat tiles ── */}
+              <View style={styles.statTileRow}>
+                <StatTile value={`${avg7}h`} label="7D AVG HRS" colors={colors} />
+                <View style={styles.statTileDivider} />
+                <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
+                <View style={styles.statTileDivider} />
+                <StatTile value={`${streak}d`} label="GOAL STREAK" color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} colors={colors} />
+                <View style={styles.statTileDivider} />
+                <StatTile value={consistency} label="CONSISTENCY" colors={colors} />
+              </View>
             </View>
 
             {/* ── Insights ── */}
@@ -649,7 +654,7 @@ export default function SleepScreen() {
 
 function StatTile({ value, label, color, colors }) {
   return (
-    <View style={{ flex: 1, backgroundColor: colors.dim, borderRadius: 12, padding: 12, alignItems: 'center' }}>
+    <View style={{ flex: 1, alignItems: 'center' }}>
       <Text style={{ fontSize: typography.md, fontFamily: fontFamily.monoBold, color: color || colors.text }}>{value}</Text>
       <Text style={{ fontSize: 8, color: colors.textMuted, fontFamily: fontFamily.bodyBold, letterSpacing: 0.3, marginTop: 4, textAlign: 'center' }}>{label}</Text>
     </View>
@@ -707,7 +712,9 @@ const createStyles = (colors) => StyleSheet.create({
   recoveryRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   recoveryVerdict: { flex: 1, fontSize: typography.base, color: colors.text, fontFamily: fontFamily.body },
 
-  statTileRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  recoveryDividerLine: { height: 1, backgroundColor: colors.border, marginTop: 16, marginBottom: 14 },
+  statTileRow: { flexDirection: 'row', alignItems: 'center' },
+  statTileDivider: { width: 1, height: 24, backgroundColor: colors.border },
 
   goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
   goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },
