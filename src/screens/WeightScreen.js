@@ -397,8 +397,31 @@ function AvgWeightRow({ row, unit, colors }) {
   );
 }
 
+// ─── Avg Weight: locked row teaser (free users, weeks beyond the first 4) ──
+function AvgWeightLockedRow({ periodLabel, colors, onPress }) {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ flex: 0.85 }}>
+        <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, color: colors.textMuted }}>{periodLabel}</Text>
+      </View>
+      <View style={{ flex: 0.95 }}>
+        <Text style={{ fontSize: 13, fontFamily: fontFamily.monoBold, color: colors.textDim }}>••.•kg</Text>
+      </View>
+      <View style={{ flex: 0.85 }}>
+        <View style={{ alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)' }}>
+          <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim }}>•••</Text>
+        </View>
+      </View>
+      <View style={{ flex: 1.3, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+        <Ionicons name="lock-closed" size={11} color={colors.textDim} />
+        <Text style={{ fontSize: 10, fontFamily: fontFamily.mono, color: colors.textDim }}>PRO</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 // ─── Avg Weight: full section (collapsed summary or expanded chart+table) ──
-function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded }) {
+function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded, hasAccess, onLockedPress }) {
   const { allDisp, rows } = useMemo(() => computeAvgWeightRows(logs, viewMode, unit), [logs, viewMode, unit]);
 
   if (rows.length === 0) {
@@ -440,7 +463,10 @@ function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded }) {
         <Text style={{ flex: 0.85, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim }}>TREND</Text>
         <Text style={{ flex: 1.3, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim, textAlign: 'right' }}>TOTAL LOST</Text>
       </View>
-      {rows.map(row => <AvgWeightRow key={row.key} row={row} unit={unit} colors={colors} />)}
+      {(hasAccess ? rows : rows.slice(0, 4)).map(row => <AvgWeightRow key={row.key} row={row} unit={unit} colors={colors} />)}
+      {!hasAccess && rows.slice(4).map(row => (
+        <AvgWeightLockedRow key={row.key} periodLabel={row.periodLabel} colors={colors} onPress={onLockedPress} />
+      ))}
     </View>
   );
 }
@@ -805,7 +831,7 @@ export default function WeightScreen() {
                   ))}
                 </View>
               )}
-              <AvgWeightSection key={wkViewMode} logs={logs} viewMode={wkViewMode} unit={unit} colors={colors} width={chartWidth} expanded={avgExpanded} />
+              <AvgWeightSection key={wkViewMode} logs={logs} viewMode={wkViewMode} unit={unit} colors={colors} width={chartWidth} expanded={avgExpanded} hasAccess={hasAccess} onLockedPress={() => setShowPaywall(true)} />
               <TouchableOpacity
                 onPress={() => setAvgExpanded(v => !v)}
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingTop: 12 }}
@@ -825,7 +851,7 @@ export default function WeightScreen() {
                 colors={colors}
                 width={340}
               >
-                <AvgWeightSection key={`export-${wkViewMode}`} logs={logs} viewMode={wkViewMode} unit={unit} colors={colors} width={300} expanded={true} />
+                <AvgWeightSection key={`export-${wkViewMode}`} logs={logs} viewMode={wkViewMode} unit={unit} colors={colors} width={300} expanded={true} hasAccess={true} />
               </ExportCardTemplate>
             </View>
 
