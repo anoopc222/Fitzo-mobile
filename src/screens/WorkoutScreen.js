@@ -1485,6 +1485,17 @@ export default function WorkoutScreen() {
     return map;
   }, [sessions, viewYear, viewMonth]);
 
+  const heatmapTypeColors = useMemo(() => {
+    const TYPE_COLOR = { gym: colors.accent, cardio: colors.blue, rest: colors.good };
+    const map = {};
+    for (const sess of sessions) {
+      const d = new Date(sess.date);
+      if (d.getFullYear() !== viewYear || d.getMonth() + 1 !== viewMonth) continue;
+      map[sess.date] = TYPE_COLOR[getSessionType(sess.notes)] ?? colors.accent;
+    }
+    return map;
+  }, [sessions, viewYear, viewMonth, colors]);
+
   const openDetailForDate = (dateStr) => {
     const match = sessions.find(s => s.date === dateStr);
     if (match) openDetail(match);
@@ -1790,6 +1801,7 @@ export default function WorkoutScreen() {
               <MonthHeatmap
                 data={heatmapData}
                 color={colors.accent}
+                typeColors={heatmapTypeColors}
                 month={viewMonth - 1}
                 year={viewYear}
                 onDayPress={(dateStr, value) => { if (value > 0) openDetailForDate(dateStr); }}

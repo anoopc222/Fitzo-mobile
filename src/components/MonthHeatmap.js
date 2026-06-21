@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-nati
 const SCREEN_W = Dimensions.get('window').width;
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year, containerPad = 32, onDayPress }) {
+export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year, containerPad = 32, onDayPress, typeColors = {} }) {
   const cellSize = Math.floor((SCREEN_W - containerPad - 2) / 7);
 
   const firstDay = new Date(year, month, 1).getDay();
@@ -50,7 +50,9 @@ export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year
             cell.day === today.getDate() &&
             month === today.getMonth() &&
             year === today.getFullYear();
+          const hasSession = cell.value > 0 || cell.dateStr in typeColors;
           const intensity = cell.value > 0 ? cell.value / maxVal : 0;
+          const cellColor = typeColors[cell.dateStr] || color;
 
           const Wrapper = onDayPress ? TouchableOpacity : View;
           return (
@@ -61,17 +63,17 @@ export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year
               style={[
                 styles.dayCell,
                 { width: cellSize, height: cellSize, borderRadius: cellSize * 0.2 },
-                cell.value > 0
-                  ? { backgroundColor: `${color}${hexAlpha(intensity)}` }
+                hasSession
+                  ? { backgroundColor: `${cellColor}${hexAlpha(intensity)}` }
                   : { backgroundColor: '#16162a' },
-                isToday && { borderWidth: 1.5, borderColor: color },
+                isToday && { borderWidth: 1.5, borderColor: cellColor },
               ]}
             >
               <Text
                 style={[
                   styles.dayNum,
-                  cell.value > 0 && { color: '#fff', fontWeight: '600' },
-                  isToday && { color },
+                  hasSession && { color: '#fff', fontWeight: '600' },
+                  isToday && { color: cellColor },
                 ]}
               >
                 {cell.day}
