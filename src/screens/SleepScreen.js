@@ -198,8 +198,9 @@ function SleepTrendChart({ data, goal, colors, width }) {
     const win = data.slice(Math.max(0, i - 6), i + 1);
     return +(win.reduce((s, x) => s + x.hours, 0) / win.length).toFixed(2);
   });
-  const maxH = Math.max(10, Math.max(...vals, ...avgVals, goal) + 1);
-  const minH = Math.max(0, Math.min(...vals, ...avgVals, goal) - 1);
+  const rangeAvgVal = +(vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(2);
+  const maxH = Math.max(10, Math.max(...vals, ...avgVals, rangeAvgVal, goal) + 1);
+  const minH = Math.max(0, Math.min(...vals, ...avgVals, rangeAvgVal, goal) - 1);
   const range = maxH - minH || 1;
   const n = data.length;
   const toY = v => P.t + ph - ((v - minH) / range) * ph;
@@ -209,6 +210,7 @@ function SleepTrendChart({ data, goal, colors, width }) {
   const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
   const avgLine = avgPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const goalY = toY(goal);
+  const rangeAvgY = toY(rangeAvgVal);
   const lastAvg = avgPts[avgPts.length - 1];
 
   return (
@@ -226,6 +228,8 @@ function SleepTrendChart({ data, goal, colors, width }) {
       })}
 
       <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#34d399" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="4,4" />
+
+      <Line x1={P.l} y1={rangeAvgY} x2={width - P.r} y2={rangeAvgY} stroke="#c4b5fd" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="2,3" />
 
       {avgPts.length > 1 && (
         <Path
@@ -471,13 +475,12 @@ export default function SleepScreen() {
 
   const trendStats = useMemo(() => {
     if (chartData.length < 2) return null;
-    const first = chartData[0].hours;
-    const lastV = chartData[chartData.length - 1].hours;
-    const change = +(lastV - first).toFixed(1);
-    const days = Math.max(1, (new Date(chartData[chartData.length - 1].logged_at) - new Date(chartData[0].logged_at)) / 86400000);
-    const ratePerWk = +((change / days) * 7).toFixed(2);
-    return { first, lastV, change, ratePerWk };
-  }, [chartData]);
+    const avgNight = +(chartData.reduce((s, x) => s + x.hours, 0) / chartData.length).toFixed(1);
+    const goalNightsHit = chartData.filter(x => x.hours >= goal).length;
+    const bestNight = Math.max(...chartData.map(x => x.hours));
+    const debtHours = +chartData.reduce((s, x) => s + Math.max(0, goal - x.hours), 0).toFixed(1);
+    return { avgNight, goalNightsHit, totalNights: chartData.length, bestNight, debtHours };
+  }, [chartData, goal]);
 
   const mk = `${year}-${String(month + 1).padStart(2, '0')}`;
   const monthLogs = useMemo(() => sortedDesc.filter(l => l.logged_at.startsWith(mk)), [sortedDesc, mk]);
@@ -666,18 +669,19 @@ export default function SleepScreen() {
               <View style={styles.legendRow}>
                 <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>Daily</Text></View>
                 <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>7D Avg</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? 'All' : `${trendRangeDays}D`} Avg</Text></View>
                 <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>Goal</Text></View>
               </View>
               <SleepTrendChart data={chartData} goal={goal} colors={colors} width={chartWidth} />
               {trendStats && (
                 <View style={styles.trendStatsRow}>
-                  <WeekStatCell value={`${trendStats.first}h`} label="START" color={colors.text} colors={colors} />
+                  <WeekStatCell value={`${trendStats.avgNight}h`} label="AVG/NIGHT" color={colors.purple} colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={`${trendStats.lastV}h`} label="LATEST" color={colors.purple} colors={colors} />
+                  <WeekStatCell value={`${trendStats.goalNightsHit}/${trendStats.totalNights}`} label="GOAL NIGHTS" color={colors.good} colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={`${trendStats.change >= 0 ? '+' : ''}${trendStats.change}h`} label="CHANGE" color={trendStats.change >= 0 ? colors.good : colors.danger} colors={colors} />
+                  <WeekStatCell value={`${trendStats.bestNight}h`} label="BEST NIGHT" color="#22d3ee" colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={trendStats.ratePerWk != null ? `${trendStats.ratePerWk}` : '—'} label="H/WK" color={trendStats.ratePerWk >= 0 ? colors.good : colors.danger} colors={colors} />
+                  <WeekStatCell value={trendStats.debtHours > 0 ? `${trendStats.debtHours}h` : '0h'} label="SLEEP DEBT" color={trendStats.debtHours > 0 ? colors.danger : colors.good} colors={colors} />
                 </View>
               )}
             </View>

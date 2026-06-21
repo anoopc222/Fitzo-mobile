@@ -164,7 +164,8 @@ function StepsTrendChart({ data, goal, colors, width }) {
     const win = data.slice(Math.max(0, i - 6), i + 1);
     return Math.round(win.reduce((s, x) => s + x.steps, 0) / win.length);
   });
-  const allVals = [...rawVals, ...avgVals, goal];
+  const rangeAvgVal = Math.round(rawVals.reduce((s, v) => s + v, 0) / rawVals.length);
+  const allVals = [...rawVals, ...avgVals, rangeAvgVal, goal];
   const minV = Math.min(...allVals) * 0.96;
   const maxV = Math.max(...allVals) * 1.04;
   const range = maxV - minV || 1;
@@ -176,6 +177,7 @@ function StepsTrendChart({ data, goal, colors, width }) {
   const rawLine = rawPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
   const avgLine = avgPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const rangeAvgY = toY(rangeAvgVal);
   const goalY = toY(goal);
   const lastAvg = avgPts[avgPts.length - 1];
   return (
@@ -191,6 +193,7 @@ function StepsTrendChart({ data, goal, colors, width }) {
         return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />;
       })}
       <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#34d399" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="4,4" />
+      <Line x1={P.l} y1={rangeAvgY} x2={width - P.r} y2={rangeAvgY} stroke="#c4b5fd" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="2,3" />
       {avgPts.length > 1 && (
         <Path d={`M ${avgPts[0].x},${H - P.b} ${avgPts.map(p => `L ${p.x},${p.y}`).join(' ')} L ${avgPts[avgPts.length - 1].x},${H - P.b} Z`} fill="url(#stepsTrendFill)" />
       )}
@@ -436,12 +439,12 @@ export default function StepsScreen() {
 
   const trendStats = useMemo(() => {
     if (trendData.length < 2) return null;
-    const first = trendData[0].steps;
-    const lastV = trendData[trendData.length - 1].steps;
-    const change = lastV - first;
     const avgPerDay = Math.round(trendData.reduce((s, x) => s + x.steps, 0) / trendData.length);
-    return { first, lastV, change, avgPerDay };
-  }, [trendData]);
+    const goalDaysHit = trendData.filter(x => x.steps >= (x.goal ?? defaultGoal)).length;
+    const bestDay = Math.max(...trendData.map(x => x.steps));
+    const totalSteps = trendData.reduce((s, x) => s + x.steps, 0);
+    return { avgPerDay, goalDaysHit, totalDays: trendData.length, bestDay, totalSteps };
+  }, [trendData, defaultGoal]);
 
   // This Week bar chart (always current real week, per reference fzRenderWeeklyStepsChart)
   const weekDays = useMemo(() => {
@@ -751,18 +754,19 @@ export default function StepsScreen() {
               <View style={styles.legendRow}>
                 <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>Daily</Text></View>
                 <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>7D Avg</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? 'All' : `${trendRangeDays}D`} Avg</Text></View>
                 <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>Goal</Text></View>
               </View>
               <StepsTrendChart data={trendData} goal={defaultGoal} colors={colors} width={chartWidth} />
               {trendStats && (
                 <View style={styles.weekStatsRow}>
-                  <WeekStatCell value={trendStats.first.toLocaleString()} label="START" color={colors.text} colors={colors} />
+                  <WeekStatCell value={trendStats.avgPerDay.toLocaleString()} label="AVG/DAY" color={colors.accent} colors={colors} />
                   <View style={styles.weekStatDivider} />
-                  <WeekStatCell value={trendStats.lastV.toLocaleString()} label="LATEST" color={colors.accent} colors={colors} />
+                  <WeekStatCell value={`${trendStats.goalDaysHit}/${trendStats.totalDays}`} label="GOAL DAYS" color={colors.good} colors={colors} />
                   <View style={styles.weekStatDivider} />
-                  <WeekStatCell value={`${trendStats.change >= 0 ? '+' : ''}${trendStats.change.toLocaleString()}`} label="CHANGE" color={trendStats.change >= 0 ? colors.good : colors.danger} colors={colors} />
+                  <WeekStatCell value={trendStats.bestDay.toLocaleString()} label="BEST DAY" color="#22d3ee" colors={colors} />
                   <View style={styles.weekStatDivider} />
-                  <WeekStatCell value={trendStats.avgPerDay.toLocaleString()} label="AVG/DAY" color="#22d3ee" colors={colors} />
+                  <WeekStatCell value={trendStats.totalSteps.toLocaleString()} label="TOTAL" color={colors.text} colors={colors} />
                 </View>
               )}
             </View>

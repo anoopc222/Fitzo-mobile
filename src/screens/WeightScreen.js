@@ -207,9 +207,10 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
     const avg = win.reduce((s, x) => s + x.weight, 0) / win.length;
     return toDisp(avg, unit);
   });
+  const rangeAvgVal = rawVals.reduce((s, v) => s + v, 0) / rawVals.length;
   const goalDisp = goalKg ? toDisp(goalKg, unit) : null;
 
-  const allVals = [...rawVals, ...avgVals, ...(goalDisp ? [goalDisp] : [])];
+  const allVals = [...rawVals, ...avgVals, rangeAvgVal, ...(goalDisp ? [goalDisp] : [])];
   const minV = Math.min(...allVals) * 0.98;
   const maxV = Math.max(...allVals) * 1.02;
   const range = maxV - minV || 1;
@@ -222,6 +223,7 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
   const rawLine = rawPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
   const avgLine = avgPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const rangeAvgY = toY(rangeAvgVal);
   const goalY = goalDisp != null ? toY(goalDisp) : null;
   const lastAvg = avgPts[avgPts.length - 1];
 
@@ -242,6 +244,8 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
       {goalY != null && (
         <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#34d399" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="4,4" />
       )}
+
+      <Line x1={P.l} y1={rangeAvgY} x2={width - P.r} y2={rangeAvgY} stroke="#c4b5fd" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="2,3" />
 
       {avgPts.length > 1 && (
         <Path
@@ -826,6 +830,7 @@ export default function WeightScreen() {
               <View style={styles.legendRow}>
                 <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>Daily</Text></View>
                 <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>7D Avg</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? 'All' : `${trendRangeDays}D`} Avg</Text></View>
                 <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>Goal</Text></View>
               </View>
               <WeightTrendChart data={trendData} unit={unit} goalKg={goalKg} colors={colors} width={chartWidth} />
