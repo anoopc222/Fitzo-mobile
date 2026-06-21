@@ -128,6 +128,8 @@ async function deleteFullSession(sessionId) {
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL  = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
+const WEEKLY_SESSION_GOAL = 3;
+const DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 // session "type" — used for cardio/rest-specific UI branches
 function getSessionType(name) {
@@ -1451,6 +1453,7 @@ export default function WorkoutScreen() {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [trendRange, setTrendRange]       = useState('30D');
   const [showTrendPaywall, setShowTrendPaywall] = useState(false);
+  const [showInsightsPaywall, setShowInsightsPaywall] = useState(false);
 
   const { data: sessions = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['sessions', user?.id],
@@ -1556,6 +1559,108 @@ export default function WorkoutScreen() {
       pct,
     };
   }, [sessions, today]);
+
+  // Active (non-rest) session dates, used for streaks/consistency
+  const activeDateSet = useMemo(
+    () => new Set(sessions.filter(s => getSessionType(s.notes) !== 'rest').map(s => s.date)),
+    [sessions]
+  );
+
+  const consistency = useMemo(() => {
+    const todayStr = localDateStr(today);
+
+    // Current streak: consecutive days logged, walking back from today (today not
+    // having a session yet doesn't break the streak — it just hasn't continued).
+    let currentStreak = 0;
+    for (let i = 0; i < 365; i++) {
+      const d = localDateStr(new Date(today.getTime() - i * 86400000));
+      if (activeDateSet.has(d)) currentStreak++;
+      else if (d !== todayStr) break;
+    }
+
+    // Longest-ever streak within the last 365 days
+    let longestStreak = 0, run = 0;
+    for (let i = 364; i >= 0; i--) {
+      const d = localDateStr(new Date(today.getTime() - i * 86400000));
+      if (activeDateSet.has(d)) { run++; longestStreak = Math.max(longestStreak, run); }
+      else run = 0;
+    }
+
+    const lastActiveDate = [...activeDateSet].sort().pop() ?? null;
+    const daysSinceLast = lastActiveDate
+      ? Math.floor((today.getTime() - new Date(lastActiveDate).getTime()) / 86400000)
+      : null;
+
+    // Weekly frequency over the last 8 full weeks (excluding the current, in-progress week)
+    const WEEKS = 8;
+    const weeklyCounts = [];
+    for (let w = 1; w <= WEEKS; w++) {
+      const [monStr, sunStr] = getWeekRange(today, w);
+      const count = sessions.filter(s =>
+        getSessionType(s.notes) !== 'rest' && s.date >= monStr && s.date <= sunStr
+      ).length;
+      weeklyCounts.push(count);
+    }
+    const weeksMeetingGoal = weeklyCounts.filter(c => c >= WEEKLY_SESSION_GOAL).length;
+    const consistencyPct = weeklyCounts.length > 0
+      ? Math.round((weeksMeetingGoal / weeklyCounts.length) * 100)
+      : 0;
+    const avgPerWeek = weeklyCounts.length > 0
+      ? weeklyCounts.reduce((a, b) => a + b, 0) / weeklyCounts.length
+      : 0;
+
+    // Same split for the prior 8-week block, to compare trend
+    const prevWeeklyCounts = [];
+    for (let w = WEEKS + 1; w <= WEEKS * 2; w++) {
+      const [monStr, sunStr] = getWeekRange(today, w);
+      const count = sessions.filter(s =>
+        getSessionType(s.notes) !== 'rest' && s.date >= monStr && s.date <= sunStr
+      ).length;
+      prevWeeklyCounts.push(count);
+    }
+    const prevWeeksMeetingGoal = prevWeeklyCounts.filter(c => c >= WEEKLY_SESSION_GOAL).length;
+    const prevConsistencyPct = prevWeeklyCounts.length > 0
+      ? Math.round((prevWeeksMeetingGoal / prevWeeklyCounts.length) * 100)
+      : 0;
+
+    // Busiest day of week, over all logged active sessions
+    const dowCounts = [0, 0, 0, 0, 0, 0, 0];
+    for (const d of activeDateSet) dowCounts[new Date(d + 'T00:00:00').getDay()]++;
+    const maxDowCount = Math.max(...dowCounts);
+    const busiestDow = maxDowCount > 0 ? DOW_NAMES[dowCounts.indexOf(maxDowCount)] : null;
+
+    return {
+      currentStreak,
+      longestStreak,
+      daysSinceLast,
+      consistencyPct,
+      prevConsistencyPct,
+      avgPerWeek,
+      busiestDow,
+    };
+  }, [sessions, activeDateSet, today]);
+
+  const insights = useMemo(() => {
+    const out = [];
+    const c = consistency;
+    if (c.consistencyPct > c.prevConsistencyPct) {
+      out.push({ icon: '📈', text: 'Consistency is up ', bold: `${c.consistencyPct - c.prevConsistencyPct}%`, rest: ' vs the previous 8 weeks — keep the momentum going.' });
+    } else if (c.consistencyPct < c.prevConsistencyPct) {
+      out.push({ icon: '📉', text: 'Consistency dipped ', bold: `${c.prevConsistencyPct - c.consistencyPct}%`, rest: ' vs the previous 8 weeks.' });
+    }
+    if (c.currentStreak >= c.longestStreak && c.currentStreak > 0) {
+      out.push({ icon: '🔥', text: 'You\'re on your ', bold: 'best-ever streak', rest: ` at ${c.currentStreak} day${c.currentStreak === 1 ? '' : 's'} — don\'t break it now!` });
+    } else if (c.longestStreak > c.currentStreak && c.currentStreak > 0) {
+      out.push({ icon: '🎯', text: `${c.longestStreak - c.currentStreak} more day${c.longestStreak - c.currentStreak === 1 ? '' : 's'} `, bold: 'ties your record', rest: ` of ${c.longestStreak} days.` });
+    }
+    if (c.daysSinceLast != null && c.daysSinceLast >= 3) {
+      out.push({ icon: '⚠️', text: 'It\'s been ', bold: `${c.daysSinceLast} days`, rest: ' since your last workout — time to get back in.' });
+    }
+    if (c.busiestDow) {
+      out.push({ icon: '📅', text: 'You train most often on ', bold: c.busiestDow, rest: ` — averaging ${c.avgPerWeek.toFixed(1)} sessions/week overall.` });
+    }
+    return out;
+  }, [consistency]);
 
   const RANGE_DAYS = { '30D': 30, '60D': 60, '90D': 90, 'ALL': Infinity };
   const trendData = useMemo(() => {
@@ -1726,17 +1831,17 @@ export default function WorkoutScreen() {
 
         {!isLoading && (
           <>
-            {/* Hero stats */}
+            {/* Hero stats — sessions & consistency first, volume secondary */}
             <View style={s.card}>
               <View style={s.heroTopRow}>
-                <Text style={s.heroNum}>{heroStats.totalVol.toLocaleString()}</Text>
-                <Text style={s.heroLabel}>kg total volume</Text>
+                <Text style={s.heroNum}>{heroStats.sessionCount}</Text>
+                <Text style={s.heroLabel}>workout sessions</Text>
               </View>
-              <Text style={s.heroSub}>across {heroStats.sessionCount} sessions this month</Text>
+              <Text style={s.heroSub}>this month · {heroStats.totalVol.toLocaleString()} kg total volume</Text>
               <View style={s.tileRow}>
                 <View style={s.tile}>
-                  <Text style={s.tileVal}>{heroStats.sessionCount}</Text>
-                  <Text style={s.tileLbl}>SESSIONS</Text>
+                  <Text style={s.tileVal}>🔥 {consistency.currentStreak}</Text>
+                  <Text style={s.tileLbl}>DAY STREAK</Text>
                 </View>
                 <View style={s.tileColDivider} />
                 <View style={s.tile}>
@@ -1757,23 +1862,19 @@ export default function WorkoutScreen() {
               )}
             </View>
 
-            {/* This Week vs Last Week */}
+            {/* This Week vs Last Week — session count, the consistency-first framing */}
             {isViewingCurrentMonth && (
               <View style={s.weekCompareCardMerged}>
                 <View style={s.weekCompareCell}>
                   <Text style={s.weekCompareTitle}>THIS WEEK</Text>
-                  <Text style={s.weekCompareVal}>{weekCompare.thisVol.toLocaleString()} kg</Text>
-                  {weekCompare.pct != null && (
-                    <Text style={[s.weekCompareSub, { color: weekCompare.pct >= 0 ? colors.good : colors.danger }]}>
-                      {weekCompare.pct >= 0 ? '▲' : '▼'} {Math.abs(weekCompare.pct)}% vs last week
-                    </Text>
-                  )}
+                  <Text style={s.weekCompareVal}>{weekDays.filter(d => d.type && d.type !== 'rest').length} / {WEEKLY_SESSION_GOAL} sessions</Text>
+                  <Text style={[s.weekCompareSub, { color: colors.textMuted }]}>{weekCompare.thisVol.toLocaleString()} kg volume</Text>
                 </View>
                 <View style={s.weekCompareDivider} />
                 <View style={s.weekCompareCell}>
                   <Text style={s.weekCompareTitle}>LAST WEEK</Text>
-                  <Text style={[s.weekCompareVal, { color: colors.textMuted }]}>{weekCompare.lastVol.toLocaleString()} kg</Text>
-                  <Text style={[s.weekCompareSub, { color: colors.textDim }]}>{weekCompare.lastCount} sessions logged</Text>
+                  <Text style={[s.weekCompareVal, { color: colors.textMuted }]}>{weekCompare.lastCount} sessions</Text>
+                  <Text style={[s.weekCompareSub, { color: colors.textDim }]}>{weekCompare.lastVol.toLocaleString()} kg volume</Text>
                 </View>
               </View>
             )}
@@ -1832,6 +1933,69 @@ export default function WorkoutScreen() {
                 })}
               </View>
               <VolumeTrendChart data={trendData} colors={colors} width={chartWidth} />
+            </View>
+
+            {/* Analysis & Insights — Pro */}
+            <View style={s.card}>
+              <View style={s.cardTitleRow}>
+                <Text style={s.cardTitle}>ANALYSIS & INSIGHTS</Text>
+                <View style={s.proBadge}><Text style={s.proBadgeText}>PRO</Text></View>
+              </View>
+
+              {hasAccess ? (
+                <>
+                  <View style={s.tileRow}>
+                    <View style={s.tile}>
+                      <Text style={s.tileVal}>{consistency.longestStreak}</Text>
+                      <Text style={s.tileLbl}>BEST STREAK</Text>
+                    </View>
+                    <View style={s.tileColDivider} />
+                    <View style={s.tile}>
+                      <Text style={s.tileVal}>{consistency.consistencyPct}%</Text>
+                      <Text style={s.tileLbl}>8-WK CONSISTENCY</Text>
+                    </View>
+                    <View style={s.tileColDivider} />
+                    <View style={s.tile}>
+                      <Text style={s.tileVal}>{consistency.avgPerWeek.toFixed(1)}</Text>
+                      <Text style={s.tileLbl}>AVG / WEEK</Text>
+                    </View>
+                  </View>
+                  {insights.length > 0 && (
+                    <View style={s.insightsList}>
+                      {insights.map((ins, i) => (
+                        <View key={i} style={s.insightRow}>
+                          <Text style={s.insightIcon}>{ins.icon}</Text>
+                          <Text style={s.insightText}>
+                            {ins.text}<Text style={s.insightBold}>{ins.bold}</Text>{ins.rest}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              ) : (
+                <TouchableOpacity activeOpacity={0.85} onPress={() => setShowInsightsPaywall(true)}>
+                  <View style={s.tileRow}>
+                    <View style={s.tile}>
+                      <Text style={s.tileVal}>●●</Text>
+                      <Text style={s.tileLbl}>BEST STREAK</Text>
+                    </View>
+                    <View style={s.tileColDivider} />
+                    <View style={s.tile}>
+                      <Text style={s.tileVal}>●●%</Text>
+                      <Text style={s.tileLbl}>8-WK CONSISTENCY</Text>
+                    </View>
+                    <View style={s.tileColDivider} />
+                    <View style={s.tile}>
+                      <Text style={s.tileVal}>●.●</Text>
+                      <Text style={s.tileLbl}>AVG / WEEK</Text>
+                    </View>
+                  </View>
+                  <Text style={s.lockedHint}>
+                    🔒 Unlock your streak record, consistency score, and personalized training insights
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </>
         )}
@@ -1950,6 +2114,7 @@ export default function WorkoutScreen() {
       />
 
       <PaywallModal visible={showTrendPaywall} onClose={() => setShowTrendPaywall(false)} />
+      <PaywallModal visible={showInsightsPaywall} onClose={() => setShowInsightsPaywall(false)} />
     </SafeAreaView>
   );
 }
@@ -2000,6 +2165,15 @@ const createS = (colors) => StyleSheet.create({
   segmentBtnActive: { backgroundColor: colors.accent },
   segmentText: { fontSize: 12, fontWeight: weight.bold, color: colors.textMuted },
   segmentTextActive: { color: colors.accentText },
+
+  proBadge: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  proBadgeText: { fontSize: 9, fontWeight: weight.black, color: colors.accentText, letterSpacing: 0.5 },
+  lockedHint: { fontSize: 12, color: colors.textMuted, marginTop: 12, lineHeight: 17 },
+  insightsList: { marginTop: 14, gap: 10 },
+  insightRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  insightIcon: { fontSize: 14, marginTop: 1 },
+  insightText: { flex: 1, fontSize: 12.5, color: colors.textMuted, lineHeight: 18 },
+  insightBold: { fontWeight: weight.bold, color: colors.text },
 
   appHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
