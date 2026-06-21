@@ -251,178 +251,196 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
   );
 }
 
-// ─── Weekly Avg Chart + horizontal bar strip ────────────────────────────────
-function WeeklyAvgChart({ logs, viewMode, viewType, unit, goalKg, colors, width }) {
-  const scrollRef = useRef(null);
-  const [selIdx, setSelIdx] = useState(null);
-  const groups = useMemo(() => {
-    const sorted = [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at));
-    const map = {};
-    sorted.forEach(l => {
-      let key;
-      if (viewMode === 'month') {
-        key = l.logged_at.slice(0, 7);
-      } else {
-        const d = new Date(l.logged_at + 'T00:00:00');
-        const dow = d.getDay();
-        const mondayOffset = dow === 0 ? -6 : 1 - dow;
-        const monday = new Date(d); monday.setDate(d.getDate() + mondayOffset);
-        key = localDateStr(monday);
-      }
-      if (!map[key]) map[key] = [];
-      map[key].push(l.weight);
-    });
-    return Object.keys(map).sort().map(key => ({
-      key, avg: map[key].reduce((s, w) => s + w, 0) / map[key].length,
-    }));
-  }, [logs, viewMode]);
+// ─── Avg Weight: grouping + row computation ─────────────────────────────────
+function computeAvgWeightRows(logs, viewMode, unit) {
+  const sorted = [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at));
+  const map = {};
+  sorted.forEach(l => {
+    const key = viewMode === 'month' ? l.logged_at.slice(0, 7) : weekKeyOf(l.logged_at);
+    if (!map[key]) map[key] = [];
+    map[key].push(l.weight);
+  });
+  const groups = Object.keys(map).sort().map(key => ({
+    key, avg: map[key].reduce((s, w) => s + w, 0) / map[key].length,
+  }));
+  const allDisp = groups.map(g => toDisp(g.avg, unit));
+  const maxLost = Math.max(...allDisp.map((_, i, a) => Math.abs(+(a[0] - a[i]).toFixed(1))), 0.001);
 
-  if (groups.length === 0) {
+  const rows = groups.map((g, i) => {
+    const dispVal = allDisp[i];
+    const delta = i === 0 ? null : +(dispVal - allDisp[i - 1]).toFixed(1);
+    const cumLost = +(allDisp[0] - dispVal).toFixed(1);
+    const periodLabel = viewMode === 'month'
+      ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] + ' ' + g.key.slice(0, 4)
+      : `Wk ${i + 1}`;
+    const dateLabel = viewMode === 'month'
+      ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1].slice(0, 3)
+      : (() => { const d = new Date(g.key + 'T00:00:00'); return `${d.getMonth() + 1}/${d.getDate()}`; })();
+    return {
+      key: g.key, periodLabel, dateLabel, dispVal, delta, cumLost,
+      isFirst: i === 0, isLast: i === groups.length - 1,
+      fillPct: Math.min(100, Math.max(2, (Math.abs(cumLost) / maxLost) * 100)),
+    };
+  });
+
+  return { groups, allDisp, rows, maxLost };
+}
+
+// ─── Avg Weight: smooth trend chart with min/max + date axis labels ────────
+function AvgWeightChart({ allDisp, dateLabels, unit, colors, width }) {
+  const H = 110;
+  const P = { t: 16, r: 6, b: 18, l: 6 };
+  const pw = width - P.l - P.r;
+  const ph = H - P.t - P.b;
+  const minV = Math.min(...allDisp);
+  const maxV = Math.max(...allDisp);
+  const range = (maxV - minV) || 1;
+  const toY = v => P.t + ph - ((v - minV) / range) * ph;
+  const toX = i => P.l + (i * pw) / Math.max(allDisp.length - 1, 1);
+  const pts = allDisp.map((v, i) => ({ x: toX(i), y: toY(v) }));
+
+  let linePath = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i], p1 = pts[i + 1];
+    const midX = (p0.x + p1.x) / 2, midY = (p0.y + p1.y) / 2;
+    linePath += ` Q ${p0.x.toFixed(1)},${p0.y.toFixed(1)} ${midX.toFixed(1)},${midY.toFixed(1)}`;
+  }
+  linePath += ` L ${pts[pts.length - 1].x.toFixed(1)},${pts[pts.length - 1].y.toFixed(1)}`;
+  const fillPath = `M ${pts[0].x.toFixed(1)},${(H - P.b).toFixed(1)} ${linePath.slice(linePath.indexOf('M') + 1)} L ${pts[pts.length - 1].x.toFixed(1)},${(H - P.b).toFixed(1)} Z`;
+
+  const labelStep = Math.max(1, Math.ceil(dateLabels.length / 6));
+
+  return (
+    <View>
+      <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 9, fontFamily: fontFamily.mono, color: colors.textDim }}>
+        {maxV.toFixed(1)}
+      </Text>
+      <Text style={{ position: 'absolute', top: H - P.b - 12, left: 0, fontSize: 9, fontFamily: fontFamily.mono, color: colors.textDim }}>
+        {minV.toFixed(1)}
+      </Text>
+      <Svg width={width} height={H}>
+        <Defs>
+          <LinearGradient id="avgFill" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={colors.accent} stopOpacity="0.22" />
+            <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
+          </LinearGradient>
+        </Defs>
+        <Line x1={P.l} y1={P.t} x2={width - P.r} y2={P.t} stroke={colors.border} strokeWidth={1} />
+        <Line x1={P.l} y1={H - P.b} x2={width - P.r} y2={H - P.b} stroke={colors.border} strokeWidth={1} />
+        {pts.length > 1 && <Path d={fillPath} fill="url(#avgFill)" />}
+        <Path d={linePath} fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        {pts.map((p, i) => (
+          <Circle
+            key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 4 : 0}
+            fill={colors.accent} stroke={i === pts.length - 1 ? colors.bgCard : 'none'}
+            strokeWidth={i === pts.length - 1 ? 2 : 0}
+          />
+        ))}
+      </Svg>
+      <View style={{ height: 14, marginTop: 2 }}>
+        {dateLabels.map((lbl, i) => (
+          (i % labelStep === 0 || i === dateLabels.length - 1) ? (
+            <Text
+              key={i}
+              style={{
+                position: 'absolute', left: toX(i) - 14, width: 30, textAlign: 'center',
+                fontSize: 9, fontFamily: fontFamily.mono, color: colors.textDim,
+              }}
+            >
+              {lbl}
+            </Text>
+          ) : null
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─── Avg Weight: trend pill + row ───────────────────────────────────────────
+function trendPillFor(row, colors) {
+  if (row.isFirst) return { bg: 'rgba(148,163,184,0.12)', color: colors.textMuted, label: '− START' };
+  if (Math.abs(row.delta) < 0.05) return { bg: 'rgba(148,163,184,0.12)', color: colors.textMuted, label: '→ 0.0' };
+  if (row.delta < 0) return { bg: 'rgba(52,211,153,0.15)', color: colors.good, label: `▼ ${Math.abs(row.delta).toFixed(1)}` };
+  return { bg: 'rgba(248,113,113,0.15)', color: colors.danger, label: `▲ ${Math.abs(row.delta).toFixed(1)}` };
+}
+
+function AvgWeightRow({ row, unit, colors }) {
+  const pill = trendPillFor(row, colors);
+  const barColor = row.cumLost > 0 ? colors.danger : colors.good;
+  return (
+    <View style={[
+      { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+      row.isLast && { backgroundColor: colors.dim, borderRadius: 8, paddingHorizontal: 6 },
+    ]}>
+      <View style={{ flex: 0.85 }}>
+        <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, color: colors.textMuted }}>
+          {row.periodLabel}{row.isLast ? <Text style={{ color: colors.accent, fontWeight: '700' }}> NOW</Text> : null}
+        </Text>
+      </View>
+      <View style={{ flex: 0.95 }}>
+        <Text style={{ fontSize: 13, fontFamily: fontFamily.monoBold, color: colors.text }}>{row.dispVal.toFixed(1)}{unit}</Text>
+      </View>
+      <View style={{ flex: 0.85 }}>
+        <View style={{ alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10, backgroundColor: pill.bg }}>
+          <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: pill.color }}>{pill.label}</Text>
+        </View>
+      </View>
+      <View style={{ flex: 1.3, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.dim }}>
+          <View style={{ height: 5, borderRadius: 3, width: `${row.fillPct}%`, backgroundColor: barColor }} />
+        </View>
+        <Text style={{ fontSize: 10, fontFamily: fontFamily.mono, color: colors.textMuted, minWidth: 40, textAlign: 'right' }}>
+          {row.cumLost > 0 ? '+' : ''}{row.cumLost.toFixed(1)}{unit}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ─── Avg Weight: full section (collapsed summary or expanded chart+table) ──
+function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded }) {
+  const { allDisp, rows } = useMemo(() => computeAvgWeightRows(logs, viewMode, unit), [logs, viewMode, unit]);
+
+  if (rows.length === 0) {
     return <Text style={{ color: colors.textDim, fontSize: typography.sm, textAlign: 'center', paddingVertical: 20 }}>Not enough data yet</Text>;
   }
 
-  const allDisp = groups.map(g => toDisp(g.avg, unit));
-  const maxLost = Math.max(...allDisp.map((_, i, a) => +(a[0] - a[i]).toFixed(1)), 0.001);
+  const lastRow = rows[rows.length - 1];
 
-  if (viewType === 'list') {
-    const goalDisp = goalKg ? toDisp(goalKg, unit) : null;
-    const rangeMin = Math.min(...allDisp, goalDisp ?? Infinity);
-    const rangeMax = Math.max(...allDisp, goalDisp ?? -Infinity);
-    const span = rangeMax - rangeMin || 1;
-    const pctOf = v => Math.min(98, Math.max(2, ((v - rangeMin) / span) * 100));
-    const goalPct = goalDisp != null ? pctOf(goalDisp) : null;
-
-    const rows = groups.map((g, i) => {
-      const dispVal = allDisp[i];
-      const delta = i === 0 ? null : +(dispVal - allDisp[i - 1]).toFixed(1);
-      const periodLabel = viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] : `Wk${i + 1}`;
-      return { key: g.key, periodLabel, dispVal, delta, isLast: i === groups.length - 1, fillPct: pctOf(dispVal) };
-    });
+  if (!expanded) {
+    const pill = trendPillFor(lastRow, colors);
     return (
-      <View>
-        {rows.map(r => (
-          <View key={r.key} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={{ fontSize: 12, fontFamily: fontFamily.mono, fontWeight: '700', color: colors.textMuted }}>
-                {r.periodLabel.toUpperCase()}{r.isLast ? ' · NOW' : ''}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                {r.delta != null && (
-                  <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, fontWeight: '700', color: Math.abs(r.delta) < 0.05 ? colors.textMuted : r.delta < 0 ? '#34d399' : '#f87171' }}>
-                    {r.delta > 0 ? '+' : ''}{r.delta.toFixed(1)}
-                  </Text>
-                )}
-                <Text style={{ fontSize: 14, fontFamily: fontFamily.monoBold, color: r.isLast ? colors.accent : colors.text }}>
-                  {r.dispVal.toFixed(1)}{unit}
-                </Text>
-              </View>
-            </View>
-            <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.dim, position: 'relative' }}>
-              <View style={{
-                position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3,
-                width: `${r.fillPct}%`,
-                backgroundColor: r.isLast ? colors.accent : 'rgba(245,158,11,0.45)',
-              }} />
-              {goalPct != null && (
-                <View style={{
-                  position: 'absolute', top: -2, width: 2, height: 10, left: `${goalPct}%`,
-                  backgroundColor: '#34d399',
-                }} />
-              )}
-            </View>
-          </View>
-        ))}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, color: colors.textMuted }}>
+            {lastRow.periodLabel} <Text style={{ color: colors.accent, fontWeight: '700' }}>NOW</Text>
+          </Text>
+        </View>
+        <Text style={{ fontSize: 15, fontFamily: fontFamily.monoBold, color: colors.text, marginRight: 10 }}>
+          {lastRow.dispVal.toFixed(1)}{unit}
+        </Text>
+        <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10, backgroundColor: pill.bg, marginRight: 10 }}>
+          <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: pill.color }}>{pill.label}</Text>
+        </View>
+        <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, color: colors.textMuted }}>
+          {lastRow.cumLost > 0 ? '+' : ''}{lastRow.cumLost.toFixed(1)}{unit}
+        </Text>
       </View>
     );
   }
 
-  const H = 110;
-  const P = { t: 12, r: 8, b: 8, l: 8 };
-  const pw = width - P.l - P.r;
-  const ph = H - P.t - P.b;
-  const minV = Math.min(...allDisp) * 0.98;
-  const maxV = Math.max(...allDisp) * 1.02;
-  const range = maxV - minV || 1;
-  const toY = v => P.t + ph - ((v - minV) / range) * ph;
-  const toX = i => P.l + (i * pw) / Math.max(groups.length - 1, 1);
-  const linePts = allDisp.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
-
   return (
     <View>
-      <Svg width={width} height={H}>
-        <Polyline points={linePts} fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-        {allDisp.map((v, i) => <Circle key={i} cx={toX(i)} cy={toY(v)} r={3} fill="#f59e0b" />)}
-      </Svg>
-
-      {(() => {
-        const sel = Math.min(selIdx == null ? groups.length - 1 : selIdx, groups.length - 1);
-        const g = groups[sel];
-        const dispVal = toDisp(g.avg, unit);
-        const delta = sel === 0 ? null : +(dispVal - toDisp(groups[sel - 1].avg, unit)).toFixed(1);
-        const cumLostVal = +(allDisp[0] - dispVal).toFixed(1);
-        const gained = cumLostVal < 0;
-        const isLast = sel === groups.length - 1;
-        const periodLabel = viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1] : `Wk${sel + 1}`;
-        return (
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', marginTop: 14, padding: 12,
-            borderRadius: 12, backgroundColor: colors.dim, borderWidth: 1, borderColor: colors.border,
-          }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textMuted }}>{periodLabel.toUpperCase()}</Text>
-              <Text style={{ fontSize: 16, fontFamily: fontFamily.monoBold, color: isLast ? colors.accent : colors.text, marginTop: 2 }}>
-                {dispVal.toFixed(1)}{unit} {isLast ? <Text style={{ fontSize: 8, color: '#0c0c0f', backgroundColor: '#f59e0b', paddingHorizontal: 4, borderRadius: 4, overflow: 'hidden' }}>NOW</Text> : null}
-              </Text>
-            </View>
-            {sel === 0 ? (
-              <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)', marginRight: 8 }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textMuted }}>START</Text></View>
-            ) : Math.abs(delta) < 0.05 ? (
-              <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)', marginRight: 8 }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textMuted }}>→ 0.0</Text></View>
-            ) : delta < 0 ? (
-              <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: 'rgba(52,211,153,0.15)', marginRight: 8 }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: '#34d399' }}>▼ {Math.abs(delta).toFixed(1)}</Text></View>
-            ) : (
-              <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: 'rgba(248,113,113,0.15)', marginRight: 8 }}><Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: '#f87171' }}>▲ {delta.toFixed(1)}</Text></View>
-            )}
-            <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, fontWeight: '700', color: gained ? '#f87171' : '#34d399' }}>
-              {gained ? '+' : '-'}{Math.abs(cumLostVal).toFixed(1)} lost
-            </Text>
-          </View>
-        );
-      })()}
-
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        onLayout={() => scrollRef.current?.scrollToEnd({ animated: false })}
-        contentContainerStyle={{ alignItems: 'flex-end', paddingTop: 14, paddingBottom: 4, gap: 10 }}
-      >
-        {groups.map((g, i) => {
-          const dispVal = toDisp(g.avg, unit);
-          const cumLostVal = +(allDisp[0] - dispVal).toFixed(1);
-          const gained = cumLostVal < 0;
-          const sel = Math.min(selIdx == null ? groups.length - 1 : selIdx, groups.length - 1);
-          const isSel = i === sel;
-          const barH = i === 0 ? 6 : Math.max(6, Math.min(48, (Math.abs(cumLostVal) / maxLost) * 48));
-          const barColor = i === 0 ? colors.textDim : gained ? '#f87171' : '#34d399';
-          return (
-            <TouchableOpacity key={g.key} onPress={() => setSelIdx(i)} style={{ alignItems: 'center', width: 28 }}>
-              <View style={{ height: 48, justifyContent: 'flex-end' }}>
-                <View style={{
-                  width: 14, height: barH, borderRadius: 4,
-                  backgroundColor: isSel ? barColor : barColor + '66',
-                }} />
-              </View>
-              <Text style={{
-                fontSize: 9, fontFamily: fontFamily.mono, marginTop: 4,
-                color: isSel ? colors.text : colors.textDim, fontWeight: isSel ? '700' : '400',
-              }}>
-                {viewMode === 'month' ? MONTH_NAMES[parseInt(g.key.slice(5, 7), 10) - 1].slice(0, 3) : `W${i + 1}`}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <AvgWeightChart allDisp={allDisp} dateLabels={rows.map(r => r.dateLabel)} unit={unit} colors={colors} width={width} />
+      <View style={{ flexDirection: 'row', paddingTop: 14, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <Text style={{ flex: 0.85, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim }}>
+          {viewMode === 'month' ? 'MONTH' : 'WK'}
+        </Text>
+        <Text style={{ flex: 0.95, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim }}>AVG WEIGHT</Text>
+        <Text style={{ flex: 0.85, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim }}>TREND</Text>
+        <Text style={{ flex: 1.3, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim, textAlign: 'right' }}>TOTAL LOST</Text>
+      </View>
+      {rows.map(row => <AvgWeightRow key={row.key} row={row} unit={unit} colors={colors} />)}
     </View>
   );
 }
@@ -450,7 +468,7 @@ export default function WeightScreen() {
 
   const [unit, setUnit] = useState('kg');
   const [wkViewMode, setWkViewMode] = useState('week'); // 'week' | 'month'
-  const [avgViewType, setAvgViewType] = useState('list'); // 'list' | 'chart'
+  const [avgExpanded, setAvgExpanded] = useState(false);
   const avgWeightExport = useExportCard();
   const { hasAccess } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
@@ -762,34 +780,41 @@ export default function WeightScreen() {
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>AVG WEIGHT</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <TouchableOpacity
-                    onPress={() => (hasAccess ? avgWeightExport.exportCard() : setShowPaywall(true))}
-                    disabled={avgWeightExport.exporting}
-                    style={styles.avgViewToggleBtn}
-                  >
-                    {avgWeightExport.exporting ? (
-                      <ActivityIndicator size="small" color={colors.textMuted} />
-                    ) : (
-                      <Ionicons name="share-outline" size={14} color={colors.textMuted} />
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setAvgViewType(v => (v === 'list' ? 'chart' : 'list'))}
-                    style={styles.avgViewToggleBtn}
-                  >
-                    <Ionicons name={avgViewType === 'list' ? 'stats-chart' : 'list'} size={14} color={colors.textMuted} />
-                  </TouchableOpacity>
-                  <View style={styles.segmentRow}>
-                    {['week', 'month'].map(v => (
-                      <TouchableOpacity key={v} onPress={() => setWkViewMode(v)} style={[styles.segmentBtn, wkViewMode === v && styles.segmentBtnActive]}>
-                        <Text style={[styles.segmentText, wkViewMode === v && styles.segmentTextActive]}>BY {v.toUpperCase()}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
+                <TouchableOpacity
+                  onPress={() => (hasAccess ? avgWeightExport.exportCard() : setShowPaywall(true))}
+                  disabled={avgWeightExport.exporting}
+                  style={styles.avgViewToggleBtn}
+                >
+                  {avgWeightExport.exporting ? (
+                    <ActivityIndicator size="small" color={colors.textMuted} />
+                  ) : (
+                    <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                  )}
+                </TouchableOpacity>
               </View>
-              <WeeklyAvgChart key={wkViewMode} logs={logs} viewMode={wkViewMode} viewType={avgViewType} unit={unit} goalKg={goalKg} colors={colors} width={chartWidth} />
+              {avgExpanded && (
+                <View style={[styles.segmentRow, { marginBottom: 12 }]}>
+                  {['week', 'month'].map(v => (
+                    <TouchableOpacity
+                      key={v}
+                      onPress={() => setWkViewMode(v)}
+                      style={[styles.segmentBtn, { flex: 1, alignItems: 'center' }, wkViewMode === v && styles.segmentBtnActive]}
+                    >
+                      <Text style={[styles.segmentText, wkViewMode === v && styles.segmentTextActive]}>BY {v.toUpperCase()}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              <AvgWeightSection key={wkViewMode} logs={logs} viewMode={wkViewMode} unit={unit} colors={colors} width={chartWidth} expanded={avgExpanded} />
+              <TouchableOpacity
+                onPress={() => setAvgExpanded(v => !v)}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingTop: 12 }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.accent }}>
+                  {avgExpanded ? 'Collapse' : 'Expand'}
+                </Text>
+                <Ionicons name={avgExpanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.accent} />
+              </TouchableOpacity>
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
@@ -800,7 +825,7 @@ export default function WeightScreen() {
                 colors={colors}
                 width={340}
               >
-                <WeeklyAvgChart key={`export-${wkViewMode}`} logs={logs} viewMode={wkViewMode} viewType={avgViewType} unit={unit} goalKg={goalKg} colors={colors} width={300} />
+                <AvgWeightSection key={`export-${wkViewMode}`} logs={logs} viewMode={wkViewMode} unit={unit} colors={colors} width={300} expanded={true} />
               </ExportCardTemplate>
             </View>
 
