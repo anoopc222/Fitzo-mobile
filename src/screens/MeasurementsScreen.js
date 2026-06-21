@@ -575,8 +575,8 @@ export default function MeasurementsScreen({ navigation }) {
           <View style={styles.subCard}>
             <Text style={styles.subCardTitleCaps}>⚖️ SYMMETRY TRACKER</Text>
             {SYMMETRY_PAIRS.map(pair => {
-              const lv = latest[pair.l];
-              const rv = latest[pair.r];
+              const lv = latest?.[pair.l];
+              const rv = latest?.[pair.r];
               if (lv == null || rv == null) return null;
               const diff = +(lv - rv).toFixed(1);
               const balanced = Math.abs(diff) <= 1;
