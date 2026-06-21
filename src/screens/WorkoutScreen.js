@@ -15,6 +15,8 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import MonthHeatmap from '../components/MonthHeatmap';
+import Sparkline from '../components/Sparkline';
+import BodyHeatmap from '../components/BodyHeatmap';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
@@ -28,7 +30,7 @@ async function fetchSessions(userId) {
     .select(`
       id, date, notes, total_volume, duration_min, calories_burned,
       workout_exercises (
-        id, exercise_name, order_index,
+        id, exercise_name, order_index, group_id,
         sets ( id, set_number, weight_kg, reps, rpe, duration_min, distance_km, avg_rpm, speed_kmh, incline_pct, calories )
       )
     `)
@@ -77,19 +79,38 @@ async function saveTemplate(userId, name, exercises) {
   if (error) throw error;
 }
 
-async function saveSession(userId, { sessionId, date, name, exercises }) {
+// Repeats a template's exercises (names + planned weight/reps) for N future weekly sessions
+async function repeatTemplateForWeeks(userId, template, weeks, startDate) {
+  const exs = (template.exercises ?? []).map(ex => ({
+    name: ex.name,
+    sets: (ex.sets ?? []).length ? ex.sets : [{ weight_kg: '', reps: '' }],
+  }));
+  for (let w = 1; w <= weeks; w++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + w * 7);
+    await saveSession(userId, {
+      sessionId: null,
+      date: localDateStr(d),
+      name: template.name,
+      exercises: exs,
+    });
+  }
+}
+
+async function saveSession(userId, { sessionId, date, name, exercises, duration_min }) {
   let sid = sessionId;
+  const durPatch = duration_min != null ? { duration_min } : {};
   if (!sid) {
     const { data, error } = await supabase
       .from('workout_sessions')
-      .insert({ user_id: userId, date, notes: name || 'Workout' })
+      .insert({ user_id: userId, date, notes: name || 'Workout', ...durPatch })
       .select().single();
     if (error) throw error;
     sid = data.id;
   } else {
     const { error } = await supabase
       .from('workout_sessions')
-      .update({ date, notes: name || 'Workout' })
+      .update({ date, notes: name || 'Workout', ...durPatch })
       .eq('id', sid);
     if (error) throw error;
   }
@@ -110,7 +131,7 @@ async function saveSession(userId, { sessionId, date, name, exercises }) {
     if (!ex.name.trim()) continue;
     const { data: newEx, error: exErr } = await supabase
       .from('workout_exercises')
-      .insert({ session_id: sid, exercise_name: ex.name.trim(), order_index: i })
+      .insert({ session_id: sid, exercise_name: ex.name.trim(), order_index: i, group_id: ex.group_id ?? null })
       .select().single();
     if (exErr) throw exErr;
 
@@ -635,6 +656,112 @@ function getMuscleVolumeThisWeek(sessions) {
     }
   }
   return Object.entries(map).map(([m, v]) => ({ muscle: m, vol: Math.round(v) })).sort((a, b) => b.vol - a.vol).slice(0, 6);
+}
+
+// All-time best (weight, reps, volume) for an exercise, used for PR detection — same data source as getPrevSetSummary
+function getAllTimeBest(allSessions, exerciseName, beforeDate) {
+  const name = (exerciseName ?? '').trim().toLowerCase();
+  if (!name) return null;
+  let bestWeight = 0, bestReps = 0, bestVol = 0;
+  for (const sess of allSessions ?? []) {
+    if (beforeDate && sess.date >= beforeDate) continue;
+    const ex = (sess.workout_exercises ?? []).find(e => (e.exercise_name ?? '').trim().toLowerCase() === name);
+    if (!ex) continue;
+    for (const st of ex.sets ?? []) {
+      const w = st.weight_kg ?? 0, r = st.reps ?? 0;
+      bestWeight = Math.max(bestWeight, w);
+      bestReps = Math.max(bestReps, r);
+      bestVol = Math.max(bestVol, w * r);
+    }
+  }
+  return { bestWeight, bestReps, bestVol };
+}
+
+// Detects which kind of PR a just-logged set hits, vs all-time best — used for the inline PR banner
+function detectSetPR(allSessions, exerciseName, weightKg, reps, beforeDate) {
+  const w = parseFloat(weightKg), r = parseInt(reps, 10);
+  if (!w || !r) return null;
+  const best = getAllTimeBest(allSessions, exerciseName, beforeDate);
+  if (!best) return null;
+  const vol = w * r;
+  if (w > best.bestWeight && best.bestWeight > 0) return { kind: 'weight', delta: Math.round((w - best.bestWeight) * 10) / 10 };
+  if (r > best.bestReps && best.bestReps > 0) return { kind: 'reps', delta: r - best.bestReps };
+  if (vol > best.bestVol && best.bestVol > 0) return { kind: 'volume', delta: Math.round(vol - best.bestVol) };
+  return null;
+}
+
+// Most recent session matching the same type/day-name — source for "Copy last session"
+function findLastSessionOfType(allSessions, name) {
+  const n = (name ?? '').trim().toLowerCase();
+  if (!n) return null;
+  return (allSessions ?? [])
+    .filter(s => (s.notes ?? '').trim().toLowerCase() === n)
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
+}
+
+// Epley formula — used for the live per-set 1RM estimate
+function estimate1RM(weightKg, reps) {
+  const w = parseFloat(weightKg), r = parseInt(reps, 10);
+  if (!w || !r) return null;
+  return Math.round(w * (1 + r / 30) * 10) / 10;
+}
+
+// Top-set weight (heaviest set) per session for an exercise, oldest -> newest, last 8 sessions — feeds the strength trend Sparkline
+function getExerciseTopSetTrend(allSessions, exerciseName) {
+  const name = (exerciseName ?? '').trim().toLowerCase();
+  if (!name) return [];
+  const points = [];
+  for (const sess of (allSessions ?? []).slice().sort((a, b) => a.date.localeCompare(b.date))) {
+    const ex = (sess.workout_exercises ?? []).find(e => (e.exercise_name ?? '').trim().toLowerCase() === name);
+    if (!ex) continue;
+    const top = Math.max(0, ...(ex.sets ?? []).map(st => st.weight_kg ?? 0));
+    if (top > 0) points.push(top);
+  }
+  return points.slice(-8);
+}
+
+// Consecutive-week streak of meeting workout_weekly_goal, walking back from the most recently completed week
+function getWeeklyGoalStreak(sessions, weeklyGoal, today) {
+  let current = 0, longest = 0, run = 0;
+  for (let w = 1; w <= 52; w++) {
+    const [monStr, sunStr] = getWeekRange(today, w);
+    const count = sessions.filter(s => getSessionType(s.notes) !== 'rest' && s.date >= monStr && s.date <= sunStr).length;
+    const met = count >= weeklyGoal;
+    if (met) { run++; longest = Math.max(longest, run); if (w === current + 1) current = run; }
+    else { run = 0; if (w === current + 1) { /* streak broken */ } }
+    if (!met && current === w - 1) break;
+  }
+  return { current, longest };
+}
+
+// 3+ consecutive calendar days training the same muscle with no rest between — overtraining/imbalance alert
+function detectOvertraining(sessions) {
+  const byDate = {};
+  for (const s of sessions) {
+    if (getSessionType(s.notes) !== 'gym') continue;
+    const muscles = new Set();
+    for (const ex of s.workout_exercises ?? []) getExerciseMuscles(ex.exercise_name).forEach(m => muscles.add(m));
+    byDate[s.date] = muscles;
+  }
+  const dates = Object.keys(byDate).sort();
+  if (!dates.length) return null;
+  const lastDate = dates[dates.length - 1];
+  let streak = 1;
+  let hitMuscle = null;
+  for (const m of byDate[lastDate]) {
+    let run = 1;
+    let d = new Date(lastDate + 'T00:00:00');
+    for (let i = 1; i < 7; i++) {
+      d.setDate(d.getDate() - 1);
+      const ds = localDateStr(d);
+      if (byDate[ds]?.has(m)) run++;
+      else break;
+    }
+    if (run >= 3 && run > streak) { streak = run; hitMuscle = m; }
+  }
+  if (!hitMuscle) return null;
+  return { muscle: hitMuscle, days: streak };
 }
 
 function suggestAutoReg(prevSetInSession) {
@@ -1217,6 +1344,7 @@ const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
 function EditSessionModal({
   visible, isNew, initialData, recentTypes, allSessions, onSave, onCancel, isSaving,
   hasAccess, templates, onSaveTemplate, onOpenToolsPaywall,
+  onRepeatTemplate, isRepeatingTemplate,
 }) {
   const { colors } = useTheme();
   const eS = useMemo(() => createES(colors), [colors]);
@@ -1228,6 +1356,8 @@ function EditSessionModal({
   const [acOpenIdx, setAcOpenIdx] = useState(null);
   const [subOpenIdx, setSubOpenIdx] = useState(null);
   const [restTimer, setRestTimer] = useState(null); // { exIdx, secondsLeft, total }
+  const [programTemplate, setProgramTemplate] = useState(null);
+  const [programWeeks, setProgramWeeks] = useState(4);
 
   useEffect(() => {
     if (!restTimer) return;
@@ -1240,6 +1370,85 @@ function EditSessionModal({
 
   const startRestTimer = (exIdx, seconds = 90) => setRestTimer({ exIdx, secondsLeft: seconds, total: seconds });
   const cancelRestTimer = () => setRestTimer(null);
+
+  // Session auto-timer — starts the moment a brand-new session modal opens.
+  const [sessionElapsedSec, setSessionElapsedSec] = useState(0);
+  const [sessionTimerRunning, setSessionTimerRunning] = useState(false);
+  const [durationManuallySet, setDurationManuallySet] = useState(false);
+  const [manualDuration, setManualDuration] = useState('');
+
+  useEffect(() => {
+    if (visible && isNew) {
+      setSessionElapsedSec(0);
+      setSessionTimerRunning(true);
+      setDurationManuallySet(false);
+      setManualDuration('');
+    } else if (!visible) {
+      setSessionTimerRunning(false);
+    }
+  }, [visible, isNew]);
+
+  useEffect(() => {
+    if (!sessionTimerRunning) return;
+    const t = setInterval(() => setSessionElapsedSec(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [sessionTimerRunning]);
+
+  const fmtElapsed = (totalSec) => {
+    const m = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  };
+
+  // Best weight + best volume (weight*reps) ever logged per exercise, for PR detection.
+  const exerciseBests = useMemo(() => {
+    const map = {};
+    for (const sess of allSessions ?? []) {
+      for (const ex of sess.workout_exercises ?? []) {
+        const key = (ex.exercise_name ?? '').trim().toLowerCase();
+        if (!key) continue;
+        if (!map[key]) map[key] = { weight: 0, volume: 0 };
+        for (const st of ex.sets ?? []) {
+          const w = st.weight_kg ?? 0;
+          const r = st.reps ?? 0;
+          if (w > map[key].weight) map[key].weight = w;
+          if (w * r > map[key].volume) map[key].volume = w * r;
+        }
+      }
+    }
+    return map;
+  }, [allSessions]);
+
+  const getSetPR = (exName, weightKg, reps) => {
+    const key = (exName ?? '').trim().toLowerCase();
+    const best = exerciseBests[key];
+    const w = parseFloat(weightKg);
+    const r = parseInt(reps, 10);
+    if (!key || isNaN(w) || !w) return null;
+    if (!best) return reps && !isNaN(r) ? { type: 'weight' } : null;
+    if (w > best.weight) return { type: 'weight' };
+    if (!isNaN(r) && w * r > best.volume) return { type: 'volume' };
+    return null;
+  };
+
+  // Copy last session — finds the most recent past session of the same getSessionType
+  // and copies just exercise names (fresh blank sets, not old weights/reps).
+  const copyLastSession = (sessionTypeName) => {
+    const targetType = getSessionType(sessionTypeName);
+    const candidates = (allSessions ?? [])
+      .filter(s => getSessionType(s.notes) === targetType && (s.workout_exercises ?? []).length > 0)
+      .slice()
+      .sort((a, b) => b.date.localeCompare(a.date));
+    const match = candidates[0];
+    if (!match) {
+      Alert.alert('No previous session', `No past "${sessionTypeName || targetType}" session found to copy.`);
+      return;
+    }
+    const exs = (match.workout_exercises ?? [])
+      .slice().sort((a, b) => a.order_index - b.order_index)
+      .map(ex => ({ _key: tid(), name: ex.exercise_name, sets: [blankSet()] }));
+    setExercises(exs);
+  };
 
   const loadTemplate = (tpl) => {
     const exs = (tpl.exercises ?? []).map(ex => ({
@@ -1303,6 +1512,23 @@ function EditSessionModal({
     setSubOpenIdx(null);
   };
 
+  // Toggling joins/leaves a superset group; a fresh group_id is minted on first toggle,
+  // and reused for up to 3 consecutive exercises so the rest timer can treat them as one circuit.
+  const toggleExerciseGroup = (exIdx) => {
+    setExercises(prev => {
+      const target = prev[exIdx];
+      if (target.group_id) {
+        return prev.map((ex, i) => i === exIdx ? { ...ex, group_id: null } : ex);
+      }
+      const openGroup = [...prev].reverse().find((ex, ri) => {
+        const i = prev.length - 1 - ri;
+        return ex.group_id && i !== exIdx && prev.filter(e => e.group_id === ex.group_id).length < 3;
+      });
+      const groupId = openGroup?.group_id ?? tid();
+      return prev.map((ex, i) => i === exIdx ? { ...ex, group_id: groupId } : ex);
+    });
+  };
+
   const removeSet = (exIdx, sIdx) =>
     setExercises(prev => prev.map((ex, i) => i !== exIdx ? ex : {
       ...ex, sets: (ex.sets ?? []).filter((_, j) => j !== sIdx),
@@ -1316,7 +1542,15 @@ function EditSessionModal({
   const handleSave = () => {
     if (!date.trim()) { Alert.alert('Date required', 'Please pick a date.'); return; }
     const isRest = name.toLowerCase() === 'rest day';
-    onSave({ date: date.trim(), name: name.trim() || 'Workout', exercises: isRest ? [] : exercises });
+    setSessionTimerRunning(false);
+    const manualMin = parseFloat(manualDuration);
+    const duration_min = durationManuallySet && !isNaN(manualMin)
+      ? manualMin
+      : (isNew && sessionElapsedSec > 0 ? Math.round(sessionElapsedSec / 60) : undefined);
+    onSave({
+      date: date.trim(), name: name.trim() || 'Workout', exercises: isRest ? [] : exercises,
+      ...(duration_min != null ? { duration_min } : {}),
+    });
   };
 
   const isRestDay = name.toLowerCase() === 'rest day';
@@ -1363,6 +1597,19 @@ function EditSessionModal({
               );
             })}
           </ScrollView>
+
+          {isNew && !isRestDay && (
+            <View style={eS.toolsRow}>
+              <View style={eS.timerPill}>
+                <Ionicons name="time-outline" size={13} color={colors.accent} />
+                <Text style={eS.timerPillText}>{fmtElapsed(sessionElapsedSec)}</Text>
+              </View>
+              <TouchableOpacity style={eS.copyLastBtn} onPress={() => copyLastSession(name)}>
+                <Ionicons name="copy-outline" size={13} color={colors.purple} />
+                <Text style={eS.copyLastBtnText}>Copy last session</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Date + Type */}
           <View style={eS.fieldRow}>
@@ -1476,6 +1723,36 @@ function EditSessionModal({
                                 <Text style={eS.swapBtnText}>{hasAccess ? '🔄' : '🔒'}</Text>
                               </TouchableOpacity>
                             )}
+                            <TouchableOpacity
+                              style={[eS.swapBtn, ex.group_id && { backgroundColor: colors.purple + '33' }]}
+                              onPress={() => hasAccess ? toggleExerciseGroup(exIdx) : onOpenToolsPaywall?.()}
+                            >
+                              <Text style={eS.swapBtnText}>{hasAccess ? '🔗' : '🔒'}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+
+                        {!isCardio && !!ex.name.trim() && (() => {
+                          const trend = getExerciseTopSetTrend(allSessions, ex.name);
+                          if (trend.length < 2) return null;
+                          return hasAccess ? (
+                            <View style={eS.trendRow}>
+                              <Text style={eS.trendLabel}>STRENGTH TREND</Text>
+                              <Sparkline data={trend} color={colors.accent} width={70} height={24} />
+                              <Text style={eS.trendVal}>{trend[trend.length - 1]}kg</Text>
+                            </View>
+                          ) : (
+                            <TouchableOpacity onPress={() => onOpenToolsPaywall?.()} style={eS.trendRow}>
+                              <Text style={eS.trendLabel}>🔒 PRO: strength trend</Text>
+                            </TouchableOpacity>
+                          );
+                        })()}
+
+                        {ex.group_id && (
+                          <View style={eS.groupHint}>
+                            <Text style={eS.groupHintText}>
+                              🔗 Grouped — rest timer waits until the last exercise in this group
+                            </Text>
                           </View>
                         )}
 
@@ -1629,6 +1906,8 @@ function EditSessionModal({
                           (ex.sets ?? []).map((s, sIdx) => {
                             const plates = calcPlates(parseFloat(s.weight_kg));
                             const autoReg = hasAccess && sIdx > 0 ? suggestAutoReg(ex.sets[sIdx - 1]) : null;
+                            const pr = getSetPR(ex.name, s.weight_kg, s.reps);
+                            const oneRM = hasAccess ? estimate1RM(s.weight_kg, s.reps) : null;
                             return (
                               <View key={s._key}>
                                 <View style={eS.setRow}>
@@ -1668,6 +1947,21 @@ function EditSessionModal({
                                 {autoReg && (
                                   <Text style={eS.autoRegText}>⚙️ Auto-reg suggests {autoReg.weight}kg — {autoReg.note}</Text>
                                 )}
+                                {oneRM && (
+                                  <Text style={eS.oneRmText}>💪 Est. 1RM: {oneRM}kg</Text>
+                                )}
+                                {!hasAccess && s.weight_kg && s.reps && (
+                                  <TouchableOpacity onPress={() => onOpenToolsPaywall?.()}>
+                                    <Text style={eS.oneRmTextLocked}>🔒 PRO: see estimated 1RM</Text>
+                                  </TouchableOpacity>
+                                )}
+                                {pr && (
+                                  <View style={eS.prBanner}>
+                                    <Text style={eS.prBannerText}>
+                                      🎉 New PR! {pr.type === 'weight' ? 'Heaviest weight yet' : 'Best volume yet'}
+                                    </Text>
+                                  </View>
+                                )}
                               </View>
                             );
                           })
@@ -1677,12 +1971,17 @@ function EditSessionModal({
                           <TouchableOpacity style={[eS.addSetBtn, { flex: 1 }]} onPress={() => addSet(exIdx)}>
                             <Text style={eS.addSetText}>{isCardio ? '+ Add Entry' : '+ Add Set'}</Text>
                           </TouchableOpacity>
-                          {!isCardio && (
-                            <TouchableOpacity style={eS.restBtn} onPress={() => startRestTimer(exIdx, 90)}>
-                              <Ionicons name="timer-outline" size={14} color={colors.blue} />
-                              <Text style={eS.restBtnText}>90s Rest</Text>
-                            </TouchableOpacity>
-                          )}
+                          {!isCardio && (() => {
+                            // In a superset, the rest timer only fires once the last exercise in the group is reached
+                            const isLastInGroup = !ex.group_id || !exercises.some((other, oi) => oi > exIdx && other.group_id === ex.group_id);
+                            if (!isLastInGroup) return null;
+                            return (
+                              <TouchableOpacity style={eS.restBtn} onPress={() => startRestTimer(exIdx, 90)}>
+                                <Ionicons name="timer-outline" size={14} color={colors.blue} />
+                                <Text style={eS.restBtnText}>90s Rest</Text>
+                              </TouchableOpacity>
+                            );
+                          })()}
                         </View>
                       </View>
                     )}
@@ -1695,13 +1994,21 @@ function EditSessionModal({
                   <Text style={eS.templateRowLabel}>📋 LOAD TEMPLATE {!hasAccess && '— PRO'}</Text>
                   {hasAccess ? (
                     templates.length > 0 ? (
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                        {templates.map(t => (
-                          <TouchableOpacity key={t.id} style={eS.templateChip} onPress={() => loadTemplate(t)}>
-                            <Text style={eS.templateChipText}>{t.name}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
+                      <>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                          {templates.map(t => (
+                            <TouchableOpacity
+                              key={t.id}
+                              style={eS.templateChip}
+                              onPress={() => loadTemplate(t)}
+                              onLongPress={() => setProgramTemplate(t)}
+                            >
+                              <Text style={eS.templateChipText}>{t.name}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                        <Text style={eS.programHintText}>Long-press a template to build a multi-week program</Text>
+                      </>
                     ) : (
                       <Text style={eS.templateEmptyText}>Save a session below to build your first template.</Text>
                     )
@@ -1709,6 +2016,40 @@ function EditSessionModal({
                     <TouchableOpacity style={eS.templateChip} onPress={onOpenToolsPaywall}>
                       <Text style={eS.templateChipText}>🔒 Unlock saved templates</Text>
                     </TouchableOpacity>
+                  )}
+
+                  {hasAccess && programTemplate && (
+                    <View style={eS.programBox}>
+                      <Text style={eS.programBoxTitle}>📅 Repeat "{programTemplate.name}" weekly</Text>
+                      <View style={eS.programWeekRow}>
+                        {[2, 4, 6, 8, 12].map(w => (
+                          <TouchableOpacity
+                            key={w}
+                            style={[eS.programWeekChip, programWeeks === w && eS.programWeekChipActive]}
+                            onPress={() => setProgramWeeks(w)}
+                          >
+                            <Text style={[eS.programWeekChipText, programWeeks === w && eS.programWeekChipTextActive]}>{w}w</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                        <TouchableOpacity
+                          style={[eS.programCreateBtn, isRepeatingTemplate && { opacity: 0.6 }]}
+                          disabled={isRepeatingTemplate}
+                          onPress={() => {
+                            onRepeatTemplate?.({ template: programTemplate, weeks: programWeeks, startDate: date || new Date() });
+                            setProgramTemplate(null);
+                          }}
+                        >
+                          <Text style={eS.programCreateBtnText}>
+                            {isRepeatingTemplate ? 'Creating…' : `Create ${programWeeks} sessions`}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={eS.programCancelBtn} onPress={() => setProgramTemplate(null)}>
+                          <Text style={eS.programCancelBtnText}>Cancel</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   )}
                 </View>
               )}
@@ -1731,6 +2072,20 @@ function EditSessionModal({
               )}
               <View style={{ height: 20 }} />
             </ScrollView>
+          )}
+
+          {isNew && !isRestDay && (
+            <View style={eS.durationOverrideRow}>
+              <Text style={eS.durationOverrideLabel}>DURATION (MIN)</Text>
+              <TextInput
+                style={eS.durationOverrideInput}
+                value={manualDuration}
+                onChangeText={v => { setManualDuration(v); setDurationManuallySet(v.trim() !== ''); }}
+                keyboardType="numeric"
+                placeholder={String(Math.round(sessionElapsedSec / 60))}
+                placeholderTextColor={colors.textDim}
+              />
+            </View>
           )}
 
           {/* Bottom buttons */}
@@ -1826,9 +2181,19 @@ export default function WorkoutScreen() {
     onError: (e) => Alert.alert('Error', e.message),
   });
 
+  const repeatTemplateMut = useMutation({
+    mutationFn: ({ template, weeks, startDate }) => repeatTemplateForWeeks(user.id, template, weeks, startDate),
+    onSuccess: (_, { weeks }) => {
+      qc.invalidateQueries(['sessions', user.id]);
+      Alert.alert('Program scheduled', `Created ${weeks} future session${weeks === 1 ? '' : 's'} from this template.`);
+    },
+    onError: (e) => Alert.alert('Error', e.message),
+  });
+
   const pbMap       = useMemo(() => computePBMap(sessions), [sessions]);
   const recentTypes = useMemo(() => getRecentTypes(sessions), [sessions]);
   const deload       = useMemo(() => detectDeload(sessions), [sessions]);
+  const overtraining = useMemo(() => detectOvertraining(sessions), [sessions]);
   const muscleVolume = useMemo(() => getMuscleVolumeThisWeek(sessions), [sessions]);
 
   const heatmapData = useMemo(() => {
@@ -1998,6 +2363,30 @@ export default function WorkoutScreen() {
       busiestDow,
     };
   }, [sessions, activeDateSet, gymDateSet, today, weeklyGoal]);
+
+  // Weekly-goal streak — distinct from the day-based gym streak above: counts
+  // consecutive completed weeks (Mon-Sun) where active-session count >= weeklyGoal.
+  const weekStreak = useMemo(() => {
+    const weekMeetsGoal = (offset) => {
+      const [monStr, sunStr] = getWeekRange(today, offset);
+      const count = sessions.filter(s =>
+        getSessionType(s.notes) !== 'rest' && s.date >= monStr && s.date <= sunStr
+      ).length;
+      return count >= weeklyGoal;
+    };
+    let current = 0;
+    if (weekMeetsGoal(0)) current++;
+    for (let w = 1; w <= 104; w++) {
+      if (weekMeetsGoal(w)) current++;
+      else break;
+    }
+    let longest = 0, run = 0;
+    for (let w = 104; w >= 0; w--) {
+      if (weekMeetsGoal(w)) { run++; longest = Math.max(longest, run); }
+      else run = 0;
+    }
+    return { current, longest: Math.max(longest, current) };
+  }, [sessions, weeklyGoal, today]);
 
   const insights = useMemo(() => {
     const out = [];
@@ -2209,13 +2598,20 @@ export default function WorkoutScreen() {
                   </View>
                   <Text style={s.heroSub}>this month · {heroStats.totalVol.toLocaleString()} kg total volume</Text>
                 </View>
-                <TouchableOpacity
-                  style={s.goalPillBtn}
-                  onPress={() => { setWorkoutGoalInput(weeklyGoal); setShowWorkoutGoalSheet(true); }}
-                >
-                  <Text style={s.goalPillBtnText}>🎯 {weeklyGoal}/wk</Text>
-                  <Ionicons name="pencil" size={11} color={colors.accent} />
-                </TouchableOpacity>
+                <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                  <TouchableOpacity
+                    style={s.goalPillBtn}
+                    onPress={() => { setWorkoutGoalInput(weeklyGoal); setShowWorkoutGoalSheet(true); }}
+                  >
+                    <Text style={s.goalPillBtnText}>🎯 {weeklyGoal}/wk</Text>
+                    <Ionicons name="pencil" size={11} color={colors.accent} />
+                  </TouchableOpacity>
+                  {weekStreak.current > 0 && (
+                    <View style={s.weekStreakPill}>
+                      <Text style={s.weekStreakPillText}>🔥 {weekStreak.current}wk streak</Text>
+                    </View>
+                  )}
+                </View>
               </View>
               <View style={s.tileRow}>
                 <View style={s.tile}>
@@ -2393,21 +2789,31 @@ export default function WorkoutScreen() {
                       </Text>
                     </View>
                   )}
-                  {muscleVolume.length > 0 ? (
-                    <View style={s.muscleBarList}>
-                      {muscleVolume.map(({ muscle, vol }) => {
-                        const max = muscleVolume[0].vol || 1;
-                        return (
-                          <View key={muscle} style={s.muscleBarRow}>
-                            <Text style={s.muscleBarLabel}>{muscle}</Text>
-                            <View style={s.muscleBarTrack}>
-                              <View style={[s.muscleBarFill, { width: `${Math.max(6, (vol / max) * 100)}%` }]} />
-                            </View>
-                            <Text style={s.muscleBarVal}>{vol.toLocaleString()}kg</Text>
-                          </View>
-                        );
-                      })}
+                  {overtraining && (
+                    <View style={s.deloadBanner}>
+                      <Text style={s.deloadBannerText}>
+                        🔥 {overtraining.muscle} trained {overtraining.days} days in a row with no rest — risk of overtraining.
+                      </Text>
                     </View>
+                  )}
+                  {muscleVolume.length > 0 ? (
+                    <>
+                      <BodyHeatmap data={muscleVolume} color={colors.purple} width={180} height={290} />
+                      <View style={[s.muscleBarList, { marginTop: 14 }]}>
+                        {muscleVolume.map(({ muscle, vol }) => {
+                          const max = muscleVolume[0].vol || 1;
+                          return (
+                            <View key={muscle} style={s.muscleBarRow}>
+                              <Text style={s.muscleBarLabel}>{muscle}</Text>
+                              <View style={s.muscleBarTrack}>
+                                <View style={[s.muscleBarFill, { width: `${Math.max(6, (vol / max) * 100)}%` }]} />
+                              </View>
+                              <Text style={s.muscleBarVal}>{vol.toLocaleString()}kg</Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </>
                   ) : (
                     <Text style={s.lockedHint}>Log a gym session this week to see your muscle group balance.</Text>
                   )}
@@ -2548,6 +2954,8 @@ export default function WorkoutScreen() {
         hasAccess={hasAccess}
         templates={templates}
         onSaveTemplate={(params) => saveTemplateMut.mutate(params)}
+        onRepeatTemplate={(params) => repeatTemplateMut.mutate(params)}
+        isRepeatingTemplate={repeatTemplateMut.isPending}
         onOpenToolsPaywall={() => setShowToolsPaywall(true)}
       />
 
@@ -2610,6 +3018,11 @@ const createS = (colors) => StyleSheet.create({
     borderWidth: 1, borderStyle: 'dashed', borderColor: colors.accent + '66',
   },
   goalPillBtnText: { fontSize: 13, fontWeight: weight.bold, color: colors.accent },
+  weekStreakPill: {
+    backgroundColor: colors.purple + '1a', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: colors.purple + '55',
+  },
+  weekStreakPillText: { fontSize: 11, fontWeight: weight.bold, color: colors.purple },
   goalSheet: {},
   goalSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   goalSheetTitle: { fontSize: 15, fontWeight: weight.bold, color: colors.text, letterSpacing: 0.5 },
@@ -2877,6 +3290,32 @@ const createES = (colors) => StyleSheet.create({
   trackLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 2, marginTop: 4 },
   closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.card, marginTop: 2 },
 
+  toolsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginTop: 10, alignItems: 'center' },
+  timerPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.accent + '14', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+    borderWidth: 1, borderColor: colors.accent + '55',
+  },
+  timerPillText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
+  copyLastBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.purple + '14', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+    borderWidth: 1, borderColor: colors.purple + '55',
+  },
+  copyLastBtnText: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.purple },
+  durationOverrideRow: { paddingHorizontal: 16, marginTop: 6, marginBottom: 4 },
+  durationOverrideLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginBottom: 4 },
+  durationOverrideInput: {
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 9, color: colors.text, fontSize: typography.sm, maxWidth: 120,
+  },
+  prBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.accent + '1a', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
+    marginLeft: 28, marginTop: -4, marginBottom: 6, alignSelf: 'flex-start',
+  },
+  prBannerText: { fontSize: 10, fontWeight: weight.bold, color: colors.accent },
+
   typeScroll: { maxHeight: 52 },
   typeRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center', paddingVertical: 8 },
   typeChip: {
@@ -3031,6 +3470,17 @@ const createES = (colors) => StyleSheet.create({
 
   plateText: { fontSize: 10, color: colors.textDim, marginTop: -4, marginBottom: 6, marginLeft: 28 },
   autoRegText: { fontSize: 10, color: colors.accent, marginTop: -4, marginBottom: 6, marginLeft: 28 },
+  oneRmText: { fontSize: 10, color: colors.purple, marginTop: -4, marginBottom: 6, marginLeft: 28 },
+  oneRmTextLocked: { fontSize: 10, color: colors.textDim, marginTop: -4, marginBottom: 6, marginLeft: 28, textDecorationLine: 'underline' },
+
+  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  trendLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 },
+  trendVal: { fontSize: 11, fontWeight: weight.semibold, color: colors.accent },
+  groupHint: {
+    backgroundColor: colors.purple + '14', borderWidth: 1, borderColor: colors.purple + '55',
+    borderRadius: 8, padding: 8, marginBottom: 10,
+  },
+  groupHintText: { fontSize: 11, color: colors.purple, fontWeight: weight.semibold },
 
   addSetRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
   restBtn: {
@@ -3047,6 +3497,25 @@ const createES = (colors) => StyleSheet.create({
   },
   templateChipText: { fontSize: typography.xs, color: colors.purple, fontWeight: weight.semibold },
   templateEmptyText: { fontSize: typography.xs, color: colors.textDim },
+  programHintText: { fontSize: 10, color: colors.textDim, marginTop: 6 },
+  programBox: {
+    backgroundColor: colors.purple + '10', borderWidth: 1, borderColor: colors.purple + '40',
+    borderRadius: 12, padding: 12, marginTop: 10,
+  },
+  programBoxTitle: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.text, marginBottom: 10 },
+  programWeekRow: { flexDirection: 'row', gap: 6 },
+  programWeekChip: {
+    flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 8, backgroundColor: colors.dim,
+  },
+  programWeekChipActive: { backgroundColor: colors.purple },
+  programWeekChipText: { fontSize: 11, fontWeight: weight.bold, color: colors.textMuted },
+  programWeekChipTextActive: { color: '#fff' },
+  programCreateBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10, backgroundColor: colors.purple,
+  },
+  programCreateBtnText: { fontSize: typography.xs, fontWeight: weight.bold, color: '#fff' },
+  programCancelBtn: { alignItems: 'center', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, backgroundColor: colors.dim },
+  programCancelBtnText: { fontSize: typography.xs, fontWeight: weight.semibold, color: colors.textMuted },
 
   saveTemplateBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
