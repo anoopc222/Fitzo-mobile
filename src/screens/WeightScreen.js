@@ -100,13 +100,14 @@ async function deleteWeightLog(id) {
 }
 
 // ─── Weight Heatmap — ports _renderWeightHeatmap (quartile-relative-to-month) ─
-function WeightHeatmap({ year, month, logsByDate, colors, unit }) {
+function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true, onLockedPress }) {
   const SCREEN_W = Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayStr = localDateStr(new Date());
+  const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
 
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
   const vals = Object.entries(logsByDate)
@@ -126,7 +127,8 @@ function WeightHeatmap({ year, month, logsByDate, colors, unit }) {
       const rel = (w - minW) / rangeW;
       if (rel < 0.25) lvl = 1; else if (rel < 0.5) lvl = 2; else if (rel < 0.75) lvl = 3; else lvl = 4;
     }
-    cells.push({ key: ds, day: d, w, lvl, isToday: ds === todayStr });
+    const locked = !hasAccess && ds < cutoffStr;
+    cells.push({ key: ds, day: d, w, lvl, isToday: ds === todayStr, locked });
   }
 
   const LVL_COLOR = {
@@ -149,6 +151,21 @@ function WeightHeatmap({ year, month, logsByDate, colors, unit }) {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {cells.map(cell => {
           if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
+          if (cell.locked) {
+            return (
+              <TouchableOpacity
+                key={cell.key}
+                onPress={onLockedPress}
+                style={[
+                  { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
+                  { width: cellSize, height: cellSize },
+                ]}
+              >
+                <Ionicons name="lock-closed" size={11} color={colors.textDim} />
+                <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim, marginTop: 1 }}>{cell.day}</Text>
+              </TouchableOpacity>
+            );
+          }
           return (
             <View
               key={cell.key}
@@ -760,7 +777,7 @@ export default function WeightScreen() {
                 </View>
               </View>
               <ProGate label="Monthly heatmap">
-                <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} />
+                <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={hasAccess} onLockedPress={() => setShowPaywall(true)} />
               </ProGate>
             </View>
 

@@ -99,13 +99,14 @@ async function deleteSleepLog(id) {
 }
 
 // ─── Sleep Heatmap — ports _renderSleepHeatmap (ratio-to-goal buckets) ──────
-function SleepHeatmap({ year, month, logsByDate, goal, colors }) {
+function SleepHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress }) {
   const SCREEN_W = Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayStr = localDateStr(new Date());
+  const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
 
   const cells = [];
   for (let i = 0; i < startDow; i++) cells.push({ key: `e${i}`, empty: true });
@@ -117,7 +118,8 @@ function SleepHeatmap({ year, month, logsByDate, goal, colors }) {
       const ratio = hrs / goal;
       if (ratio < 0.5) lvl = 1; else if (ratio < 0.75) lvl = 2; else if (ratio < 1.0) lvl = 3; else lvl = 4;
     }
-    cells.push({ key: ds, day: d, hrs, lvl, isToday: ds === todayStr });
+    const locked = !hasAccess && ds < cutoffStr;
+    cells.push({ key: ds, day: d, hrs, lvl, isToday: ds === todayStr, locked });
   }
 
   const LVL_COLOR = {
@@ -140,6 +142,21 @@ function SleepHeatmap({ year, month, logsByDate, goal, colors }) {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {cells.map(cell => {
           if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
+          if (cell.locked) {
+            return (
+              <TouchableOpacity
+                key={cell.key}
+                onPress={onLockedPress}
+                style={[
+                  { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
+                  { width: cellSize, height: cellSize },
+                ]}
+              >
+                <Ionicons name="lock-closed" size={11} color={colors.textDim} />
+                <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim, marginTop: 1 }}>{cell.day}</Text>
+              </TouchableOpacity>
+            );
+          }
           return (
             <View
               key={cell.key}
@@ -577,7 +594,7 @@ export default function SleepScreen() {
                     <Text style={styles.hmLegendLabel}>Great</Text>
                   </View>
                 </View>
-                <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} />
+                <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} hasAccess={hasAccess} onLockedPress={() => recoveryExport.setShowPaywall(true)} />
               </View>
             </ProGate>
 

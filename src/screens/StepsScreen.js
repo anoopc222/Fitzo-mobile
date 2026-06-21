@@ -18,6 +18,7 @@ import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import ProGate from '../components/ui/ProGate';
 import { useGatedExport } from '../hooks/useGatedExport';
+import { useSubscription } from '../context/SubscriptionContext';
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 // Steps km/kcal are derived on the fly (matches reference app: totalKm =
@@ -306,13 +307,14 @@ function DailyLogBar({ steps, goal, barMax, colors }) {
 }
 
 // ─── Monthly Heatmap — ports _renderStepsHeatmap bucket logic ───────────────
-function StepsHeatmap({ year, month, logsByDate, goal, colors }) {
+function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress }) {
   const SCREEN_W = Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayStr = localDateStr(new Date());
+  const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
 
   const cells = [];
   for (let i = 0; i < startDow; i++) cells.push({ key: `e${i}`, empty: true });
@@ -324,7 +326,8 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors }) {
       const pct = steps / goal;
       if (pct < 0.5) lvl = 1; else if (pct < 0.85) lvl = 2; else if (pct < 1) lvl = 3; else lvl = 4;
     }
-    cells.push({ key: ds, day: d, steps, lvl, isToday: ds === todayStr });
+    const locked = !hasAccess && ds < cutoffStr;
+    cells.push({ key: ds, day: d, steps, lvl, isToday: ds === todayStr, locked });
   }
 
   const LVL_COLOR = {
@@ -347,6 +350,21 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors }) {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {cells.map(cell => {
           if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
+          if (cell.locked) {
+            return (
+              <TouchableOpacity
+                key={cell.key}
+                onPress={onLockedPress}
+                style={[
+                  { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
+                  { width: cellSize, height: cellSize },
+                ]}
+              >
+                <Ionicons name="lock-closed" size={11} color={colors.textDim} />
+                <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim, marginTop: 1 }}>{cell.day}</Text>
+              </TouchableOpacity>
+            );
+          }
           return (
             <View
               key={cell.key}
@@ -375,6 +393,7 @@ export default function StepsScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const heroExport = useGatedExport();
+  const { hasAccess } = useSubscription();
 
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
@@ -710,7 +729,7 @@ export default function StepsScreen() {
                     <Text style={styles.hmLegendLabel}>More</Text>
                   </View>
                 </View>
-                <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} />
+                <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={hasAccess} onLockedPress={() => heroExport.setShowPaywall(true)} />
               </View>
             </ProGate>
 
