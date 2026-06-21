@@ -25,19 +25,28 @@ export function SubscriptionProvider({ children }) {
   const [customerInfo, setCustomerInfo] = useState(null);
   const [offerings, setOfferings] = useState(null);
   const [ready, setReady] = useState(false);
+  const [configured, setConfigured] = useState(false);
 
   useEffect(() => {
     const apiKey = Platform.OS === 'ios' ? REVENUECAT_API_KEYS.ios : REVENUECAT_API_KEYS.android;
-    Purchases.configure({ apiKey });
-    if (__DEV__) Purchases.setLogLevel('DEBUG');
+    try {
+      Purchases.configure({ apiKey });
+      if (__DEV__) Purchases.setLogLevel('DEBUG');
+      setConfigured(true);
+    } catch (e) {
+      // Placeholder/invalid key (e.g. before RevenueCat is set up, or running
+      // on web) — fall back to trial-only gating rather than crashing the app.
+      setReady(true);
+    }
   }, []);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!configured || !user?.id) return;
     Purchases.logIn(user.id).catch(() => {});
-  }, [user?.id]);
+  }, [configured, user?.id]);
 
   const refresh = useCallback(async () => {
+    if (!configured) return;
     try {
       const [info, offs] = await Promise.all([
         Purchases.getCustomerInfo(),
@@ -51,14 +60,15 @@ export function SubscriptionProvider({ children }) {
     } finally {
       setReady(true);
     }
-  }, []);
+  }, [configured]);
 
   useEffect(() => {
+    if (!configured) return;
     refresh();
     const listener = (info) => setCustomerInfo(info);
     Purchases.addCustomerInfoUpdateListener(listener);
     return () => Purchases.removeCustomerInfoUpdateListener(listener);
-  }, [refresh]);
+  }, [configured, refresh]);
 
   const isPro = !!customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID];
   const { isInTrial, trialDaysLeft, trialEndsAt } = trialInfo(user);
@@ -67,16 +77,18 @@ export function SubscriptionProvider({ children }) {
   const currentOffering = offerings?.all?.[DEFAULT_OFFERING_ID] ?? offerings?.current ?? null;
 
   const purchasePackage = useCallback(async (pkg) => {
+    if (!configured) throw new Error('Purchases are not available yet.');
     const { customerInfo: info } = await Purchases.purchasePackage(pkg);
     setCustomerInfo(info);
     return info;
-  }, []);
+  }, [configured]);
 
   const restorePurchases = useCallback(async () => {
+    if (!configured) throw new Error('Purchases are not available yet.');
     const info = await Purchases.restorePurchases();
     setCustomerInfo(info);
     return info;
-  }, []);
+  }, [configured]);
 
   return (
     <SubscriptionContext.Provider
