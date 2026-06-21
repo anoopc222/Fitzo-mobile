@@ -4,9 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { typography, weight } from '../theme/typography';
 
-const getSections = (colors) => [
+const getSections = (colors, isAdmin) => [
   {
     title: 'BODY & HEALTH',
     items: [
@@ -29,13 +30,20 @@ const getSections = (colors) => [
       { label: 'Settings',      icon: 'settings',    screen: 'Settings',     color: colors.textMuted },
     ],
   },
+  ...(isAdmin ? [{
+    title: 'ADMIN',
+    items: [
+      { label: 'Admin Dashboard', icon: 'shield-checkmark', screen: 'AdminDashboard', color: colors.purple },
+    ],
+  }] : []),
 ];
 
 export default function MoreScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { isAdmin } = useSubscription();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const SECTIONS = useMemo(() => getSections(colors), [colors]);
+  const SECTIONS = useMemo(() => getSections(colors, isAdmin), [colors, isAdmin]);
   const name    = user?.user_metadata?.full_name?.split(' ')[0] ?? 'there';
   const initial = (name[0] ?? 'F').toUpperCase();
 

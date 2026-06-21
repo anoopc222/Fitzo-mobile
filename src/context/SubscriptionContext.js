@@ -28,13 +28,24 @@ export function SubscriptionProvider({ children }) {
   const [ready, setReady] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
-  useEffect(() => {
-    if (!user?.id) { setIsAdmin(false); return; }
-    supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-      .then(({ data }) => setIsAdmin(!!data?.is_admin))
-      .catch(() => setIsAdmin(false));
+  const refreshAdminFlags = useCallback(() => {
+    if (!user?.id) { setIsAdmin(false); setIsSuperAdmin(false); return; }
+    supabase.from('profiles').select('is_admin, is_super_admin').eq('id', user.id).single()
+      .then(({ data }) => {
+        setIsAdmin(!!data?.is_admin);
+        setIsSuperAdmin(!!data?.is_super_admin);
+      })
+      .catch(() => { setIsAdmin(false); setIsSuperAdmin(false); });
   }, [user?.id]);
+
+  useEffect(() => { refreshAdminFlags(); }, [refreshAdminFlags]);
+
+  const setUserAdmin = useCallback(async (email, makeAdmin) => {
+    const { error } = await supabase.rpc('set_user_admin', { target_email: email, make_admin: makeAdmin });
+    if (error) throw error;
+  }, []);
 
   useEffect(() => {
     const apiKey = Platform.OS === 'ios' ? REVENUECAT_API_KEYS.ios : REVENUECAT_API_KEYS.android;
@@ -79,6 +90,21 @@ export function SubscriptionProvider({ children }) {
     return () => Purchases.removeCustomerInfoUpdateListener(listener);
   }, [configured, refresh]);
 
+  // App-side mirror of RevenueCat status into a queryable table, so the admin
+  // dashboard has something to show. This only reflects what this device has
+  // seen — a real cross-user feed would need RevenueCat webhooks server-side.
+  useEffect(() => {
+    if (!user?.id || !customerInfo) return;
+    const entitlement = customerInfo.entitlements?.active?.[PRO_ENTITLEMENT_ID];
+    supabase.from('subscriptions').upsert({
+      user_id: user.id,
+      status: entitlement ? 'active' : 'none',
+      plan_id: entitlement?.productIdentifier ?? null,
+      store: entitlement?.store ?? null,
+      period_end: entitlement?.expirationDate ?? null,
+    }).then(() => {}).catch(() => {});
+  }, [user?.id, customerInfo]);
+
   const isPro = isAdmin || !!customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID];
   const { isInTrial, trialDaysLeft, trialEndsAt } = trialInfo(user);
   const hasAccess = isAdmin || isPro || isInTrial;
@@ -89,8 +115,12 @@ export function SubscriptionProvider({ children }) {
     if (!configured) throw new Error('Purchases are not available yet.');
     const { customerInfo: info } = await Purchases.purchasePackage(pkg);
     setCustomerInfo(info);
+    if (user?.id && pkg?.product?.priceString) {
+      supabase.from('subscriptions').update({ price_string: pkg.product.priceString }).eq('user_id', user.id)
+        .then(() => {}).catch(() => {});
+    }
     return info;
-  }, [configured]);
+  }, [configured, user?.id]);
 
   const restorePurchases = useCallback(async () => {
     if (!configured) throw new Error('Purchases are not available yet.');
@@ -104,6 +134,9 @@ export function SubscriptionProvider({ children }) {
       value={{
         ready,
         isAdmin,
+        isSuperAdmin,
+        setUserAdmin,
+        refreshAdminFlags,
         isPro,
         isInTrial,
         trialDaysLeft,
