@@ -1260,240 +1260,214 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* ── Pro Goal Forecast ───────────────────────────────── */}
-            {hasAccess ? (
-              data?.goalForecast && (
-                <View style={styles.forecastCard}>
-                  <View style={styles.forecastHeader}>
-                    <Ionicons name="rocket-outline" size={15} color={colors.accent} />
-                    <Text style={styles.forecastTitle}>GOAL FORECAST</Text>
-                    <View style={styles.proBadge}>
-                      <Text style={styles.proBadgeText}>PRO</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.forecastHeadline}>
-                    ~{data.goalForecast.daysToGoal} days to your goal
-                  </Text>
-                  <Text style={styles.forecastSub}>
-                    Projected {data.goalForecast.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ·
-                    {' '}{Math.abs(data.goalForecast.weeklyPaceKg)}kg/wk pace · {data.goalForecast.kgRemaining}kg to go
-                  </Text>
-                </View>
-              )
-            ) : (
-              <TouchableOpacity
-                style={styles.forecastCard}
-                activeOpacity={0.85}
-                onPress={() => setShowForecastPaywall(true)}
-              >
-                <View style={styles.forecastHeader}>
-                  <Ionicons name="rocket-outline" size={15} color={colors.accent} />
-                  <Text style={styles.forecastTitle}>GOAL FORECAST</Text>
-                  <View style={styles.proBadge}>
-                    <Text style={styles.proBadgeText}>PRO</Text>
-                  </View>
-                </View>
-                <Text style={styles.forecastHeadline}>~●● days to your goal</Text>
-                <Text style={styles.forecastSub}>
-                  Unlock your personalized projection — exact date, weekly pace, and more 🔒
-                </Text>
-              </TouchableOpacity>
-            )}
+            {/* ── Pro Insights Hub (consolidated) ─────────────────── */}
+            <View style={styles.insightsHubCard}>
+              <View style={styles.insightsHubHeader}>
+                <Ionicons name="sparkles-outline" size={14} color={colors.accent} />
+                <Text style={styles.insightsHubHeaderText}>PRO INSIGHTS</Text>
+              </View>
 
-            {/* ── Pro Strength PR Watch ───────────────────────────── */}
-            {hasAccess ? (
-              data?.prWatch && (
-                <View style={[styles.forecastCard, { borderColor: C_GREEN + '55' }]}>
-                  <View style={styles.forecastHeader}>
-                    <Ionicons name="barbell-outline" size={15} color={C_GREEN} />
-                    <Text style={styles.forecastTitle}>PR WATCH</Text>
-                    <View style={[styles.proBadge, { backgroundColor: C_GREEN }]}>
-                      <Text style={styles.proBadgeText}>PRO</Text>
+              {/* Goal Forecast */}
+              {(hasAccess ? !!data?.goalForecast : true) && (
+                <>
+                  <TouchableOpacity
+                    style={styles.insightsHubRow}
+                    activeOpacity={0.7}
+                    disabled={hasAccess}
+                    onPress={() => setShowForecastPaywall(true)}
+                  >
+                    <Ionicons name="rocket-outline" size={16} color={colors.accent} />
+                    <View style={styles.insightsHubBody}>
+                      <View style={styles.insightsHubTitleRow}>
+                        <Text style={[styles.insightsHubTitle, { color: colors.accent }]}>Goal forecast</Text>
+                        {!hasAccess && (
+                          <View style={styles.miniProBadge}>
+                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.goalForecast
+                          ? `Projected ${data.goalForecast.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${Math.abs(data.goalForecast.weeklyPaceKg)}kg/wk pace`
+                          : 'Unlock your personalized projection 🔒'}
+                      </Text>
                     </View>
-                  </View>
-                  <Text style={styles.forecastHeadline}>
-                    {data.prWatch.gapKg}kg from a new {data.prWatch.exercise} PR
-                  </Text>
-                  <Text style={styles.forecastSub}>
-                    Recent best {data.prWatch.recentKg}kg · all-time best {data.prWatch.prKg}kg — one good session away 💪
-                  </Text>
-                </View>
-              )
-            ) : (
-              <TouchableOpacity
-                style={[styles.forecastCard, { borderColor: C_GREEN + '55' }]}
-                activeOpacity={0.85}
-                onPress={() => setShowProTeaserPaywall(true)}
-              >
-                <View style={styles.forecastHeader}>
-                  <Ionicons name="barbell-outline" size={15} color={C_GREEN} />
-                  <Text style={styles.forecastTitle}>PR WATCH</Text>
-                  <View style={[styles.proBadge, { backgroundColor: C_GREEN }]}>
-                    <Text style={styles.proBadgeText}>PRO</Text>
-                  </View>
-                </View>
-                <Text style={styles.forecastHeadline}>●●kg from a new PR</Text>
-                <Text style={styles.forecastSub}>
-                  See which lift you're closest to beating — and how close 🔒
-                </Text>
-              </TouchableOpacity>
-            )}
+                    {hasAccess && data?.goalForecast && (
+                      <Text style={styles.insightsHubVal}>~{data.goalForecast.daysToGoal}d to goal</Text>
+                    )}
+                  </TouchableOpacity>
+                  <View style={styles.overviewDivider} />
+                </>
+              )}
 
-            {/* ── Pro Recovery Score ──────────────────────────────── */}
-            {hasAccess ? (
-              data?.recoveryScore != null && (
-                <View style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}>
-                  <View style={styles.forecastHeader}>
-                    <Ionicons name="pulse-outline" size={15} color={C_SLEEP} />
-                    <Text style={styles.forecastTitle}>RECOVERY SCORE</Text>
-                    <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
-                      <Text style={styles.proBadgeText}>PRO</Text>
+              {/* PR Watch */}
+              {(hasAccess ? !!data?.prWatch : true) && (
+                <>
+                  <TouchableOpacity
+                    style={styles.insightsHubRow}
+                    activeOpacity={0.7}
+                    disabled={hasAccess}
+                    onPress={() => setShowProTeaserPaywall(true)}
+                  >
+                    <Ionicons name="barbell-outline" size={16} color={C_GREEN} />
+                    <View style={styles.insightsHubBody}>
+                      <View style={styles.insightsHubTitleRow}>
+                        <Text style={[styles.insightsHubTitle, { color: C_GREEN }]}>PR watch</Text>
+                        {!hasAccess && (
+                          <View style={[styles.miniProBadge, { backgroundColor: C_GREEN }]}>
+                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.prWatch
+                          ? `${data.prWatch.exercise} · best ${data.prWatch.prKg}kg`
+                          : "See which lift you're closest to beating 🔒"}
+                      </Text>
                     </View>
-                  </View>
-                  <Text style={styles.forecastHeadline}>{data.recoveryScore}% recovered</Text>
-                  <Text style={styles.forecastSub}>
-                    {data.recoveryScore >= 80 ? 'Primed to push hard today 🚀'
-                      : data.recoveryScore >= 50 ? 'Moderate load — train smart today'
-                      : 'Low recovery — consider an easier day'}
-                  </Text>
-                </View>
-              )
-            ) : (
-              <TouchableOpacity
-                style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}
-                activeOpacity={0.85}
-                onPress={() => setShowProTeaserPaywall(true)}
-              >
-                <View style={styles.forecastHeader}>
-                  <Ionicons name="pulse-outline" size={15} color={C_SLEEP} />
-                  <Text style={styles.forecastTitle}>RECOVERY SCORE</Text>
-                  <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
-                    <Text style={styles.proBadgeText}>PRO</Text>
-                  </View>
-                </View>
-                <Text style={styles.forecastHeadline}>●●% recovered</Text>
-                <Text style={styles.forecastSub}>
-                  Daily readiness score from your sleep — know when to push vs. rest 🔒
-                </Text>
-              </TouchableOpacity>
-            )}
+                    {hasAccess && data?.prWatch && (
+                      <Text style={styles.insightsHubVal}>{data.prWatch.gapKg}kg from PR</Text>
+                    )}
+                  </TouchableOpacity>
+                  <View style={styles.overviewDivider} />
+                </>
+              )}
 
-            {/* ── Pro Streak Record ───────────────────────────────── */}
-            {hasAccess ? (
-              data?.longestStreak > 0 && (
-                <View style={[styles.forecastCard, { borderColor: C_STEPS + '55' }]}>
-                  <View style={styles.forecastHeader}>
-                    <Ionicons name="flame-outline" size={15} color={C_STEPS} />
-                    <Text style={styles.forecastTitle}>STREAK RECORD</Text>
-                    <View style={[styles.proBadge, { backgroundColor: C_STEPS }]}>
-                      <Text style={styles.proBadgeText}>PRO</Text>
+              {/* Recovery Score */}
+              {(hasAccess ? data?.recoveryScore != null : true) && (
+                <>
+                  <TouchableOpacity
+                    style={styles.insightsHubRow}
+                    activeOpacity={0.7}
+                    disabled={hasAccess}
+                    onPress={() => setShowProTeaserPaywall(true)}
+                  >
+                    <Ionicons name="pulse-outline" size={16} color={C_SLEEP} />
+                    <View style={styles.insightsHubBody}>
+                      <View style={styles.insightsHubTitleRow}>
+                        <Text style={[styles.insightsHubTitle, { color: C_SLEEP }]}>Recovery score</Text>
+                        {!hasAccess && (
+                          <View style={[styles.miniProBadge, { backgroundColor: C_SLEEP }]}>
+                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.recoveryScore != null
+                          ? (data.recoveryScore >= 80 ? 'Primed to push hard today 🚀'
+                            : data.recoveryScore >= 50 ? 'Moderate load — train smart'
+                            : 'Low recovery — consider an easier day')
+                          : 'Daily readiness from your sleep 🔒'}
+                      </Text>
                     </View>
-                  </View>
-                  <Text style={styles.forecastHeadline}>
-                    {data.streak} / {data.longestStreak} day record
-                  </Text>
-                  <Text style={styles.forecastSub}>
-                    {data.streak >= data.longestStreak
-                      ? "You're at your personal best — keep it alive! 🔥"
-                      : `${data.longestStreak - data.streak} more day${data.longestStreak - data.streak === 1 ? '' : 's'} to tie your record`}
-                  </Text>
-                </View>
-              )
-            ) : (
-              <TouchableOpacity
-                style={[styles.forecastCard, { borderColor: C_STEPS + '55' }]}
-                activeOpacity={0.85}
-                onPress={() => setShowProTeaserPaywall(true)}
-              >
-                <View style={styles.forecastHeader}>
-                  <Ionicons name="flame-outline" size={15} color={C_STEPS} />
-                  <Text style={styles.forecastTitle}>STREAK RECORD</Text>
-                  <View style={[styles.proBadge, { backgroundColor: C_STEPS }]}>
-                    <Text style={styles.proBadgeText}>PRO</Text>
-                  </View>
-                </View>
-                <Text style={styles.forecastHeadline}>●● / ●● day record</Text>
-                <Text style={styles.forecastSub}>
-                  Track your best-ever streak and how close you are to beating it 🔒
-                </Text>
-              </TouchableOpacity>
-            )}
+                    {hasAccess && data?.recoveryScore != null && (
+                      <Text style={styles.insightsHubVal}>{data.recoveryScore}% recovered</Text>
+                    )}
+                  </TouchableOpacity>
+                  <View style={styles.overviewDivider} />
+                </>
+              )}
 
-            {/* ── Pro True Maintenance Calories ───────────────────── */}
-            {hasAccess ? (
-              data?.calorieInsight && (
-                <View style={[styles.forecastCard, { borderColor: C_KCAL + '55' }]}>
-                  <View style={styles.forecastHeader}>
-                    <Ionicons name="flask-outline" size={15} color={C_KCAL} />
-                    <Text style={styles.forecastTitle}>TRUE MAINTENANCE</Text>
-                    <View style={[styles.proBadge, { backgroundColor: C_KCAL }]}>
-                      <Text style={styles.proBadgeText}>PRO</Text>
+              {/* Streak Record */}
+              {(hasAccess ? data?.longestStreak > 0 : true) && (
+                <>
+                  <TouchableOpacity
+                    style={styles.insightsHubRow}
+                    activeOpacity={0.7}
+                    disabled={hasAccess}
+                    onPress={() => setShowProTeaserPaywall(true)}
+                  >
+                    <Ionicons name="flame-outline" size={16} color={C_STEPS} />
+                    <View style={styles.insightsHubBody}>
+                      <View style={styles.insightsHubTitleRow}>
+                        <Text style={[styles.insightsHubTitle, { color: C_STEPS }]}>Streak record</Text>
+                        {!hasAccess && (
+                          <View style={[styles.miniProBadge, { backgroundColor: C_STEPS }]}>
+                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.longestStreak > 0
+                          ? (data.streak >= data.longestStreak
+                            ? "Personal best — keep it alive! 🔥"
+                            : `${data.longestStreak - data.streak} more day${data.longestStreak - data.streak === 1 ? '' : 's'} to tie record`)
+                          : 'Track your best-ever streak 🔒'}
+                      </Text>
                     </View>
-                  </View>
-                  <Text style={styles.forecastHeadline}>~{data.calorieInsight.trueMaintenance} kcal/day</Text>
-                  <Text style={styles.forecastSub}>
-                    Based on your actual intake + weight trend{data.calorieInsight.diffVsTarget != null
-                      ? ` — ${Math.abs(data.calorieInsight.diffVsTarget)} kcal ${data.calorieInsight.diffVsTarget > 0 ? 'higher' : 'lower'} than your set target`
-                      : ''}
-                  </Text>
-                </View>
-              )
-            ) : (
-              <TouchableOpacity
-                style={[styles.forecastCard, { borderColor: C_KCAL + '55' }]}
-                activeOpacity={0.85}
-                onPress={() => setShowProTeaserPaywall(true)}
-              >
-                <View style={styles.forecastHeader}>
-                  <Ionicons name="flask-outline" size={15} color={C_KCAL} />
-                  <Text style={styles.forecastTitle}>TRUE MAINTENANCE</Text>
-                  <View style={[styles.proBadge, { backgroundColor: C_KCAL }]}>
-                    <Text style={styles.proBadgeText}>PRO</Text>
-                  </View>
-                </View>
-                <Text style={styles.forecastHeadline}>~●●●● kcal/day</Text>
-                <Text style={styles.forecastSub}>
-                  Your real maintenance calories, calculated from actual intake vs. weight trend — not a generic formula 🔒
-                </Text>
-              </TouchableOpacity>
-            )}
+                    {hasAccess && data?.longestStreak > 0 && (
+                      <Text style={styles.insightsHubVal}>{data.streak} / {data.longestStreak}d</Text>
+                    )}
+                  </TouchableOpacity>
+                  <View style={styles.overviewDivider} />
+                </>
+              )}
 
-            {/* ── Pro Sleep Debt Tracker ──────────────────────────── */}
-            {hasAccess ? (
-              data?.sleepDebt && (
-                <View style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}>
-                  <View style={styles.forecastHeader}>
-                    <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
-                    <Text style={styles.forecastTitle}>SLEEP DEBT</Text>
-                    <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
-                      <Text style={styles.proBadgeText}>PRO</Text>
+              {/* True Maintenance */}
+              {(hasAccess ? !!data?.calorieInsight : true) && (
+                <>
+                  <TouchableOpacity
+                    style={styles.insightsHubRow}
+                    activeOpacity={0.7}
+                    disabled={hasAccess}
+                    onPress={() => setShowProTeaserPaywall(true)}
+                  >
+                    <Ionicons name="flask-outline" size={16} color={C_KCAL} />
+                    <View style={styles.insightsHubBody}>
+                      <View style={styles.insightsHubTitleRow}>
+                        <Text style={[styles.insightsHubTitle, { color: C_KCAL }]}>True maintenance</Text>
+                        {!hasAccess && (
+                          <View style={[styles.miniProBadge, { backgroundColor: C_KCAL }]}>
+                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.calorieInsight
+                          ? `Based on actual intake + weight trend${data.calorieInsight.diffVsTarget != null
+                              ? ` — ${Math.abs(data.calorieInsight.diffVsTarget)} kcal ${data.calorieInsight.diffVsTarget > 0 ? 'higher' : 'lower'} than target`
+                              : ''}`
+                          : 'Your real maintenance calories 🔒'}
+                      </Text>
                     </View>
+                    {hasAccess && data?.calorieInsight && (
+                      <Text style={styles.insightsHubVal}>~{data.calorieInsight.trueMaintenance} kcal</Text>
+                    )}
+                  </TouchableOpacity>
+                  <View style={styles.overviewDivider} />
+                </>
+              )}
+
+              {/* Sleep Debt */}
+              {(hasAccess ? !!data?.sleepDebt : true) && (
+                <TouchableOpacity
+                  style={styles.insightsHubRow}
+                  activeOpacity={0.7}
+                  disabled={hasAccess}
+                  onPress={() => setShowProTeaserPaywall(true)}
+                >
+                  <Ionicons name="moon-outline" size={16} color={C_SLEEP} />
+                  <View style={styles.insightsHubBody}>
+                    <View style={styles.insightsHubTitleRow}>
+                      <Text style={[styles.insightsHubTitle, { color: C_SLEEP }]}>Sleep debt</Text>
+                      {!hasAccess && (
+                        <View style={[styles.miniProBadge, { backgroundColor: C_SLEEP }]}>
+                          <Text style={styles.miniProBadgeText}>PRO</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.insightsHubSub} numberOfLines={2}>
+                      {hasAccess && data?.sleepDebt
+                        ? `Over last ${data.sleepDebt.nights} nights · ~${data.sleepDebt.nightsToRecover} night${data.sleepDebt.nightsToRecover === 1 ? '' : 's'} to recover`
+                        : 'Your cumulative sleep debt 🔒'}
+                    </Text>
                   </View>
-                  <Text style={styles.forecastHeadline}>{data.sleepDebt.totalDebtHrs}h owed</Text>
-                  <Text style={styles.forecastSub}>
-                    Over your last {data.sleepDebt.nights} nights · ~{data.sleepDebt.nightsToRecover} night{data.sleepDebt.nightsToRecover === 1 ? '' : 's'} of +1h sleep to recover
-                  </Text>
-                </View>
-              )
-            ) : (
-              <TouchableOpacity
-                style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}
-                activeOpacity={0.85}
-                onPress={() => setShowProTeaserPaywall(true)}
-              >
-                <View style={styles.forecastHeader}>
-                  <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
-                  <Text style={styles.forecastTitle}>SLEEP DEBT</Text>
-                  <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
-                    <Text style={styles.proBadgeText}>PRO</Text>
-                  </View>
-                </View>
-                <Text style={styles.forecastHeadline}>●●h owed</Text>
-                <Text style={styles.forecastSub}>
-                  See your cumulative sleep debt and exactly how to pay it back 🔒
-                </Text>
-              </TouchableOpacity>
-            )}
+                  {hasAccess && data?.sleepDebt && (
+                    <Text style={styles.insightsHubVal}>{data.sleepDebt.totalDebtHrs}h owed</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
 
             {/* ── Actionable nudge cards ────────────────────────── */}
             {data?.daysSinceWeight != null && data.daysSinceWeight >= 2 && (
@@ -1900,6 +1874,21 @@ const createStyles = (colors) => StyleSheet.create({
   proBadgeText: { fontSize: 9, fontWeight: weight.black, color: colors.bg },
   forecastHeadline: { fontSize: 17, fontWeight: weight.black, color: colors.text, marginBottom: 4 },
   forecastSub: { fontSize: 11, color: colors.textMuted, lineHeight: 16 },
+  insightsHubCard: {
+    backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
+  },
+  insightsHubHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 2 },
+  insightsHubHeaderText: { fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 0.6, flex: 1 },
+  insightsHubRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11 },
+  insightsHubBody: { flex: 1 },
+  insightsHubTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  insightsHubTitle: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.6, textTransform: 'uppercase' },
+  insightsHubSub: { fontSize: 10.5, color: colors.textDim, marginTop: 2, fontFamily: fontFamily.body, lineHeight: 14 },
+  insightsHubVal: { fontSize: 14, fontFamily: fontFamily.bodyBold, color: colors.text, fontWeight: weight.semibold, maxWidth: 110, textAlign: 'right' },
+  miniProBadge: { backgroundColor: colors.accent, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1.5 },
+  miniProBadgeText: { fontSize: 7.5, fontWeight: weight.black, color: colors.bg },
   overviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   overviewIconWrap: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
   overviewBody: { flex: 1 },
