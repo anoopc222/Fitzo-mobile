@@ -2,16 +2,8 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { Platform } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { useAuth } from './AuthContext';
-import {
-  REVENUECAT_API_KEYS, PRO_ENTITLEMENT_ID, DEFAULT_OFFERING_ID, TRIAL_DAYS,
-  ADMIN_OVERRIDE_USER_IDS, ADMIN_OVERRIDE_EMAILS,
-} from '../config/subscription';
-
-function isAdminOverride(user) {
-  if (!user) return false;
-  if (ADMIN_OVERRIDE_USER_IDS.includes(user.id)) return true;
-  return !!user.email && ADMIN_OVERRIDE_EMAILS.includes(user.email.toLowerCase());
-}
+import { supabase } from '../lib/supabase';
+import { REVENUECAT_API_KEYS, PRO_ENTITLEMENT_ID, DEFAULT_OFFERING_ID, TRIAL_DAYS } from '../config/subscription';
 
 const SubscriptionContext = createContext(null);
 
@@ -35,6 +27,14 @@ export function SubscriptionProvider({ children }) {
   const [offerings, setOfferings] = useState(null);
   const [ready, setReady] = useState(false);
   const [configured, setConfigured] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) { setIsAdmin(false); return; }
+    supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+      .then(({ data }) => setIsAdmin(!!data?.is_admin))
+      .catch(() => setIsAdmin(false));
+  }, [user?.id]);
 
   useEffect(() => {
     const apiKey = Platform.OS === 'ios' ? REVENUECAT_API_KEYS.ios : REVENUECAT_API_KEYS.android;
@@ -79,7 +79,6 @@ export function SubscriptionProvider({ children }) {
     return () => Purchases.removeCustomerInfoUpdateListener(listener);
   }, [configured, refresh]);
 
-  const isAdmin = isAdminOverride(user);
   const isPro = isAdmin || !!customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID];
   const { isInTrial, trialDaysLeft, trialEndsAt } = trialInfo(user);
   const hasAccess = isAdmin || isPro || isInTrial;
