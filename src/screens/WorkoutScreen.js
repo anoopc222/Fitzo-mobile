@@ -1470,6 +1470,21 @@ export default function WorkoutScreen() {
   const pbMap       = useMemo(() => computePBMap(sessions), [sessions]);
   const recentTypes = useMemo(() => getRecentTypes(sessions), [sessions]);
 
+  const heatmapData = useMemo(() => {
+    const map = {};
+    for (const sess of sessions) {
+      const d = new Date(sess.date);
+      if (d.getFullYear() !== viewYear || d.getMonth() + 1 !== viewMonth) continue;
+      map[sess.date] = (map[sess.date] ?? 0) + calcSessionVol(sess);
+    }
+    return map;
+  }, [sessions, viewYear, viewMonth]);
+
+  const openDetailForDate = (dateStr) => {
+    const match = sessions.find(s => s.date === dateStr);
+    if (match) openDetail(match);
+  };
+
   const filteredSessions = useMemo(() => {
     const ms = sessions.filter(s => {
       const d = new Date(s.date);
@@ -1626,6 +1641,21 @@ export default function WorkoutScreen() {
       >
         {isLoading && <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />}
 
+        {!isLoading && (
+          <View style={s.card}>
+            <View style={s.cardTitleRow}>
+              <Text style={s.cardTitle}>MONTHLY HEATMAP</Text>
+            </View>
+            <MonthHeatmap
+              data={heatmapData}
+              color={colors.accent}
+              month={viewMonth - 1}
+              year={viewYear}
+              onDayPress={(dateStr, value) => { if (value > 0) openDetailForDate(dateStr); }}
+            />
+          </View>
+        )}
+
         {!isLoading && dayList.length === 0 && (
           <View style={s.empty}>
             <Ionicons name="barbell-outline" size={52} color={colors.textDim} />
@@ -1745,6 +1775,13 @@ export default function WorkoutScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const createS = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+
+  card: {
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 18, padding: 16, marginBottom: 14,
+  },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  cardTitle: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: colors.textMuted, fontWeight: weight.bold },
 
   appHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

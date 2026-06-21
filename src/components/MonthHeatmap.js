@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year, containerPad = 32 }) {
+export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year, containerPad = 32, onDayPress }) {
   const cellSize = Math.floor((SCREEN_W - containerPad - 2) / 7);
 
   const firstDay = new Date(year, month, 1).getDay();
@@ -52,9 +52,12 @@ export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year
             year === today.getFullYear();
           const intensity = cell.value > 0 ? cell.value / maxVal : 0;
 
+          const Wrapper = onDayPress ? TouchableOpacity : View;
           return (
-            <View
+            <Wrapper
               key={cell.key}
+              activeOpacity={onDayPress ? 0.7 : undefined}
+              onPress={onDayPress ? () => onDayPress(cell.dateStr, cell.value) : undefined}
               style={[
                 styles.dayCell,
                 { width: cellSize, height: cellSize, borderRadius: cellSize * 0.2 },
@@ -73,7 +76,7 @@ export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year
               >
                 {cell.day}
               </Text>
-            </View>
+            </Wrapper>
           );
         })}
       </View>
