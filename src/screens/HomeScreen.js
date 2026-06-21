@@ -642,16 +642,18 @@ async function fetchMonthSessions(userId, year, month) {
   return data ?? [];
 }
 
-function StreakCalendarModal({ visible, userId, onClose }) {
+function StreakCalendarModal({ visible, userId, onClose, hasAccess = true }) {
   const { colors } = useTheme();
   const scS = useMemo(() => createScS(colors), [colors]);
   const today    = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
 
   const [calYear,  setCalYear]  = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth() + 1);
   const [selDay,   setSelDay]   = useState(null);
   const [showDay,  setShowDay]  = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -836,6 +838,21 @@ function StreakCalendarModal({ visible, userId, onClose }) {
                   const entry   = dayMap[iso];
                   const isToday = iso === todayStr;
                   const isFuture = iso > todayStr;
+                  const isLocked = !hasAccess && !isFuture && iso < cutoffStr;
+
+                  if (isLocked) {
+                    return (
+                      <TouchableOpacity
+                        key={day}
+                        style={[scS.dayCell, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}
+                        onPress={() => setShowPaywall(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="lock-closed" size={10} color={colors.textDim} />
+                        <Text style={[scS.dayNum, { color: colors.textDim, marginTop: 2 }]}>{day}</Text>
+                      </TouchableOpacity>
+                    );
+                  }
 
                   const typeColor = entry?.type === 'gym'    ? '#34d399'
                     : entry?.type === 'cardio' ? '#3b82f6'
@@ -886,6 +903,7 @@ function StreakCalendarModal({ visible, userId, onClose }) {
         )}
         </View>
       </View>
+      <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
     </Modal>
   );
 }
@@ -1740,6 +1758,7 @@ export default function HomeScreen() {
         visible={showStreak}
         userId={user?.id}
         onClose={() => setShowStreak(false)}
+        hasAccess={hasAccess}
       />
 
       <PaywallModal visible={consistencyExport.showPaywall} onClose={() => consistencyExport.setShowPaywall(false)} />
