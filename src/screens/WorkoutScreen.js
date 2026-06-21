@@ -56,6 +56,27 @@ async function updateWorkoutGoal(userId, goal) {
   if (error) throw error;
 }
 
+async function fetchTemplates(userId) {
+  const { data, error } = await supabase
+    .from('workout_templates')
+    .select('id, name, exercises, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function saveTemplate(userId, name, exercises) {
+  const clean = (exercises ?? []).map(ex => ({
+    name: ex.name,
+    sets: (ex.sets ?? []).map(s => ({ weight_kg: s.weight_kg, reps: s.reps })),
+  })).filter(ex => ex.name?.trim());
+  const { error } = await supabase
+    .from('workout_templates')
+    .insert({ user_id: userId, name: name?.trim() || 'Workout', exercises: clean });
+  if (error) throw error;
+}
+
 async function saveSession(userId, { sessionId, date, name, exercises }) {
   let sid = sessionId;
   if (!sid) {
@@ -510,6 +531,119 @@ function getMuscleGroups(exercises) {
     getExerciseMuscles(ex.exercise_name).forEach(g => groups.add(g));
   }
   return [...groups].slice(0, 7);
+}
+
+const PLATE_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
+function calcPlates(totalKg, barKg = 20) {
+  let perSide = (totalKg - barKg) / 2;
+  if (!totalKg || perSide <= 0) return [];
+  const plates = [];
+  for (const p of PLATE_KG) {
+    while (perSide >= p - 0.001) { plates.push(p); perSide -= p; }
+  }
+  return plates;
+}
+
+function getPrevSetSummary(allSessions, exerciseName, beforeDate) {
+  const name = (exerciseName ?? '').trim().toLowerCase();
+  if (!name) return null;
+  const candidates = (allSessions ?? [])
+    .filter(s => !beforeDate || s.date < beforeDate)
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date));
+  for (const sess of candidates) {
+    const ex = (sess.workout_exercises ?? []).find(
+      e => (e.exercise_name ?? '').trim().toLowerCase() === name
+    );
+    if (ex && (ex.sets ?? []).length) {
+      const best = ex.sets.slice().sort(
+        (a, b) => (b.weight_kg ?? 0) * (b.reps ?? 0) - (a.weight_kg ?? 0) * (a.reps ?? 0)
+      )[0];
+      if (best.weight_kg) return { weight: best.weight_kg, reps: best.reps, rpe: best.rpe, date: sess.date };
+    }
+  }
+  return null;
+}
+
+function suggestProgressiveOverload(prev) {
+  if (!prev || !prev.weight) return null;
+  const rpe = parseFloat(prev.rpe);
+  if (!isNaN(rpe) && rpe >= 9) {
+    return { weight: prev.weight, reps: prev.reps, note: 'last RPE was high — hold steady' };
+  }
+  if ((prev.reps ?? 0) >= 10) {
+    return { weight: Math.round((prev.weight + 2.5) * 2) / 2, reps: Math.max(6, prev.reps - 2), note: 'increase weight' };
+  }
+  return { weight: prev.weight, reps: (prev.reps ?? 0) + 1, note: 'add a rep' };
+}
+
+const WARMUP_PCTS = [0.4, 0.6, 0.8];
+function getWarmupSets(topWeightKg) {
+  if (!topWeightKg) return [];
+  return WARMUP_PCTS.map(p => Math.round((topWeightKg * p) / 2.5) * 2.5);
+}
+
+const SUBSTITUTE_MAP = {
+  'bench press': ['Dumbbell Bench Press', 'Push-up', 'Machine Chest Press'],
+  'squat': ['Goblet Squat', 'Leg Press', 'Hack Squat'],
+  'deadlift': ['Romanian Deadlift', 'Trap Bar Deadlift', 'Hip Thrust'],
+  'overhead press': ['Dumbbell Shoulder Press', 'Arnold Press', 'Machine Shoulder Press'],
+  'pull-up': ['Lat Pulldown', 'Assisted Pull-up', 'Band Pull-up'],
+  'barbell row': ['Dumbbell Row', 'Seated Cable Row', 'Chest-Supported Row'],
+  'bicep curl': ['Hammer Curl', 'Cable Curl', 'Preacher Curl'],
+  'leg press': ['Goblet Squat', 'Hack Squat', 'Bulgarian Split Squat'],
+};
+function getSubstitutes(exerciseName) {
+  const name = (exerciseName ?? '').toLowerCase();
+  for (const k of Object.keys(SUBSTITUTE_MAP)) {
+    if (name.includes(k)) return SUBSTITUTE_MAP[k];
+  }
+  return [];
+}
+
+function detectDeload(sessions) {
+  const gym = sessions
+    .filter(s => getSessionType(s.notes) === 'gym')
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const rpeOf = (s) => {
+    const all = (s.workout_exercises ?? [])
+      .flatMap(e => e.sets ?? [])
+      .map(x => parseFloat(x.rpe))
+      .filter(v => !isNaN(v));
+    if (!all.length) return null;
+    return all.reduce((a, b) => a + b, 0) / all.length;
+  };
+  const recent = gym.slice(0, 3).map(rpeOf).filter(v => v != null);
+  if (recent.length < 2) return null;
+  const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+  if (avg >= 8.5) return { avg: avg.toFixed(1) };
+  return null;
+}
+
+function getMuscleVolumeThisWeek(sessions) {
+  const [start, end] = getWeekRange(new Date(), 0);
+  const map = {};
+  for (const s of sessions) {
+    if (s.date < start || s.date > end) continue;
+    for (const ex of s.workout_exercises ?? []) {
+      const muscles = getExerciseMuscles(ex.exercise_name);
+      if (!muscles.length) continue;
+      const vol = (ex.sets ?? []).reduce((sum, st) => sum + (st.weight_kg ?? 0) * (st.reps ?? 0), 0);
+      if (!vol) continue;
+      muscles.forEach(m => { map[m] = (map[m] ?? 0) + vol / muscles.length; });
+    }
+  }
+  return Object.entries(map).map(([m, v]) => ({ muscle: m, vol: Math.round(v) })).sort((a, b) => b.vol - a.vol).slice(0, 6);
+}
+
+function suggestAutoReg(prevSetInSession) {
+  const rpe = parseFloat(prevSetInSession?.rpe);
+  const w = parseFloat(prevSetInSession?.weight_kg);
+  if (isNaN(rpe) || isNaN(w) || !w) return null;
+  if (rpe >= 9) return { weight: Math.round(w * 0.95 * 2) / 2, note: 'RPE was high last set — ease off' };
+  if (rpe <= 6) return { weight: Math.round(w * 1.05 * 2) / 2, note: 'RPE was low last set — push more' };
+  return null;
 }
 
 function generateDayList(sessions) {
@@ -1080,7 +1214,10 @@ function DatePickerModal({ visible, value, onSelect, onClose }) {
 // Always show these two as default chip suggestions
 const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
 
-function EditSessionModal({ visible, isNew, initialData, recentTypes, allSessions, onSave, onCancel, isSaving }) {
+function EditSessionModal({
+  visible, isNew, initialData, recentTypes, allSessions, onSave, onCancel, isSaving,
+  hasAccess, templates, onSaveTemplate, onOpenToolsPaywall,
+}) {
   const { colors } = useTheme();
   const eS = useMemo(() => createES(colors), [colors]);
   const [date, setDate] = useState('');
@@ -1089,6 +1226,32 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
   const [activeExIdx, setActiveExIdx] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [acOpenIdx, setAcOpenIdx] = useState(null);
+  const [subOpenIdx, setSubOpenIdx] = useState(null);
+  const [restTimer, setRestTimer] = useState(null); // { exIdx, secondsLeft, total }
+
+  useEffect(() => {
+    if (!restTimer) return;
+    if (restTimer.secondsLeft <= 0) return;
+    const t = setTimeout(() => {
+      setRestTimer(prev => prev ? { ...prev, secondsLeft: prev.secondsLeft - 1 } : prev);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [restTimer]);
+
+  const startRestTimer = (exIdx, seconds = 90) => setRestTimer({ exIdx, secondsLeft: seconds, total: seconds });
+  const cancelRestTimer = () => setRestTimer(null);
+
+  const loadTemplate = (tpl) => {
+    const exs = (tpl.exercises ?? []).map(ex => ({
+      _key: tid(),
+      name: ex.name ?? '',
+      sets: (ex.sets ?? []).length
+        ? ex.sets.map(s => ({ ...blankSet(), weight_kg: String(s.weight_kg ?? ''), reps: String(s.reps ?? '') }))
+        : [blankSet()],
+    }));
+    setExercises(exs);
+    setName(tpl.name ?? name);
+  };
 
   const namePool = useMemo(() => getExerciseNamePool(allSessions), [allSessions]);
 
@@ -1129,6 +1292,16 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
     setExercises(prev => prev.map((ex, i) => i !== exIdx ? ex : {
       ...ex, sets: [...(ex.sets ?? []), blankSet()],
     }));
+
+  const insertWarmupSet = (exIdx, weightKg) =>
+    setExercises(prev => prev.map((ex, i) => i !== exIdx ? ex : {
+      ...ex, sets: [{ ...blankSet(), weight_kg: String(weightKg), reps: '8' }, ...(ex.sets ?? [])],
+    }));
+
+  const applySwap = (exIdx, newName) => {
+    updateExName(exIdx, newName);
+    setSubOpenIdx(null);
+  };
 
   const removeSet = (exIdx, sIdx) =>
     setExercises(prev => prev.map((ex, i) => i !== exIdx ? ex : {
@@ -1295,6 +1468,26 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
                               placeholderTextColor={colors.textDim}
                               autoFocus
                             />
+                            {!!ex.name.trim() && getSubstitutes(ex.name).length > 0 && (
+                              <TouchableOpacity
+                                style={eS.swapBtn}
+                                onPress={() => hasAccess ? setSubOpenIdx(subOpenIdx === exIdx ? null : exIdx) : onOpenToolsPaywall?.()}
+                              >
+                                <Text style={eS.swapBtnText}>{hasAccess ? '🔄' : '🔒'}</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        )}
+
+                        {!isCardio && hasAccess && subOpenIdx === exIdx && (
+                          <View style={eS.acDropdown}>
+                            <Text style={eS.subHeader}>SWAP EXERCISE — PRO</Text>
+                            {getSubstitutes(ex.name).map(n => (
+                              <TouchableOpacity key={n} style={eS.acItem} onPress={() => applySwap(exIdx, n)}>
+                                <Text style={{ fontSize: 14 }}>🔄</Text>
+                                <Text style={eS.acItemText}>{n}</Text>
+                              </TouchableOpacity>
+                            ))}
                           </View>
                         )}
 
@@ -1320,6 +1513,53 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
                             </View>
                           );
                         })()}
+
+                        {!isCardio && !!ex.name.trim() && (() => {
+                          const prev = getPrevSetSummary(allSessions, ex.name, date || undefined);
+                          if (!prev) return null;
+                          const suggestion = suggestProgressiveOverload(prev);
+                          const warmups = getWarmupSets(suggestion?.weight ?? prev.weight);
+                          return (
+                            <View style={eS.prevPerfBox}>
+                              <Text style={eS.prevPerfText}>
+                                📈 Last: <Text style={eS.prevPerfBold}>{prev.weight}kg × {prev.reps}</Text>
+                                {prev.rpe ? ` @ RPE ${prev.rpe}` : ''}
+                              </Text>
+                              {hasAccess ? (
+                                suggestion && (
+                                  <Text style={eS.suggestText}>
+                                    🎯 Suggested: <Text style={eS.prevPerfBold}>{suggestion.weight}kg × {suggestion.reps}</Text> ({suggestion.note})
+                                  </Text>
+                                )
+                              ) : (
+                                <TouchableOpacity onPress={() => onOpenToolsPaywall?.()}>
+                                  <Text style={eS.suggestTextLocked}>🔒 Pro: see your suggested next target</Text>
+                                </TouchableOpacity>
+                              )}
+                              {(ex.sets ?? []).length === 1 && !ex.sets[0].weight_kg && (
+                                <View style={eS.warmupRow}>
+                                  <Text style={eS.warmupLabel}>WARM-UP:</Text>
+                                  {warmups.map((w, wi) => (
+                                    <TouchableOpacity key={wi} style={eS.warmupChip} onPress={() => insertWarmupSet(exIdx, w)}>
+                                      <Text style={eS.warmupChipText}>{w}kg</Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          );
+                        })()}
+
+                        {!isCardio && restTimer && restTimer.exIdx === exIdx && (
+                          <View style={eS.restBanner}>
+                            <Text style={eS.restBannerText}>
+                              ⏱ Rest: {Math.floor(restTimer.secondsLeft / 60)}:{String(restTimer.secondsLeft % 60).padStart(2, '0')}
+                            </Text>
+                            <TouchableOpacity onPress={cancelRestTimer}>
+                              <Text style={eS.restBannerCancel}>Skip</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
 
                         {isCardio ? (
                           (ex.sets ?? []).map((s, sIdx) => {
@@ -1386,46 +1626,109 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
                             );
                           })
                         ) : (
-                          (ex.sets ?? []).map((s, sIdx) => (
-                            <View key={s._key} style={eS.setRow}>
-                              <Text style={eS.setNumLabel}>{sIdx + 1}</Text>
-                              <TextInput
-                                style={eS.setInput}
-                                value={s.weight_kg}
-                                onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
-                                keyboardType="decimal-pad"
-                                placeholder="kg"
-                                placeholderTextColor={colors.textDim}
-                              />
-                              <Text style={eS.setX}>×</Text>
-                              <TextInput
-                                style={eS.setInput}
-                                value={s.reps}
-                                onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
-                                keyboardType="numeric"
-                                placeholder="reps"
-                                placeholderTextColor={colors.textDim}
-                              />
-                              <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
-                                <Ionicons name="close" size={14} color={colors.textDim} />
-                              </TouchableOpacity>
-                            </View>
-                          ))
+                          (ex.sets ?? []).map((s, sIdx) => {
+                            const plates = calcPlates(parseFloat(s.weight_kg));
+                            const autoReg = hasAccess && sIdx > 0 ? suggestAutoReg(ex.sets[sIdx - 1]) : null;
+                            return (
+                              <View key={s._key}>
+                                <View style={eS.setRow}>
+                                  <Text style={eS.setNumLabel}>{sIdx + 1}</Text>
+                                  <TextInput
+                                    style={eS.setInput}
+                                    value={s.weight_kg}
+                                    onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
+                                    keyboardType="decimal-pad"
+                                    placeholder={autoReg ? String(autoReg.weight) : 'kg'}
+                                    placeholderTextColor={autoReg ? colors.accent : colors.textDim}
+                                  />
+                                  <Text style={eS.setX}>×</Text>
+                                  <TextInput
+                                    style={eS.setInput}
+                                    value={s.reps}
+                                    onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
+                                    keyboardType="numeric"
+                                    placeholder="reps"
+                                    placeholderTextColor={colors.textDim}
+                                  />
+                                  <TextInput
+                                    style={[eS.setInput, { maxWidth: 50 }]}
+                                    value={s.rpe}
+                                    onChangeText={v => updateSet(exIdx, sIdx, 'rpe', v)}
+                                    keyboardType="decimal-pad"
+                                    placeholder="RPE"
+                                    placeholderTextColor={colors.textDim}
+                                  />
+                                  <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
+                                    <Ionicons name="close" size={14} color={colors.textDim} />
+                                  </TouchableOpacity>
+                                </View>
+                                {plates.length > 0 && (
+                                  <Text style={eS.plateText}>🏋️ Plates/side: {plates.join(' + ')}kg</Text>
+                                )}
+                                {autoReg && (
+                                  <Text style={eS.autoRegText}>⚙️ Auto-reg suggests {autoReg.weight}kg — {autoReg.note}</Text>
+                                )}
+                              </View>
+                            );
+                          })
                         )}
 
-                        <TouchableOpacity style={eS.addSetBtn} onPress={() => addSet(exIdx)}>
-                          <Text style={eS.addSetText}>{isCardio ? '+ Add Entry' : '+ Add Set'}</Text>
-                        </TouchableOpacity>
+                        <View style={eS.addSetRow}>
+                          <TouchableOpacity style={[eS.addSetBtn, { flex: 1 }]} onPress={() => addSet(exIdx)}>
+                            <Text style={eS.addSetText}>{isCardio ? '+ Add Entry' : '+ Add Set'}</Text>
+                          </TouchableOpacity>
+                          {!isCardio && (
+                            <TouchableOpacity style={eS.restBtn} onPress={() => startRestTimer(exIdx, 90)}>
+                              <Ionicons name="timer-outline" size={14} color={colors.blue} />
+                              <Text style={eS.restBtnText}>90s Rest</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                     )}
                   </View>
                 );
               })}
 
+              {isNew && exercises.length === 0 && !isCardio && (
+                <View style={eS.templateRow}>
+                  <Text style={eS.templateRowLabel}>📋 LOAD TEMPLATE {!hasAccess && '— PRO'}</Text>
+                  {hasAccess ? (
+                    templates.length > 0 ? (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                        {templates.map(t => (
+                          <TouchableOpacity key={t.id} style={eS.templateChip} onPress={() => loadTemplate(t)}>
+                            <Text style={eS.templateChipText}>{t.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    ) : (
+                      <Text style={eS.templateEmptyText}>Save a session below to build your first template.</Text>
+                    )
+                  ) : (
+                    <TouchableOpacity style={eS.templateChip} onPress={onOpenToolsPaywall}>
+                      <Text style={eS.templateChipText}>🔒 Unlock saved templates</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
               <TouchableOpacity style={eS.addExBtn} onPress={addExercise}>
                 <Ionicons name="add" size={18} color={colors.accent} />
                 <Text style={eS.addExText}>{isCardio ? 'Add Activity' : 'Add Exercise'}</Text>
               </TouchableOpacity>
+
+              {!isCardio && exercises.length > 0 && (
+                <TouchableOpacity
+                  style={eS.saveTemplateBtn}
+                  onPress={() => hasAccess ? onSaveTemplate({ name: name.trim() || 'Workout', exercises }) : onOpenToolsPaywall?.()}
+                >
+                  <Ionicons name="bookmark-outline" size={14} color={hasAccess ? colors.purple : colors.textDim} />
+                  <Text style={eS.saveTemplateBtnText}>
+                    {hasAccess ? 'Save as Template' : '🔒 Save as Template (Pro)'}
+                  </Text>
+                </TouchableOpacity>
+              )}
               <View style={{ height: 20 }} />
             </ScrollView>
           )}
@@ -1473,6 +1776,7 @@ export default function WorkoutScreen() {
   const [showInsightsPaywall, setShowInsightsPaywall] = useState(false);
   const [showWorkoutGoalSheet, setShowWorkoutGoalSheet] = useState(false);
   const [workoutGoalInput, setWorkoutGoalInput] = useState(4);
+  const [showToolsPaywall, setShowToolsPaywall] = useState(false);
 
   const { data: sessions = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['sessions', user?.id],
@@ -1508,8 +1812,24 @@ export default function WorkoutScreen() {
     onError: (e) => Alert.alert('Error', e.message),
   });
 
+  const { data: templates = [] } = useQuery({
+    queryKey: ['workoutTemplates', user?.id],
+    queryFn: () => fetchTemplates(user.id),
+    enabled: !!user?.id && hasAccess,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const saveTemplateMut = useMutation({
+    mutationFn: ({ name, exercises }) => saveTemplate(user.id, name, exercises),
+    onSuccess: () => { qc.invalidateQueries(['workoutTemplates', user.id]); Alert.alert('Saved', 'Template saved.'); },
+    onError: (e) => Alert.alert('Error', e.message),
+  });
+
   const pbMap       = useMemo(() => computePBMap(sessions), [sessions]);
   const recentTypes = useMemo(() => getRecentTypes(sessions), [sessions]);
+  const deload       = useMemo(() => detectDeload(sessions), [sessions]);
+  const muscleVolume = useMemo(() => getMuscleVolumeThisWeek(sessions), [sessions]);
 
   const heatmapData = useMemo(() => {
     const map = {};
@@ -2056,6 +2376,61 @@ export default function WorkoutScreen() {
                 </TouchableOpacity>
               )}
             </View>
+
+            {/* Muscle Group Volume + Auto-Deload — Pro */}
+            <View style={s.card}>
+              <View style={s.cardTitleRow}>
+                <Text style={s.cardTitle}>MUSCLE GROUP VOLUME · THIS WEEK</Text>
+                <View style={s.proBadge}><Text style={s.proBadgeText}>PRO</Text></View>
+              </View>
+
+              {hasAccess ? (
+                <>
+                  {deload && (
+                    <View style={s.deloadBanner}>
+                      <Text style={s.deloadBannerText}>
+                        ⚠️ Avg RPE {deload.avg} over your last 3 sessions — consider a deload week.
+                      </Text>
+                    </View>
+                  )}
+                  {muscleVolume.length > 0 ? (
+                    <View style={s.muscleBarList}>
+                      {muscleVolume.map(({ muscle, vol }) => {
+                        const max = muscleVolume[0].vol || 1;
+                        return (
+                          <View key={muscle} style={s.muscleBarRow}>
+                            <Text style={s.muscleBarLabel}>{muscle}</Text>
+                            <View style={s.muscleBarTrack}>
+                              <View style={[s.muscleBarFill, { width: `${Math.max(6, (vol / max) * 100)}%` }]} />
+                            </View>
+                            <Text style={s.muscleBarVal}>{vol.toLocaleString()}kg</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <Text style={s.lockedHint}>Log a gym session this week to see your muscle group balance.</Text>
+                  )}
+                </>
+              ) : (
+                <TouchableOpacity activeOpacity={0.85} onPress={() => setShowToolsPaywall(true)}>
+                  <View style={s.muscleBarList}>
+                    {['Chest', 'Back', 'Legs'].map(m => (
+                      <View key={m} style={s.muscleBarRow}>
+                        <Text style={s.muscleBarLabel}>{m}</Text>
+                        <View style={s.muscleBarTrack}>
+                          <View style={[s.muscleBarFill, { width: '40%', opacity: 0.3 }]} />
+                        </View>
+                        <Text style={s.muscleBarVal}>●●●kg</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={s.lockedHint}>
+                    🔒 Unlock muscle group balance, deload alerts, exercise swaps, progressive overload targets, auto-regulation, and saved templates
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </>
         )}
 
@@ -2170,10 +2545,15 @@ export default function WorkoutScreen() {
         onSave={(data) => saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null })}
         onCancel={() => setShowEdit(false)}
         isSaving={saveMut.isPending}
+        hasAccess={hasAccess}
+        templates={templates}
+        onSaveTemplate={(params) => saveTemplateMut.mutate(params)}
+        onOpenToolsPaywall={() => setShowToolsPaywall(true)}
       />
 
       <PaywallModal visible={showTrendPaywall} onClose={() => setShowTrendPaywall(false)} />
       <PaywallModal visible={showInsightsPaywall} onClose={() => setShowInsightsPaywall(false)} />
+      <PaywallModal visible={showToolsPaywall} onClose={() => setShowToolsPaywall(false)} />
 
       <BottomSheet visible={showWorkoutGoalSheet} onClose={() => setShowWorkoutGoalSheet(false)} style={s.goalSheet}>
         <View style={s.goalSheetHeader}>
@@ -2284,6 +2664,18 @@ const createS = (colors) => StyleSheet.create({
   proBadge: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
   proBadgeText: { fontSize: 9, fontWeight: weight.black, color: colors.accentText, letterSpacing: 0.5 },
   lockedHint: { fontSize: 12, color: colors.textMuted, marginTop: 12, lineHeight: 17 },
+
+  deloadBanner: {
+    backgroundColor: colors.danger + '14', borderWidth: 1, borderColor: colors.danger + '55',
+    borderRadius: 10, padding: 10, marginBottom: 12,
+  },
+  deloadBannerText: { fontSize: typography.xs, color: colors.danger, fontWeight: weight.semibold },
+  muscleBarList: { gap: 10 },
+  muscleBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  muscleBarLabel: { width: 64, fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
+  muscleBarTrack: { flex: 1, height: 8, borderRadius: 4, backgroundColor: colors.surface, overflow: 'hidden' },
+  muscleBarFill: { height: 8, borderRadius: 4, backgroundColor: colors.purple },
+  muscleBarVal: { width: 64, textAlign: 'right', fontSize: typography.xs, color: colors.textDim },
   insightsList: { marginTop: 14, gap: 10 },
   insightRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   insightIcon: { fontSize: 14, marginTop: 1 },
@@ -2550,7 +2942,7 @@ const createES = (colors) => StyleSheet.create({
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   setNumLabel: { width: 20, fontSize: typography.xs, color: colors.textDim, textAlign: 'center', fontWeight: weight.bold },
   setInput: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: 8,
+    flex: 1, minWidth: 0, backgroundColor: colors.surface, borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 9, color: colors.text, fontSize: typography.sm,
     textAlign: 'center', borderWidth: 1, borderColor: colors.border,
   },
@@ -2606,6 +2998,62 @@ const createES = (colors) => StyleSheet.create({
   acDropdown: { backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginTop: -8, marginBottom: 12, overflow: 'hidden' },
   acItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
   acItemText: { fontFamily: fontFamily.bodyMedium, fontSize: typography.sm, color: colors.text },
+  subHeader: { fontSize: 10, fontWeight: weight.bold, color: colors.purple, letterSpacing: 1, padding: 10, paddingBottom: 4 },
+
+  swapBtn: {
+    width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.purple + '1a', marginLeft: 6,
+  },
+  swapBtnText: { fontSize: 14 },
+
+  prevPerfBox: {
+    backgroundColor: colors.dim, borderRadius: 10, padding: 10, marginBottom: 10, gap: 4,
+  },
+  prevPerfText: { fontSize: typography.xs, color: colors.textMuted },
+  prevPerfBold: { fontWeight: weight.bold, color: colors.text },
+  suggestText: { fontSize: typography.xs, color: colors.accent },
+  suggestTextLocked: { fontSize: typography.xs, color: colors.purple, fontWeight: weight.semibold },
+  warmupRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' },
+  warmupLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 },
+  warmupChip: {
+    backgroundColor: colors.blue + '14', borderWidth: 1, borderColor: colors.blue + '55',
+    borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4,
+  },
+  warmupChipText: { fontSize: typography.xs, color: colors.blue, fontWeight: weight.semibold },
+
+  restBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.blue + '14', borderWidth: 1, borderColor: colors.blue + '55',
+    borderRadius: 10, padding: 10, marginBottom: 10,
+  },
+  restBannerText: { fontSize: typography.sm, color: colors.blue, fontWeight: weight.bold },
+  restBannerCancel: { fontSize: typography.xs, color: colors.textDim, fontWeight: weight.semibold },
+
+  plateText: { fontSize: 10, color: colors.textDim, marginTop: -4, marginBottom: 6, marginLeft: 28 },
+  autoRegText: { fontSize: 10, color: colors.accent, marginTop: -4, marginBottom: 6, marginLeft: 28 },
+
+  addSetRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  restBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12,
+    borderWidth: 1, borderColor: colors.blue + '55', borderRadius: 8, backgroundColor: colors.blue + '14',
+  },
+  restBtnText: { fontSize: typography.xs, color: colors.blue, fontWeight: weight.semibold },
+
+  templateRow: { marginBottom: 10, gap: 6 },
+  templateRowLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 },
+  templateChip: {
+    backgroundColor: colors.purple + '14', borderWidth: 1, borderColor: colors.purple + '55',
+    borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7,
+  },
+  templateChipText: { fontSize: typography.xs, color: colors.purple, fontWeight: weight.semibold },
+  templateEmptyText: { fontSize: typography.xs, color: colors.textDim },
+
+  saveTemplateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.purple + '66',
+    borderRadius: 12, padding: 10, marginBottom: 8,
+  },
+  saveTemplateBtnText: { fontSize: typography.xs, fontWeight: weight.semibold, color: colors.purple },
 
   cardioFieldCard: { backgroundColor: colors.dim, borderRadius: 10, padding: 10, marginBottom: 8, gap: 8 },
   cardioFieldRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
