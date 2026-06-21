@@ -16,8 +16,8 @@ import MonthYearPicker from '../components/ui/MonthYearPicker';
 import Chip from '../components/ui/Chip';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
-import ProGate from '../components/ui/ProGate';
 import { useGatedExport } from '../hooks/useGatedExport';
+import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
@@ -393,6 +393,7 @@ export default function StepsScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const heroExport = useGatedExport();
+  const heatmapExport = useExportCard();
   const { hasAccess } = useSubscription();
 
   const [showLogSheet, setShowLogSheet] = useState(false);
@@ -717,10 +718,10 @@ export default function StepsScreen() {
             )}
 
             {/* ── Monthly Heatmap ── */}
-            <ProGate label="Monthly heatmap">
-              <View style={styles.card}>
-                <View style={styles.cardTitleRow}>
-                  <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <View style={styles.hmLegend}>
                     <Text style={styles.hmLegendLabel}>Less</Text>
                     {['rgba(56,189,248,0.22)', 'rgba(34,211,238,0.42)', 'rgba(20,184,166,0.65)', 'rgba(52,211,153,0.88)'].map((c, i) => (
@@ -728,10 +729,26 @@ export default function StepsScreen() {
                     ))}
                     <Text style={styles.hmLegendLabel}>More</Text>
                   </View>
+                  <TouchableOpacity
+                    onPress={() => (hasAccess ? heatmapExport.exportCard() : heroExport.setShowPaywall(true))}
+                    disabled={heatmapExport.exporting}
+                  >
+                    {heatmapExport.exporting ? (
+                      <ActivityIndicator size="small" color={colors.textMuted} />
+                    ) : (
+                      <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
                 </View>
-                <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={hasAccess} onLockedPress={() => heroExport.setShowPaywall(true)} />
               </View>
-            </ProGate>
+              <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={hasAccess} onLockedPress={() => heroExport.setShowPaywall(true)} />
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate ref={heatmapExport.ref} title="Monthly Heatmap" subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
+                <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={true} />
+              </ExportCardTemplate>
+            </View>
 
             {/* ── Trend Chart ── */}
             <View style={styles.card}>

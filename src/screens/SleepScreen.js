@@ -16,8 +16,8 @@ import MonthYearPicker from '../components/ui/MonthYearPicker';
 import CircularGauge from '../components/CircularGauge';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
-import ProGate from '../components/ui/ProGate';
 import { useGatedExport } from '../hooks/useGatedExport';
+import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -288,6 +288,7 @@ export default function SleepScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const recoveryExport = useGatedExport();
+  const heatmapExport = useExportCard();
   const { hasAccess } = useSubscription();
   const [showRangePaywall, setShowRangePaywall] = useState(false);
 
@@ -582,10 +583,10 @@ export default function SleepScreen() {
             )}
 
             {/* ── Monthly Heatmap ── */}
-            <ProGate label="Monthly heatmap">
-              <View style={styles.card}>
-                <View style={styles.cardTitleRow}>
-                  <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <View style={styles.hmLegend}>
                     <Text style={styles.hmLegendLabel}>Poor</Text>
                     {['rgba(248,113,113,0.6)', 'rgba(251,191,36,0.55)', 'rgba(52,211,153,0.5)', 'rgba(129,140,248,0.7)'].map((c, i) => (
@@ -593,10 +594,26 @@ export default function SleepScreen() {
                     ))}
                     <Text style={styles.hmLegendLabel}>Great</Text>
                   </View>
+                  <TouchableOpacity
+                    onPress={() => (hasAccess ? heatmapExport.exportCard() : recoveryExport.setShowPaywall(true))}
+                    disabled={heatmapExport.exporting}
+                  >
+                    {heatmapExport.exporting ? (
+                      <ActivityIndicator size="small" color={colors.textMuted} />
+                    ) : (
+                      <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
                 </View>
-                <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} hasAccess={hasAccess} onLockedPress={() => recoveryExport.setShowPaywall(true)} />
               </View>
-            </ProGate>
+              <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} hasAccess={hasAccess} onLockedPress={() => recoveryExport.setShowPaywall(true)} />
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate ref={heatmapExport.ref} title="Monthly Heatmap" subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
+                <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} hasAccess={true} />
+              </ExportCardTemplate>
+            </View>
 
             {/* ── Sleep Trend ── */}
             <View style={styles.card}>

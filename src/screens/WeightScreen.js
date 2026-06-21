@@ -14,7 +14,6 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
-import ProGate from '../components/ui/ProGate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useSubscription } from '../context/SubscriptionContext';
 import CircularGauge from '../components/CircularGauge';
@@ -513,6 +512,7 @@ export default function WeightScreen() {
   const [wkViewMode, setWkViewMode] = useState('week'); // 'week' | 'month'
   const [avgExpanded, setAvgExpanded] = useState(false);
   const avgWeightExport = useExportCard();
+  const heatmapExport = useExportCard();
   const { hasAccess } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
   const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
@@ -768,17 +768,40 @@ export default function WeightScreen() {
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
-                <View style={styles.hmLegend}>
-                  <Text style={styles.hmLegendLabel}>Low</Text>
-                  {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
-                    <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
-                  ))}
-                  <Text style={styles.hmLegendLabel}>High</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={styles.hmLegend}>
+                    <Text style={styles.hmLegendLabel}>Low</Text>
+                    {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
+                      <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+                    ))}
+                    <Text style={styles.hmLegendLabel}>High</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowPaywall(true))}
+                    disabled={heatmapExport.exporting}
+                    style={styles.avgViewToggleBtn}
+                  >
+                    {heatmapExport.exporting ? (
+                      <ActivityIndicator size="small" color={colors.textMuted} />
+                    ) : (
+                      <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
                 </View>
               </View>
-              <ProGate label="Monthly heatmap">
-                <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={hasAccess} onLockedPress={() => setShowPaywall(true)} />
-              </ProGate>
+              <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={hasAccess} onLockedPress={() => setShowPaywall(true)} />
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate
+                ref={heatmapExport.ref}
+                title="Monthly Heatmap"
+                subtitle={`${MONTH_NAMES[month]} ${year}`}
+                colors={colors}
+                width={340}
+              >
+                <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={true} />
+              </ExportCardTemplate>
             </View>
 
             {/* ── 30-Day Trend ── */}
