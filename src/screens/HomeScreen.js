@@ -132,6 +132,8 @@ async function fetchHome(userId) {
     lastWeekFood,
     monthFood,
     monthWeight,
+    prExercises,
+    streakStepsHist,
   ] = await Promise.all([
     supabase.from('profiles')
       .select('full_name, goal, weight_goal_kg, step_goal, sleep_goal_hours')
@@ -181,11 +183,18 @@ async function fetchHome(userId) {
       .select('calories').eq('user_id', userId)
       .gte('logged_at', `${lastWeekStart}T00:00:00`).lte('logged_at', `${lastWeekEnd}T23:59:59`),
     supabase.from('food_logs')
-      .select('calories').eq('user_id', userId)
+      .select('calories, logged_at').eq('user_id', userId)
       .gte('logged_at', `${monthStart}T00:00:00`).lte('logged_at', `${monthEnd}T23:59:59`),
     supabase.from('weight_logs')
       .select('weight').eq('user_id', userId)
       .gte('logged_at', `${monthStart}T00:00:00`).lte('logged_at', `${monthEnd}T23:59:59`),
+    supabase.from('workout_exercises')
+      .select('exercise_name, sets(weight_kg), workout_sessions!inner(date, user_id)')
+      .eq('workout_sessions.user_id', userId)
+      .order('exercise_name', { ascending: true }),
+    supabase.from('step_logs')
+      .select('logged_at').eq('user_id', userId)
+      .order('logged_at', { ascending: false }).limit(120),
   ]);
 
   const weightArr = (weightHist.data ?? []).map(w => w.weight).reverse();
@@ -280,6 +289,100 @@ async function fetchHome(userId) {
     }
   }
 
+  // Pro-only strength PR watch: closest exercise to a new all-time best,
+  // comparing each exercise's all-time top set against its best set in the
+  // last 30 days.
+  let prWatch = null;
+  {
+    const exMap = {};
+    (prExercises.data ?? []).forEach(ex => {
+      const sessDate = ex.workout_sessions?.date;
+      const topSet = (ex.sets ?? []).reduce(
+        (b, st) => (st.weight_kg ?? 0) > b ? (st.weight_kg ?? 0) : b, 0
+      );
+      if (!topSet) return;
+      if (!exMap[ex.exercise_name]) exMap[ex.exercise_name] = { best: 0, recentBest: 0 };
+      const e = exMap[ex.exercise_name];
+      if (topSet > e.best) e.best = topSet;
+      const daysAgo = sessDate ? (Date.now() - new Date(sessDate).getTime()) / 86400000 : 9999;
+      if (daysAgo <= 30 && topSet > e.recentBest) e.recentBest = topSet;
+    });
+    Object.entries(exMap).forEach(([name, e]) => {
+      if (e.recentBest > 0 && e.recentBest < e.best) {
+        const gapKg = +(e.best - e.recentBest).toFixed(1);
+        if (!prWatch || gapKg < prWatch.gapKg) {
+          prWatch = { exercise: name, gapKg, prKg: e.best, recentKg: e.recentBest };
+        }
+      }
+    });
+  }
+
+  // Pro-only recovery score: blends last logged sleep duration vs goal with
+  // sleep quality rating.
+  let recoveryScore = null;
+  {
+    const last = sleepHist.data?.[0];
+    if (last) {
+      recoveryScore = Math.min(100, Math.max(0,
+        Math.round((last.hours / sleepGoal) * 70 + (last.quality ?? 3) * 6)
+      ));
+    }
+  }
+
+  // Pro-only longest streak record: best-ever consecutive run of logged-step
+  // days within the last 120 days, for comparison against the current streak.
+  let longestStreak = 0;
+  {
+    const streakDates = new Set((streakStepsHist.data ?? []).map(s => localDateStr(new Date(s.logged_at))));
+    let run = 0;
+    for (let i = 0; i < 120; i++) {
+      const d = localDateStr(new Date(Date.now() - i * 86400000));
+      if (streakDates.has(d)) { run++; longestStreak = Math.max(longestStreak, run); }
+      else run = 0;
+    }
+  }
+
+  // Pro-only true-maintenance insight: compares average logged calorie intake
+  // against actual monthly weight change to estimate real maintenance
+  // calories (≈7700 kcal per kg of bodyweight change), vs. the user's set
+  // calorie target.
+  let calorieInsight = null;
+  {
+    const loggedDays = new Set((monthFood.data ?? []).map(f => f.logged_at?.slice(0, 10))).size;
+    const rangeDays = Math.max(1, Math.round((new Date(monthEnd) - new Date(monthStart)) / 86400000) + 1);
+    if (loggedDays >= 10 && monthWeightDelta != null) {
+      const avgDailyIntake = monthKcal / loggedDays;
+      const dailyImbalance = (monthWeightDelta * 7700) / rangeDays;
+      const trueMaintenance = Math.round(avgDailyIntake - dailyImbalance);
+      const targetKcal = profile.data?.calorie_target ?? null;
+      if (trueMaintenance > 800 && trueMaintenance < 6000) {
+        calorieInsight = {
+          trueMaintenance,
+          avgDailyIntake: Math.round(avgDailyIntake),
+          targetKcal,
+          diffVsTarget: targetKcal ? trueMaintenance - targetKcal : null,
+        };
+      }
+    }
+  }
+
+  // Pro-only sleep debt: cumulative shortfall vs. goal across recent logged
+  // nights, plus a simple estimate of nights needed to recover at +1h/night.
+  let sleepDebt = null;
+  {
+    const recent = (sleepHist.data ?? []).slice(0, 7);
+    if (recent.length >= 3) {
+      const totalDebtHrs = recent.reduce((sum, s) => sum + Math.max(0, sleepGoal - s.hours), 0);
+      if (totalDebtHrs > 0) {
+        sleepDebt = {
+          totalDebtHrs: +totalDebtHrs.toFixed(1),
+          nights: recent.length,
+          nightsToRecover: Math.ceil(totalDebtHrs / 1),
+        };
+      }
+    }
+  }
+
   // Last workout info
   const lastWorkoutDate  = lastWorkout.data?.[0]?.date ?? null;
   const lastWorkoutNotes = lastWorkout.data?.[0]?.notes ?? null;
@@ -338,6 +441,11 @@ async function fetchHome(userId) {
     },
     sessionsLeft,
     goalForecast,
+    prWatch,
+    recoveryScore,
+    longestStreak,
+    calorieInsight,
+    sleepDebt,
   };
 }
 
@@ -788,6 +896,7 @@ export default function HomeScreen() {
   const [activeTab,   setActiveTab]   = useState(0);
   const [showStreak,  setShowStreak]  = useState(false);
   const [showForecastPaywall, setShowForecastPaywall] = useState(false);
+  const [showProTeaserPaywall, setShowProTeaserPaywall] = useState(false);
   const consistencyExport = useGatedExport();
   const { hasAccess } = useSubscription();
 
@@ -987,6 +1096,201 @@ export default function HomeScreen() {
                 <Text style={styles.forecastHeadline}>~●● days to your goal</Text>
                 <Text style={styles.forecastSub}>
                   Unlock your personalized projection — exact date, weekly pace, and more 🔒
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Pro Strength PR Watch ───────────────────────────── */}
+            {hasAccess ? (
+              data?.prWatch && (
+                <View style={[styles.forecastCard, { borderColor: C_GREEN + '55' }]}>
+                  <View style={styles.forecastHeader}>
+                    <Ionicons name="barbell-outline" size={15} color={C_GREEN} />
+                    <Text style={styles.forecastTitle}>PR WATCH</Text>
+                    <View style={[styles.proBadge, { backgroundColor: C_GREEN }]}>
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.forecastHeadline}>
+                    {data.prWatch.gapKg}kg from a new {data.prWatch.exercise} PR
+                  </Text>
+                  <Text style={styles.forecastSub}>
+                    Recent best {data.prWatch.recentKg}kg · all-time best {data.prWatch.prKg}kg — one good session away 💪
+                  </Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                style={[styles.forecastCard, { borderColor: C_GREEN + '55' }]}
+                activeOpacity={0.85}
+                onPress={() => setShowProTeaserPaywall(true)}
+              >
+                <View style={styles.forecastHeader}>
+                  <Ionicons name="barbell-outline" size={15} color={C_GREEN} />
+                  <Text style={styles.forecastTitle}>PR WATCH</Text>
+                  <View style={[styles.proBadge, { backgroundColor: C_GREEN }]}>
+                    <Text style={styles.proBadgeText}>PRO</Text>
+                  </View>
+                </View>
+                <Text style={styles.forecastHeadline}>●●kg from a new PR</Text>
+                <Text style={styles.forecastSub}>
+                  See which lift you're closest to beating — and how close 🔒
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Pro Recovery Score ──────────────────────────────── */}
+            {hasAccess ? (
+              data?.recoveryScore != null && (
+                <View style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}>
+                  <View style={styles.forecastHeader}>
+                    <Ionicons name="pulse-outline" size={15} color={C_SLEEP} />
+                    <Text style={styles.forecastTitle}>RECOVERY SCORE</Text>
+                    <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.forecastHeadline}>{data.recoveryScore}% recovered</Text>
+                  <Text style={styles.forecastSub}>
+                    {data.recoveryScore >= 80 ? 'Primed to push hard today 🚀'
+                      : data.recoveryScore >= 50 ? 'Moderate load — train smart today'
+                      : 'Low recovery — consider an easier day'}
+                  </Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}
+                activeOpacity={0.85}
+                onPress={() => setShowProTeaserPaywall(true)}
+              >
+                <View style={styles.forecastHeader}>
+                  <Ionicons name="pulse-outline" size={15} color={C_SLEEP} />
+                  <Text style={styles.forecastTitle}>RECOVERY SCORE</Text>
+                  <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
+                    <Text style={styles.proBadgeText}>PRO</Text>
+                  </View>
+                </View>
+                <Text style={styles.forecastHeadline}>●●% recovered</Text>
+                <Text style={styles.forecastSub}>
+                  Daily readiness score from your sleep — know when to push vs. rest 🔒
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Pro Streak Record ───────────────────────────────── */}
+            {hasAccess ? (
+              data?.longestStreak > 0 && (
+                <View style={[styles.forecastCard, { borderColor: C_STEPS + '55' }]}>
+                  <View style={styles.forecastHeader}>
+                    <Ionicons name="flame-outline" size={15} color={C_STEPS} />
+                    <Text style={styles.forecastTitle}>STREAK RECORD</Text>
+                    <View style={[styles.proBadge, { backgroundColor: C_STEPS }]}>
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.forecastHeadline}>
+                    {data.streak} / {data.longestStreak} day record
+                  </Text>
+                  <Text style={styles.forecastSub}>
+                    {data.streak >= data.longestStreak
+                      ? "You're at your personal best — keep it alive! 🔥"
+                      : `${data.longestStreak - data.streak} more day${data.longestStreak - data.streak === 1 ? '' : 's'} to tie your record`}
+                  </Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                style={[styles.forecastCard, { borderColor: C_STEPS + '55' }]}
+                activeOpacity={0.85}
+                onPress={() => setShowProTeaserPaywall(true)}
+              >
+                <View style={styles.forecastHeader}>
+                  <Ionicons name="flame-outline" size={15} color={C_STEPS} />
+                  <Text style={styles.forecastTitle}>STREAK RECORD</Text>
+                  <View style={[styles.proBadge, { backgroundColor: C_STEPS }]}>
+                    <Text style={styles.proBadgeText}>PRO</Text>
+                  </View>
+                </View>
+                <Text style={styles.forecastHeadline}>●● / ●● day record</Text>
+                <Text style={styles.forecastSub}>
+                  Track your best-ever streak and how close you are to beating it 🔒
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Pro True Maintenance Calories ───────────────────── */}
+            {hasAccess ? (
+              data?.calorieInsight && (
+                <View style={[styles.forecastCard, { borderColor: C_KCAL + '55' }]}>
+                  <View style={styles.forecastHeader}>
+                    <Ionicons name="flask-outline" size={15} color={C_KCAL} />
+                    <Text style={styles.forecastTitle}>TRUE MAINTENANCE</Text>
+                    <View style={[styles.proBadge, { backgroundColor: C_KCAL }]}>
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.forecastHeadline}>~{data.calorieInsight.trueMaintenance} kcal/day</Text>
+                  <Text style={styles.forecastSub}>
+                    Based on your actual intake + weight trend{data.calorieInsight.diffVsTarget != null
+                      ? ` — ${Math.abs(data.calorieInsight.diffVsTarget)} kcal ${data.calorieInsight.diffVsTarget > 0 ? 'higher' : 'lower'} than your set target`
+                      : ''}
+                  </Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                style={[styles.forecastCard, { borderColor: C_KCAL + '55' }]}
+                activeOpacity={0.85}
+                onPress={() => setShowProTeaserPaywall(true)}
+              >
+                <View style={styles.forecastHeader}>
+                  <Ionicons name="flask-outline" size={15} color={C_KCAL} />
+                  <Text style={styles.forecastTitle}>TRUE MAINTENANCE</Text>
+                  <View style={[styles.proBadge, { backgroundColor: C_KCAL }]}>
+                    <Text style={styles.proBadgeText}>PRO</Text>
+                  </View>
+                </View>
+                <Text style={styles.forecastHeadline}>~●●●● kcal/day</Text>
+                <Text style={styles.forecastSub}>
+                  Your real maintenance calories, calculated from actual intake vs. weight trend — not a generic formula 🔒
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Pro Sleep Debt Tracker ──────────────────────────── */}
+            {hasAccess ? (
+              data?.sleepDebt && (
+                <View style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}>
+                  <View style={styles.forecastHeader}>
+                    <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
+                    <Text style={styles.forecastTitle}>SLEEP DEBT</Text>
+                    <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.forecastHeadline}>{data.sleepDebt.totalDebtHrs}h owed</Text>
+                  <Text style={styles.forecastSub}>
+                    Over your last {data.sleepDebt.nights} nights · ~{data.sleepDebt.nightsToRecover} night{data.sleepDebt.nightsToRecover === 1 ? '' : 's'} of +1h sleep to recover
+                  </Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}
+                activeOpacity={0.85}
+                onPress={() => setShowProTeaserPaywall(true)}
+              >
+                <View style={styles.forecastHeader}>
+                  <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
+                  <Text style={styles.forecastTitle}>SLEEP DEBT</Text>
+                  <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
+                    <Text style={styles.proBadgeText}>PRO</Text>
+                  </View>
+                </View>
+                <Text style={styles.forecastHeadline}>●●h owed</Text>
+                <Text style={styles.forecastSub}>
+                  See your cumulative sleep debt and exactly how to pay it back 🔒
                 </Text>
               </TouchableOpacity>
             )}
@@ -1305,6 +1609,7 @@ export default function HomeScreen() {
 
       <PaywallModal visible={consistencyExport.showPaywall} onClose={() => consistencyExport.setShowPaywall(false)} />
       <PaywallModal visible={showForecastPaywall} onClose={() => setShowForecastPaywall(false)} />
+      <PaywallModal visible={showProTeaserPaywall} onClose={() => setShowProTeaserPaywall(false)} />
     </SafeAreaView>
   );
 }
