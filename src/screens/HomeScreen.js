@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  RefreshControl, ActivityIndicator, Modal, Dimensions,
+  RefreshControl, ActivityIndicator, Modal, Dimensions, TextInput, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import BottomSheet from '../components/ui/BottomSheet';
 
 const SCREEN_W  = Dimensions.get('window').width;
 const CAL_PAD   = 16;  // horizontal padding inside the calendar section
@@ -106,6 +107,35 @@ function classifySession(notes) {
 
 const CAL_MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const CAL_DAY_MON      = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+
+// ─── quick-log helpers (nudge cards) ───────────────────────────────────────
+async function quickLogWeight(userId, weightKg) {
+  const date = localDateStr(new Date());
+  const existing = await supabase
+    .from('weight_logs').select('id').eq('user_id', userId).eq('logged_at', date).limit(1).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data) {
+    const { error } = await supabase.from('weight_logs').update({ weight: weightKg }).eq('id', existing.data.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('weight_logs').insert({ user_id: userId, weight: weightKg, logged_at: date });
+    if (error) throw error;
+  }
+}
+
+async function quickLogSleep(userId, hours) {
+  const date = localDateStr(new Date());
+  const existing = await supabase
+    .from('sleep_logs').select('id').eq('user_id', userId).eq('logged_at', date).limit(1).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data) {
+    const { error } = await supabase.from('sleep_logs').update({ hours }).eq('id', existing.data.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('sleep_logs').insert({ user_id: userId, hours, logged_at: date });
+    if (error) throw error;
+  }
+}
 
 // ─── data fetch ─────────────────────────────────────────────────────────────
 async function fetchHome(userId) {
@@ -389,6 +419,12 @@ async function fetchHome(userId) {
   const daysSinceWorkout = lastWorkoutDate
     ? Math.floor((Date.now() - new Date(lastWorkoutDate).getTime()) / 86400000) : null;
 
+  // Days since last weigh-in / sleep log, for the actionable nudge cards
+  const daysSinceWeight = latestWeight?.logged_at
+    ? Math.floor((Date.now() - new Date(latestWeight.logged_at).getTime()) / 86400000) : null;
+  const daysSinceSleep = latestSleep?.logged_at
+    ? Math.floor((Date.now() - new Date(latestSleep.logged_at).getTime()) / 86400000) : null;
+
   // Streak (consecutive days with step logs)
   let streak = 0;
   for (let i = 0; i < 60; i++) {
@@ -431,6 +467,7 @@ async function fetchHome(userId) {
     hasTodayWorkout, todaySession,
     todayExCount, todaySetCount, todayWorkoutName,
     lastWorkoutDate, lastWorkoutNotes, daysSinceWorkout,
+    daysSinceWeight, daysSinceSleep,
     motivText, streak, stepsWeekSeries,
     thisWeek: { sessions: thisWeekSessions, steps: thisWeekStepsAvg, kcal: thisWeekKcal, goalDays: thisWeekGoalDays, weightDelta: weekWeightDelta },
     lastWeek: { sessions: lastWeekSessions, steps: lastWeekStepsAvg, kcal: lastWeekKcal, goalDays: lastWeekGoalDays, weightDelta: lastWeekWeightDelta },
@@ -887,6 +924,32 @@ function StepsTrendChart({ current, previous, goal, colors, width }) {
   );
 }
 
+// ─── Actionable nudge card (e.g. "No weigh-in for 4 days" + Log) ───────────
+function NudgeCard({ icon, color, title, sub, styles, onPress, logLabel, logBadge }) {
+  return (
+    <TouchableOpacity style={styles.nudgeCard} onPress={onPress} activeOpacity={0.8}>
+      <View style={[styles.nudgeIconWrap, { backgroundColor: color + '1f' }]}>
+        <Ionicons name={icon} size={16} color={color} />
+      </View>
+      <View style={styles.nudgeBody}>
+        <Text style={styles.nudgeTitle}>{title}</Text>
+        <Text style={styles.nudgeSub}>{sub}</Text>
+      </View>
+      {logBadge != null ? (
+        <View style={styles.nudgeBadgeWrap}>
+          <Text style={[styles.nudgeBadgeNum, { color }]}>{logBadge}</Text>
+          {logLabel && <Text style={styles.nudgeBadgeLabel}>{logLabel}</Text>}
+        </View>
+      ) : (
+        <View style={styles.nudgeLogBtn}>
+          <Ionicons name="add" size={13} color="#0c0c0f" />
+          <Text style={styles.nudgeLogBtnText}>Log</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 // ─── component ──────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -899,6 +962,12 @@ export default function HomeScreen() {
   const [showProTeaserPaywall, setShowProTeaserPaywall] = useState(false);
   const consistencyExport = useGatedExport();
   const { hasAccess } = useSubscription();
+  const qc = useQueryClient();
+
+  const [showWeightLog, setShowWeightLog] = useState(false);
+  const [weightQuickInput, setWeightQuickInput] = useState('');
+  const [showSleepLog, setShowSleepLog] = useState(false);
+  const [sleepQuickInput, setSleepQuickInput] = useState('');
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['home', user?.id],
@@ -906,6 +975,26 @@ export default function HomeScreen() {
     enabled: !!user?.id,
     staleTime: 0,
     gcTime: 0,
+  });
+
+  const weightQuickMut = useMutation({
+    mutationFn: (kg) => quickLogWeight(user.id, kg),
+    onSuccess: () => {
+      qc.invalidateQueries(['home', user.id]);
+      qc.invalidateQueries(['weight', user.id]);
+      setShowWeightLog(false); setWeightQuickInput('');
+    },
+    onError: (e) => Alert.alert('Error', e.message),
+  });
+
+  const sleepQuickMut = useMutation({
+    mutationFn: (hours) => quickLogSleep(user.id, hours),
+    onSuccess: () => {
+      qc.invalidateQueries(['home', user.id]);
+      qc.invalidateQueries(['sleep', user.id]);
+      setShowSleepLog(false); setSleepQuickInput('');
+    },
+    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const onRefresh = useCallback(() => refetch(), [refetch]);
@@ -1377,6 +1466,52 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* ── Actionable nudge cards ────────────────────────── */}
+            {data?.daysSinceWeight != null && data.daysSinceWeight >= 2 && (
+              <NudgeCard
+                icon="scale-outline"
+                color={C_WEIGHT}
+                title={`No weigh-in for ${data.daysSinceWeight} days`}
+                sub={`Last: ${data.latestWeight.weight}KG · ${data.daysSinceWeight} days ago`}
+                styles={styles}
+                onPress={() => setShowWeightLog(true)}
+              />
+            )}
+            {!data?.hasTodayWorkout && (
+              <NudgeCard
+                icon="trophy-outline"
+                color={colors.warning}
+                title={data?.lastWorkoutDate ? 'Rest day — no session today' : 'No session today'}
+                sub={data?.lastWorkoutDate
+                  ? `Last: ${classifySession(data.lastWorkoutNotes) === 'rest' ? 'Rest Day' : 'Session'} on ${new Date(data.lastWorkoutDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`
+                  : 'Tap to start your first session'}
+                styles={styles}
+                onPress={() => navigation.navigate('Workout')}
+              />
+            )}
+            {data?.daysSinceSleep != null && data.daysSinceSleep >= 1 && (
+              <NudgeCard
+                icon="moon-outline"
+                color={C_SLEEP}
+                title={`No sleep logged for ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'}`}
+                sub={`Last: ${data.latestSleep.hours}h · ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'} ago`}
+                styles={styles}
+                onPress={() => setShowSleepLog(true)}
+              />
+            )}
+            {sessionsLeft > 0 && thisWeekSessions > 0 && (
+              <NudgeCard
+                icon="trophy"
+                color={C_GREEN}
+                title={`Almost there! — ${sessionsLeft} more gym session${sessionsLeft === 1 ? '' : 's'} this week`}
+                sub={`${thisWeekSessions}/${WEEKLY_SESSION_GOAL} gym sessions · this week`}
+                styles={styles}
+                onPress={() => navigation.navigate('Workout')}
+                logLabel="THIS WEEK"
+                logBadge={String(thisWeekSessions)}
+              />
+            )}
+
             {/* ── 7-Day Steps Trend (vs last week, with goal line) ─ */}
             <Text style={styles.sectionLabel}>7-DAY TREND</Text>
             <View style={styles.chartCard}>
@@ -1610,6 +1745,63 @@ export default function HomeScreen() {
       <PaywallModal visible={consistencyExport.showPaywall} onClose={() => consistencyExport.setShowPaywall(false)} />
       <PaywallModal visible={showForecastPaywall} onClose={() => setShowForecastPaywall(false)} />
       <PaywallModal visible={showProTeaserPaywall} onClose={() => setShowProTeaserPaywall(false)} />
+
+      {/* Quick log: Weight */}
+      <BottomSheet visible={showWeightLog} onClose={() => setShowWeightLog(false)}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>LOG WEIGHT</Text>
+          <TouchableOpacity onPress={() => setShowWeightLog(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <Text style={styles.sheetFieldLabel}>WEIGHT (KG)</Text>
+          {data?.latestWeight && <Text style={styles.lastHint}>↑ LAST: {data.latestWeight.weight}KG</Text>}
+        </View>
+        <TextInput
+          style={styles.sheetInput}
+          value={weightQuickInput}
+          onChangeText={setWeightQuickInput}
+          placeholder={data?.latestWeight ? String(data.latestWeight.weight) : '70.0'}
+          placeholderTextColor={colors.textDim}
+          keyboardType="numeric"
+          autoFocus
+        />
+        <TouchableOpacity
+          style={[styles.saveBtn, { marginTop: 18 }]}
+          onPress={() => weightQuickInput && weightQuickMut.mutate(parseFloat(weightQuickInput))}
+          disabled={weightQuickMut.isPending}
+        >
+          {weightQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Weight</Text>}
+        </TouchableOpacity>
+      </BottomSheet>
+
+      {/* Quick log: Sleep */}
+      <BottomSheet visible={showSleepLog} onClose={() => setShowSleepLog(false)}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>LOG SLEEP</Text>
+          <TouchableOpacity onPress={() => setShowSleepLog(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.sheetFieldLabel}>HOURS SLEPT</Text>
+        <TextInput
+          style={styles.sheetInput}
+          value={sleepQuickInput}
+          onChangeText={setSleepQuickInput}
+          placeholder={data?.sleepGoal ? String(data.sleepGoal) : '8'}
+          placeholderTextColor={colors.textDim}
+          keyboardType="numeric"
+          autoFocus
+        />
+        <TouchableOpacity
+          style={[styles.saveBtn, { marginTop: 18 }]}
+          onPress={() => sleepQuickInput && sleepQuickMut.mutate(parseFloat(sleepQuickInput))}
+          disabled={sleepQuickMut.isPending}
+        >
+          {sleepQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Sleep</Text>}
+        </TouchableOpacity>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -1700,6 +1892,23 @@ const createStyles = (colors) => StyleSheet.create({
   bannerSub: { fontSize: 10, color: colors.textMuted, marginTop: 2, fontFamily: fontFamily.body },
   viewBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: `${C_GREEN}20`, borderWidth: 1, borderColor: C_GREEN },
   viewBtnText: { fontSize: 12, color: C_GREEN, fontFamily: fontFamily.bodyBold },
+  nudgeCard: { backgroundColor: colors.bgCard, marginHorizontal: 16, marginBottom: 10, borderRadius: 16, flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10, borderWidth: 1, borderColor: colors.border },
+  nudgeIconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  nudgeBody: { flex: 1 },
+  nudgeTitle: { fontSize: 13, fontFamily: fontFamily.bodyBold, color: colors.text, lineHeight: 17 },
+  nudgeSub: { fontSize: 10, color: colors.textMuted, marginTop: 2, fontFamily: fontFamily.body },
+  nudgeLogBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
+  nudgeLogBtnText: { fontSize: 12, fontWeight: weight.bold, color: '#0c0c0f', fontFamily: fontFamily.bodyBold },
+  nudgeBadgeWrap: { alignItems: 'center' },
+  nudgeBadgeNum: { fontSize: 16, fontWeight: weight.black, fontFamily: fontFamily.mono },
+  nudgeBadgeLabel: { fontSize: 8, color: colors.textDim, fontFamily: fontFamily.mono, letterSpacing: 0.5 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  sheetTitle: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 2, fontFamily: fontFamily.mono },
+  sheetFieldLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1, marginBottom: 6, fontFamily: fontFamily.mono },
+  sheetInput: { backgroundColor: colors.bgElevated, borderRadius: 12, padding: 12, color: colors.text, fontSize: typography.base, borderWidth: 1, borderColor: colors.border },
+  lastHint: { fontSize: 10, color: colors.accent, fontFamily: fontFamily.mono },
+  saveBtn: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
+  saveBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.base },
   tabsCard: { marginHorizontal: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   tabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative' },
