@@ -15,7 +15,9 @@ import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import Chip from '../components/ui/Chip';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
-import { useExportCard } from '../hooks/useExportCard';
+import PaywallModal from '../components/ui/PaywallModal';
+import ProGate from '../components/ui/ProGate';
+import { useGatedExport } from '../hooks/useGatedExport';
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 // Steps km/kcal are derived on the fly (matches reference app: totalKm =
@@ -372,7 +374,7 @@ export default function StepsScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
-  const heroExport = useExportCard();
+  const heroExport = useGatedExport();
 
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
@@ -570,7 +572,7 @@ export default function StepsScreen() {
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 8 }}>
                   <TouchableOpacity
-                    onPress={heroExport.exportCard}
+                    onPress={heroExport.onExportPress}
                     disabled={heroExport.exporting}
                     style={styles.cardExportBtn}
                   >
@@ -696,19 +698,21 @@ export default function StepsScreen() {
             )}
 
             {/* ── Monthly Heatmap ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
-                <View style={styles.hmLegend}>
-                  <Text style={styles.hmLegendLabel}>Less</Text>
-                  {['rgba(56,189,248,0.22)', 'rgba(34,211,238,0.42)', 'rgba(20,184,166,0.65)', 'rgba(52,211,153,0.88)'].map((c, i) => (
-                    <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
-                  ))}
-                  <Text style={styles.hmLegendLabel}>More</Text>
+            <ProGate label="Monthly heatmap">
+              <View style={styles.card}>
+                <View style={styles.cardTitleRow}>
+                  <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+                  <View style={styles.hmLegend}>
+                    <Text style={styles.hmLegendLabel}>Less</Text>
+                    {['rgba(56,189,248,0.22)', 'rgba(34,211,238,0.42)', 'rgba(20,184,166,0.65)', 'rgba(52,211,153,0.88)'].map((c, i) => (
+                      <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+                    ))}
+                    <Text style={styles.hmLegendLabel}>More</Text>
+                  </View>
                 </View>
+                <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} />
               </View>
-              <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} />
-            </View>
+            </ProGate>
 
             {/* ── Trend Chart ── */}
             <View style={styles.card}>
@@ -894,6 +898,8 @@ export default function StepsScreen() {
           {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Goal</Text>}
         </TouchableOpacity>
       </BottomSheet>
+
+      <PaywallModal visible={heroExport.showPaywall} onClose={() => heroExport.setShowPaywall(false)} />
     </SafeAreaView>
   );
 }

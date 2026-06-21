@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+import { useSubscription } from '../context/SubscriptionContext';
+import PaywallModal from '../components/ui/PaywallModal';
 
 // Some calculator entries below use a theme token name (e.g. 'accent') instead of
 // a literal hex value for their `color` field, since CALCULATORS is static module
@@ -102,7 +104,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'bodyFat', label: 'Body Fat %', icon: 'body', color: '#22d3ee',
+    id: 'bodyFat', label: 'Body Fat %', icon: 'body', color: '#22d3ee', pro: true,
     desc: 'Navy method body fat estimate',
     fields: [
       { key: 'sex', label: 'Sex (M/F)', placeholder: 'M' },
@@ -144,7 +146,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'lbm', label: 'Lean Body Mass', icon: 'fitness', color: 'blue',
+    id: 'lbm', label: 'Lean Body Mass', icon: 'fitness', color: 'blue', pro: true,
     desc: 'LBM and fat mass from body fat %',
     fields: [
       { key: 'weight', label: 'Body weight (kg)', placeholder: '80' },
@@ -161,7 +163,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'ffmi', label: 'FFMI', icon: 'barbell', color: 'accent',
+    id: 'ffmi', label: 'FFMI', icon: 'barbell', color: 'accent', pro: true,
     desc: 'Fat-Free Mass Index',
     fields: [
       { key: 'weight', label: 'Weight (kg)', placeholder: '80' },
@@ -182,7 +184,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'idealWeight', label: 'Ideal Body Weight', icon: 'scale', color: '#e879f9',
+    id: 'idealWeight', label: 'Ideal Body Weight', icon: 'scale', color: '#e879f9', pro: true,
     desc: 'Estimated ideal weight (Devine formula)',
     fields: [
       { key: 'height', label: 'Height (cm)', placeholder: '175' },
@@ -254,7 +256,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'deficit', label: 'Deficit Planner', icon: 'trending-down', color: 'warning',
+    id: 'deficit', label: 'Deficit Planner', icon: 'trending-down', color: 'warning', pro: true,
     desc: 'How long to reach your goal weight',
     fields: [
       { key: 'current', label: 'Current weight (kg)', placeholder: '90' },
@@ -275,7 +277,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'waistHip', label: 'Waist-Hip Ratio', icon: 'body', color: '#e879f9',
+    id: 'waistHip', label: 'Waist-Hip Ratio', icon: 'body', color: '#e879f9', pro: true,
     desc: 'Cardiovascular risk indicator',
     fields: [
       { key: 'waist', label: 'Waist (cm)', placeholder: '85' },
@@ -295,7 +297,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'volumeLoad', label: 'Volume Load', icon: 'layers', color: 'accent',
+    id: 'volumeLoad', label: 'Volume Load', icon: 'layers', color: 'accent', pro: true,
     desc: 'Total training volume for a set',
     fields: [
       { key: 'sets', label: 'Sets', placeholder: '4' },
@@ -312,7 +314,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'wilks', label: 'Wilks Score', icon: 'trophy', color: 'warning',
+    id: 'wilks', label: 'Wilks Score', icon: 'trophy', color: 'warning', pro: true,
     desc: 'Powerlifting strength standard',
     fields: [
       { key: 'total', label: 'Powerlifting total (kg)', placeholder: '400' },
@@ -331,7 +333,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'sleep', label: 'Sleep Calculator', icon: 'moon', color: 'purple',
+    id: 'sleep', label: 'Sleep Calculator', icon: 'moon', color: 'purple', pro: true,
     desc: 'Optimal wake-up times based on sleep cycles',
     fields: [{ key: 'bedtime', label: 'Bedtime (HH:MM, 24h)', placeholder: '23:00' }],
     compute: ({ bedtime }) => {
@@ -348,7 +350,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'strengthLevel', label: 'Strength Level', icon: 'barbell', color: 'blue',
+    id: 'strengthLevel', label: 'Strength Level', icon: 'barbell', color: 'blue', pro: true,
     desc: 'Strength standard relative to bodyweight',
     fields: [
       { key: 'lift', label: 'Lift (bench/squat/deadlift)', placeholder: 'bench' },
@@ -372,7 +374,7 @@ const CALCULATORS = [
     },
   },
   {
-    id: 'caloriesBurned', label: 'Calories Burned', icon: 'flame', color: '#fb923c',
+    id: 'caloriesBurned', label: 'Calories Burned', icon: 'flame', color: '#fb923c', pro: true,
     desc: 'Estimate calories burned during exercise',
     fields: [
       { key: 'weight', label: 'Body weight (kg)', placeholder: '80' },
@@ -414,6 +416,8 @@ export default function CalculatorsScreen({ navigation }) {
   const [inputs, setInputs] = useState({});
   const [activityIdx, setActivityIdx] = useState(1);
   const [results, setResults] = useState({});
+  const { hasAccess } = useSubscription();
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const filtered = CALCULATORS.filter(c =>
     !search || c.label.toLowerCase().includes(search.toLowerCase()) || c.desc.toLowerCase().includes(search.toLowerCase())
@@ -460,7 +464,10 @@ export default function CalculatorsScreen({ navigation }) {
             <View key={calc.id} style={styles.calcCard}>
               <TouchableOpacity
                 style={styles.calcHeader}
-                onPress={() => setOpenId(isOpen ? null : calc.id)}
+                onPress={() => {
+                  if (calc.pro && !hasAccess) { setShowPaywall(true); return; }
+                  setOpenId(isOpen ? null : calc.id);
+                }}
               >
                 <View style={[styles.calcIcon, { backgroundColor: calcColor + '22' }]}>
                   <Ionicons name={calc.icon} size={20} color={calcColor} />
@@ -469,7 +476,10 @@ export default function CalculatorsScreen({ navigation }) {
                   <Text style={styles.calcLabel}>{calc.label}</Text>
                   <Text style={styles.calcDesc}>{calc.desc}</Text>
                 </View>
-                <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+                {calc.pro && !hasAccess
+                  ? <Ionicons name="lock-closed" size={16} color={colors.textMuted} />
+                  : <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+                }
               </TouchableOpacity>
 
               {isOpen && (
@@ -526,6 +536,8 @@ export default function CalculatorsScreen({ navigation }) {
         })}
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
     </SafeAreaView>
   );
 }

@@ -15,7 +15,10 @@ import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import CircularGauge from '../components/CircularGauge';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
-import { useExportCard } from '../hooks/useExportCard';
+import PaywallModal from '../components/ui/PaywallModal';
+import ProGate from '../components/ui/ProGate';
+import { useGatedExport } from '../hooks/useGatedExport';
+import { useSubscription } from '../context/SubscriptionContext';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -267,7 +270,9 @@ export default function SleepScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
-  const recoveryExport = useExportCard();
+  const recoveryExport = useGatedExport();
+  const { hasAccess } = useSubscription();
+  const [showRangePaywall, setShowRangePaywall] = useState(false);
 
   const [chartRange, setChartRange] = useState('1M'); // 1M | 3M | 6M | ALL
   const [showLogSheet, setShowLogSheet] = useState(false);
@@ -483,7 +488,7 @@ export default function SleepScreen() {
               <View style={styles.recoveryGradientBar} />
               <View style={styles.recoveryTopRow}>
                 <TouchableOpacity
-                  onPress={recoveryExport.exportCard}
+                  onPress={recoveryExport.onExportPress}
                   disabled={recoveryExport.exporting}
                   style={styles.cardExportBtn}
                 >
@@ -560,19 +565,21 @@ export default function SleepScreen() {
             )}
 
             {/* ── Monthly Heatmap ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
-                <View style={styles.hmLegend}>
-                  <Text style={styles.hmLegendLabel}>Poor</Text>
-                  {['rgba(248,113,113,0.6)', 'rgba(251,191,36,0.55)', 'rgba(52,211,153,0.5)', 'rgba(129,140,248,0.7)'].map((c, i) => (
-                    <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
-                  ))}
-                  <Text style={styles.hmLegendLabel}>Great</Text>
+            <ProGate label="Monthly heatmap">
+              <View style={styles.card}>
+                <View style={styles.cardTitleRow}>
+                  <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+                  <View style={styles.hmLegend}>
+                    <Text style={styles.hmLegendLabel}>Poor</Text>
+                    {['rgba(248,113,113,0.6)', 'rgba(251,191,36,0.55)', 'rgba(52,211,153,0.5)', 'rgba(129,140,248,0.7)'].map((c, i) => (
+                      <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+                    ))}
+                    <Text style={styles.hmLegendLabel}>Great</Text>
+                  </View>
                 </View>
+                <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} />
               </View>
-              <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} />
-            </View>
+            </ProGate>
 
             {/* ── Sleep Trend ── */}
             <View style={styles.card}>
@@ -584,7 +591,14 @@ export default function SleepScreen() {
               </View>
               <View style={styles.segmentRow}>
                 {['1M', '3M', '6M', 'ALL'].map(r => (
-                  <TouchableOpacity key={r} onPress={() => setChartRange(r)} style={[styles.segmentBtn, chartRange === r && styles.segmentBtnActive]}>
+                  <TouchableOpacity
+                    key={r}
+                    onPress={() => {
+                      if (r !== '1M' && !hasAccess) { setShowRangePaywall(true); return; }
+                      setChartRange(r);
+                    }}
+                    style={[styles.segmentBtn, chartRange === r && styles.segmentBtnActive]}
+                  >
                     <Text style={[styles.segmentText, chartRange === r && styles.segmentTextActive]}>{r}</Text>
                   </TouchableOpacity>
                 ))}
@@ -718,6 +732,9 @@ export default function SleepScreen() {
           {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Goal</Text>}
         </TouchableOpacity>
       </BottomSheet>
+
+      <PaywallModal visible={recoveryExport.showPaywall} onClose={() => recoveryExport.setShowPaywall(false)} />
+      <PaywallModal visible={showRangePaywall} onClose={() => setShowRangePaywall(false)} />
     </SafeAreaView>
   );
 }

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 
@@ -47,11 +48,29 @@ async function updateProfile(userId, fields) {
 export default function ProfileScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
+  const { isSuperAdmin, setUserAdmin } = useSubscription();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [showGoalPicker, setShowGoalPicker] = useState(false);
+  const [grantEmail, setGrantEmail] = useState('');
+  const [grantBusy, setGrantBusy] = useState(false);
+
+  const handleSetAdmin = async (makeAdmin) => {
+    const email = grantEmail.trim();
+    if (!email) return;
+    setGrantBusy(true);
+    try {
+      await setUserAdmin(email, makeAdmin);
+      Alert.alert('Done', `${email} is ${makeAdmin ? 'now an admin' : 'no longer an admin'}.`);
+      setGrantEmail('');
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setGrantBusy(false);
+    }
+  };
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['profile', user?.id],
@@ -231,6 +250,48 @@ export default function ProfileScreen({ navigation }) {
                 </View>
               </View>
             </View>
+
+            {/* Super admin: grant admin access */}
+            {isSuperAdmin && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Super Admin</Text>
+                <Text style={[styles.bodyFieldLabel, { marginBottom: 10 }]}>Grant or revoke admin access by email</Text>
+                <TextInput
+                  style={[styles.bodyFieldInput, { marginBottom: 10 }]}
+                  placeholder="user@example.com"
+                  placeholderTextColor={colors.textDim}
+                  value={grantEmail}
+                  onChangeText={setGrantEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.signOutBtn, { flex: 1, justifyContent: 'center', backgroundColor: colors.accent }]}
+                    onPress={() => handleSetAdmin(true)}
+                    disabled={grantBusy}
+                  >
+                    {grantBusy
+                      ? <ActivityIndicator color={colors.bg} />
+                      : <Text style={[styles.signOutText, { color: colors.bg }]}>Grant</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.deleteBtn, { flex: 1, justifyContent: 'center' }]}
+                    onPress={() => handleSetAdmin(false)}
+                    disabled={grantBusy}
+                  >
+                    {grantBusy
+                      ? <ActivityIndicator color={colors.danger} />
+                      : <Text style={styles.deleteBtnText}>Revoke</Text>}
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={{ marginTop: 12 }} onPress={() => navigation.navigate('AdminDashboard')}>
+                  <Text style={{ color: colors.accent, fontSize: typography.sm, fontWeight: weight.semibold }}>
+                    Open Admin Dashboard →
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Sign out + Delete */}
             <View style={styles.dangerSection}>

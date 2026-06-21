@@ -14,7 +14,8 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
-import { useExportCard } from '../hooks/useExportCard';
+import PaywallModal from '../components/ui/PaywallModal';
+import { useGatedExport } from '../hooks/useGatedExport';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -388,7 +389,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   const dS = useMemo(() => createDS(colors), [colors]);
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [historyEx, setHistoryEx] = useState(null);
-  const sessionExport = useExportCard();
+  const sessionExport = useGatedExport();
 
   useEffect(() => {
     if (visible && session) {
@@ -441,7 +442,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
           </View>
           {!isRestDay && (
             <TouchableOpacity
-              onPress={sessionExport.exportCard}
+              onPress={sessionExport.onExportPress}
               disabled={sessionExport.exporting}
               style={dS.closeBtn}
             >
@@ -711,6 +712,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
       visible={!!historyEx}
       onClose={() => setHistoryEx(null)}
     />
+    <PaywallModal visible={sessionExport.showPaywall} onClose={() => sessionExport.setShowPaywall(false)} />
     </>
   );
 }

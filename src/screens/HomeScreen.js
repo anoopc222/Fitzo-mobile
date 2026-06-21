@@ -21,7 +21,8 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import Svg, { Polyline, Line } from 'react-native-svg';
 import Sparkline from '../components/Sparkline';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
-import { useExportCard } from '../hooks/useExportCard';
+import PaywallModal from '../components/ui/PaywallModal';
+import { useGatedExport } from '../hooks/useGatedExport';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -760,7 +761,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const [activeTab,   setActiveTab]   = useState(0);
   const [showStreak,  setShowStreak]  = useState(false);
-  const consistencyExport = useExportCard();
+  const consistencyExport = useGatedExport();
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['home', user?.id],
@@ -1050,7 +1051,7 @@ export default function HomeScreen() {
                 </View>
               </View>
               <TouchableOpacity
-                onPress={consistencyExport.exportCard}
+                onPress={consistencyExport.onExportPress}
                 disabled={consistencyExport.exporting}
                 style={styles.cardExportBtn}
               >
@@ -1233,6 +1234,8 @@ export default function HomeScreen() {
         userId={user?.id}
         onClose={() => setShowStreak(false)}
       />
+
+      <PaywallModal visible={consistencyExport.showPaywall} onClose={() => consistencyExport.setShowPaywall(false)} />
     </SafeAreaView>
   );
 }

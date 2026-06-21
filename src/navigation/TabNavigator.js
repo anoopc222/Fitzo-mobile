@@ -19,6 +19,7 @@ import HealthLogScreen from '../screens/HealthLogScreen';
 import CalculatorsScreen from '../screens/CalculatorsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -44,6 +45,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Calculators" component={CalculatorsScreen} />
       <HomeStack.Screen name="Profile" component={ProfileScreen} />
       <HomeStack.Screen name="Settings" component={SettingsScreen} />
+      <HomeStack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
     </HomeStack.Navigator>
   );
 }
