@@ -2,20 +2,24 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
-  Modal, KeyboardAvoidingView, Platform,
+  Modal, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
+import MonthHeatmap from '../components/MonthHeatmap';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
+import { useExportCard } from '../hooks/useExportCard';
+import { useSubscription } from '../context/SubscriptionContext';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -293,6 +297,138 @@ function fmtDate(d) {
 function fmtDateShort(d) {
   const dt = new Date(d);
   return `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()]}`;
+}
+
+function localDateStr(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+const DOW_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+function getWeekRange(refDate, offsetWeeks = 0) {
+  const d = new Date(refDate);
+  const dow = d.getDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + mondayOffset - offsetWeeks * 7);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return [localDateStr(monday), localDateStr(sunday), monday];
+}
+
+// Catmull-Rom → cubic-bezier smoothing for a polyline's points
+function smoothPath(pts) {
+  if (pts.length < 2) return '';
+  if (pts.length === 2) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  let d = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
+// ─── Volume Trend Chart (Daily + 7-entry Avg) — mirrors StepsTrendChart ───
+function VolumeTrendChart({ data, colors, width }) {
+  const H = 170;
+  const P = { t: 18, r: 8, b: 22, l: 8 };
+  const pw = width - P.l - P.r;
+  const ph = H - P.t - P.b;
+  if (data.length < 2) {
+    return (
+      <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Not enough data yet</Text>
+      </View>
+    );
+  }
+  const rawVals = data.map(e => e.vol);
+  const avgVals = data.map((_, i) => {
+    const win = data.slice(Math.max(0, i - 6), i + 1);
+    return Math.round(win.reduce((s, x) => s + x.vol, 0) / win.length);
+  });
+  const allVals = [...rawVals, ...avgVals];
+  const minV = Math.min(...allVals, 0) * 0.96;
+  const maxV = Math.max(...allVals, 1) * 1.06;
+  const range = maxV - minV || 1;
+  const n = data.length;
+  const xs = pw / Math.max(n - 1, 1);
+  const toY = v => P.t + ph - ((v - minV) / range) * ph;
+  const toX = i => P.l + i * xs;
+  const rawPts = rawVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
+  const rawLine = smoothPath(rawPts);
+  const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
+  const avgLine = smoothPath(avgPts);
+  const lastAvg = avgPts[avgPts.length - 1];
+  return (
+    <Svg width={width} height={H}>
+      <Defs>
+        <LinearGradient id="workoutTrendFill" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#d4ff00" stopOpacity="0.22" />
+          <Stop offset="1" stopColor="#d4ff00" stopOpacity="0" />
+        </LinearGradient>
+      </Defs>
+      {[0, 1, 2, 3].map(i => {
+        const y = P.t + (ph / 3) * i;
+        return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />;
+      })}
+      {avgPts.length > 1 && (
+        <Path d={`${avgLine} L ${avgPts[avgPts.length - 1].x.toFixed(1)},${H - P.b} L ${avgPts[0].x.toFixed(1)},${H - P.b} Z`} fill="url(#workoutTrendFill)" />
+      )}
+      {rawPts.length > 1 && (
+        <Path d={rawLine} fill="none" stroke="#67e8f9" strokeOpacity={0.35} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      )}
+      {avgPts.length > 1 && (
+        <Path d={avgLine} fill="none" stroke="#d4ff00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      )}
+      {rawPts.map((p, i) => (<Circle key={i} cx={p.x} cy={p.y} r={2} fill="#67e8f9" fillOpacity={0.6} />))}
+      {lastAvg && <Circle cx={lastAvg.x} cy={lastAvg.y} r={3.5} fill="#d4ff00" />}
+    </Svg>
+  );
+}
+
+// ─── Weekly Bar Chart (volume per day, colored by session type) ───────────
+function WorkoutWeekBarChart({ days, colors, width }) {
+  const H = 140;
+  const padTop = 22, padBot = 30;
+  const chartH = H - padTop - padBot;
+  const barGap = 8;
+  const barW = (width - barGap * 8) / 7;
+  const TYPE_COLOR = { gym: '#d4ff00', cardio: colors.blue, rest: colors.good };
+
+  const vols = days.filter(d => !d.isFuture).map(d => d.vol);
+  const maxVal = Math.max(...vols, 1) * 1.15;
+  const toY = v => padTop + chartH - (v / maxVal) * chartH;
+
+  return (
+    <Svg width={width} height={H}>
+      {days.map((day, i) => {
+        const x = barGap + i * (barW + barGap);
+        const isRest = day.type === 'rest';
+        const barH = isRest ? Math.max(3, chartH * 0.06) : (day.vol > 0 ? Math.max(3, (day.vol / maxVal) * chartH) : 0);
+        const barY = padTop + chartH - barH;
+        const color = TYPE_COLOR[day.type] ?? colors.dim;
+        return (
+          <React.Fragment key={day.date}>
+            {!day.isFuture && (day.vol > 0 || isRest) ? (
+              <Rect x={x} y={barY} width={barW} height={barH} rx={5} fill={color} fillOpacity={0.85} />
+            ) : (
+              <Rect x={x} y={padTop} width={barW} height={chartH} rx={5} fill={colors.dim} />
+            )}
+            {day.isToday && (
+              <Rect x={x - 1} y={padTop - 2} width={barW + 2} height={chartH + 2} rx={5} fill="none" stroke="rgba(212,255,0,0.6)" strokeWidth={1.5} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </Svg>
+  );
 }
 
 const MUSCLE_KW = [
