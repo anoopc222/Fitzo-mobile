@@ -2,7 +2,16 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { Platform } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { useAuth } from './AuthContext';
-import { REVENUECAT_API_KEYS, PRO_ENTITLEMENT_ID, DEFAULT_OFFERING_ID, TRIAL_DAYS } from '../config/subscription';
+import {
+  REVENUECAT_API_KEYS, PRO_ENTITLEMENT_ID, DEFAULT_OFFERING_ID, TRIAL_DAYS,
+  ADMIN_OVERRIDE_USER_IDS, ADMIN_OVERRIDE_EMAILS,
+} from '../config/subscription';
+
+function isAdminOverride(user) {
+  if (!user) return false;
+  if (ADMIN_OVERRIDE_USER_IDS.includes(user.id)) return true;
+  return !!user.email && ADMIN_OVERRIDE_EMAILS.includes(user.email.toLowerCase());
+}
 
 const SubscriptionContext = createContext(null);
 
@@ -70,9 +79,10 @@ export function SubscriptionProvider({ children }) {
     return () => Purchases.removeCustomerInfoUpdateListener(listener);
   }, [configured, refresh]);
 
-  const isPro = !!customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID];
+  const isAdmin = isAdminOverride(user);
+  const isPro = isAdmin || !!customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID];
   const { isInTrial, trialDaysLeft, trialEndsAt } = trialInfo(user);
-  const hasAccess = isPro || isInTrial;
+  const hasAccess = isAdmin || isPro || isInTrial;
 
   const currentOffering = offerings?.all?.[DEFAULT_OFFERING_ID] ?? offerings?.current ?? null;
 
@@ -94,6 +104,7 @@ export function SubscriptionProvider({ children }) {
     <SubscriptionContext.Provider
       value={{
         ready,
+        isAdmin,
         isPro,
         isInTrial,
         trialDaysLeft,
