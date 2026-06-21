@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Svg, { Polyline, Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -178,6 +178,25 @@ function SleepHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true,
   );
 }
 
+// Catmull-Rom → cubic-bezier smoothing for a polyline's points
+function smoothPath(pts) {
+  if (pts.length < 2) return '';
+  if (pts.length === 2) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  let d = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
 // ─── Sleep Trend Chart — ports _renderSleepTrendChart ───────────────────────
 function SleepTrendChart({ data, goal, colors, width }) {
   const H = 200;
@@ -207,8 +226,9 @@ function SleepTrendChart({ data, goal, colors, width }) {
   const toX = i => P.l + (i * pw) / Math.max(n - 1, 1);
 
   const pts = data.map((e, i) => ({ x: toX(i), y: toY(e.hours), hit: e.hours >= goal }));
+  const rawLine = smoothPath(pts);
   const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
-  const avgLine = avgPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const avgLine = smoothPath(avgPts);
   const goalY = toY(goal);
   const rangeAvgY = toY(rangeAvgVal);
   const lastAvg = avgPts[avgPts.length - 1];
@@ -233,17 +253,17 @@ function SleepTrendChart({ data, goal, colors, width }) {
 
       {avgPts.length > 1 && (
         <Path
-          d={`M ${avgPts[0].x},${H - P.b} ${avgPts.map(p => `L ${p.x},${p.y}`).join(' ')} L ${avgPts[avgPts.length - 1].x},${H - P.b} Z`}
+          d={`${avgLine} L ${avgPts[avgPts.length - 1].x.toFixed(1)},${H - P.b} L ${avgPts[0].x.toFixed(1)},${H - P.b} Z`}
           fill="url(#slpFill)"
         />
       )}
 
       {pts.length > 1 && (
-        <Polyline points={pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')} fill="none" stroke="#67e8f9" strokeOpacity={0.35} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d={rawLine} fill="none" stroke="#67e8f9" strokeOpacity={0.35} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       )}
 
       {avgPts.length > 1 && (
-        <Polyline points={avgLine} fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d={avgLine} fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
       )}
 
       {pts.map((p, i) => (

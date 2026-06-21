@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Svg, { Polyline, Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -146,6 +146,25 @@ function getWeekRange(refDate, offsetWeeks = 0) {
   return [localDateStr(monday), localDateStr(sunday), monday];
 }
 
+// Catmull-Rom → cubic-bezier smoothing for a polyline's points
+function smoothPath(pts) {
+  if (pts.length < 2) return '';
+  if (pts.length === 2) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  let d = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
 // ─── Range Trend Chart (Daily + 7D Avg + Goal) — mirrors WeightTrendChart ──
 function StepsTrendChart({ data, goal, colors, width }) {
   const H = 170;
@@ -174,9 +193,9 @@ function StepsTrendChart({ data, goal, colors, width }) {
   const toY = v => P.t + ph - ((v - minV) / range) * ph;
   const toX = i => P.l + i * xs;
   const rawPts = rawVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
-  const rawLine = rawPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const rawLine = smoothPath(rawPts);
   const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
-  const avgLine = avgPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const avgLine = smoothPath(avgPts);
   const rangeAvgY = toY(rangeAvgVal);
   const goalY = toY(goal);
   const lastAvg = avgPts[avgPts.length - 1];
@@ -195,13 +214,13 @@ function StepsTrendChart({ data, goal, colors, width }) {
       <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#34d399" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="4,4" />
       <Line x1={P.l} y1={rangeAvgY} x2={width - P.r} y2={rangeAvgY} stroke="#c4b5fd" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="2,3" />
       {avgPts.length > 1 && (
-        <Path d={`M ${avgPts[0].x},${H - P.b} ${avgPts.map(p => `L ${p.x},${p.y}`).join(' ')} L ${avgPts[avgPts.length - 1].x},${H - P.b} Z`} fill="url(#stepsTrendFill)" />
+        <Path d={`${avgLine} L ${avgPts[avgPts.length - 1].x.toFixed(1)},${H - P.b} L ${avgPts[0].x.toFixed(1)},${H - P.b} Z`} fill="url(#stepsTrendFill)" />
       )}
       {rawPts.length > 1 && (
-        <Polyline points={rawLine} fill="none" stroke="#67e8f9" strokeOpacity={0.35} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d={rawLine} fill="none" stroke="#67e8f9" strokeOpacity={0.35} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       )}
       {avgPts.length > 1 && (
-        <Polyline points={avgLine} fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d={avgLine} fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
       )}
       {rawPts.map((p, i) => (<Circle key={i} cx={p.x} cy={p.y} r={2} fill="#67e8f9" fillOpacity={0.6} />))}
       {lastAvg && <Circle cx={lastAvg.x} cy={lastAvg.y} r={3.5} fill="#f59e0b" />}
