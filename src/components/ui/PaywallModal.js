@@ -22,7 +22,9 @@ export default function PaywallModal({ visible, onClose }) {
   const [busy, setBusy] = useState(false);
   const styles = createStyles(colors);
 
-  const packages = offering?.availablePackages ?? [];
+  // Single plan for everyone — no regional/multi-tier pricing buttons, even
+  // if the RevenueCat offering happens to have more than one package.
+  const plan = offering?.availablePackages?.[0] ?? null;
 
   const handlePurchase = async (pkg) => {
     setBusy(true);
@@ -68,21 +70,18 @@ export default function PaywallModal({ visible, onClose }) {
         ))}
       </View>
 
-      {packages.length === 0 ? (
+      {!plan ? (
         <Text style={styles.noOffer}>Subscription plans aren't available yet.</Text>
       ) : (
         <View style={styles.plans}>
-          {packages.map(pkg => (
-            <TouchableOpacity
-              key={pkg.identifier}
-              style={styles.planBtn}
-              onPress={() => handlePurchase(pkg)}
-              disabled={busy}
-            >
-              <Text style={styles.planTitle}>{pkg.product.title || pkg.identifier}</Text>
-              <Text style={styles.planPrice}>{pkg.product.priceString}/mo</Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity
+            style={styles.planBtn}
+            onPress={() => handlePurchase(plan)}
+            disabled={busy}
+          >
+            <Text style={styles.planTitle}>{plan.product.title || plan.identifier}</Text>
+            <Text style={styles.planPrice}>{plan.product.priceString}/mo</Text>
+          </TouchableOpacity>
         </View>
       )}
 
