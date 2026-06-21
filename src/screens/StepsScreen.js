@@ -958,25 +958,23 @@ export default function StepsScreen() {
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={styles.hmLegend}>
-                    <Text style={styles.hmLegendLabel}>Less</Text>
-                    {['rgba(56,189,248,0.22)', 'rgba(34,211,238,0.42)', 'rgba(20,184,166,0.65)', 'rgba(52,211,153,0.88)'].map((c, i) => (
-                      <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
-                    ))}
-                    <Text style={styles.hmLegendLabel}>More</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => (hasAccess ? heatmapExport.exportCard() : heroExport.setShowPaywall(true))}
-                    disabled={heatmapExport.exporting}
-                  >
-                    {heatmapExport.exporting ? (
-                      <ActivityIndicator size="small" color={colors.textMuted} />
-                    ) : (
-                      <Ionicons name="share-outline" size={14} color={colors.textMuted} />
-                    )}
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  onPress={() => (hasAccess ? heatmapExport.exportCard() : heroExport.setShowPaywall(true))}
+                  disabled={heatmapExport.exporting}
+                >
+                  {heatmapExport.exporting ? (
+                    <ActivityIndicator size="small" color={colors.textMuted} />
+                  ) : (
+                    <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.hmLegend, styles.hmLegendRow]}>
+                <Text style={styles.hmLegendLabel}>Less</Text>
+                {['rgba(56,189,248,0.22)', 'rgba(34,211,238,0.42)', 'rgba(20,184,166,0.65)', 'rgba(52,211,153,0.88)'].map((c, i) => (
+                  <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+                ))}
+                <Text style={styles.hmLegendLabel}>More</Text>
               </View>
               <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={hasAccess} onLockedPress={() => heroExport.setShowPaywall(true)} />
             </View>
@@ -1403,6 +1401,7 @@ const createStyles = (colors) => StyleSheet.create({
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   hmLegendLabel: { fontSize: 9, color: colors.textDim },
   hmLegendSwatch: { width: 10, height: 10, borderRadius: 2 },
+  hmLegendRow: { justifyContent: 'flex-end', marginBottom: 10 },
 
   weekDayLabels: { flexDirection: 'row', marginTop: 2, marginBottom: 8 },
   weekDayLabel: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono },
