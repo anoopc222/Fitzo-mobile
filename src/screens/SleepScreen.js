@@ -134,7 +134,7 @@ function SleepHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true,
     <View>
       <View style={{ flexDirection: 'row', marginBottom: 6 }}>
         {DOW_LABELS.map(d => (
-          <View key={d} style={{ width: cellSize, alignItems: 'center' }}>
+          <View key={d} style={{ width: cellSize, marginHorizontal: 2, alignItems: 'center' }}>
             <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted, fontFamily: fontFamily.mono }}>{d}</Text>
           </View>
         ))}
