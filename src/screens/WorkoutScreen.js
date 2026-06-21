@@ -48,6 +48,14 @@ async function fetchWorkoutGoal(userId) {
   return data?.workout_weekly_goal ?? 4;
 }
 
+async function updateWorkoutGoal(userId, goal) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ workout_weekly_goal: goal })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
 async function saveSession(userId, { sessionId, date, name, exercises }) {
   let sid = sessionId;
   if (!sid) {
@@ -1463,6 +1471,8 @@ export default function WorkoutScreen() {
   const [trendRange, setTrendRange]       = useState('30D');
   const [showTrendPaywall, setShowTrendPaywall] = useState(false);
   const [showInsightsPaywall, setShowInsightsPaywall] = useState(false);
+  const [showWorkoutGoalSheet, setShowWorkoutGoalSheet] = useState(false);
+  const [workoutGoalInput, setWorkoutGoalInput] = useState(4);
 
   const { data: sessions = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['sessions', user?.id],
@@ -1489,6 +1499,12 @@ export default function WorkoutScreen() {
   const deleteMut = useMutation({
     mutationFn: deleteFullSession,
     onSuccess: () => { qc.invalidateQueries(['sessions', user.id]); setShowDetail(false); },
+    onError: (e) => Alert.alert('Error', e.message),
+  });
+
+  const goalMut = useMutation({
+    mutationFn: (goal) => updateWorkoutGoal(user.id, goal),
+    onSuccess: () => { qc.invalidateQueries(['workoutGoal', user.id]); setShowWorkoutGoalSheet(false); },
     onError: (e) => Alert.alert('Error', e.message),
   });
 
@@ -1865,11 +1881,22 @@ export default function WorkoutScreen() {
           <>
             {/* Hero stats — sessions & consistency first, volume secondary */}
             <View style={s.card}>
-              <View style={s.heroTopRow}>
-                <Text style={s.heroNum}>{heroStats.sessionCount}</Text>
-                <Text style={s.heroLabel}>workout sessions</Text>
+              <View style={s.heroHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <View style={s.heroTopRow}>
+                    <Text style={s.heroNum}>{heroStats.sessionCount}</Text>
+                    <Text style={s.heroLabel}>workout sessions</Text>
+                  </View>
+                  <Text style={s.heroSub}>this month · {heroStats.totalVol.toLocaleString()} kg total volume</Text>
+                </View>
+                <TouchableOpacity
+                  style={s.goalPillBtn}
+                  onPress={() => { setWorkoutGoalInput(weeklyGoal); setShowWorkoutGoalSheet(true); }}
+                >
+                  <Text style={s.goalPillBtnText}>🎯 {weeklyGoal}/wk</Text>
+                  <Ionicons name="pencil" size={11} color={colors.accent} />
+                </TouchableOpacity>
               </View>
-              <Text style={s.heroSub}>this month · {heroStats.totalVol.toLocaleString()} kg total volume</Text>
               <View style={s.tileRow}>
                 <View style={s.tile}>
                   <Text style={s.tileVal}>🔥 {consistency.currentStreak}</Text>
@@ -2147,6 +2174,40 @@ export default function WorkoutScreen() {
 
       <PaywallModal visible={showTrendPaywall} onClose={() => setShowTrendPaywall(false)} />
       <PaywallModal visible={showInsightsPaywall} onClose={() => setShowInsightsPaywall(false)} />
+
+      <BottomSheet visible={showWorkoutGoalSheet} onClose={() => setShowWorkoutGoalSheet(false)} style={s.goalSheet}>
+        <View style={s.goalSheetHeader}>
+          <Text style={s.goalSheetTitle}>🎯 WEEKLY WORKOUT GOAL</Text>
+          <TouchableOpacity onPress={() => setShowWorkoutGoalSheet(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={s.goalBigVal}>{workoutGoalInput}</Text>
+        <Text style={s.goalBigSub}>session{workoutGoalInput === 1 ? '' : 's'} / week</Text>
+
+        <Text style={s.goalFieldLabel}>DAYS PER WEEK</Text>
+        <View style={s.goalChipRow}>
+          {[1, 2, 3, 4, 5, 6, 7].map(n => (
+            <TouchableOpacity
+              key={n}
+              style={[s.goalChip, workoutGoalInput === n && { backgroundColor: colors.accent }]}
+              onPress={() => setWorkoutGoalInput(n)}
+            >
+              <Text style={[s.goalChipText, workoutGoalInput === n && { color: colors.bg }]}>{n}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={s.goalHint}>Drives your streak, consistency %, and weekly goal across the app. Cardio days don't count toward this goal.</Text>
+
+        <TouchableOpacity
+          style={s.goalSaveBtn}
+          onPress={() => goalMut.mutate(workoutGoalInput)}
+          disabled={goalMut.isPending}
+        >
+          <Text style={s.saveBtnText}>{goalMut.isPending ? 'Saving…' : 'Save Goal'}</Text>
+        </TouchableOpacity>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -2161,6 +2222,28 @@ const createS = (colors) => StyleSheet.create({
   },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   cardTitle: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: colors.textMuted, fontWeight: weight.bold },
+
+  heroHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  goalPillBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.accent + '66',
+  },
+  goalPillBtnText: { fontSize: 13, fontWeight: weight.bold, color: colors.accent },
+  goalSheet: {},
+  goalSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  goalSheetTitle: { fontSize: 15, fontWeight: weight.bold, color: colors.text, letterSpacing: 0.5 },
+  goalBigVal: { fontSize: 38, fontWeight: weight.black, color: colors.text, textAlign: 'center', marginTop: 8 },
+  goalBigSub: { fontSize: 13, color: colors.textMuted, textAlign: 'center', marginBottom: 16 },
+  goalFieldLabel: { fontSize: 11, color: colors.textMuted, fontWeight: weight.semibold, marginBottom: 10, letterSpacing: 0.5 },
+  goalChipRow: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
+  goalChip: {
+    flex: 1, minWidth: 36, paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+    backgroundColor: colors.bgElevated ?? colors.surface, borderWidth: 1, borderColor: colors.border,
+  },
+  goalChipText: { color: colors.text, fontWeight: weight.semibold, fontSize: 13 },
+  goalHint: { fontSize: 11, color: colors.textDim, marginBottom: 16, lineHeight: 16 },
+  goalSaveBtn: { padding: 14, borderRadius: 14, backgroundColor: colors.accent, alignItems: 'center' },
 
   heroTopRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 2 },
   heroNum: { fontSize: 38, fontWeight: weight.black, color: colors.accent },
