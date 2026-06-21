@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import BottomSheet from '../components/ui/BottomSheet';
 
@@ -1262,10 +1263,20 @@ export default function HomeScreen() {
 
             {/* ── Pro Insights Hub (consolidated) ─────────────────── */}
             <View style={styles.insightsHubCard}>
-              <View style={styles.insightsHubHeader}>
-                <Ionicons name="sparkles-outline" size={14} color={colors.accent} />
+              <LinearGradient
+                colors={[colors.accent, C_GREEN]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.insightsHubHeader}
+              >
+                <Ionicons name="sparkles" size={14} color="#0a0a0a" />
                 <Text style={styles.insightsHubHeaderText}>PRO INSIGHTS</Text>
-              </View>
+                {!hasAccess && (
+                  <View style={styles.insightsHubUnlockPill}>
+                    <Text style={styles.insightsHubUnlockText}>Unlock all 6 🔒</Text>
+                  </View>
+                )}
+              </LinearGradient>
 
               {/* Goal Forecast */}
               {(hasAccess ? !!data?.goalForecast : true) && (
@@ -1540,6 +1551,40 @@ export default function HomeScreen() {
                   width={SCREEN_W - 32 - 28}
                 />
               )}
+              {data?.stepsWeekSeries && (() => {
+                const curVals = data.stepsWeekSeries.current.filter(v => v != null);
+                const prevVals = data.stepsWeekSeries.previous.filter(v => v != null);
+                const curTotal = curVals.reduce((a, b) => a + b, 0);
+                const prevTotal = prevVals.reduce((a, b) => a + b, 0);
+                const avg = curVals.length ? Math.round(curTotal / curVals.length) : 0;
+                const pctDelta = prevTotal > 0 ? Math.round(((curTotal - prevTotal) / prevTotal) * 100) : null;
+                const bestDay = curVals.length ? Math.max(...curVals) : 0;
+                return (
+                  <View style={styles.chartStatsRow}>
+                    <View style={styles.chartStatTile}>
+                      <Text style={styles.chartStatVal}>{curTotal.toLocaleString()}</Text>
+                      <Text style={styles.chartStatLabel}>TOTAL THIS WK</Text>
+                    </View>
+                    <View style={styles.chartStatDivider} />
+                    <View style={styles.chartStatTile}>
+                      <Text style={styles.chartStatVal}>{avg.toLocaleString()}</Text>
+                      <Text style={styles.chartStatLabel}>DAILY AVG</Text>
+                    </View>
+                    <View style={styles.chartStatDivider} />
+                    <View style={styles.chartStatTile}>
+                      <Text style={styles.chartStatVal}>{bestDay.toLocaleString()}</Text>
+                      <Text style={styles.chartStatLabel}>BEST DAY</Text>
+                    </View>
+                    <View style={styles.chartStatDivider} />
+                    <View style={styles.chartStatTile}>
+                      <Text style={[styles.chartStatVal, { color: pctDelta == null ? colors.text : pctDelta >= 0 ? C_GREEN : '#f87171' }]}>
+                        {pctDelta == null ? '—' : `${pctDelta > 0 ? '+' : ''}${pctDelta}%`}
+                      </Text>
+                      <Text style={styles.chartStatLabel}>VS LAST WK</Text>
+                    </View>
+                  </View>
+                );
+              })()}
             </View>
 
             {/* ── Consistency (replaces old goal-progress banner) ── */}
@@ -1856,6 +1901,11 @@ const createStyles = (colors) => StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendDot: { width: 6, height: 6, borderRadius: 3 },
   legendText: { fontSize: 9, color: colors.textDim, fontFamily: fontFamily.body },
+  chartStatsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  chartStatTile: { flex: 1, alignItems: 'center' },
+  chartStatVal: { fontSize: 14, fontFamily: fontFamily.bodyBold, color: colors.text, fontWeight: weight.bold },
+  chartStatLabel: { fontSize: 8, color: colors.textDim, fontFamily: fontFamily.body, letterSpacing: 0.4, marginTop: 2, textAlign: 'center' },
+  chartStatDivider: { width: 1, height: 22, backgroundColor: colors.border },
   consistencyCard: { flexDirection: 'row', backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, marginHorizontal: 16, marginBottom: 10, overflow: 'hidden' },
   consistencyTile: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   consistencyNum: { fontSize: 18, fontFamily: fontFamily.monoBold },
@@ -1876,11 +1926,13 @@ const createStyles = (colors) => StyleSheet.create({
   forecastSub: { fontSize: 11, color: colors.textMuted, lineHeight: 16 },
   insightsHubCard: {
     backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10,
-    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
+    borderWidth: 1, borderColor: colors.accent + '40', overflow: 'hidden',
+    shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 10, elevation: 4,
   },
-  insightsHubHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 2 },
-  insightsHubHeaderText: { fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 0.6, flex: 1 },
+  insightsHubHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10 },
+  insightsHubHeaderText: { fontSize: 11, fontWeight: weight.black, color: '#0a0a0a', letterSpacing: 0.6, flex: 1 },
+  insightsHubUnlockPill: { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  insightsHubUnlockText: { fontSize: 9, fontWeight: weight.black, color: '#0a0a0a' },
   insightsHubRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11 },
   insightsHubBody: { flex: 1 },
   insightsHubTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
