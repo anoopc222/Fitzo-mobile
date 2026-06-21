@@ -647,7 +647,7 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true }) {
   const scS = useMemo(() => createScS(colors), [colors]);
   const today    = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const cutoffStr = localDateStr(new Date(Date.now() - 19 * 24 * 60 * 60 * 1000));
+  const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
 
   const [calYear,  setCalYear]  = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth() + 1);
