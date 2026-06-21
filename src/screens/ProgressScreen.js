@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
+import ProGate from '../components/ui/ProGate';
 
 async function fetchProgress(userId) {
   const { data, error } = await supabase
@@ -130,6 +131,7 @@ export default function ProgressScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
       >
+      <ProGate label="Progress tracking">
         {isLoading && <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />}
         {!isLoading && grouped.length === 0 && (
           <View style={styles.empty}>
@@ -227,6 +229,7 @@ export default function ProgressScreen() {
             </View>
           );
         })}
+      </ProGate>
       </ScrollView>
     </SafeAreaView>
   );

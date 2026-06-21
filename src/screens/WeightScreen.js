@@ -14,6 +14,9 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
+import ProGate from '../components/ui/ProGate';
+import PaywallModal from '../components/ui/PaywallModal';
+import { useSubscription } from '../context/SubscriptionContext';
 import CircularGauge from '../components/CircularGauge';
 import { useExportCard } from '../hooks/useExportCard';
 
@@ -449,6 +452,8 @@ export default function WeightScreen() {
   const [wkViewMode, setWkViewMode] = useState('week'); // 'week' | 'month'
   const [avgViewType, setAvgViewType] = useState('list'); // 'list' | 'chart'
   const avgWeightExport = useExportCard();
+  const { hasAccess } = useSubscription();
+  const [showPaywall, setShowPaywall] = useState(false);
   const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
 
   const [showLogSheet, setShowLogSheet] = useState(false);
@@ -710,7 +715,9 @@ export default function WeightScreen() {
                   <Text style={styles.hmLegendLabel}>High</Text>
                 </View>
               </View>
-              <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} />
+              <ProGate label="Monthly heatmap">
+                <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} />
+              </ProGate>
             </View>
 
             {/* ── 30-Day Trend ── */}
@@ -719,7 +726,14 @@ export default function WeightScreen() {
                 <Text style={styles.cardTitle}>📈 TREND</Text>
                 <View style={styles.segmentRow}>
                   {[30, 60, 90, 0].map(d => (
-                    <TouchableOpacity key={d} onPress={() => setTrendRangeDays(d)} style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}>
+                    <TouchableOpacity
+                      key={d}
+                      onPress={() => {
+                        if (d !== 30 && !hasAccess) { setShowPaywall(true); return; }
+                        setTrendRangeDays(d);
+                      }}
+                      style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}
+                    >
                       <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}</Text>
                     </TouchableOpacity>
                   ))}
@@ -750,7 +764,7 @@ export default function WeightScreen() {
                 <Text style={styles.cardTitle}>AVG WEIGHT</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <TouchableOpacity
-                    onPress={avgWeightExport.exportCard}
+                    onPress={() => (hasAccess ? avgWeightExport.exportCard() : setShowPaywall(true))}
                     disabled={avgWeightExport.exporting}
                     style={styles.avgViewToggleBtn}
                   >
@@ -955,6 +969,8 @@ export default function WeightScreen() {
           {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Goal</Text>}
         </TouchableOpacity>
       </BottomSheet>
+
+      <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
     </SafeAreaView>
   );
 }

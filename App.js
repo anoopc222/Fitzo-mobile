@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './src/context/AuthContext';
+import { SubscriptionProvider } from './src/context/SubscriptionContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { useAppFonts } from './src/theme/useAppFonts';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -40,7 +41,9 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            <Root />
+            <SubscriptionProvider>
+              <Root />
+            </SubscriptionProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>

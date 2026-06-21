@@ -12,7 +12,8 @@ import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
-import { useExportCard } from '../hooks/useExportCard';
+import PaywallModal from '../components/ui/PaywallModal';
+import { useGatedExport } from '../hooks/useGatedExport';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -80,7 +81,7 @@ export default function FoodLogScreen() {
     Breakfast: '#fb923c', Lunch: '#22d3ee', Dinner: colors.purple, Snack: colors.success,
   }), [colors]);
   const qc = useQueryClient();
-  const summaryExport = useExportCard();
+  const summaryExport = useGatedExport();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState('Breakfast');
@@ -198,7 +199,7 @@ export default function FoodLogScreen() {
                 </View>
               </View>
               <TouchableOpacity
-                onPress={summaryExport.exportCard}
+                onPress={summaryExport.onExportPress}
                 disabled={summaryExport.exporting}
                 style={styles.cardExportBtn}
               >
@@ -324,6 +325,8 @@ export default function FoodLogScreen() {
           {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Food</Text>}
         </TouchableOpacity>
       </BottomSheet>
+
+      <PaywallModal visible={summaryExport.showPaywall} onClose={() => summaryExport.setShowPaywall(false)} />
     </SafeAreaView>
   );
 }

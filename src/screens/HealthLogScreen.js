@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import CircularGauge from '../components/CircularGauge';
+import ProGate from '../components/ui/ProGate';
 
 // ─── Marker reference data — ports HL_REF / HL_GROUPS from reference app ────
 const HL_REF = {
@@ -375,7 +376,9 @@ export default function HealthLogScreen() {
 
         {isLoading ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
-        ) : search ? (
+        ) : (
+        <ProGate label="Health log">
+        {search ? (
           // ── SEARCH RESULTS ──
           searchResults.length === 0 ? (
             <View style={styles.emptyWrap}>
@@ -616,6 +619,8 @@ export default function HealthLogScreen() {
               })}
             </View>
           ))
+        )}
+        </ProGate>
         )}
         <View style={{ height: 90 }} />
       </ScrollView>

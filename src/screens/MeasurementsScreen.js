@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import ProGate from '../components/ui/ProGate';
 
 const SITES = [
   { key: 'chest',       label: 'Chest',        icon: 'body' },
@@ -124,7 +125,7 @@ export default function MeasurementsScreen({ navigation }) {
         {isLoading ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
         ) : (
-          <>
+          <ProGate label="Body measurements">
             {/* Latest vs Previous comparison */}
             {latest ? (
               <View style={styles.compCard}>
@@ -202,7 +203,7 @@ export default function MeasurementsScreen({ navigation }) {
                 ))}
               </View>
             )}
-          </>
+          </ProGate>
         )}
       </ScrollView>
 
