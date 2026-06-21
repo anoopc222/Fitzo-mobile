@@ -57,13 +57,13 @@ export default function ProfileScreen({ navigation }) {
   const [grantEmail, setGrantEmail] = useState('');
   const [grantBusy, setGrantBusy] = useState(false);
 
-  const handleGrantAdmin = async () => {
+  const handleSetAdmin = async (makeAdmin) => {
     const email = grantEmail.trim();
     if (!email) return;
     setGrantBusy(true);
     try {
-      await setUserAdmin(email, true);
-      Alert.alert('Done', `${email} is now an admin.`);
+      await setUserAdmin(email, makeAdmin);
+      Alert.alert('Done', `${email} is ${makeAdmin ? 'now an admin' : 'no longer an admin'}.`);
       setGrantEmail('');
     } catch (e) {
       Alert.alert('Error', e.message);
@@ -255,25 +255,34 @@ export default function ProfileScreen({ navigation }) {
             {isSuperAdmin && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Super Admin</Text>
-                <Text style={[styles.bodyFieldLabel, { marginBottom: 10 }]}>Grant admin access by email</Text>
+                <Text style={[styles.bodyFieldLabel, { marginBottom: 10 }]}>Grant or revoke admin access by email</Text>
+                <TextInput
+                  style={[styles.bodyFieldInput, { marginBottom: 10 }]}
+                  placeholder="user@example.com"
+                  placeholderTextColor={colors.textDim}
+                  value={grantEmail}
+                  onChangeText={setGrantEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
                 <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TextInput
-                    style={[styles.bodyFieldInput, { flex: 1 }]}
-                    placeholder="user@example.com"
-                    placeholderTextColor={colors.textDim}
-                    value={grantEmail}
-                    onChangeText={setGrantEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
                   <TouchableOpacity
-                    style={[styles.signOutBtn, { paddingHorizontal: 16, backgroundColor: colors.accent }]}
-                    onPress={handleGrantAdmin}
+                    style={[styles.signOutBtn, { flex: 1, justifyContent: 'center', backgroundColor: colors.accent }]}
+                    onPress={() => handleSetAdmin(true)}
                     disabled={grantBusy}
                   >
                     {grantBusy
                       ? <ActivityIndicator color={colors.bg} />
                       : <Text style={[styles.signOutText, { color: colors.bg }]}>Grant</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.deleteBtn, { flex: 1, justifyContent: 'center' }]}
+                    onPress={() => handleSetAdmin(false)}
+                    disabled={grantBusy}
+                  >
+                    {grantBusy
+                      ? <ActivityIndicator color={colors.danger} />
+                      : <Text style={styles.deleteBtnText}>Revoke</Text>}
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity style={{ marginTop: 12 }} onPress={() => navigation.navigate('AdminDashboard')}>
