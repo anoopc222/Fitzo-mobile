@@ -14,7 +14,6 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
-import ProGate from '../components/ui/ProGate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useSubscription } from '../context/SubscriptionContext';
 import CircularGauge from '../components/CircularGauge';
@@ -100,13 +99,14 @@ async function deleteWeightLog(id) {
 }
 
 // ─── Weight Heatmap — ports _renderWeightHeatmap (quartile-relative-to-month) ─
-function WeightHeatmap({ year, month, logsByDate, colors, unit }) {
+function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true, onLockedPress }) {
   const SCREEN_W = Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayStr = localDateStr(new Date());
+  const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
 
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
   const vals = Object.entries(logsByDate)
@@ -126,7 +126,8 @@ function WeightHeatmap({ year, month, logsByDate, colors, unit }) {
       const rel = (w - minW) / rangeW;
       if (rel < 0.25) lvl = 1; else if (rel < 0.5) lvl = 2; else if (rel < 0.75) lvl = 3; else lvl = 4;
     }
-    cells.push({ key: ds, day: d, w, lvl, isToday: ds === todayStr });
+    const locked = !hasAccess && ds < cutoffStr;
+    cells.push({ key: ds, day: d, w, lvl, isToday: ds === todayStr, locked });
   }
 
   const LVL_COLOR = {
@@ -149,6 +150,21 @@ function WeightHeatmap({ year, month, logsByDate, colors, unit }) {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {cells.map(cell => {
           if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
+          if (cell.locked) {
+            return (
+              <TouchableOpacity
+                key={cell.key}
+                onPress={onLockedPress}
+                style={[
+                  { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
+                  { width: cellSize, height: cellSize },
+                ]}
+              >
+                <Ionicons name="lock-closed" size={11} color={colors.textDim} />
+                <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim, marginTop: 1 }}>{cell.day}</Text>
+              </TouchableOpacity>
+            );
+          }
           return (
             <View
               key={cell.key}
@@ -496,6 +512,7 @@ export default function WeightScreen() {
   const [wkViewMode, setWkViewMode] = useState('week'); // 'week' | 'month'
   const [avgExpanded, setAvgExpanded] = useState(false);
   const avgWeightExport = useExportCard();
+  const heatmapExport = useExportCard();
   const { hasAccess } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
   const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
@@ -751,17 +768,40 @@ export default function WeightScreen() {
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
-                <View style={styles.hmLegend}>
-                  <Text style={styles.hmLegendLabel}>Low</Text>
-                  {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
-                    <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
-                  ))}
-                  <Text style={styles.hmLegendLabel}>High</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={styles.hmLegend}>
+                    <Text style={styles.hmLegendLabel}>Low</Text>
+                    {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
+                      <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+                    ))}
+                    <Text style={styles.hmLegendLabel}>High</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowPaywall(true))}
+                    disabled={heatmapExport.exporting}
+                    style={styles.avgViewToggleBtn}
+                  >
+                    {heatmapExport.exporting ? (
+                      <ActivityIndicator size="small" color={colors.textMuted} />
+                    ) : (
+                      <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
                 </View>
               </View>
-              <ProGate label="Monthly heatmap">
-                <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} />
-              </ProGate>
+              <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={hasAccess} onLockedPress={() => setShowPaywall(true)} />
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate
+                ref={heatmapExport.ref}
+                title="Monthly Heatmap"
+                subtitle={`${MONTH_NAMES[month]} ${year}`}
+                colors={colors}
+                width={340}
+              >
+                <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={true} />
+              </ExportCardTemplate>
             </View>
 
             {/* ── 30-Day Trend ── */}
