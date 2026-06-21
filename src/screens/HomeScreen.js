@@ -183,7 +183,7 @@ async function fetchHome(userId) {
       .select('calories').eq('user_id', userId)
       .gte('logged_at', `${lastWeekStart}T00:00:00`).lte('logged_at', `${lastWeekEnd}T23:59:59`),
     supabase.from('food_logs')
-      .select('calories').eq('user_id', userId)
+      .select('calories, logged_at').eq('user_id', userId)
       .gte('logged_at', `${monthStart}T00:00:00`).lte('logged_at', `${monthEnd}T23:59:59`),
     supabase.from('weight_logs')
       .select('weight').eq('user_id', userId)
@@ -342,6 +342,47 @@ async function fetchHome(userId) {
     }
   }
 
+  // Pro-only true-maintenance insight: compares average logged calorie intake
+  // against actual monthly weight change to estimate real maintenance
+  // calories (≈7700 kcal per kg of bodyweight change), vs. the user's set
+  // calorie target.
+  let calorieInsight = null;
+  {
+    const loggedDays = new Set((monthFood.data ?? []).map(f => f.logged_at?.slice(0, 10))).size;
+    const rangeDays = Math.max(1, Math.round((new Date(monthEnd) - new Date(monthStart)) / 86400000) + 1);
+    if (loggedDays >= 10 && monthWeightDelta != null) {
+      const avgDailyIntake = monthKcal / loggedDays;
+      const dailyImbalance = (monthWeightDelta * 7700) / rangeDays;
+      const trueMaintenance = Math.round(avgDailyIntake - dailyImbalance);
+      const targetKcal = profile.data?.calorie_target ?? null;
+      if (trueMaintenance > 800 && trueMaintenance < 6000) {
+        calorieInsight = {
+          trueMaintenance,
+          avgDailyIntake: Math.round(avgDailyIntake),
+          targetKcal,
+          diffVsTarget: targetKcal ? trueMaintenance - targetKcal : null,
+        };
+      }
+    }
+  }
+
+  // Pro-only sleep debt: cumulative shortfall vs. goal across recent logged
+  // nights, plus a simple estimate of nights needed to recover at +1h/night.
+  let sleepDebt = null;
+  {
+    const recent = (sleepHist.data ?? []).slice(0, 7);
+    if (recent.length >= 3) {
+      const totalDebtHrs = recent.reduce((sum, s) => sum + Math.max(0, sleepGoal - s.hours), 0);
+      if (totalDebtHrs > 0) {
+        sleepDebt = {
+          totalDebtHrs: +totalDebtHrs.toFixed(1),
+          nights: recent.length,
+          nightsToRecover: Math.ceil(totalDebtHrs / 1),
+        };
+      }
+    }
+  }
+
   // Last workout info
   const lastWorkoutDate  = lastWorkout.data?.[0]?.date ?? null;
   const lastWorkoutNotes = lastWorkout.data?.[0]?.notes ?? null;
@@ -403,6 +444,8 @@ async function fetchHome(userId) {
     prWatch,
     recoveryScore,
     longestStreak,
+    calorieInsight,
+    sleepDebt,
   };
 }
 
@@ -1172,6 +1215,82 @@ export default function HomeScreen() {
                 <Text style={styles.forecastHeadline}>●● / ●● day record</Text>
                 <Text style={styles.forecastSub}>
                   Track your best-ever streak and how close you are to beating it 🔒
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Pro True Maintenance Calories ───────────────────── */}
+            {hasAccess ? (
+              data?.calorieInsight && (
+                <View style={[styles.forecastCard, { borderColor: C_KCAL + '55' }]}>
+                  <View style={styles.forecastHeader}>
+                    <Ionicons name="flask-outline" size={15} color={C_KCAL} />
+                    <Text style={styles.forecastTitle}>TRUE MAINTENANCE</Text>
+                    <View style={[styles.proBadge, { backgroundColor: C_KCAL }]}>
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.forecastHeadline}>~{data.calorieInsight.trueMaintenance} kcal/day</Text>
+                  <Text style={styles.forecastSub}>
+                    Based on your actual intake + weight trend{data.calorieInsight.diffVsTarget != null
+                      ? ` — ${Math.abs(data.calorieInsight.diffVsTarget)} kcal ${data.calorieInsight.diffVsTarget > 0 ? 'higher' : 'lower'} than your set target`
+                      : ''}
+                  </Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                style={[styles.forecastCard, { borderColor: C_KCAL + '55' }]}
+                activeOpacity={0.85}
+                onPress={() => setShowProTeaserPaywall(true)}
+              >
+                <View style={styles.forecastHeader}>
+                  <Ionicons name="flask-outline" size={15} color={C_KCAL} />
+                  <Text style={styles.forecastTitle}>TRUE MAINTENANCE</Text>
+                  <View style={[styles.proBadge, { backgroundColor: C_KCAL }]}>
+                    <Text style={styles.proBadgeText}>PRO</Text>
+                  </View>
+                </View>
+                <Text style={styles.forecastHeadline}>~●●●● kcal/day</Text>
+                <Text style={styles.forecastSub}>
+                  Your real maintenance calories, calculated from actual intake vs. weight trend — not a generic formula 🔒
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Pro Sleep Debt Tracker ──────────────────────────── */}
+            {hasAccess ? (
+              data?.sleepDebt && (
+                <View style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}>
+                  <View style={styles.forecastHeader}>
+                    <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
+                    <Text style={styles.forecastTitle}>SLEEP DEBT</Text>
+                    <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.forecastHeadline}>{data.sleepDebt.totalDebtHrs}h owed</Text>
+                  <Text style={styles.forecastSub}>
+                    Over your last {data.sleepDebt.nights} nights · ~{data.sleepDebt.nightsToRecover} night{data.sleepDebt.nightsToRecover === 1 ? '' : 's'} of +1h sleep to recover
+                  </Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                style={[styles.forecastCard, { borderColor: C_SLEEP + '55' }]}
+                activeOpacity={0.85}
+                onPress={() => setShowProTeaserPaywall(true)}
+              >
+                <View style={styles.forecastHeader}>
+                  <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
+                  <Text style={styles.forecastTitle}>SLEEP DEBT</Text>
+                  <View style={[styles.proBadge, { backgroundColor: C_SLEEP }]}>
+                    <Text style={styles.proBadgeText}>PRO</Text>
+                  </View>
+                </View>
+                <Text style={styles.forecastHeadline}>●●h owed</Text>
+                <Text style={styles.forecastSub}>
+                  See your cumulative sleep debt and exactly how to pay it back 🔒
                 </Text>
               </TouchableOpacity>
             )}
