@@ -23,6 +23,7 @@ import Sparkline from '../components/Sparkline';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
+import { useSubscription } from '../context/SubscriptionContext';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -255,6 +256,30 @@ async function fetchHome(userId) {
   const lastWeekWeightDelta = weightDeltaFor(lastWeekStart, lastWeekEnd);
   const monthWeightDelta = weightDeltaFor(monthStart, monthEnd);
 
+  // Pro-only goal forecast: linear-trend projection of days remaining to
+  // reach the user's weight goal, using the oldest/newest of the last 10 logs.
+  const weightGoalKg = profile.data?.weight_goal_kg ?? null;
+  let goalForecast = null;
+  if (weightGoalKg != null && (weightHist.data?.length ?? 0) >= 2) {
+    const newest = weightHist.data[0];
+    const oldest = weightHist.data[weightHist.data.length - 1];
+    const daysSpan = (new Date(newest.logged_at) - new Date(oldest.logged_at)) / 86400000;
+    const kgPerDay = daysSpan > 0 ? (newest.weight - oldest.weight) / daysSpan : 0;
+    const kgRemaining = weightGoalKg - newest.weight;
+    if (kgPerDay !== 0 && Math.sign(kgPerDay) === Math.sign(kgRemaining)) {
+      const daysToGoal = Math.round(kgRemaining / kgPerDay);
+      if (daysToGoal > 0 && daysToGoal < 3650) {
+        const forecastDate = new Date(Date.now() + daysToGoal * 86400000);
+        goalForecast = {
+          daysToGoal,
+          forecastDate,
+          weeklyPaceKg: +(kgPerDay * 7).toFixed(2),
+          kgRemaining: +Math.abs(kgRemaining).toFixed(1),
+        };
+      }
+    }
+  }
+
   // Last workout info
   const lastWorkoutDate  = lastWorkout.data?.[0]?.date ?? null;
   const lastWorkoutNotes = lastWorkout.data?.[0]?.notes ?? null;
@@ -312,6 +337,7 @@ async function fetchHome(userId) {
       avgWeight: monthAvgWeight, avgSteps: monthAvgSteps,
     },
     sessionsLeft,
+    goalForecast,
   };
 }
 
@@ -761,7 +787,9 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const [activeTab,   setActiveTab]   = useState(0);
   const [showStreak,  setShowStreak]  = useState(false);
+  const [showForecastPaywall, setShowForecastPaywall] = useState(false);
   const consistencyExport = useGatedExport();
+  const { hasAccess } = useSubscription();
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['home', user?.id],
@@ -922,6 +950,46 @@ export default function HomeScreen() {
                 </View>
               ))}
             </ScrollView>
+
+            {/* ── Pro Goal Forecast ───────────────────────────────── */}
+            {hasAccess ? (
+              data?.goalForecast && (
+                <View style={styles.forecastCard}>
+                  <View style={styles.forecastHeader}>
+                    <Ionicons name="rocket-outline" size={15} color={colors.accent} />
+                    <Text style={styles.forecastTitle}>GOAL FORECAST</Text>
+                    <View style={styles.proBadge}>
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.forecastHeadline}>
+                    ~{data.goalForecast.daysToGoal} days to your goal
+                  </Text>
+                  <Text style={styles.forecastSub}>
+                    Projected {data.goalForecast.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ·
+                    {' '}{Math.abs(data.goalForecast.weeklyPaceKg)}kg/wk pace · {data.goalForecast.kgRemaining}kg to go
+                  </Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                style={styles.forecastCard}
+                activeOpacity={0.85}
+                onPress={() => setShowForecastPaywall(true)}
+              >
+                <View style={styles.forecastHeader}>
+                  <Ionicons name="rocket-outline" size={15} color={colors.accent} />
+                  <Text style={styles.forecastTitle}>GOAL FORECAST</Text>
+                  <View style={styles.proBadge}>
+                    <Text style={styles.proBadgeText}>PRO</Text>
+                  </View>
+                </View>
+                <Text style={styles.forecastHeadline}>~●● days to your goal</Text>
+                <Text style={styles.forecastSub}>
+                  Unlock your personalized projection — exact date, weekly pace, and more 🔒
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* ── Stat Overview (merged, line-separated) ─────────── */}
             <View style={styles.overviewCard}>
@@ -1236,6 +1304,7 @@ export default function HomeScreen() {
       />
 
       <PaywallModal visible={consistencyExport.showPaywall} onClose={() => consistencyExport.setShowPaywall(false)} />
+      <PaywallModal visible={showForecastPaywall} onClose={() => setShowForecastPaywall(false)} />
     </SafeAreaView>
   );
 }
@@ -1303,6 +1372,13 @@ const createStyles = (colors) => StyleSheet.create({
   consistencyDivider: { width: 1, backgroundColor: colors.border },
   cardExportBtn: { position: 'absolute', top: 8, right: 24, padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated ?? colors.bgCard },
   overviewCard: { backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  forecastCard: { backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.accent + '55', padding: 14 },
+  forecastHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  forecastTitle: { fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 0.5, flex: 1 },
+  proBadge: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
+  proBadgeText: { fontSize: 9, fontWeight: weight.black, color: colors.bg },
+  forecastHeadline: { fontSize: 17, fontWeight: weight.black, color: colors.text, marginBottom: 4 },
+  forecastSub: { fontSize: 11, color: colors.textMuted, lineHeight: 16 },
   overviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   overviewIconWrap: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
   overviewBody: { flex: 1 },
