@@ -32,7 +32,6 @@ const C_STEPS  = '#f59e0b'; // amber gold
 const C_KCAL   = '#fb7185'; // rose
 const C_SLEEP  = '#c4b5fd'; // soft violet
 const C_GREEN  = '#34d399';
-const WEEKLY_SESSION_GOAL = 4;
 
 // Styles will be defined later using static colors
 
@@ -166,7 +165,7 @@ async function fetchHome(userId) {
     streakStepsHist,
   ] = await Promise.all([
     supabase.from('profiles')
-      .select('full_name, goal, weight_goal_kg, step_goal, sleep_goal_hours')
+      .select('full_name, goal, weight_goal_kg, step_goal, sleep_goal_hours, workout_weekly_goal')
       .eq('id', userId).single(),
     supabase.from('weight_logs')
       .select('weight, logged_at').eq('user_id', userId)
@@ -236,8 +235,9 @@ async function fetchHome(userId) {
   const latestSteps  = stepsHist.data?.[0];
   const latestSleep  = sleepHist.data?.[0];
 
-  const stepGoal  = profile.data?.step_goal ?? 10000;
-  const sleepGoal = profile.data?.sleep_goal_hours ?? 8;
+  const stepGoal   = profile.data?.step_goal ?? 10000;
+  const sleepGoal  = profile.data?.sleep_goal_hours ?? 8;
+  const weeklyGoal = profile.data?.workout_weekly_goal ?? 4;
 
   const weightDeltaVsYday = (latestWeight && prevWeight)
     ? +(latestWeight.weight - prevWeight.weight).toFixed(1) : null;
@@ -440,7 +440,7 @@ async function fetchHome(userId) {
   else if (stepGoalMet)  motivText = 'Step goal crushed! 👟';
   else if (weekWeightDelta !== null && weekWeightDelta < -0.2) motivText = 'Weight dropping! 📉';
 
-  const sessionsLeft = Math.max(0, WEEKLY_SESSION_GOAL - thisWeekSessions);
+  const sessionsLeft = Math.max(0, weeklyGoal - thisWeekSessions);
 
   // Steps trend: this week vs last week, bucketed Mon..Sun for the chart
   const buildWeekSeries = (weekStartStr, rows) => {
@@ -461,7 +461,7 @@ async function fetchHome(userId) {
     weightArr, stepsArr, sleepArr,
     latestWeight, latestSteps, latestSleep,
     weightDeltaVsYday,
-    stepGoal, sleepGoal,
+    stepGoal, sleepGoal, weeklyGoal,
     stepGoalMet, sleepGoalMet,
     todayKcal, todayProtein,
     hasTodayWorkout, todaySession,
@@ -642,7 +642,7 @@ async function fetchMonthSessions(userId, year, month) {
   return data ?? [];
 }
 
-function StreakCalendarModal({ visible, userId, onClose, hasAccess = true }) {
+function StreakCalendarModal({ visible, userId, onClose, hasAccess = true, weeklyGoal = 4 }) {
   const { colors } = useTheme();
   const scS = useMemo(() => createScS(colors), [colors]);
   const today    = new Date();
@@ -710,7 +710,7 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true }) {
 
   const bestWk = weeklyActive.length ? Math.max(...weeklyActive) : '—';
   const lowWk  = weeklyActive.length ? Math.min(...weeklyActive) : '—';
-  const metGoalWeeks = weeklyActive.filter(c => c >= WEEKLY_SESSION_GOAL).length;
+  const metGoalWeeks = weeklyActive.filter(c => c >= weeklyGoal).length;
   const consistency  = weeklyActive.length > 0 ? Math.round((metGoalWeeks / weeklyActive.length) * 100) : 0;
   const wkStreak     = metGoalWeeks > 0 ? metGoalWeeks : '—';
 
@@ -744,7 +744,7 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true }) {
     { val: lowWk,       lbl: 'LOW WK',       icon: 'trending-down',    color: C_KCAL    },
     { val: wkStreak,    lbl: 'WK STREAK',    icon: 'flame',            color: colors.textMuted },
     { val: thisMonth,   lbl: 'THIS MONTH',   icon: 'calendar',         color: colors.text, sub: vsLastMonthLabel },
-    { val: `${consistency}%`, lbl: 'CONSISTENCY', icon: 'checkmark-circle', color: consistency >= 50 ? C_GREEN : C_KCAL, sub: `${metGoalWeeks}/${weeklyActive.length} wks · ${WEEKLY_SESSION_GOAL}/wk` },
+    { val: `${consistency}%`, lbl: 'CONSISTENCY', icon: 'checkmark-circle', color: consistency >= 50 ? C_GREEN : C_KCAL, sub: `${metGoalWeeks}/${weeklyActive.length} wks · ${weeklyGoal}/wk` },
     { val: noLog,       lbl: 'NO LOG',       icon: 'close-circle',     color: colors.textDim },
   ];
 
@@ -1027,8 +1027,9 @@ export default function HomeScreen() {
     else navigation.navigate('More'); // HomeStack screen
   }
 
+  const weeklyGoal       = data?.weeklyGoal ?? 4;
   const thisWeekSessions = data?.thisWeek?.sessions ?? 0;
-  const sessionsLeft     = data?.sessionsLeft ?? WEEKLY_SESSION_GOAL;
+  const sessionsLeft     = data?.sessionsLeft ?? weeklyGoal;
 
   const tabStats = [data?.thisWeek, data?.lastWeek, data?.thisMonth];
   const todayIsoDow = (() => { const d = new Date().getDay(); return d === 0 ? 7 : d; })();
@@ -1037,7 +1038,7 @@ export default function HomeScreen() {
   const stepGoalForWeek = data?.stepGoal ?? 10000;
   const stepsPct    = Math.min(100, Math.round(((data?.thisWeek?.steps ?? 0) / (stepGoalForWeek * periodDays[0])) * 100));
   const caloriesPct = (data?.thisWeek?.kcal ?? 0) > 0 ? 100 : 0;
-  const sessionsPct = Math.min(100, Math.round((thisWeekSessions / WEEKLY_SESSION_GOAL) * 100));
+  const sessionsPct = Math.min(100, Math.round((thisWeekSessions / weeklyGoal) * 100));
   const weightDelta = data?.thisWeek?.weightDelta;
   const wtTrendPct  = weightDelta == null ? 0 : Math.max(0, Math.min(100, Math.round(50 - weightDelta * 50)));
 
@@ -1077,7 +1078,7 @@ export default function HomeScreen() {
   if (sessionsLeft > 0) {
     insights.push({
       icon: 'barbell-outline', color: colors.accent,
-      text: `${sessionsLeft} more session${sessionsLeft !== 1 ? 's' : ''} to hit your weekly goal of ${WEEKLY_SESSION_GOAL}.`,
+      text: `${sessionsLeft} more session${sessionsLeft !== 1 ? 's' : ''} to hit your weekly goal of ${weeklyGoal}.`,
     });
   }
   if (insights.length === 0) {
@@ -1522,7 +1523,7 @@ export default function HomeScreen() {
                 icon="trophy"
                 color={C_GREEN}
                 title={`Almost there! — ${sessionsLeft} more gym session${sessionsLeft === 1 ? '' : 's'} this week`}
-                sub={`${thisWeekSessions}/${WEEKLY_SESSION_GOAL} gym sessions · this week`}
+                sub={`${thisWeekSessions}/${weeklyGoal} gym sessions · this week`}
                 styles={styles}
                 onPress={() => navigation.navigate('Workout')}
                 logLabel="THIS WEEK"
@@ -1571,7 +1572,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.consistencyDivider} />
                 <View style={styles.consistencyTile}>
-                  <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{WEEKLY_SESSION_GOAL}</Text>
+                  <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{weeklyGoal}</Text>
                   <Text style={styles.consistencyLabel}>WORKOUT{'\n'}SESSIONS</Text>
                 </View>
               </View>
@@ -1602,7 +1603,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.consistencyDivider} />
                   <View style={styles.consistencyTile}>
-                    <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{WEEKLY_SESSION_GOAL}</Text>
+                    <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{weeklyGoal}</Text>
                     <Text style={styles.consistencyLabel}>WORKOUT{'\n'}SESSIONS</Text>
                   </View>
                 </View>
@@ -1759,6 +1760,7 @@ export default function HomeScreen() {
         userId={user?.id}
         onClose={() => setShowStreak(false)}
         hasAccess={hasAccess}
+        weeklyGoal={data?.weeklyGoal ?? 4}
       />
 
       <PaywallModal visible={consistencyExport.showPaywall} onClose={() => consistencyExport.setShowPaywall(false)} />
