@@ -20,6 +20,6 @@ export const ADMIN_OVERRIDE_USER_IDS = [
 ];
 
 export const ADMIN_OVERRIDE_EMAILS = [
-  // 'you@example.com',
+  'anoopc222@gmail.com',
 ];
 
