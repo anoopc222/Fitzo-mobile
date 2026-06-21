@@ -244,6 +244,13 @@ async function fetchHome(userId) {
   const stepGoalMet  = latestSteps ? latestSteps.steps >= (latestSteps.goal ?? stepGoal) : false;
   const sleepGoalMet = latestSleep ? latestSleep.hours >= sleepGoal : false;
 
+  const todayStr = localDateStr(new Date());
+  const ydayStr  = localDateStr(new Date(Date.now() - 86400000));
+  const stepsIsYesterday = latestSteps?.logged_at?.slice(0, 10) === ydayStr;
+  const sleepIsToday     = latestSleep?.logged_at?.slice(0, 10) === todayStr;
+  const daysSinceSteps = latestSteps?.logged_at
+    ? Math.floor((Date.now() - new Date(latestSteps.logged_at).getTime()) / 86400000) : null;
+
   const todayKcal    = (foodToday.data ?? []).reduce((s, f) => s + (f.calories ?? 0), 0);
   const todayProtein = (foodToday.data ?? []).reduce((s, f) => s + (f.protein ?? 0), 0);
 
@@ -463,6 +470,7 @@ async function fetchHome(userId) {
     weightDeltaVsYday,
     stepGoal, sleepGoal, weeklyGoal,
     stepGoalMet, sleepGoalMet,
+    stepsIsYesterday, sleepIsToday, daysSinceSteps,
     todayKcal, todayProtein,
     hasTodayWorkout, todaySession,
     todayExCount, todaySetCount, todayWorkoutName,
@@ -1168,6 +1176,90 @@ export default function HomeScreen() {
               ))}
             </ScrollView>
 
+            {/* ── Stat Overview (merged, line-separated) ─────────── */}
+            <View style={styles.overviewCard}>
+              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Weight')} activeOpacity={0.7}>
+                <View style={styles.overviewIconWrap}>
+                  <Ionicons name="scale-outline" size={15} color={C_WEIGHT} />
+                </View>
+                <View style={styles.overviewBody}>
+                  <Text style={[styles.overviewLabel, { color: C_WEIGHT }]}>WEIGHT</Text>
+                  <Text style={styles.overviewSub}>kg · body weight</Text>
+                </View>
+                <View style={styles.overviewRight}>
+                  <Text style={styles.overviewVal}>{data?.latestWeight?.weight ?? '—'}</Text>
+                  {data?.weightDeltaVsYday !== null && data?.weightDeltaVsYday !== undefined && (
+                    <Text style={[styles.overviewDelta, { color: data.weightDeltaVsYday <= 0 ? C_GREEN : '#f87171' }]}>
+                      {data.weightDeltaVsYday > 0 ? '+' : ''}{data.weightDeltaVsYday}kg vs yday
+                    </Text>
+                  )}
+                </View>
+                {(data?.weightArr?.length ?? 0) >= 2 && (
+                  <Sparkline data={data.weightArr} color={C_WEIGHT} width={48} height={26} />
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.overviewDivider} />
+
+              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Steps')} activeOpacity={0.7}>
+                <View style={styles.overviewIconWrap}>
+                  <Ionicons name="footsteps-outline" size={15} color={C_STEPS} />
+                </View>
+                <View style={styles.overviewBody}>
+                  <Text style={[styles.overviewLabel, { color: C_STEPS }]}>STEPS</Text>
+                  <Text style={styles.overviewSub}>
+                    {data?.stepsIsYesterday ? 'steps yesterday' : 'data not added yet'}
+                  </Text>
+                </View>
+                <View style={styles.overviewRight}>
+                  <Text style={styles.overviewVal}>{data?.stepsIsYesterday ? data.latestSteps.steps.toLocaleString() : '—'}</Text>
+                  {data?.stepsIsYesterday && data?.stepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met!</Text>}
+                </View>
+                {data?.stepsIsYesterday && (data?.stepsArr?.length ?? 0) >= 2 && (
+                  <Sparkline data={data.stepsArr} color={C_STEPS} width={48} height={26} />
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.overviewDivider} />
+
+              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Log')} activeOpacity={0.7}>
+                <View style={styles.overviewIconWrap}>
+                  <Ionicons name="flame-outline" size={15} color={C_KCAL} />
+                </View>
+                <View style={styles.overviewBody}>
+                  <Text style={[styles.overviewLabel, { color: C_KCAL }]}>TODAY KCAL</Text>
+                  <Text style={styles.overviewSub}>
+                    {(data?.todayKcal ?? 0) === 0 ? 'not logged · tap to log food' : 'kcal today'}
+                  </Text>
+                </View>
+                <View style={styles.overviewRight}>
+                  <Text style={styles.overviewVal}>{(data?.todayKcal ?? 0) === 0 ? '—' : data.todayKcal}</Text>
+                  {(data?.todayProtein ?? 0) > 0 && (
+                    <Text style={[styles.overviewDelta, { color: colors.success }]}>{Math.round(data.todayProtein)}g protein</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.overviewDivider} />
+
+              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Sleep')} activeOpacity={0.7}>
+                <View style={styles.overviewIconWrap}>
+                  <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
+                </View>
+                <View style={styles.overviewBody}>
+                  <Text style={[styles.overviewLabel, { color: C_SLEEP }]}>SLEEP</Text>
+                  <Text style={styles.overviewSub}>{data?.sleepIsToday ? 'logged today' : 'data not added yet'}</Text>
+                </View>
+                <View style={styles.overviewRight}>
+                  <Text style={styles.overviewVal}>{data?.sleepIsToday ? `${data.latestSleep.hours}h` : '—'}</Text>
+                  {data?.sleepIsToday && data?.sleepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met</Text>}
+                </View>
+                {data?.sleepIsToday && (data?.sleepArr?.length ?? 0) >= 2 && (
+                  <Sparkline data={data.sleepArr} color={C_SLEEP} width={48} height={26} />
+                )}
+              </TouchableOpacity>
+            </View>
+
             {/* ── Pro Goal Forecast ───────────────────────────────── */}
             {hasAccess ? (
               data?.goalForecast && (
@@ -1403,88 +1495,6 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
 
-            {/* ── Stat Overview (merged, line-separated) ─────────── */}
-            <View style={styles.overviewCard}>
-              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Weight')} activeOpacity={0.7}>
-                <View style={styles.overviewIconWrap}>
-                  <Ionicons name="scale-outline" size={15} color={C_WEIGHT} />
-                </View>
-                <View style={styles.overviewBody}>
-                  <Text style={[styles.overviewLabel, { color: C_WEIGHT }]}>WEIGHT</Text>
-                  <Text style={styles.overviewSub}>kg · body weight</Text>
-                </View>
-                <View style={styles.overviewRight}>
-                  <Text style={styles.overviewVal}>{data?.latestWeight?.weight ?? '—'}</Text>
-                  {data?.weightDeltaVsYday !== null && data?.weightDeltaVsYday !== undefined && (
-                    <Text style={[styles.overviewDelta, { color: data.weightDeltaVsYday <= 0 ? C_GREEN : '#f87171' }]}>
-                      {data.weightDeltaVsYday > 0 ? '+' : ''}{data.weightDeltaVsYday}kg vs yday
-                    </Text>
-                  )}
-                </View>
-                {(data?.weightArr?.length ?? 0) >= 2 && (
-                  <Sparkline data={data.weightArr} color={C_WEIGHT} width={48} height={26} />
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.overviewDivider} />
-
-              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Steps')} activeOpacity={0.7}>
-                <View style={styles.overviewIconWrap}>
-                  <Ionicons name="footsteps-outline" size={15} color={C_STEPS} />
-                </View>
-                <View style={styles.overviewBody}>
-                  <Text style={[styles.overviewLabel, { color: C_STEPS }]}>STEPS</Text>
-                  <Text style={styles.overviewSub}>steps yesterday</Text>
-                </View>
-                <View style={styles.overviewRight}>
-                  <Text style={styles.overviewVal}>{data?.latestSteps?.steps?.toLocaleString() ?? '—'}</Text>
-                  {data?.stepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met!</Text>}
-                </View>
-                {(data?.stepsArr?.length ?? 0) >= 2 && (
-                  <Sparkline data={data.stepsArr} color={C_STEPS} width={48} height={26} />
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.overviewDivider} />
-
-              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Log')} activeOpacity={0.7}>
-                <View style={styles.overviewIconWrap}>
-                  <Ionicons name="flame-outline" size={15} color={C_KCAL} />
-                </View>
-                <View style={styles.overviewBody}>
-                  <Text style={[styles.overviewLabel, { color: C_KCAL }]}>TODAY KCAL</Text>
-                  <Text style={styles.overviewSub}>
-                    {(data?.todayKcal ?? 0) === 0 ? 'not logged · tap to log food' : 'kcal today'}
-                  </Text>
-                </View>
-                <View style={styles.overviewRight}>
-                  <Text style={styles.overviewVal}>{(data?.todayKcal ?? 0) === 0 ? '—' : data.todayKcal}</Text>
-                  {(data?.todayProtein ?? 0) > 0 && (
-                    <Text style={[styles.overviewDelta, { color: colors.success }]}>{Math.round(data.todayProtein)}g protein</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.overviewDivider} />
-
-              <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Sleep')} activeOpacity={0.7}>
-                <View style={styles.overviewIconWrap}>
-                  <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
-                </View>
-                <View style={styles.overviewBody}>
-                  <Text style={[styles.overviewLabel, { color: C_SLEEP }]}>SLEEP</Text>
-                  <Text style={styles.overviewSub}>{data?.latestSleep ? 'logged today' : 'not logged'}</Text>
-                </View>
-                <View style={styles.overviewRight}>
-                  <Text style={styles.overviewVal}>{data?.latestSleep ? `${data.latestSleep.hours}h` : '—'}</Text>
-                  {data?.sleepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met</Text>}
-                </View>
-                {(data?.sleepArr?.length ?? 0) >= 2 && (
-                  <Sparkline data={data.sleepArr} color={C_SLEEP} width={48} height={26} />
-                )}
-              </TouchableOpacity>
-            </View>
-
             {/* ── Actionable nudge cards ────────────────────────── */}
             {data?.daysSinceWeight != null && data.daysSinceWeight >= 2 && (
               <NudgeCard
@@ -1610,8 +1620,8 @@ export default function HomeScreen() {
               </ExportCardTemplate>
             </View>
 
-            {/* ── Workout Banner ─────────────────────────────────── */}
-            {data?.hasTodayWorkout ? (
+            {/* ── Workout Banner (today completed) ────────────────── */}
+            {data?.hasTodayWorkout && (
               <View style={styles.banner}>
                 <Text style={styles.bannerEmoji}>✅</Text>
                 <View style={styles.bannerBody}>
@@ -1622,17 +1632,6 @@ export default function HomeScreen() {
                   <Text style={styles.viewBtnText}>View</Text>
                 </TouchableOpacity>
               </View>
-            ) : (
-              <TouchableOpacity style={styles.banner} onPress={() => navigation.navigate('Workout')} activeOpacity={0.85}>
-                <Ionicons name="barbell-outline" size={22} color={colors.warning} />
-                <View style={styles.bannerBody}>
-                  <Text style={[styles.bannerTitle, { color: colors.warning }]}>No workout today</Text>
-                  <Text style={styles.bannerSub}>Tap to start a new session</Text>
-                </View>
-                <View style={[styles.viewBtn, { borderColor: colors.warning, backgroundColor: colors.warning + '22' }]}>
-                  <Text style={[styles.viewBtnText, { color: colors.warning }]}>Start</Text>
-                </View>
-              </TouchableOpacity>
             )}
 
             {/* ── Weekly Tabs ────────────────────────────────────── */}
@@ -1889,7 +1888,11 @@ const createStyles = (colors) => StyleSheet.create({
   consistencyLabel: { fontSize: 7, color: colors.textDim, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, textAlign: 'center', marginTop: 4 },
   consistencyDivider: { width: 1, backgroundColor: colors.border },
   cardExportBtn: { position: 'absolute', top: 8, right: 24, padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated ?? colors.bgCard },
-  overviewCard: { backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  overviewCard: {
+    backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
+  },
   forecastCard: { backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.accent + '55', padding: 14 },
   forecastHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   forecastTitle: { fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 0.5, flex: 1 },
@@ -1903,7 +1906,7 @@ const createStyles = (colors) => StyleSheet.create({
   overviewLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.8, textTransform: 'uppercase' },
   overviewSub: { fontSize: 10, color: colors.textDim, marginTop: 2, fontFamily: fontFamily.body },
   overviewRight: { alignItems: 'flex-end' },
-  overviewVal: { fontSize: 17, fontFamily: fontFamily.monoBold, color: colors.text },
+  overviewVal: { fontSize: 18, fontFamily: fontFamily.monoBold, color: colors.text, fontWeight: weight.bold },
   overviewDelta: { fontSize: 9, fontFamily: fontFamily.bodyBold, marginTop: 2 },
   overviewDivider: { height: 1, backgroundColor: colors.border, marginLeft: 54 },
   banner: { backgroundColor: colors.bgCard, marginHorizontal: 16, marginBottom: 10, borderRadius: 16, flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderWidth: 1, borderColor: colors.border },
