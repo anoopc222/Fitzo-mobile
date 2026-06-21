@@ -1802,6 +1802,8 @@ export default function WorkoutScreen() {
                 data={heatmapData}
                 color={colors.accent}
                 typeColors={heatmapTypeColors}
+                emptyCellColor={colors.surface}
+                mutedTextColor={colors.textDim}
                 month={viewMonth - 1}
                 year={viewYear}
                 onDayPress={(dateStr, value) => { if (value > 0) openDetailForDate(dateStr); }}
