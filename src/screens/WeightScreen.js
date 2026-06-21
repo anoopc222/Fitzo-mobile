@@ -791,26 +791,24 @@ export default function WeightScreen() {
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={styles.hmLegend}>
-                    <Text style={styles.hmLegendLabel}>Low</Text>
-                    {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
-                      <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
-                    ))}
-                    <Text style={styles.hmLegendLabel}>High</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowPaywall(true))}
-                    disabled={heatmapExport.exporting}
-                    style={styles.avgViewToggleBtn}
-                  >
-                    {heatmapExport.exporting ? (
-                      <ActivityIndicator size="small" color={colors.textMuted} />
-                    ) : (
-                      <Ionicons name="share-outline" size={14} color={colors.textMuted} />
-                    )}
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowPaywall(true))}
+                  disabled={heatmapExport.exporting}
+                  style={styles.avgViewToggleBtn}
+                >
+                  {heatmapExport.exporting ? (
+                    <ActivityIndicator size="small" color={colors.textMuted} />
+                  ) : (
+                    <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.hmLegend, styles.hmLegendRow]}>
+                <Text style={styles.hmLegendLabel}>Low</Text>
+                {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
+                  <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+                ))}
+                <Text style={styles.hmLegendLabel}>High</Text>
               </View>
               <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={hasAccess} onLockedPress={() => setShowPaywall(true)} />
             </View>
@@ -1158,6 +1156,7 @@ const createStyles = (colors) => StyleSheet.create({
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   hmLegendLabel: { fontSize: 9, color: colors.textDim },
   hmLegendSwatch: { width: 10, height: 10, borderRadius: 2 },
+  hmLegendRow: { justifyContent: 'flex-end', marginBottom: 10 },
 
   heroCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, marginBottom: 12, position: 'relative', overflow: 'hidden' },
   heroGradientBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#fb7185' },
