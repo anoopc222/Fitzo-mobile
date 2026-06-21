@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Svg, { Polyline, Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -146,107 +146,84 @@ function getWeekRange(refDate, offsetWeeks = 0) {
   return [localDateStr(monday), localDateStr(sunday), monday];
 }
 
-// ─── Trend Chart (Daily + 30d avg) — ports _drawStepsChartWithTrend ─────────
-function TrendChart({ monthData, allLogs, goal, colors, width }) {
+// Catmull-Rom → cubic-bezier smoothing for a polyline's points
+function smoothPath(pts) {
+  if (pts.length < 2) return '';
+  if (pts.length === 2) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  let d = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
+// ─── Range Trend Chart (Daily + 7D Avg + Goal) — mirrors WeightTrendChart ──
+function StepsTrendChart({ data, goal, colors, width }) {
   const H = 170;
   const P = { t: 18, r: 8, b: 22, l: 8 };
   const pw = width - P.l - P.r;
   const ph = H - P.t - P.b;
-
-  const valid = monthData.filter(e => e.steps > 0);
-  if (valid.length < 2) {
+  if (data.length < 2) {
     return (
       <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Not enough data yet</Text>
       </View>
     );
   }
-
-  // 30-day rolling avg per data point (mirrors reference: window of 30 days ending at e.date, min 3 entries)
-  const trendPoints = monthData.map(e => {
-    const end = new Date(e.logged_at + 'T00:00:00');
-    const start = new Date(end); start.setDate(end.getDate() - 29);
-    const startStr = localDateStr(start);
-    const win = allLogs.filter(x => x.steps > 0 && x.logged_at >= startStr && x.logged_at <= e.logged_at);
-    return win.length >= 3 ? Math.round(win.reduce((s, x) => s + x.steps, 0) / win.length) : null;
+  const rawVals = data.map(e => e.steps);
+  const avgVals = data.map((_, i) => {
+    const win = data.slice(Math.max(0, i - 6), i + 1);
+    return Math.round(win.reduce((s, x) => s + x.steps, 0) / win.length);
   });
-
-  const allVals = [...valid.map(e => e.steps), goal, ...trendPoints.filter(Boolean)];
+  const rangeAvgVal = Math.round(rawVals.reduce((s, v) => s + v, 0) / rawVals.length);
+  const allVals = [...rawVals, ...avgVals, rangeAvgVal, goal];
   const minV = Math.min(...allVals) * 0.96;
   const maxV = Math.max(...allVals) * 1.04;
   const range = maxV - minV || 1;
-  const n = monthData.length;
+  const n = data.length;
   const xs = pw / Math.max(n - 1, 1);
   const toY = v => P.t + ph - ((v - minV) / range) * ph;
   const toX = i => P.l + i * xs;
-
-  const pts = monthData.map((e, i) => e.steps > 0 ? { x: toX(i), y: toY(e.steps), v: e.steps, i } : null);
-  const ptsValid = pts.filter(Boolean);
-  const linePts = ptsValid.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-
-  const trendPts = trendPoints.map((v, i) => v != null ? { x: toX(i), y: toY(v), v } : null);
-  const trendValid = trendPts.filter(Boolean);
-  const trendLine = trendValid.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-
+  const rawPts = rawVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
+  const rawLine = smoothPath(rawPts);
+  const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
+  const avgLine = smoothPath(avgPts);
+  const rangeAvgY = toY(rangeAvgVal);
   const goalY = toY(goal);
-
-  // sparse x-axis labels (first, last, evenly spaced)
-  const labelStep = n > 8 ? Math.ceil(n / 6) : 1;
-
-  const lastTrend = trendValid[trendValid.length - 1];
-
+  const lastAvg = avgPts[avgPts.length - 1];
   return (
     <Svg width={width} height={H}>
       <Defs>
-        <LinearGradient id="stepsFill" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#d4ff00" stopOpacity="0.22" />
-          <Stop offset="1" stopColor="#d4ff00" stopOpacity="0" />
+        <LinearGradient id="stepsTrendFill" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#f59e0b" stopOpacity="0.22" />
+          <Stop offset="1" stopColor="#f59e0b" stopOpacity="0" />
         </LinearGradient>
       </Defs>
-
-      {/* grid lines */}
       {[0, 1, 2, 3].map(i => {
         const y = P.t + (ph / 3) * i;
         return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />;
       })}
-
-      {/* goal dashed line */}
-      <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#d4ff00" strokeOpacity={0.35} strokeWidth={1.5} strokeDasharray="4,4" />
-
-      {/* area fill under daily line */}
-      {ptsValid.length > 1 && (
-        <Path
-          d={`M ${ptsValid[0].x},${H - P.b} ${ptsValid.map(p => `L ${p.x},${p.y}`).join(' ')} L ${ptsValid[ptsValid.length - 1].x},${H - P.b} Z`}
-          fill="url(#stepsFill)"
-        />
+      <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#34d399" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="4,4" />
+      <Line x1={P.l} y1={rangeAvgY} x2={width - P.r} y2={rangeAvgY} stroke="#c4b5fd" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="2,3" />
+      {avgPts.length > 1 && (
+        <Path d={`${avgLine} L ${avgPts[avgPts.length - 1].x.toFixed(1)},${H - P.b} L ${avgPts[0].x.toFixed(1)},${H - P.b} Z`} fill="url(#stepsTrendFill)" />
       )}
-
-      {/* daily line */}
-      {ptsValid.length > 1 && (
-        <Polyline points={linePts} fill="none" stroke="#d4ff00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      {rawPts.length > 1 && (
+        <Path d={rawLine} fill="none" stroke="#67e8f9" strokeOpacity={0.35} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       )}
-
-      {/* 30d avg dashed trend line */}
-      {trendValid.length > 1 && (
-        <Polyline points={trendLine} fill="none" stroke="#fb7185" strokeOpacity={0.85} strokeWidth={2} strokeDasharray="5,3" strokeLinejoin="round" />
+      {avgPts.length > 1 && (
+        <Path d={avgLine} fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
       )}
-
-      {/* daily dots */}
-      {ptsValid.map(p => (
-        <Circle key={p.i} cx={p.x} cy={p.y} r={3} fill="#d4ff00" />
-      ))}
-
-      {/* value labels above visible dots */}
-      {monthData.map((e, i) => {
-        if (!e.steps) return null;
-        if (n > 8 && i % labelStep !== 0 && i !== n - 1) return null;
-        const x = toX(i), y = toY(e.steps);
-        return null; // RN SVG Text omitted from this pass — see <SvgValueLabels> below
-      })}
-
-      {lastTrend != null && (
-        <Circle cx={lastTrend.x} cy={lastTrend.y} r={2.5} fill="#fb7185" />
-      )}
+      {rawPts.map((p, i) => (<Circle key={i} cx={p.x} cy={p.y} r={2} fill="#67e8f9" fillOpacity={0.6} />))}
+      {lastAvg && <Circle cx={lastAvg.x} cy={lastAvg.y} r={3.5} fill="#f59e0b" />}
     </Svg>
   );
 }
@@ -463,6 +440,30 @@ export default function StepsScreen() {
     const vals = logs.filter(l => l.steps).map(l => l.steps);
     return Math.max(...vals, defaultGoal, 1);
   }, [logs, defaultGoal]);
+
+  // ── Trend chart (range-based, mirrors WeightScreen pattern) ─────────────
+  const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
+  const [showTrendPaywall, setShowTrendPaywall] = useState(false);
+
+  const sortedAscLogs = useMemo(() =>
+    [...logs].filter(l => l.steps > 0).sort((a, b) => a.logged_at.localeCompare(b.logged_at)),
+  [logs]);
+
+  const trendData = useMemo(() => {
+    if (trendRangeDays === 0) return sortedAscLogs;
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - trendRangeDays);
+    const cutoffStr = localDateStr(cutoff);
+    return sortedAscLogs.filter(l => l.logged_at >= cutoffStr);
+  }, [sortedAscLogs, trendRangeDays]);
+
+  const trendStats = useMemo(() => {
+    if (trendData.length < 2) return null;
+    const avgPerDay = Math.round(trendData.reduce((s, x) => s + x.steps, 0) / trendData.length);
+    const goalDaysHit = trendData.filter(x => x.steps >= (x.goal ?? defaultGoal)).length;
+    const bestDay = Math.max(...trendData.map(x => x.steps));
+    const totalSteps = trendData.reduce((s, x) => s + x.steps, 0);
+    return { avgPerDay, goalDaysHit, totalDays: trendData.length, bestDay, totalSteps };
+  }, [trendData, defaultGoal]);
 
   // This Week bar chart (always current real week, per reference fzRenderWeeklyStepsChart)
   const weekDays = useMemo(() => {
@@ -750,25 +751,43 @@ export default function StepsScreen() {
               </ExportCardTemplate>
             </View>
 
-            {/* ── Trend Chart ── */}
+            {/* ── Steps Trend ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>STEPS</Text>
-                <View style={styles.goalPill}>
-                  <Text style={styles.goalPillText}>GOAL {fmtK(defaultGoal)}</Text>
+                <Text style={styles.cardTitle}>STEPS - TREND</Text>
+                <View style={styles.segmentRow}>
+                  {[30, 60, 90, 0].map(d => (
+                    <TouchableOpacity
+                      key={d}
+                      onPress={() => {
+                        if (d !== 30 && !hasAccess) { setShowTrendPaywall(true); return; }
+                        setTrendRangeDays(d);
+                      }}
+                      style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}
+                    >
+                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
               <View style={styles.legendRow}>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendSwatch, { backgroundColor: '#d4ff00' }]} />
-                  <Text style={styles.legendLabel}>Daily</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendSwatch, { backgroundColor: '#fb7185' }]} />
-                  <Text style={styles.legendLabel}>30d avg</Text>
-                </View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>Daily</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>7D Avg</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? 'All' : `${trendRangeDays}D`} Avg</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>Goal</Text></View>
               </View>
-              <TrendChart monthData={logMonthData} allLogs={logs} goal={defaultGoal} colors={colors} width={chartWidth} />
+              <StepsTrendChart data={trendData} goal={defaultGoal} colors={colors} width={chartWidth} />
+              {trendStats && (
+                <View style={styles.weekStatsRow}>
+                  <WeekStatCell value={trendStats.avgPerDay.toLocaleString()} label="AVG/DAY" color={colors.accent} colors={colors} />
+                  <View style={styles.weekStatDivider} />
+                  <WeekStatCell value={`${trendStats.goalDaysHit}/${trendStats.totalDays}`} label="GOAL DAYS" color={colors.good} colors={colors} />
+                  <View style={styles.weekStatDivider} />
+                  <WeekStatCell value={trendStats.bestDay.toLocaleString()} label="BEST DAY" color="#22d3ee" colors={colors} />
+                  <View style={styles.weekStatDivider} />
+                  <WeekStatCell value={trendStats.totalSteps.toLocaleString()} label="TOTAL" color={colors.text} colors={colors} />
+                </View>
+              )}
             </View>
 
             {/* ── Daily Log ── */}
@@ -936,6 +955,7 @@ export default function StepsScreen() {
       </BottomSheet>
 
       <PaywallModal visible={heroExport.showPaywall} onClose={() => heroExport.setShowPaywall(false)} />
+      <PaywallModal visible={showTrendPaywall} onClose={() => setShowTrendPaywall(false)} />
     </SafeAreaView>
   );
 }

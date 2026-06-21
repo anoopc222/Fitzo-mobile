@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Svg, { Polyline, Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -178,6 +178,25 @@ function SleepHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true,
   );
 }
 
+// Catmull-Rom → cubic-bezier smoothing for a polyline's points
+function smoothPath(pts) {
+  if (pts.length < 2) return '';
+  if (pts.length === 2) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  let d = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
 // ─── Sleep Trend Chart — ports _renderSleepTrendChart ───────────────────────
 function SleepTrendChart({ data, goal, colors, width }) {
   const H = 200;
@@ -194,25 +213,32 @@ function SleepTrendChart({ data, goal, colors, width }) {
   }
 
   const vals = data.map(e => e.hours);
-  const maxH = Math.max(10, Math.max(...vals) + 1);
-  const minH = Math.max(0, Math.min(...vals) - 1);
+  const avgVals = data.map((_, i) => {
+    const win = data.slice(Math.max(0, i - 6), i + 1);
+    return +(win.reduce((s, x) => s + x.hours, 0) / win.length).toFixed(2);
+  });
+  const rangeAvgVal = +(vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(2);
+  const maxH = Math.max(10, Math.max(...vals, ...avgVals, rangeAvgVal, goal) + 1);
+  const minH = Math.max(0, Math.min(...vals, ...avgVals, rangeAvgVal, goal) - 1);
   const range = maxH - minH || 1;
   const n = data.length;
   const toY = v => P.t + ph - ((v - minH) / range) * ph;
   const toX = i => P.l + (i * pw) / Math.max(n - 1, 1);
 
   const pts = data.map((e, i) => ({ x: toX(i), y: toY(e.hours), hit: e.hours >= goal }));
-  const line = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const rawLine = smoothPath(pts);
+  const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
+  const avgLine = smoothPath(avgPts);
   const goalY = toY(goal);
-
-  const labelStep = n > 8 ? Math.ceil(n / 6) : 1;
+  const rangeAvgY = toY(rangeAvgVal);
+  const lastAvg = avgPts[avgPts.length - 1];
 
   return (
     <Svg width={width} height={H}>
       <Defs>
         <LinearGradient id="slpFill" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#818cf8" stopOpacity="0.25" />
-          <Stop offset="1" stopColor="#818cf8" stopOpacity="0.02" />
+          <Stop offset="0" stopColor="#f59e0b" stopOpacity="0.22" />
+          <Stop offset="1" stopColor="#f59e0b" stopOpacity="0" />
         </LinearGradient>
       </Defs>
 
@@ -221,23 +247,39 @@ function SleepTrendChart({ data, goal, colors, width }) {
         return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />;
       })}
 
-      <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#f59e0b" strokeOpacity={0.5} strokeWidth={1.5} strokeDasharray="4,4" />
+      <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#34d399" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="4,4" />
 
-      {pts.length > 1 && (
+      <Line x1={P.l} y1={rangeAvgY} x2={width - P.r} y2={rangeAvgY} stroke="#c4b5fd" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="2,3" />
+
+      {avgPts.length > 1 && (
         <Path
-          d={`M ${pts[0].x},${H - P.b} ${pts.map(p => `L ${p.x},${p.y}`).join(' ')} L ${pts[pts.length - 1].x},${H - P.b} Z`}
+          d={`${avgLine} L ${avgPts[avgPts.length - 1].x.toFixed(1)},${H - P.b} L ${avgPts[0].x.toFixed(1)},${H - P.b} Z`}
           fill="url(#slpFill)"
         />
       )}
 
       {pts.length > 1 && (
-        <Polyline points={line} fill="none" stroke="#818cf8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d={rawLine} fill="none" stroke="#67e8f9" strokeOpacity={0.35} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      )}
+
+      {avgPts.length > 1 && (
+        <Path d={avgLine} fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
       )}
 
       {pts.map((p, i) => (
-        <Circle key={i} cx={p.x} cy={p.y} r={3} fill={p.hit ? '#34d399' : '#f59e0b'} />
+        <Circle key={i} cx={p.x} cy={p.y} r={2} fill="#67e8f9" fillOpacity={0.6} />
       ))}
+      {lastAvg && <Circle cx={lastAvg.x} cy={lastAvg.y} r={3.5} fill="#f59e0b" />}
     </Svg>
+  );
+}
+
+function WeekStatCell({ value, label, color, colors }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center' }}>
+      <Text style={{ fontSize: typography.base, fontWeight: weight.black, color, fontFamily: fontFamily.monoBold }}>{value}</Text>
+      <Text style={{ fontSize: 9, color: colors.textDim, marginTop: 2, letterSpacing: 0.5 }}>{label}</Text>
+    </View>
   );
 }
 
@@ -292,7 +334,7 @@ export default function SleepScreen() {
   const { hasAccess } = useSubscription();
   const [showRangePaywall, setShowRangePaywall] = useState(false);
 
-  const [chartRange, setChartRange] = useState('1M'); // 1M | 3M | 6M | ALL
+  const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
   const [hoursInput, setHoursInput] = useState('');
@@ -444,11 +486,21 @@ export default function SleepScreen() {
 
   // Trend chart data
   const chartData = useMemo(() => {
-    const rangeMonths = { '1M': 1, '3M': 3, '6M': 6, ALL: 9999 }[chartRange];
-    const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth() - rangeMonths);
+    const sortedAsc = [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at));
+    if (trendRangeDays === 0) return sortedAsc;
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - trendRangeDays);
     const cutoffStr = localDateStr(cutoff);
-    return [...logs].filter(l => chartRange === 'ALL' || l.logged_at >= cutoffStr).sort((a, b) => a.logged_at.localeCompare(b.logged_at));
-  }, [logs, chartRange]);
+    return sortedAsc.filter(l => l.logged_at >= cutoffStr);
+  }, [logs, trendRangeDays]);
+
+  const trendStats = useMemo(() => {
+    if (chartData.length < 2) return null;
+    const avgNight = +(chartData.reduce((s, x) => s + x.hours, 0) / chartData.length).toFixed(1);
+    const goalNightsHit = chartData.filter(x => x.hours >= goal).length;
+    const bestNight = Math.max(...chartData.map(x => x.hours));
+    const debtHours = +chartData.reduce((s, x) => s + Math.max(0, goal - x.hours), 0).toFixed(1);
+    return { avgNight, goalNightsHit, totalNights: chartData.length, bestNight, debtHours };
+  }, [chartData, goal]);
 
   const mk = `${year}-${String(month + 1).padStart(2, '0')}`;
   const monthLogs = useMemo(() => sortedDesc.filter(l => l.logged_at.startsWith(mk)), [sortedDesc, mk]);
@@ -618,26 +670,40 @@ export default function SleepScreen() {
             {/* ── Sleep Trend ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>SLEEP TREND</Text>
-                <View style={styles.goalPill}>
-                  <Text style={styles.goalPillText}>GOAL {goal}H</Text>
+                <Text style={styles.cardTitle}>SLEEP - TREND</Text>
+                <View style={styles.segmentRow}>
+                  {[30, 60, 90, 0].map(d => (
+                    <TouchableOpacity
+                      key={d}
+                      onPress={() => {
+                        if (d !== 30 && !hasAccess) { setShowRangePaywall(true); return; }
+                        setTrendRangeDays(d);
+                      }}
+                      style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}
+                    >
+                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
-              <View style={styles.segmentRow}>
-                {['1M', '3M', '6M', 'ALL'].map(r => (
-                  <TouchableOpacity
-                    key={r}
-                    onPress={() => {
-                      if (r !== '1M' && !hasAccess) { setShowRangePaywall(true); return; }
-                      setChartRange(r);
-                    }}
-                    style={[styles.segmentBtn, chartRange === r && styles.segmentBtnActive]}
-                  >
-                    <Text style={[styles.segmentText, chartRange === r && styles.segmentTextActive]}>{r}</Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.legendRow}>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>Daily</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>7D Avg</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? 'All' : `${trendRangeDays}D`} Avg</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>Goal</Text></View>
               </View>
               <SleepTrendChart data={chartData} goal={goal} colors={colors} width={chartWidth} />
+              {trendStats && (
+                <View style={styles.trendStatsRow}>
+                  <WeekStatCell value={`${trendStats.avgNight}h`} label="AVG/NIGHT" color={colors.purple} colors={colors} />
+                  <View style={styles.statDividerInline} />
+                  <WeekStatCell value={`${trendStats.goalNightsHit}/${trendStats.totalNights}`} label="GOAL NIGHTS" color={colors.good} colors={colors} />
+                  <View style={styles.statDividerInline} />
+                  <WeekStatCell value={`${trendStats.bestNight}h`} label="BEST NIGHT" color="#22d3ee" colors={colors} />
+                  <View style={styles.statDividerInline} />
+                  <WeekStatCell value={trendStats.debtHours > 0 ? `${trendStats.debtHours}h` : '0h'} label="SLEEP DEBT" color={trendStats.debtHours > 0 ? colors.danger : colors.good} colors={colors} />
+                </View>
+              )}
             </View>
 
             {/* ── Sleep Log ── */}
@@ -820,6 +886,14 @@ const createStyles = (colors) => StyleSheet.create({
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   hmLegendLabel: { fontSize: 9, color: colors.textDim },
   hmLegendSwatch: { width: 10, height: 10, borderRadius: 2 },
+
+  legendRow: { flexDirection: 'row', gap: 14, marginBottom: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendSwatch: { width: 8, height: 8, borderRadius: 4 },
+  legendLabel: { fontSize: 10, color: colors.textMuted },
+
+  trendStatsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
+  statDividerInline: { width: 1, height: 24, backgroundColor: colors.border },
 
   recoveryCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, marginBottom: 12, position: 'relative', overflow: 'hidden' },
   recoveryGradientBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#818cf8' },
