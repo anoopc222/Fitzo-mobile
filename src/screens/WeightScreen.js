@@ -807,7 +807,7 @@ export default function WeightScreen() {
             {/* ── 30-Day Trend ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>📈 TREND</Text>
+                <Text style={styles.cardTitle}>WEIGHT - TREND</Text>
                 <View style={styles.segmentRow}>
                   {[30, 60, 90, 0].map(d => (
                     <TouchableOpacity
