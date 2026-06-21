@@ -25,7 +25,7 @@ const NOTIFICATION_ITEMS = [
 async function fetchSettings(userId) {
   const { data } = await supabase
     .from('profiles')
-    .select('calorie_target, protein_target, carbs_target, fats_target, step_goal, sleep_goal_hours, weight_goal_kg')
+    .select('calorie_target, protein_target, carbs_target, fats_target, step_goal, sleep_goal_hours, weight_goal_kg, workout_weekly_goal')
     .eq('id', userId)
     .single();
   return data;
@@ -44,6 +44,8 @@ export default function SettingsScreen({ navigation }) {
   const [notifs, setNotifs] = useState({ weigh_in: false, workout: false, sleep: false, steps: false });
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [goalsForm, setGoalsForm] = useState({});
+  const [showWorkoutGoalModal, setShowWorkoutGoalModal] = useState(false);
+  const [workoutGoalInput, setWorkoutGoalInput] = useState(4);
 
   const { data: settings } = useQuery({
     queryKey: ['settings', user?.id],
@@ -52,6 +54,10 @@ export default function SettingsScreen({ navigation }) {
     staleTime: 0,
     gcTime: 0,
   });
+
+  useEffect(() => {
+    if (settings?.workout_weekly_goal) setWorkoutGoalInput(settings.workout_weekly_goal);
+  }, [settings]);
 
   useEffect(() => {
     if (settings) {
@@ -85,6 +91,15 @@ export default function SettingsScreen({ navigation }) {
     if (goalsForm.sleep_goal_hours) fields.sleep_goal_hours = parseFloat(goalsForm.sleep_goal_hours);
     updateMut.mutate(fields);
   };
+
+  const workoutGoalMut = useMutation({
+    mutationFn: (goal) => updateSettings(user.id, { workout_weekly_goal: goal }),
+    onSuccess: () => {
+      qc.invalidateQueries(['settings', user.id]);
+      setShowWorkoutGoalModal(false);
+    },
+    onError: (e) => Alert.alert('Error', e.message),
+  });
 
   const [isExporting, setIsExporting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -234,6 +249,19 @@ export default function SettingsScreen({ navigation }) {
           <Text style={styles.editGoalsBtnText}>Edit All Goals</Text>
         </TouchableOpacity>
 
+        {/* ── Workout Target ──────────────────────────────────────── */}
+        <SectionHeader title="Workout Target" />
+        <View style={styles.card}>
+          <SettingRow icon="barbell-outline" label="Weekly Workout Goal"
+            value={`${settings?.workout_weekly_goal ?? 4} / week`}
+            last chevron
+            onPress={() => {
+              setWorkoutGoalInput(settings?.workout_weekly_goal ?? 4);
+              setShowWorkoutGoalModal(true);
+            }}
+          />
+        </View>
+
         {/* ── Theme ───────────────────────────────────────────────── */}
         <SectionHeader title="Appearance" />
         <View style={styles.card}>
@@ -347,6 +375,41 @@ export default function SettingsScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </BottomSheet>
+
+      {/* Weekly Workout Goal Modal */}
+      <BottomSheet visible={showWorkoutGoalModal} onClose={() => setShowWorkoutGoalModal(false)} style={styles.sheet}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>🎯 WEEKLY WORKOUT GOAL</Text>
+          <TouchableOpacity onPress={() => setShowWorkoutGoalModal(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.goalBigVal}>{workoutGoalInput}</Text>
+        <Text style={styles.goalBigSub}>session{workoutGoalInput === 1 ? '' : 's'} / week</Text>
+
+        <Text style={styles.sheetFieldLabel}>DAYS PER WEEK</Text>
+        <View style={styles.quickAddRow}>
+          {[1, 2, 3, 4, 5, 6, 7].map(n => (
+            <TouchableOpacity
+              key={n}
+              style={[styles.quickAddChip, workoutGoalInput === n && { backgroundColor: colors.accent }]}
+              onPress={() => setWorkoutGoalInput(n)}
+            >
+              <Text style={[styles.quickAddChipText, workoutGoalInput === n && { color: colors.bg }]}>{n}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.goalHint}>This drives your streak, consistency %, and weekly goal calculations across the app. Cardio days don't count toward this goal.</Text>
+
+        <TouchableOpacity
+          style={styles.saveBtn}
+          onPress={() => workoutGoalMut.mutate(workoutGoalInput)}
+          disabled={workoutGoalMut.isPending}
+        >
+          <Text style={styles.saveBtnText}>{workoutGoalMut.isPending ? 'Saving…' : 'Save Goal'}</Text>
+        </TouchableOpacity>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -436,4 +499,14 @@ const createStyles = (colors) => StyleSheet.create({
   cancelBtnText: { color: colors.textMuted, fontWeight: weight.semibold },
   saveBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center' },
   saveBtnText: { color: colors.bg, fontWeight: weight.bold },
+  goalBigVal: { fontSize: typography.xxxl, fontWeight: weight.black, color: colors.text, textAlign: 'center', marginTop: 8 },
+  goalBigSub: { fontSize: typography.sm, color: colors.textMuted, textAlign: 'center', marginBottom: 16 },
+  sheetFieldLabel: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold, marginBottom: 10 },
+  quickAddRow: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
+  quickAddChip: {
+    flex: 1, minWidth: 36, paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+    backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border,
+  },
+  quickAddChipText: { color: colors.text, fontWeight: weight.semibold, fontSize: typography.sm },
+  goalHint: { fontSize: typography.xs, color: colors.textDim, marginBottom: 16, lineHeight: 16 },
 });

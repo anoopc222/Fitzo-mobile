@@ -39,6 +39,15 @@ async function fetchSessions(userId) {
   return data ?? [];
 }
 
+async function fetchWorkoutGoal(userId) {
+  const { data } = await supabase
+    .from('profiles')
+    .select('workout_weekly_goal')
+    .eq('id', userId)
+    .single();
+  return data?.workout_weekly_goal ?? 4;
+}
+
 async function saveSession(userId, { sessionId, date, name, exercises }) {
   let sid = sessionId;
   if (!sid) {
@@ -128,7 +137,7 @@ async function deleteFullSession(sessionId) {
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL  = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
-const WEEKLY_SESSION_GOAL = 3;
+const DEFAULT_WEEKLY_GOAL = 4;
 const DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 // session "type" — used for cardio/rest-specific UI branches
@@ -1463,6 +1472,14 @@ export default function WorkoutScreen() {
     gcTime: 0,
   });
 
+  const { data: weeklyGoal = DEFAULT_WEEKLY_GOAL } = useQuery({
+    queryKey: ['workoutGoal', user?.id],
+    queryFn: () => fetchWorkoutGoal(user.id),
+    enabled: !!user?.id,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
   const saveMut = useMutation({
     mutationFn: (params) => saveSession(user.id, params),
     onSuccess: () => { qc.invalidateQueries(['sessions', user.id]); setShowEdit(false); },
@@ -1560,9 +1577,15 @@ export default function WorkoutScreen() {
     };
   }, [sessions, today]);
 
-  // Active (non-rest) session dates, used for streaks/consistency
+  // Active (non-rest) session dates — used for weekly consistency (cardio still counts)
   const activeDateSet = useMemo(
     () => new Set(sessions.filter(s => getSessionType(s.notes) !== 'rest').map(s => s.date)),
+    [sessions]
+  );
+
+  // Gym-only session dates — streaks are gym-specific; cardio doesn't count toward them
+  const gymDateSet = useMemo(
+    () => new Set(sessions.filter(s => getSessionType(s.notes) === 'gym').map(s => s.date)),
     [sessions]
   );
 
@@ -1574,7 +1597,7 @@ export default function WorkoutScreen() {
     let currentStreak = 0;
     for (let i = 0; i < 365; i++) {
       const d = localDateStr(new Date(today.getTime() - i * 86400000));
-      if (activeDateSet.has(d)) currentStreak++;
+      if (gymDateSet.has(d)) currentStreak++;
       else if (d !== todayStr) break;
     }
 
@@ -1582,11 +1605,11 @@ export default function WorkoutScreen() {
     let longestStreak = 0, run = 0;
     for (let i = 364; i >= 0; i--) {
       const d = localDateStr(new Date(today.getTime() - i * 86400000));
-      if (activeDateSet.has(d)) { run++; longestStreak = Math.max(longestStreak, run); }
+      if (gymDateSet.has(d)) { run++; longestStreak = Math.max(longestStreak, run); }
       else run = 0;
     }
 
-    const lastActiveDate = [...activeDateSet].sort().pop() ?? null;
+    const lastActiveDate = [...gymDateSet].sort().pop() ?? null;
     const daysSinceLast = lastActiveDate
       ? Math.floor((today.getTime() - new Date(lastActiveDate).getTime()) / 86400000)
       : null;
@@ -1601,7 +1624,7 @@ export default function WorkoutScreen() {
       ).length;
       weeklyCounts.push(count);
     }
-    const weeksMeetingGoal = weeklyCounts.filter(c => c >= WEEKLY_SESSION_GOAL).length;
+    const weeksMeetingGoal = weeklyCounts.filter(c => c >= weeklyGoal).length;
     const consistencyPct = weeklyCounts.length > 0
       ? Math.round((weeksMeetingGoal / weeklyCounts.length) * 100)
       : 0;
@@ -1618,7 +1641,7 @@ export default function WorkoutScreen() {
       ).length;
       prevWeeklyCounts.push(count);
     }
-    const prevWeeksMeetingGoal = prevWeeklyCounts.filter(c => c >= WEEKLY_SESSION_GOAL).length;
+    const prevWeeksMeetingGoal = prevWeeklyCounts.filter(c => c >= weeklyGoal).length;
     const prevConsistencyPct = prevWeeklyCounts.length > 0
       ? Math.round((prevWeeksMeetingGoal / prevWeeklyCounts.length) * 100)
       : 0;
@@ -1638,7 +1661,7 @@ export default function WorkoutScreen() {
       avgPerWeek,
       busiestDow,
     };
-  }, [sessions, activeDateSet, today]);
+  }, [sessions, activeDateSet, gymDateSet, today, weeklyGoal]);
 
   const insights = useMemo(() => {
     const out = [];
@@ -1659,8 +1682,17 @@ export default function WorkoutScreen() {
     if (c.busiestDow) {
       out.push({ icon: '📅', text: 'You train most often on ', bold: c.busiestDow, rest: ` — averaging ${c.avgPerWeek.toFixed(1)} sessions/week overall.` });
     }
+    // Forecast: can the weekly goal still be hit with the days remaining this week?
+    const doneThisWeek = weekDays.filter(d => d.type && d.type !== 'rest' && !d.isFuture).length;
+    const daysLeftThisWeek = weekDays.filter(d => d.isFuture).length + (weekDays.find(d => d.isToday && !d.type) ? 1 : 0);
+    const remaining = weeklyGoal - doneThisWeek;
+    if (remaining > 0 && remaining <= daysLeftThisWeek) {
+      out.push({ icon: '✅', text: 'On pace — ', bold: `${remaining} more session${remaining === 1 ? '' : 's'}`, rest: ` this week hits your goal of ${weeklyGoal}.` });
+    } else if (remaining > daysLeftThisWeek) {
+      out.push({ icon: '🚨', text: 'Goal at risk — only ', bold: `${daysLeftThisWeek} day${daysLeftThisWeek === 1 ? '' : 's'} left`, rest: ` to log ${remaining} more session${remaining === 1 ? '' : 's'} for your ${weeklyGoal}/week goal.` });
+    }
     return out;
-  }, [consistency]);
+  }, [consistency, weekDays, weeklyGoal]);
 
   const RANGE_DAYS = { '30D': 30, '60D': 60, '90D': 90, 'ALL': Infinity };
   const trendData = useMemo(() => {
@@ -1867,7 +1899,7 @@ export default function WorkoutScreen() {
               <View style={s.weekCompareCardMerged}>
                 <View style={s.weekCompareCell}>
                   <Text style={s.weekCompareTitle}>THIS WEEK</Text>
-                  <Text style={s.weekCompareVal}>{weekDays.filter(d => d.type && d.type !== 'rest').length} / {WEEKLY_SESSION_GOAL} sessions</Text>
+                  <Text style={s.weekCompareVal}>{weekDays.filter(d => d.type && d.type !== 'rest').length} / {weeklyGoal} sessions</Text>
                   <Text style={[s.weekCompareSub, { color: colors.textMuted }]}>{weekCompare.thisVol.toLocaleString()} kg volume</Text>
                 </View>
                 <View style={s.weekCompareDivider} />

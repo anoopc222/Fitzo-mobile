@@ -71,7 +71,7 @@ screens/
 ### Supabase tables (all live, RLS enabled)
 | Table | Key columns |
 |---|---|
-| `profiles` | `id`, `full_name`, `goal`, `height_cm`, `sex`, `date_of_birth`, `weight_goal_kg`, `step_goal`, `sleep_goal_hours`, `calorie_target`, `protein_target`, `carbs_target`, `fats_target`, `bio` |
+| `profiles` | `id`, `full_name`, `goal`, `height_cm`, `sex`, `date_of_birth`, `weight_goal_kg`, `step_goal`, `sleep_goal_hours`, `calorie_target`, `protein_target`, `carbs_target`, `fats_target`, `bio`, `workout_weekly_goal` (1-7, default 4) |
 | `weight_logs` | `user_id`, `weight`, `logged_at`, `notes` |
 | `step_logs` | `user_id`, `steps`, `goal`, `distance_km`, `calories_burned`, `logged_at` |
 | `workout_sessions` | `user_id`, `date`, `total_volume`, `duration_min`, `calories_burned`, `notes` |
