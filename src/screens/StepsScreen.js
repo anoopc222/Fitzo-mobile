@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -74,6 +76,10 @@ function fmtK(n) {
   if (n == null) return '—';
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
+function csvEscape(val) {
+  const s = val === null || val === undefined ? '' : String(val);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
 function fmtDateShort(iso) {
   const d = new Date(iso + 'T00:00:00');
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} (${DOW_SHORT[d.getDay()]})`;
@@ -131,6 +137,140 @@ async function updateStepGoal(userId, goal) {
 async function deleteStepLog(id) {
   const { error } = await supabase.from('step_logs').delete().eq('id', id);
   if (error) throw error;
+}
+
+async function fetchSleepForCorrelation(userId) {
+  const { data, error } = await supabase
+    .from('sleep_logs')
+    .select('hours, logged_at')
+    .eq('user_id', userId)
+    .order('logged_at', { ascending: false })
+    .limit(120);
+  if (error) throw error;
+  return (data ?? []).map(s => ({ ...s, logged_at: s.logged_at.slice(0, 10) }));
+}
+
+// ─── Stats helpers (streaks, breakdowns, insights) ──────────────────────────
+function computeStepStreaks(logs, getGoal) {
+  const byDate = {};
+  logs.forEach(l => { if (l.steps) byDate[l.logged_at] = l; });
+  const today = new Date();
+  let current = 0;
+  let cursor = new Date(today);
+  // today doesn't break the streak if not logged yet, but doesn't count until hit
+  if (!(byDate[localDateStr(cursor)] && byDate[localDateStr(cursor)].steps >= getGoal(byDate[localDateStr(cursor)]))) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  while (true) {
+    const ds = localDateStr(cursor);
+    const entry = byDate[ds];
+    if (entry && entry.steps >= getGoal(entry)) { current++; cursor.setDate(cursor.getDate() - 1); }
+    else break;
+  }
+  const sortedDates = Object.keys(byDate).sort();
+  let longest = 0, run = 0, prevDate = null;
+  for (const ds of sortedDates) {
+    const entry = byDate[ds];
+    const hit = entry.steps >= getGoal(entry);
+    if (hit) {
+      if (prevDate) {
+        const diffDays = Math.round((new Date(ds) - new Date(prevDate)) / 86400000);
+        run = diffDays === 1 ? run + 1 : 1;
+      } else run = 1;
+      longest = Math.max(longest, run);
+      prevDate = ds;
+    } else { run = 0; prevDate = null; }
+  }
+  return { current, longest: Math.max(longest, current) };
+}
+
+function dayOfWeekAverages(logs) {
+  const buckets = Array.from({ length: 7 }, () => ({ total: 0, count: 0 }));
+  logs.forEach(l => {
+    if (!l.steps) return;
+    const dow = new Date(l.logged_at + 'T12:00:00').getDay(); // 0=Sun
+    buckets[dow].total += l.steps;
+    buckets[dow].count += 1;
+  });
+  // Reorder Mon..Sun to match DOW_LABELS
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  return order.map(dow => ({
+    label: DOW_LABELS[order.indexOf(dow)],
+    avg: buckets[dow].count ? Math.round(buckets[dow].total / buckets[dow].count) : 0,
+    count: buckets[dow].count,
+  }));
+}
+
+function activityBreakdown(logs) {
+  const map = {};
+  logs.forEach(l => {
+    if (!l.steps) return;
+    const key = l.activity_type || 'walk';
+    if (!map[key]) map[key] = { steps: 0, count: 0, km: 0, cal: 0 };
+    map[key].steps += l.steps;
+    map[key].count += 1;
+    map[key].km += l.steps * KM_PER_STEP;
+    map[key].cal += l.steps * KCAL_PER_STEP;
+  });
+  const totalSteps = Object.values(map).reduce((s, v) => s + v.steps, 0) || 1;
+  return ACT_TYPES.map(t => ({
+    ...t,
+    steps: map[t.key]?.steps ?? 0,
+    count: map[t.key]?.count ?? 0,
+    km: map[t.key]?.km ?? 0,
+    cal: Math.round(map[t.key]?.cal ?? 0),
+    pct: Math.round(((map[t.key]?.steps ?? 0) / totalSteps) * 100),
+  })).filter(t => t.count > 0);
+}
+
+function adaptiveGoalSuggestion(logs, currentGoal) {
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
+  const cutoffStr = localDateStr(cutoff);
+  const recent = logs.filter(l => l.steps && l.logged_at >= cutoffStr);
+  if (recent.length < 7) return null;
+  const avg = recent.reduce((s, l) => s + l.steps, 0) / recent.length;
+  const hitRate = recent.filter(l => l.steps >= currentGoal).length / recent.length;
+  if (avg >= currentGoal * 1.15 && hitRate >= 0.7) {
+    const suggested = Math.round((avg * 0.95) / 500) * 500;
+    if (suggested > currentGoal) return { suggested, avg: Math.round(avg), hitRate: Math.round(hitRate * 100) };
+  }
+  return null;
+}
+
+function correlateSleepSteps(stepLogs, sleepLogs) {
+  if (!sleepLogs.length) return null;
+  const sleepByDate = {};
+  sleepLogs.forEach(s => { sleepByDate[s.logged_at] = s.hours; });
+  const lowGroup = [], normalGroup = [];
+  stepLogs.forEach(l => {
+    if (!l.steps) return;
+    const d = new Date(l.logged_at + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    const priorNight = sleepByDate[localDateStr(d)];
+    if (priorNight == null) return;
+    (priorNight < 6 ? lowGroup : normalGroup).push(l.steps);
+  });
+  if (lowGroup.length < 3 || normalGroup.length < 3) return null;
+  const avgLow = Math.round(lowGroup.reduce((s, v) => s + v, 0) / lowGroup.length);
+  const avgNormal = Math.round(normalGroup.reduce((s, v) => s + v, 0) / normalGroup.length);
+  return { avgLow, avgNormal, diff: avgNormal - avgLow, lowDays: lowGroup.length, normalDays: normalGroup.length };
+}
+
+const MILESTONES = [
+  { km: 42.2, name: 'a marathon' },
+  { km: 100, name: 'a century ride' },
+  { km: 565, name: 'NYC to Boston' },
+  { km: 1270, name: 'London to Rome' },
+  { km: 3944, name: 'NYC to LA' },
+  { km: 9000, name: 'NYC to Tokyo' },
+  { km: 20000, name: 'half the globe' },
+  { km: 40075, name: 'around the world' },
+];
+function milestoneDistance(totalKm) {
+  let best = null;
+  for (const m of MILESTONES) { if (totalKm >= m.km) best = m; }
+  const next = MILESTONES.find(m => m.km > totalKm);
+  return { best, next, totalKm };
 }
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
@@ -516,6 +656,74 @@ export default function StepsScreen() {
 
   const lifetimeSteps = useMemo(() => logs.filter(l => l.steps).reduce((s, l) => s + l.steps, 0), [logs]);
 
+  // ── Streak, today nudge, insights, breakdowns ───────────────────────────
+  const streaks = useMemo(() => computeStepStreaks(logs, e => e.goal ?? defaultGoal), [logs, defaultGoal]);
+
+  const todayStr = localDateStr(new Date());
+  const todayLog = logs.find(l => l.logged_at === todayStr);
+  const todaySteps = todayLog?.steps ?? 0;
+  const stepsNeededToday = Math.max(0, defaultGoal - todaySteps);
+
+  const yesterdayLog = useMemo(() => {
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    return logs.find(l => l.logged_at === localDateStr(d));
+  }, [logs]);
+
+  const dowAverages = useMemo(() => dayOfWeekAverages(logs), [logs]);
+  const actBreakdown = useMemo(() => activityBreakdown(logs), [logs]);
+  const goalSuggestion = useMemo(() => adaptiveGoalSuggestion(logs, defaultGoal), [logs, defaultGoal]);
+
+  const { data: sleepLogs } = useQuery({
+    queryKey: ['sleepForStepsCorrelation', user?.id],
+    queryFn: () => fetchSleepForCorrelation(user.id),
+    enabled: !!user?.id,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const sleepCorrelation = useMemo(() => correlateSleepSteps(logs, sleepLogs ?? []), [logs, sleepLogs]);
+
+  const milestone = useMemo(() => milestoneDistance(lifetimeSteps * KM_PER_STEP), [lifetimeSteps]);
+
+  const busiestDow = useMemo(() => {
+    const withData = dowAverages.filter(d => d.count > 0);
+    if (!withData.length) return null;
+    return withData.reduce((best, d) => (d.avg > best.avg ? d : best), withData[0]);
+  }, [dowAverages]);
+
+  const consistency8wk = useMemo(() => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 56);
+    const cutoffStr = localDateStr(cutoff);
+    const recent = logs.filter(l => l.steps && l.logged_at >= cutoffStr);
+    if (!recent.length) return null;
+    const hit = recent.filter(l => l.steps >= (l.goal ?? defaultGoal)).length;
+    return Math.round((hit / recent.length) * 100);
+  }, [logs, defaultGoal]);
+
+  const [showInsightsPaywall, setShowInsightsPaywall] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
+
+  const handleExportCsv = async () => {
+    if (!hasAccess) { setShowInsightsPaywall(true); return; }
+    if (!logs.length) return;
+    setExportingCsv(true);
+    try {
+      const header = ['Date', 'Steps', 'Goal', 'Distance (km)', 'Calories', 'Activity', 'Note'];
+      const rows = [...logs].filter(l => l.steps).sort((a, b) => a.logged_at.localeCompare(b.logged_at)).map(l => [
+        l.logged_at, l.steps, l.goal ?? defaultGoal, l.distance_km ?? '', l.calories_burned ?? '', l.activity_type ?? 'walk', l.note ?? '',
+      ]);
+      const csv = [header, ...rows].map(r => r.map(csvEscape).join(',')).join('\n');
+      const path = `${FileSystem.cacheDirectory}fitzo-steps-${Date.now()}.csv`;
+      await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Export Step History' });
+      } else {
+        Alert.alert('Exported', `Saved to ${path}`);
+      }
+    } catch (e) {
+      Alert.alert('Export failed', e.message);
+    } finally { setExportingCsv(false); }
+  };
+
   const [thisWStart, thisWEnd] = getWeekRange(new Date(), 0);
   const [lastWStart, lastWEnd] = getWeekRange(new Date(), 1);
   const thisWeekLogs = logs.filter(l => l.steps && l.logged_at >= thisWStart && l.logged_at <= thisWEnd);
@@ -536,6 +744,13 @@ export default function StepsScreen() {
     setActType('walk');
     setNote('');
     setShowLogSheet(true);
+  };
+
+  const repeatYesterday = () => {
+    if (!yesterdayLog) return;
+    setStepsInput(String(yesterdayLog.steps));
+    setActType(yesterdayLog.activity_type || 'walk');
+    setNote(yesterdayLog.note || '');
   };
 
   return (
@@ -643,6 +858,27 @@ export default function StepsScreen() {
                   </View>
                 )}
               </View>
+
+              <View style={styles.streakRow}>
+                <View style={styles.streakPill}>
+                  <Text style={styles.streakPillEmoji}>🔥</Text>
+                  <Text style={styles.streakPillText}>{streaks.current} day streak</Text>
+                  {streaks.longest > streaks.current && (
+                    <Text style={styles.streakPillSub}>best {streaks.longest}</Text>
+                  )}
+                </View>
+              </View>
+
+              {todaySteps < defaultGoal && (
+                <View style={styles.nudgeBanner}>
+                  <Ionicons name="walk-outline" size={15} color="#f59e0b" />
+                  <Text style={styles.nudgeText}>
+                    {todaySteps > 0
+                      ? `Walk ${stepsNeededToday.toLocaleString()} more today to hit your goal`
+                      : `Log today's steps — ${defaultGoal.toLocaleString()} to hit your goal`}
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
@@ -790,6 +1026,135 @@ export default function StepsScreen() {
               )}
             </View>
 
+            {/* ── Analysis & Insights (Pro) ── */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>ANALYSIS & INSIGHTS</Text>
+                {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+              </View>
+              {hasAccess ? (
+                <>
+                  <View style={styles.weekStatsRow}>
+                    <WeekStatCell value={String(streaks.longest)} label="BEST STREAK" color="#f59e0b" colors={colors} />
+                    <View style={styles.weekStatDivider} />
+                    <WeekStatCell value={consistency8wk != null ? `${consistency8wk}%` : '—'} label="8WK CONSISTENCY" color={colors.good} colors={colors} />
+                    <View style={styles.weekStatDivider} />
+                    <WeekStatCell value={busiestDow ? busiestDow.label : '—'} label="BUSIEST DAY" color="#22d3ee" colors={colors} />
+                  </View>
+                  <View style={{ marginTop: 12, gap: 8 }}>
+                    {goalSuggestion && (
+                      <View style={styles.tipRow}>
+                        <Text style={styles.tipEmoji}>📈</Text>
+                        <Text style={styles.tipText}>You're averaging {goalSuggestion.avg.toLocaleString()} steps/day and hitting your goal {goalSuggestion.hitRate}% of the time — consider raising your goal to {goalSuggestion.suggested.toLocaleString()}.</Text>
+                      </View>
+                    )}
+                    {sleepCorrelation && sleepCorrelation.diff > 200 && (
+                      <View style={styles.tipRow}>
+                        <Text style={styles.tipEmoji}>😴</Text>
+                        <Text style={styles.tipText}>After nights with under 6h sleep, you average {sleepCorrelation.diff.toLocaleString()} fewer steps ({sleepCorrelation.avgLow.toLocaleString()} vs {sleepCorrelation.avgNormal.toLocaleString()}).</Text>
+                      </View>
+                    )}
+                    {milestone.best && (
+                      <View style={styles.tipRow}>
+                        <Text style={styles.tipEmoji}>🌍</Text>
+                        <Text style={styles.tipText}>You've walked the distance of {milestone.best.name} ({Math.round(milestone.totalKm).toLocaleString()} km lifetime).</Text>
+                      </View>
+                    )}
+                    {!goalSuggestion && !sleepCorrelation && !milestone.best && (
+                      <Text style={styles.emptyText}>Log a few more days to unlock personalized insights.</Text>
+                    )}
+                  </View>
+                </>
+              ) : (
+                <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
+                  <View style={styles.weekStatsRow}>
+                    <WeekStatCell value="••" label="BEST STREAK" color={colors.textDim} colors={colors} />
+                    <View style={styles.weekStatDivider} />
+                    <WeekStatCell value="••%" label="8WK CONSISTENCY" color={colors.textDim} colors={colors} />
+                    <View style={styles.weekStatDivider} />
+                    <WeekStatCell value="••" label="BUSIEST DAY" color={colors.textDim} colors={colors} />
+                  </View>
+                  <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>Unlock streak history, sleep correlation & adaptive goal tips with Pro.</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* ── Day-of-Week Average (Pro) ── */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>AVG STEPS BY DAY OF WEEK</Text>
+                {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+              </View>
+              {hasAccess ? (
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 110, gap: 6 }}>
+                  {(() => {
+                    const maxAvg = Math.max(...dowAverages.map(d => d.avg), defaultGoal, 1);
+                    return dowAverages.map(d => (
+                      <View key={d.label} style={{ flex: 1, alignItems: 'center' }}>
+                        <View style={{ width: '100%', height: 80, justifyContent: 'flex-end' }}>
+                          <View style={{
+                            width: '100%', borderRadius: 5,
+                            height: Math.max(3, (d.avg / maxAvg) * 80),
+                            backgroundColor: d.avg >= defaultGoal ? '#34d399' : '#f59e0b',
+                            opacity: d.count ? 0.9 : 0.25,
+                          }} />
+                        </View>
+                        <Text style={styles.weekDayLabel}>{d.label}</Text>
+                        <Text style={styles.weekDayNum}>{d.count ? fmtK(d.avg) : '—'}</Text>
+                      </View>
+                    ));
+                  })()}
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
+                  <Text style={styles.emptyText}>Unlock weekday patterns with Pro.</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* ── Activity Breakdown (Pro) ── */}
+            {actBreakdown.length > 0 && (
+              <View style={styles.card}>
+                <View style={styles.cardTitleRow}>
+                  <Text style={styles.cardTitle}>ACTIVITY BREAKDOWN</Text>
+                  {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+                </View>
+                {hasAccess ? (
+                  <View style={{ gap: 10 }}>
+                    {actBreakdown.map(a => (
+                      <View key={a.key}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <Text style={styles.actBreakdownLabel}>{a.icon} {a.label} · {a.count}x</Text>
+                          <Text style={styles.actBreakdownVal}>{a.steps.toLocaleString()} steps · {a.km.toFixed(1)}km · {a.cal}cal</Text>
+                        </View>
+                        <View style={styles.weekCompareBarTrack}>
+                          <View style={[styles.weekCompareBarFill, { width: `${a.pct}%`, backgroundColor: colors.accent }]} />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
+                    <Text style={styles.emptyText}>Unlock activity-type breakdown with Pro.</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* ── Export History (Pro) ── */}
+            <TouchableOpacity
+              style={styles.exportCsvBtn}
+              onPress={handleExportCsv}
+              disabled={exportingCsv}
+            >
+              {exportingCsv ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Ionicons name={hasAccess ? 'download-outline' : 'lock-closed'} size={15} color={colors.accent} />
+              )}
+              <Text style={styles.exportCsvText}>Export full step history (CSV)</Text>
+            </TouchableOpacity>
+
             {/* ── Daily Log ── */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>DAILY LOG</Text>
@@ -847,6 +1212,13 @@ export default function StepsScreen() {
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
+
+        {yesterdayLog && (
+          <TouchableOpacity style={styles.repeatYesterdayBtn} onPress={repeatYesterday}>
+            <Ionicons name="repeat" size={13} color={colors.accent} />
+            <Text style={styles.repeatYesterdayText}>Repeat yesterday ({fmtK(yesterdayLog.steps)} steps)</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.sheetFieldRow}>
           <View style={styles.sheetFieldCol}>
@@ -956,6 +1328,7 @@ export default function StepsScreen() {
 
       <PaywallModal visible={heroExport.showPaywall} onClose={() => heroExport.setShowPaywall(false)} />
       <PaywallModal visible={showTrendPaywall} onClose={() => setShowTrendPaywall(false)} />
+      <PaywallModal visible={showInsightsPaywall} onClose={() => setShowInsightsPaywall(false)} />
     </SafeAreaView>
   );
 }
@@ -1065,6 +1438,42 @@ const createStyles = (colors) => StyleSheet.create({
   pbInlineVal: { fontSize: typography.sm, fontFamily: fontFamily.monoBold, color: colors.accent },
   pbChip: { alignSelf: 'flex-start', backgroundColor: colors.dim, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   pbChipText: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.monoBold },
+
+  streakRow: { flexDirection: 'row', marginTop: 12 },
+  streakPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)',
+  },
+  streakPillEmoji: { fontSize: 13 },
+  streakPillText: { fontSize: 12, fontWeight: weight.bold, color: '#f59e0b', fontFamily: fontFamily.monoBold },
+  streakPillSub: { fontSize: 10, color: colors.textDim, marginLeft: 2 },
+  nudgeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10,
+    backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 10, padding: 10,
+  },
+  nudgeText: { flex: 1, fontSize: 11, color: colors.text, lineHeight: 15 },
+
+  repeatYesterdayBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+    backgroundColor: colors.accent + '14', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7,
+    borderWidth: 1, borderColor: colors.accent + '44', marginBottom: 16,
+  },
+  repeatYesterdayText: { fontSize: 11, color: colors.accent, fontWeight: weight.bold },
+
+  tipRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  tipEmoji: { fontSize: 14 },
+  tipText: { flex: 1, fontSize: 11, color: colors.textMuted, lineHeight: 15 },
+
+  actBreakdownLabel: { fontSize: 11, color: colors.text, fontWeight: weight.semibold },
+  actBreakdownVal: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono },
+
+  exportCsvBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border,
+    paddingVertical: 14, marginBottom: 12,
+  },
+  exportCsvText: { fontSize: 12, color: colors.accent, fontWeight: weight.bold },
 
   goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
   goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },
