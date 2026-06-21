@@ -1,14 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 const SCREEN_W = Dimensions.get('window').width;
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-export default function MonthHeatmap({
-  data = {}, color = '#d4ff00', month, year, containerPad = 32, onDayPress,
-  hasAccess = true, cutoffStr, onLockedPress,
-}) {
+export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year, containerPad = 32, onDayPress }) {
   const cellSize = Math.floor((SCREEN_W - containerPad - 2) / 7);
 
   const firstDay = new Date(year, month, 1).getDay();
@@ -54,25 +50,7 @@ export default function MonthHeatmap({
             cell.day === today.getDate() &&
             month === today.getMonth() &&
             year === today.getFullYear();
-          const isFuture = cell.dateStr > `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-          const isLocked = !hasAccess && !isFuture && cutoffStr != null && cell.dateStr < cutoffStr;
           const intensity = cell.value > 0 ? cell.value / maxVal : 0;
-
-          if (isLocked) {
-            return (
-              <TouchableOpacity
-                key={cell.key}
-                activeOpacity={0.7}
-                onPress={onLockedPress}
-                style={[
-                  styles.dayCell,
-                  { width: cellSize, height: cellSize, borderRadius: cellSize * 0.2, backgroundColor: '#16162a' },
-                ]}
-              >
-                <Ionicons name="lock-closed" size={10} color="#555570" />
-              </TouchableOpacity>
-            );
-          }
 
           const Wrapper = onDayPress ? TouchableOpacity : View;
           return (

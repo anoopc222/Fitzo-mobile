@@ -19,7 +19,6 @@ import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
-import { useSubscription } from '../context/SubscriptionContext';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -1433,7 +1432,6 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
 export default function WorkoutScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
-  const { hasAccess } = useSubscription();
   const s = useMemo(() => createS(colors), [colors]);
   const qc = useQueryClient();
 
@@ -1443,7 +1441,6 @@ export default function WorkoutScreen() {
   const [search, setSearch]       = useState('');
   const [detailSession, setDetailSession] = useState(null);
   const [showDetail, setShowDetail]       = useState(false);
-  const [showHeatmapPaywall, setShowHeatmapPaywall] = useState(false);
   const [showEdit, setShowEdit]           = useState(false);
   const [editIsNew, setEditIsNew]         = useState(false);
   const [editInitial, setEditInitial]     = useState(null);
@@ -1486,11 +1483,6 @@ export default function WorkoutScreen() {
     const match = sessions.find(s => s.date === dateStr);
     if (match) openDetail(match);
   };
-
-  const heatmapCutoffStr = useMemo(
-    () => localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000)),
-    []
-  );
 
   const filteredSessions = useMemo(() => {
     const ms = sessions.filter(s => {
@@ -1658,9 +1650,6 @@ export default function WorkoutScreen() {
               color={colors.accent}
               month={viewMonth - 1}
               year={viewYear}
-              hasAccess={hasAccess}
-              cutoffStr={heatmapCutoffStr}
-              onLockedPress={() => setShowHeatmapPaywall(true)}
               onDayPress={(dateStr, value) => { if (value > 0) openDetailForDate(dateStr); }}
             />
           </View>
@@ -1778,8 +1767,6 @@ export default function WorkoutScreen() {
         onCancel={() => setShowEdit(false)}
         isSaving={saveMut.isPending}
       />
-
-      <PaywallModal visible={showHeatmapPaywall} onClose={() => setShowHeatmapPaywall(false)} />
     </SafeAreaView>
   );
 }
