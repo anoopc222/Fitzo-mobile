@@ -2,20 +2,24 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
-  Modal, KeyboardAvoidingView, Platform,
+  Modal, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
+import MonthHeatmap from '../components/MonthHeatmap';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
+import { useExportCard } from '../hooks/useExportCard';
+import { useSubscription } from '../context/SubscriptionContext';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -293,6 +297,138 @@ function fmtDate(d) {
 function fmtDateShort(d) {
   const dt = new Date(d);
   return `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()]}`;
+}
+
+function localDateStr(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+const DOW_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+function getWeekRange(refDate, offsetWeeks = 0) {
+  const d = new Date(refDate);
+  const dow = d.getDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + mondayOffset - offsetWeeks * 7);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return [localDateStr(monday), localDateStr(sunday), monday];
+}
+
+// Catmull-Rom → cubic-bezier smoothing for a polyline's points
+function smoothPath(pts) {
+  if (pts.length < 2) return '';
+  if (pts.length === 2) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  let d = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
+// ─── Volume Trend Chart (Daily + 7-entry Avg) — mirrors StepsTrendChart ───
+function VolumeTrendChart({ data, colors, width }) {
+  const H = 170;
+  const P = { t: 18, r: 8, b: 22, l: 8 };
+  const pw = width - P.l - P.r;
+  const ph = H - P.t - P.b;
+  if (data.length < 2) {
+    return (
+      <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Not enough data yet</Text>
+      </View>
+    );
+  }
+  const rawVals = data.map(e => e.vol);
+  const avgVals = data.map((_, i) => {
+    const win = data.slice(Math.max(0, i - 6), i + 1);
+    return Math.round(win.reduce((s, x) => s + x.vol, 0) / win.length);
+  });
+  const allVals = [...rawVals, ...avgVals];
+  const minV = Math.min(...allVals, 0) * 0.96;
+  const maxV = Math.max(...allVals, 1) * 1.06;
+  const range = maxV - minV || 1;
+  const n = data.length;
+  const xs = pw / Math.max(n - 1, 1);
+  const toY = v => P.t + ph - ((v - minV) / range) * ph;
+  const toX = i => P.l + i * xs;
+  const rawPts = rawVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
+  const rawLine = smoothPath(rawPts);
+  const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
+  const avgLine = smoothPath(avgPts);
+  const lastAvg = avgPts[avgPts.length - 1];
+  return (
+    <Svg width={width} height={H}>
+      <Defs>
+        <LinearGradient id="workoutTrendFill" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={colors.accent} stopOpacity="0.22" />
+          <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
+        </LinearGradient>
+      </Defs>
+      {[0, 1, 2, 3].map(i => {
+        const y = P.t + (ph / 3) * i;
+        return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />;
+      })}
+      {avgPts.length > 1 && (
+        <Path d={`${avgLine} L ${avgPts[avgPts.length - 1].x.toFixed(1)},${H - P.b} L ${avgPts[0].x.toFixed(1)},${H - P.b} Z`} fill="url(#workoutTrendFill)" />
+      )}
+      {rawPts.length > 1 && (
+        <Path d={rawLine} fill="none" stroke={colors.purple} strokeOpacity={0.35} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      )}
+      {avgPts.length > 1 && (
+        <Path d={avgLine} fill="none" stroke={colors.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      )}
+      {rawPts.map((p, i) => (<Circle key={i} cx={p.x} cy={p.y} r={2} fill={colors.purple} fillOpacity={0.6} />))}
+      {lastAvg && <Circle cx={lastAvg.x} cy={lastAvg.y} r={3.5} fill={colors.accent} />}
+    </Svg>
+  );
+}
+
+// ─── Weekly Bar Chart (volume per day, colored by session type) ───────────
+function WorkoutWeekBarChart({ days, colors, width }) {
+  const H = 140;
+  const padTop = 22, padBot = 30;
+  const chartH = H - padTop - padBot;
+  const barGap = 8;
+  const barW = (width - barGap * 8) / 7;
+  const TYPE_COLOR = { gym: colors.accent, cardio: colors.blue, rest: colors.good };
+
+  const vols = days.filter(d => !d.isFuture).map(d => d.vol);
+  const maxVal = Math.max(...vols, 1) * 1.15;
+  const toY = v => padTop + chartH - (v / maxVal) * chartH;
+
+  return (
+    <Svg width={width} height={H}>
+      {days.map((day, i) => {
+        const x = barGap + i * (barW + barGap);
+        const isRest = day.type === 'rest';
+        const barH = isRest ? Math.max(3, chartH * 0.06) : (day.vol > 0 ? Math.max(3, (day.vol / maxVal) * chartH) : 0);
+        const barY = padTop + chartH - barH;
+        const color = TYPE_COLOR[day.type] ?? colors.dim;
+        return (
+          <React.Fragment key={day.date}>
+            {!day.isFuture && (day.vol > 0 || isRest) ? (
+              <Rect x={x} y={barY} width={barW} height={barH} rx={5} fill={color} fillOpacity={0.85} />
+            ) : (
+              <Rect x={x} y={padTop} width={barW} height={chartH} rx={5} fill={colors.dim} />
+            )}
+            {day.isToday && (
+              <Rect x={x - 1} y={padTop - 2} width={barW + 2} height={chartH + 2} rx={5} fill="none" stroke={colors.accent} strokeOpacity={0.6} strokeWidth={1.5} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </Svg>
+  );
 }
 
 const MUSCLE_KW = [
@@ -1297,8 +1433,11 @@ function EditSessionModal({ visible, isNew, initialData, recentTypes, allSession
 export default function WorkoutScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { hasAccess } = useSubscription();
   const s = useMemo(() => createS(colors), [colors]);
   const qc = useQueryClient();
+  const screenWidth = Dimensions.get('window').width;
+  const chartWidth = screenWidth - 32 - 32;
 
   const today = new Date();
   const [viewYear, setViewYear]   = useState(today.getFullYear());
@@ -1310,6 +1449,8 @@ export default function WorkoutScreen() {
   const [editIsNew, setEditIsNew]         = useState(false);
   const [editInitial, setEditInitial]     = useState(null);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [trendRange, setTrendRange]       = useState('30D');
+  const [showTrendPaywall, setShowTrendPaywall] = useState(false);
 
   const { data: sessions = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['sessions', user?.id],
@@ -1333,6 +1474,99 @@ export default function WorkoutScreen() {
 
   const pbMap       = useMemo(() => computePBMap(sessions), [sessions]);
   const recentTypes = useMemo(() => getRecentTypes(sessions), [sessions]);
+
+  const heatmapData = useMemo(() => {
+    const map = {};
+    for (const sess of sessions) {
+      const d = new Date(sess.date);
+      if (d.getFullYear() !== viewYear || d.getMonth() + 1 !== viewMonth) continue;
+      map[sess.date] = (map[sess.date] ?? 0) + calcSessionVol(sess);
+    }
+    return map;
+  }, [sessions, viewYear, viewMonth]);
+
+  const heatmapTypeColors = useMemo(() => {
+    const TYPE_COLOR = { gym: colors.accent, cardio: colors.blue, rest: colors.good };
+    const map = {};
+    for (const sess of sessions) {
+      const d = new Date(sess.date);
+      if (d.getFullYear() !== viewYear || d.getMonth() + 1 !== viewMonth) continue;
+      map[sess.date] = TYPE_COLOR[getSessionType(sess.notes)] ?? colors.accent;
+    }
+    return map;
+  }, [sessions, viewYear, viewMonth, colors]);
+
+  const openDetailForDate = (dateStr) => {
+    const match = sessions.find(s => s.date === dateStr);
+    if (match) openDetail(match);
+  };
+
+  const isViewingCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1;
+
+  const heroStats = useMemo(() => {
+    const monthSessions = sessions.filter(s => {
+      const d = new Date(s.date);
+      return d.getFullYear() === viewYear && d.getMonth() + 1 === viewMonth;
+    });
+    const activeSessions = monthSessions.filter(s => getSessionType(s.notes) !== 'rest');
+    const totalVol = monthSessions.reduce((sum, s) => sum + (s.total_volume ?? calcSessionVol(s)), 0);
+    const totalKcal = monthSessions.reduce((sum, s) => sum + (s.calories_burned ?? 0), 0);
+    const totalMin = monthSessions.reduce((sum, s) => sum + (s.duration_min ?? 0), 0);
+    const pbCount = activeSessions.reduce((sum, s) => sum + (pbMap[s.id]?.size ?? 0), 0);
+    return {
+      totalVol: Math.round(totalVol),
+      sessionCount: activeSessions.length,
+      durationHrs: (totalMin / 60).toFixed(1),
+      totalKcal: Math.round(totalKcal),
+      pbCount,
+    };
+  }, [sessions, viewYear, viewMonth, pbMap]);
+
+  const weekDays = useMemo(() => {
+    const [mondayStr, sundayStr, monday] = getWeekRange(today, 0);
+    const todayStr = localDateStr(today);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = localDateStr(d);
+      const sess = sessions.find(s => s.date === dateStr);
+      const type = sess ? getSessionType(sess.notes) : null;
+      return {
+        date: dateStr,
+        vol: sess ? (sess.total_volume ?? calcSessionVol(sess)) : 0,
+        type,
+        isToday: dateStr === todayStr,
+        isFuture: dateStr > todayStr,
+      };
+    });
+  }, [sessions, today]);
+
+  const weekCompare = useMemo(() => {
+    const [thisMonStr, thisSunStr] = getWeekRange(today, 0);
+    const [lastMonStr, lastSunStr] = getWeekRange(today, 1);
+    const thisWeekSessions = sessions.filter(s => s.date >= thisMonStr && s.date <= thisSunStr);
+    const lastWeekSessions = sessions.filter(s => s.date >= lastMonStr && s.date <= lastSunStr);
+    const thisVol = thisWeekSessions.reduce((sum, s) => sum + (s.total_volume ?? calcSessionVol(s)), 0);
+    const lastVol = lastWeekSessions.reduce((sum, s) => sum + (s.total_volume ?? calcSessionVol(s)), 0);
+    const pct = lastVol > 0 ? Math.round(((thisVol - lastVol) / lastVol) * 100) : null;
+    return {
+      thisVol: Math.round(thisVol),
+      lastVol: Math.round(lastVol),
+      lastCount: lastWeekSessions.filter(s => getSessionType(s.notes) !== 'rest').length,
+      pct,
+    };
+  }, [sessions, today]);
+
+  const RANGE_DAYS = { '30D': 30, '60D': 60, '90D': 90, 'ALL': Infinity };
+  const trendData = useMemo(() => {
+    const days = RANGE_DAYS[trendRange];
+    const cutoff = days === Infinity ? null : localDateStr(new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000));
+    const inRange = sessions
+      .filter(s => getSessionType(s.notes) !== 'rest')
+      .filter(s => !cutoff || s.date >= cutoff)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    return inRange.map(s => ({ date: s.date, vol: s.total_volume ?? calcSessionVol(s) }));
+  }, [sessions, trendRange]);
 
   const filteredSessions = useMemo(() => {
     const ms = sessions.filter(s => {
@@ -1490,6 +1724,118 @@ export default function WorkoutScreen() {
       >
         {isLoading && <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />}
 
+        {!isLoading && (
+          <>
+            {/* Hero stats */}
+            <View style={s.card}>
+              <View style={s.heroTopRow}>
+                <Text style={s.heroNum}>{heroStats.totalVol.toLocaleString()}</Text>
+                <Text style={s.heroLabel}>kg total volume</Text>
+              </View>
+              <Text style={s.heroSub}>across {heroStats.sessionCount} sessions this month</Text>
+              <View style={s.tileRow}>
+                <View style={s.tile}>
+                  <Text style={s.tileVal}>{heroStats.sessionCount}</Text>
+                  <Text style={s.tileLbl}>SESSIONS</Text>
+                </View>
+                <View style={s.tileColDivider} />
+                <View style={s.tile}>
+                  <Text style={s.tileVal}>{heroStats.durationHrs}h</Text>
+                  <Text style={s.tileLbl}>DURATION</Text>
+                </View>
+                <View style={s.tileColDivider} />
+                <View style={s.tile}>
+                  <Text style={s.tileVal}>{heroStats.totalKcal.toLocaleString()}</Text>
+                  <Text style={s.tileLbl}>KCAL BURNED</Text>
+                </View>
+              </View>
+              {heroStats.pbCount > 0 && (
+                <View style={s.pbInlineRow}>
+                  <Text style={{ fontSize: 14 }}>🏆</Text>
+                  <Text style={s.pbInlineLabel}>{heroStats.pbCount} personal best{heroStats.pbCount > 1 ? 's' : ''} this month</Text>
+                </View>
+              )}
+            </View>
+
+            {/* This Week vs Last Week */}
+            {isViewingCurrentMonth && (
+              <View style={s.weekCompareCardMerged}>
+                <View style={s.weekCompareCell}>
+                  <Text style={s.weekCompareTitle}>THIS WEEK</Text>
+                  <Text style={s.weekCompareVal}>{weekCompare.thisVol.toLocaleString()} kg</Text>
+                  {weekCompare.pct != null && (
+                    <Text style={[s.weekCompareSub, { color: weekCompare.pct >= 0 ? colors.good : colors.danger }]}>
+                      {weekCompare.pct >= 0 ? '▲' : '▼'} {Math.abs(weekCompare.pct)}% vs last week
+                    </Text>
+                  )}
+                </View>
+                <View style={s.weekCompareDivider} />
+                <View style={s.weekCompareCell}>
+                  <Text style={s.weekCompareTitle}>LAST WEEK</Text>
+                  <Text style={[s.weekCompareVal, { color: colors.textMuted }]}>{weekCompare.lastVol.toLocaleString()} kg</Text>
+                  <Text style={[s.weekCompareSub, { color: colors.textDim }]}>{weekCompare.lastCount} sessions logged</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Week Volume bar chart */}
+            {isViewingCurrentMonth && (
+              <View style={s.card}>
+                <View style={s.cardTitleRow}>
+                  <Text style={s.cardTitle}>WEEK VOLUME</Text>
+                </View>
+                <View style={s.legendRow}>
+                  <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.accent }]} /><Text style={s.legendLabel}>Gym</Text></View>
+                  <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.blue }]} /><Text style={s.legendLabel}>Cardio</Text></View>
+                  <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.good }]} /><Text style={s.legendLabel}>Rest</Text></View>
+                </View>
+                <WorkoutWeekBarChart days={weekDays} colors={colors} width={chartWidth} />
+              </View>
+            )}
+
+            {/* Monthly heatmap */}
+            <View style={s.card}>
+              <View style={s.cardTitleRow}>
+                <Text style={s.cardTitle}>MONTHLY HEATMAP</Text>
+              </View>
+              <MonthHeatmap
+                data={heatmapData}
+                color={colors.accent}
+                typeColors={heatmapTypeColors}
+                emptyCellColor={colors.surface}
+                mutedTextColor={colors.textDim}
+                month={viewMonth - 1}
+                year={viewYear}
+                onDayPress={(dateStr, value) => { if (value > 0) openDetailForDate(dateStr); }}
+              />
+            </View>
+
+            {/* Volume trend */}
+            <View style={s.card}>
+              <View style={s.cardTitleRow}>
+                <Text style={s.cardTitle}>VOLUME TREND</Text>
+              </View>
+              <View style={s.segmentRow}>
+                {['30D', '60D', '90D', 'ALL'].map(r => {
+                  const locked = !hasAccess && r !== '30D';
+                  return (
+                    <TouchableOpacity
+                      key={r}
+                      style={[s.segmentBtn, trendRange === r && s.segmentBtnActive]}
+                      onPress={() => locked ? setShowTrendPaywall(true) : setTrendRange(r)}
+                    >
+                      <Text style={[s.segmentText, trendRange === r && s.segmentTextActive]}>
+                        {r}{locked ? ' 🔒' : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <VolumeTrendChart data={trendData} colors={colors} width={chartWidth} />
+            </View>
+          </>
+        )}
+
         {!isLoading && dayList.length === 0 && (
           <View style={s.empty}>
             <Ionicons name="barbell-outline" size={52} color={colors.textDim} />
@@ -1602,6 +1948,8 @@ export default function WorkoutScreen() {
         onCancel={() => setShowEdit(false)}
         isSaving={saveMut.isPending}
       />
+
+      <PaywallModal visible={showTrendPaywall} onClose={() => setShowTrendPaywall(false)} />
     </SafeAreaView>
   );
 }
@@ -1609,6 +1957,49 @@ export default function WorkoutScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const createS = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+
+  card: {
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 18, padding: 16, marginBottom: 14,
+  },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  cardTitle: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: colors.textMuted, fontWeight: weight.bold },
+
+  heroTopRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 2 },
+  heroNum: { fontSize: 38, fontWeight: weight.black, color: colors.accent },
+  heroLabel: { fontSize: 13, color: colors.textMuted, fontWeight: weight.bold },
+  heroSub: { fontSize: 12, color: colors.textDim, marginBottom: 14 },
+  tileRow: { flexDirection: 'row' },
+  tile: { flex: 1, alignItems: 'center', paddingVertical: 8 },
+  tileColDivider: { width: 1, backgroundColor: colors.border },
+  tileVal: { fontSize: 18, fontWeight: weight.black, color: colors.text },
+  tileLbl: { fontSize: 10, color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 },
+  pbInlineRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  pbInlineLabel: { fontSize: 12, color: colors.textMuted, fontWeight: weight.bold },
+
+  weekCompareCardMerged: {
+    flexDirection: 'row', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 18, marginBottom: 14, overflow: 'hidden',
+  },
+  weekCompareCell: { flex: 1, padding: 14 },
+  weekCompareDivider: { width: 1, backgroundColor: colors.border },
+  weekCompareTitle: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, color: colors.textDim, marginBottom: 6 },
+  weekCompareVal: { fontSize: 22, fontWeight: weight.black, color: colors.text, marginBottom: 8 },
+  weekCompareSub: { fontSize: 11, fontWeight: weight.bold },
+
+  legendRow: { flexDirection: 'row', gap: 14, marginBottom: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendSwatch: { width: 9, height: 9, borderRadius: 3 },
+  legendLabel: { fontSize: 11, color: colors.textMuted },
+
+  segmentRow: { flexDirection: 'row', gap: 6, marginBottom: 14 },
+  segmentBtn: { flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 10, backgroundColor: colors.dim },
+  segmentBtnActive: { backgroundColor: colors.accent },
+  segmentText: { fontSize: 12, fontWeight: weight.bold, color: colors.textMuted },
+  segmentTextActive: { color: colors.accentText },
 
   appHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

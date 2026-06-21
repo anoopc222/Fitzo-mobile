@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year, containerPad = 32 }) {
+export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year, containerPad = 32, onDayPress, typeColors = {}, emptyCellColor = '#16162a', mutedTextColor = '#555570' }) {
   const cellSize = Math.floor((SCREEN_W - containerPad - 2) / 7);
 
   const firstDay = new Date(year, month, 1).getDay();
@@ -37,7 +37,7 @@ export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year
       <View style={styles.labelRow}>
         {DAY_LABELS.map((d, i) => (
           <View key={i} style={{ width: cellSize, alignItems: 'center' }}>
-            <Text style={styles.dayLabel}>{d}</Text>
+            <Text style={[styles.dayLabel, { color: mutedTextColor }]}>{d}</Text>
           </View>
         ))}
       </View>
@@ -50,30 +50,36 @@ export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year
             cell.day === today.getDate() &&
             month === today.getMonth() &&
             year === today.getFullYear();
+          const hasSession = cell.value > 0 || cell.dateStr in typeColors;
           const intensity = cell.value > 0 ? cell.value / maxVal : 0;
+          const cellColor = typeColors[cell.dateStr] || color;
 
+          const Wrapper = onDayPress ? TouchableOpacity : View;
           return (
-            <View
+            <Wrapper
               key={cell.key}
+              activeOpacity={onDayPress ? 0.7 : undefined}
+              onPress={onDayPress ? () => onDayPress(cell.dateStr, cell.value) : undefined}
               style={[
                 styles.dayCell,
                 { width: cellSize, height: cellSize, borderRadius: cellSize * 0.2 },
-                cell.value > 0
-                  ? { backgroundColor: `${color}${hexAlpha(intensity)}` }
-                  : { backgroundColor: '#16162a' },
-                isToday && { borderWidth: 1.5, borderColor: color },
+                hasSession
+                  ? { backgroundColor: `${cellColor}${hexAlpha(intensity)}` }
+                  : { backgroundColor: emptyCellColor },
+                isToday && { borderWidth: 1.5, borderColor: cellColor },
               ]}
             >
               <Text
                 style={[
                   styles.dayNum,
-                  cell.value > 0 && { color: '#fff', fontWeight: '600' },
-                  isToday && { color },
+                  { color: mutedTextColor },
+                  hasSession && { color: '#fff', fontWeight: '600' },
+                  isToday && { color: cellColor },
                 ]}
               >
                 {cell.day}
               </Text>
-            </View>
+            </Wrapper>
           );
         })}
       </View>
@@ -85,6 +91,6 @@ const styles = StyleSheet.create({
   labelRow: { flexDirection: 'row', marginBottom: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   dayCell: { alignItems: 'center', justifyContent: 'center', margin: 1 },
-  dayLabel: { fontSize: 9, color: '#555570', fontWeight: '700' },
-  dayNum: { fontSize: 10, color: '#555570' },
+  dayLabel: { fontSize: 9, fontWeight: '700' },
+  dayNum: { fontSize: 10 },
 });
