@@ -2225,6 +2225,7 @@ export default function WorkoutScreen() {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [trendRange, setTrendRange]       = useState('30D');
   const [showTrendPaywall, setShowTrendPaywall] = useState(false);
+  const [muscleExpanded, setMuscleExpanded] = useState(false);
   const [showInsightsPaywall, setShowInsightsPaywall] = useState(false);
   const [showWorkoutGoalSheet, setShowWorkoutGoalSheet] = useState(false);
   const [workoutGoalInput, setWorkoutGoalInput] = useState(4);
@@ -2900,7 +2901,7 @@ export default function WorkoutScreen() {
                 <View style={s.proBadge}><Text style={s.proBadgeText}>PRO</Text></View>
               </View>
 
-              {hasAccess ? (
+              {muscleExpanded && (hasAccess ? (
                 <>
                   {deload && (
                     <View style={s.deloadBanner}>
@@ -2955,7 +2956,17 @@ export default function WorkoutScreen() {
                     🔒 Unlock muscle group balance, deload alerts, exercise swaps, progressive overload targets, auto-regulation, and saved templates
                   </Text>
                 </TouchableOpacity>
-              )}
+              ))}
+
+              <TouchableOpacity
+                onPress={() => setMuscleExpanded(v => !v)}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingTop: muscleExpanded ? 12 : 0 }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.accent }}>
+                  {muscleExpanded ? 'Collapse' : 'Expand'}
+                </Text>
+                <Ionicons name={muscleExpanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.accent} />
+              </TouchableOpacity>
             </View>
           </>
         )}
