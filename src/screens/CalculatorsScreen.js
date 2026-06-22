@@ -412,17 +412,12 @@ const CALCULATORS = [
 export default function CalculatorsScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState(null);
   const [inputs, setInputs] = useState({});
   const [activityIdx, setActivityIdx] = useState(1);
   const [results, setResults] = useState({});
   const { hasAccess } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
-
-  const filtered = CALCULATORS.filter(c =>
-    !search || c.label.toLowerCase().includes(search.toLowerCase()) || c.desc.toLowerCase().includes(search.toLowerCase())
-  );
 
   const handleCompute = (calc) => {
     try {
@@ -447,15 +442,8 @@ export default function CalculatorsScreen({ navigation }) {
         right={<Text style={styles.count}>{CALCULATORS.length}</Text>}
       />
 
-      <View style={styles.searchWrap}>
-        <Ionicons name="search" size={16} color={colors.textDim} />
-        <TextInput style={styles.searchInput} placeholder="Search calculators…" placeholderTextColor={colors.textDim}
-          value={search} onChangeText={setSearch} />
-        {search ? <TouchableOpacity onPress={() => setSearch('')}><Ionicons name="close-circle" size={16} color={colors.textDim} /></TouchableOpacity> : null}
-      </View>
-
       <ScrollView contentContainerStyle={styles.content}>
-        {filtered.map((calc) => {
+        {CALCULATORS.map((calc) => {
           const isOpen = openId === calc.id;
           const calcResults = results[calc.id] ?? [];
           const calcColor = resolveColor(calc.color, colors);
@@ -547,8 +535,6 @@ const createStyles = (colors) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   title: { flex: 1, fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
   count: { fontSize: typography.xs, color: colors.accent, fontWeight: weight.bold, backgroundColor: colors.accent + '22', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginBottom: 12, backgroundColor: colors.bgCard, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.border },
-  searchInput: { flex: 1, color: colors.text, fontSize: typography.sm },
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   calcCard: { backgroundColor: colors.bgCard, borderRadius: 16, marginBottom: 8, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   calcHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },

@@ -238,7 +238,7 @@ const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   title: { fontSize: typography.xl, fontWeight: weight.bold, color: colors.text },
-  subtitle: { fontSize: typography.xs, color: colors.textMuted, marginTop: 2, paddingHorizontal: 20 },
+  subtitle: { fontSize: typography.xl, fontWeight: weight.bold, color: colors.text, marginTop: 4, paddingHorizontal: 20 },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginBottom: 12,
