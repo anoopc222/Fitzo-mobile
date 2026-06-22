@@ -302,12 +302,6 @@ export default function MeasurementsScreen({ navigation }) {
         title="MEASUREMENTS"
         colors={colors}
         onBack={() => navigation.goBack()}
-        right={(
-          <TouchableOpacity style={styles.logBtn} onPress={() => { setForm({}); setShowModal(true); }}>
-            <Ionicons name="add" size={18} color={colors.bg} />
-            <Text style={styles.logBtnText}>Log</Text>
-          </TouchableOpacity>
-        )}
       />
 
       <ScrollView
@@ -460,6 +454,11 @@ export default function MeasurementsScreen({ navigation }) {
           </>
         )}
       </ScrollView>
+
+      {/* FAB */}
+      <TouchableOpacity style={styles.fab} onPress={() => { setForm({}); setShowModal(true); }}>
+        <Ionicons name="add" size={28} color={colors.bg} />
+      </TouchableOpacity>
 
       {/* Log Modal */}
       <BottomSheet visible={showModal} onClose={() => setShowModal(false)} style={styles.sheet}>
@@ -768,12 +767,14 @@ const createStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
   },
   title: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
-  logBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: colors.accent, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+  fab: {
+    position: 'absolute', bottom: 24, right: 24,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45, shadowRadius: 10, elevation: 10,
   },
-  logBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.sm },
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  content: { paddingHorizontal: 16, paddingBottom: 90 },
 
   empty: { alignItems: 'center', paddingTop: 60, gap: 10 },
   emptyTitle: { fontSize: typography.md, fontWeight: weight.bold, color: colors.textMuted },

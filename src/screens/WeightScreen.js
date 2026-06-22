@@ -716,7 +716,6 @@ export default function WeightScreen() {
           <>
             {/* ── Hero + Goal Progress + Stats (merged) ── */}
             <View style={styles.heroCard}>
-              <View style={styles.heroGradientBar} />
               <View style={styles.heroTopRow}>
                 <View>
                   <Text style={styles.heroNum}>{latest ? toDisp(latest.weight, unit).toFixed(1) : '—'}</Text>
@@ -1162,7 +1161,6 @@ const createStyles = (colors) => StyleSheet.create({
   hmLegendRow: { justifyContent: 'flex-end', marginBottom: 10 },
 
   heroCard: { backgroundColor: colors.bgCard, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, marginBottom: 12, position: 'relative', overflow: 'hidden' },
-  heroGradientBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#fb7185' },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   heroNum: { fontSize: 38, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent },
   heroLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginTop: 2 },
