@@ -12,6 +12,14 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
+import DatePickerField from '../components/ui/DatePickerField';
+
+function localDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 const GOALS = [
   'Weight Loss', 'Fat Loss', 'Muscle Gain', 'Recomposition',
@@ -228,11 +236,19 @@ export default function ProfileScreen({ navigation }) {
                   editing={editing} onChange={v => setForm(p => ({ ...p, height_cm: v }))}
                   placeholder="175" numeric
                 />
-                <BodyField
-                  label="Date of Birth" value={form.date_of_birth}
-                  editing={editing} onChange={v => setForm(p => ({ ...p, date_of_birth: v }))}
-                  placeholder="YYYY-MM-DD"
-                />
+                <View style={styles.bodyField}>
+                  <Text style={styles.bodyFieldLabel}>Date of Birth</Text>
+                  {editing ? (
+                    <DatePickerField
+                      value={form.date_of_birth}
+                      onChange={v => setForm(p => ({ ...p, date_of_birth: v }))}
+                      colors={colors}
+                      maxDate={localDateStr(new Date())}
+                    />
+                  ) : (
+                    <Text style={styles.bodyFieldValue}>{form.date_of_birth || '--'}</Text>
+                  )}
+                </View>
               </View>
               <View style={styles.bodyGrid}>
                 <View style={styles.bodyField}>

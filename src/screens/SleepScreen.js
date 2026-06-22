@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import DatePickerField from '../components/ui/DatePickerField';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import CircularGauge from '../components/CircularGauge';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
@@ -752,12 +753,11 @@ export default function SleepScreen() {
         <View style={styles.sheetFieldRow}>
           <View style={styles.sheetFieldCol}>
             <Text style={styles.sheetFieldLabel}>DATE</Text>
-            <TextInput
-              style={styles.sheetInput}
+            <DatePickerField
               value={logDate}
-              onChangeText={setLogDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textDim}
+              onChange={setLogDate}
+              colors={colors}
+              maxDate={localDateStr(new Date())}
             />
           </View>
           <View style={styles.sheetFieldCol}>
