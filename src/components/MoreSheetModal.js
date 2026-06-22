@@ -75,18 +75,19 @@ export default function MoreSheetModal() {
           {SECTIONS.map(section => (
             <View key={section.title} style={styles.section}>
               <Text style={styles.sectionTitle}>{section.title}</Text>
-              <View style={styles.grid}>
-                {section.items.map(item => (
+              <View style={styles.list}>
+                {section.items.map((item, i) => (
                   <TouchableOpacity
                     key={item.label}
-                    style={styles.tile}
+                    style={[styles.row, i < section.items.length - 1 && styles.rowDivider]}
                     onPress={() => onPressItem(item.target)}
-                    activeOpacity={0.75}
+                    activeOpacity={0.6}
                   >
-                    <View style={[styles.iconWrap, { backgroundColor: item.color + '20' }]}>
-                      <Ionicons name={item.icon} size={22} color={item.color} />
+                    <View style={[styles.iconWrap, { backgroundColor: item.color + '18' }]}>
+                      <Ionicons name={item.icon} size={17} color={item.color} />
                     </View>
-                    <Text style={styles.tileLabel}>{item.label}</Text>
+                    <Text style={styles.rowLabel}>{item.label}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -115,18 +116,21 @@ const createStyles = (colors) => StyleSheet.create({
   title: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
   closeBtn: { padding: 4 },
 
-  content: { paddingHorizontal: 16, paddingBottom: 28, paddingTop: 6 },
-  section: { marginBottom: 18 },
+  content: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 6 },
+  section: { marginBottom: 16 },
   sectionTitle: {
     fontSize: 11, fontWeight: weight.bold, color: colors.textDim,
-    letterSpacing: 1, marginBottom: 10,
+    letterSpacing: 1, marginBottom: 6, marginLeft: 4,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tile: {
-    width: '47%', alignItems: 'center', gap: 8,
-    backgroundColor: colors.bg, borderRadius: 16, paddingVertical: 18,
-    borderWidth: 1, borderColor: colors.border,
+  list: {
+    backgroundColor: colors.bg, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
   },
-  iconWrap: { width: 46, height: 46, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  tileLabel: { fontSize: typography.sm, fontWeight: weight.medium, color: colors.text, textAlign: 'center' },
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 11, paddingHorizontal: 12,
+  },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  iconWrap: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  rowLabel: { flex: 1, fontSize: typography.sm, fontWeight: weight.medium, color: colors.text },
 });
