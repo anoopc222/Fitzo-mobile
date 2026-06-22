@@ -18,6 +18,7 @@ import MonthYearPicker from '../components/ui/MonthYearPicker';
 import Chip from '../components/ui/Chip';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
+import ScreenHeader from '../components/ScreenHeader';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -756,14 +757,7 @@ export default function StepsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
-      <View style={styles.appHeader}>
-        <Text style={styles.logoText}>Fitzo<Text style={styles.logoDot}>•</Text></Text>
-        <Text style={styles.screenLabel}>STEPS</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={styles.onlineDot} />
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
-        </View>
-      </View>
+      <ScreenHeader title="STEPS" colors={colors} />
 
       {/* Month nav + unit toggle */}
       <View style={styles.topRow}>

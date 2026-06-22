@@ -15,6 +15,7 @@ import { typography, weight } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import PaywallModal from '../components/ui/PaywallModal';
 import CircularGauge from '../components/CircularGauge';
+import ScreenHeader from '../components/ScreenHeader';
 
 const SITES = [
   { key: 'chest',       label: 'Chest',        icon: 'body',    dir: 'up' },
@@ -297,16 +298,17 @@ export default function MeasurementsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Measurements</Text>
-        <TouchableOpacity style={styles.logBtn} onPress={() => { setForm({}); setShowModal(true); }}>
-          <Ionicons name="add" size={18} color={colors.bg} />
-          <Text style={styles.logBtnText}>Log</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="MEASUREMENTS"
+        colors={colors}
+        onBack={() => navigation.goBack()}
+        right={(
+          <TouchableOpacity style={styles.logBtn} onPress={() => { setForm({}); setShowModal(true); }}>
+            <Ionicons name="add" size={18} color={colors.bg} />
+            <Text style={styles.logBtnText}>Log</Text>
+          </TouchableOpacity>
+        )}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}

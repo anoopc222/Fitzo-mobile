@@ -13,6 +13,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import { TRIAL_DAYS } from '../config/subscription';
+import ScreenHeader from '../components/ScreenHeader';
 
 async function fetchUsers() {
   const [{ data: profiles, error: pErr }, { data: subs, error: sErr }] = await Promise.all([
@@ -106,17 +107,18 @@ export default function AdminDashboardScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Admin Dashboard</Text>
-        <TouchableOpacity onPress={handleExport} disabled={exporting || !users?.length}>
-          {exporting
-            ? <ActivityIndicator color={colors.accent} />
-            : <Ionicons name="download-outline" size={22} color={colors.accent} />}
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="ADMIN"
+        colors={colors}
+        onBack={() => navigation.goBack()}
+        right={(
+          <TouchableOpacity onPress={handleExport} disabled={exporting || !users?.length}>
+            {exporting
+              ? <ActivityIndicator color={colors.accent} />
+              : <Ionicons name="download-outline" size={22} color={colors.accent} />}
+          </TouchableOpacity>
+        )}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}

@@ -9,6 +9,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import BottomSheet from '../components/ui/BottomSheet';
+import ScreenHeader from '../components/ScreenHeader';
 
 const SCREEN_W  = Dimensions.get('window').width;
 const CAL_PAD   = 16;  // horizontal padding inside the calendar section
@@ -26,6 +27,7 @@ import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useMoreMenu } from '../context/MoreMenuContext';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -983,6 +985,7 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const navigation = useNavigation();
+  const { open: openMore } = useMoreMenu();
   const [activeTab,   setActiveTab]   = useState(0);
   const [showStreak,  setShowStreak]  = useState(false);
   const [showForecastPaywall, setShowForecastPaywall] = useState(false);
@@ -1033,7 +1036,7 @@ export default function HomeScreen() {
   function nav(target) {
     const tabs = ['Home', 'Workout', 'Log', 'Steps', 'Weight', 'Sleep'];
     if (tabs.includes(target)) navigation.navigate(target);
-    else navigation.navigate('More'); // HomeStack screen
+    else openMore();
   }
 
   const weeklyGoal       = data?.weeklyGoal ?? 4;
@@ -1111,16 +1114,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       {/* ── App Header ─────────────────────────────────────────── */}
-      <View style={styles.appHeader}>
-        <Text style={styles.logo}>Fitzo<Text style={styles.logoDot}>•</Text></Text>
-        <Text style={styles.screenLabel}>HOME</Text>
-        <View style={styles.headerRight}>
-          <View style={styles.onlineDot} />
-          <TouchableOpacity style={styles.headerAvatarBtn} onPress={() => navigation.navigate('More')}>
-            <Text style={styles.headerAvatarText}>{initial}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader title="HOME" colors={colors} />
 
       <ScrollView
         style={styles.scroll}

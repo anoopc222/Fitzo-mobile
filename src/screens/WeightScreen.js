@@ -17,6 +17,7 @@ import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useSubscription } from '../context/SubscriptionContext';
 import CircularGauge from '../components/CircularGauge';
+import ScreenHeader from '../components/ScreenHeader';
 import { useExportCard } from '../hooks/useExportCard';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -681,14 +682,7 @@ export default function WeightScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
-      <View style={styles.appHeader}>
-        <Text style={styles.logoText}>Fitzo<Text style={styles.logoDot}>•</Text></Text>
-        <Text style={styles.screenLabel}>WEIGHT</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={styles.onlineDot} />
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
-        </View>
-      </View>
+      <ScreenHeader title="WEIGHT" colors={colors} />
 
       {/* Month nav + unit toggle */}
       <View style={styles.topRow}>

@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import { useSubscription } from '../context/SubscriptionContext';
 import PaywallModal from '../components/ui/PaywallModal';
+import ScreenHeader from '../components/ScreenHeader';
 
 // Some calculator entries below use a theme token name (e.g. 'accent') instead of
 // a literal hex value for their `color` field, since CALCULATORS is static module
@@ -439,13 +440,12 @@ export default function CalculatorsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Calculators</Text>
-        <Text style={styles.count}>{CALCULATORS.length}</Text>
-      </View>
+      <ScreenHeader
+        title="CALCULATORS"
+        colors={colors}
+        onBack={() => navigation.goBack()}
+        right={<Text style={styles.count}>{CALCULATORS.length}</Text>}
+      />
 
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={16} color={colors.textDim} />

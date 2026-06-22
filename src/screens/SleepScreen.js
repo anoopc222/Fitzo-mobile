@@ -19,6 +19,7 @@ import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
+import ScreenHeader from '../components/ScreenHeader';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -520,14 +521,7 @@ export default function SleepScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
-      <View style={styles.appHeader}>
-        <Text style={styles.logoText}>Fitzo<Text style={styles.logoDot}>•</Text></Text>
-        <Text style={styles.screenLabel}>SLEEP</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={styles.onlineDot} />
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
-        </View>
-      </View>
+      <ScreenHeader title="SLEEP" colors={colors} />
 
       {/* Month nav */}
       <View style={styles.topRow}>

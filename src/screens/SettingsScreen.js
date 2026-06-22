@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import { exportBackup, restoreBackup } from '../lib/backupRestore';
 import BottomSheet from '../components/ui/BottomSheet';
+import ScreenHeader from '../components/ScreenHeader';
 
 const NOTIFICATION_ITEMS = [
   { key: 'weigh_in', label: 'Daily weigh-in reminder', icon: 'scale-outline' },
@@ -202,13 +203,7 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title="SETTINGS" colors={colors} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* ── Account ─────────────────────────────────────────────── */}
