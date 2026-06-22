@@ -39,7 +39,7 @@ async function updateSettings(userId, fields) {
 
 export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
-  const { colors, isDark, setIsDark } = useTheme();
+  const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [notifs, setNotifs] = useState({ weigh_in: false, workout: false, sleep: false, steps: false });
@@ -226,17 +226,7 @@ export default function SettingsScreen({ navigation }) {
             value={settings?.step_goal ? `${settings.step_goal.toLocaleString()}` : 'Not set'} />
           <SettingRow icon="moon-outline" label="Sleep"
             value={settings?.sleep_goal_hours ? `${settings.sleep_goal_hours}h` : 'Not set'}
-            last chevron onPress={() => {
-              if (settings) setGoalsForm({
-                calorie_target: settings.calorie_target ? String(settings.calorie_target) : '',
-                protein_target: settings.protein_target ? String(settings.protein_target) : '',
-                carbs_target: settings.carbs_target ? String(settings.carbs_target) : '',
-                fats_target: settings.fats_target ? String(settings.fats_target) : '',
-                step_goal: settings.step_goal ? String(settings.step_goal) : '',
-                sleep_goal_hours: settings.sleep_goal_hours ? String(settings.sleep_goal_hours) : '',
-              });
-              setShowGoalsModal(true);
-            }}
+            last
           />
         </View>
         <TouchableOpacity style={styles.editGoalsBtn} onPress={() => setShowGoalsModal(true)}>
@@ -255,31 +245,6 @@ export default function SettingsScreen({ navigation }) {
               setShowWorkoutGoalModal(true);
             }}
           />
-        </View>
-
-        {/* ── Theme ───────────────────────────────────────────────── */}
-        <SectionHeader title="Appearance" />
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={[styles.themeOption, styles.rowBorder]}
-            onPress={() => setIsDark(true)}
-          >
-            <Ionicons name="moon" size={18} color={isDark ? colors.accent : colors.textMuted} />
-            <Text style={[styles.switchLabel, isDark && { color: colors.accent, fontWeight: weight.semibold }]}>
-              Dark
-            </Text>
-            {isDark && <Ionicons name="checkmark-circle" size={18} color={colors.accent} />}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.themeOption}
-            onPress={() => setIsDark(false)}
-          >
-            <Ionicons name="sunny" size={18} color={!isDark ? colors.accent : colors.textMuted} />
-            <Text style={[styles.switchLabel, !isDark && { color: colors.accent, fontWeight: weight.semibold }]}>
-              Light
-            </Text>
-            {!isDark && <Ionicons name="checkmark-circle" size={18} color={colors.accent} />}
-          </TouchableOpacity>
         </View>
 
         {/* ── Notifications ───────────────────────────────────────── */}
@@ -325,7 +290,7 @@ export default function SettingsScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>FitZo v1.0.0 · Built with Supabase + Expo</Text>
+        <Text style={styles.version}>FitZo v1.0.0</Text>
       </ScrollView>
 
       {/* Goals Modal */}
@@ -458,8 +423,6 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 8, marginBottom: 4,
   },
   editGoalsBtnText: { fontSize: typography.xs, color: colors.accent, fontWeight: weight.semibold },
-
-  themeOption: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
 
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
   switchLabel: { flex: 1, fontSize: typography.base, color: colors.text },

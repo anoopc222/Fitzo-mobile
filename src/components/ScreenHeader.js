@@ -2,8 +2,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, weight, fontFamily } from '../theme/typography';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ScreenHeader({ title, onBack, colors, right }) {
+  const { isDark, setIsDark } = useTheme();
   const styles = createStyles(colors);
   return (
     <View style={styles.header}>
@@ -16,7 +18,14 @@ export default function ScreenHeader({ title, onBack, colors, right }) {
       )}
       <Text style={styles.screenLabel}>{title}</Text>
       <View style={styles.headerRight}>
-        {right ?? <View style={styles.onlineDot} />}
+        {right}
+        <TouchableOpacity
+          onPress={() => setIsDark(!isDark)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={isDark ? colors.accent : colors.textMuted} />
+        </TouchableOpacity>
+        <View style={styles.onlineDot} />
       </View>
     </View>
   );
