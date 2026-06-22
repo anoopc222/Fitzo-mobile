@@ -453,6 +453,15 @@ function VolumeTrendChart({ data, colors, width }) {
   );
 }
 
+function WeekStatCell({ value, label, color, colors }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center' }}>
+      <Text style={{ fontSize: typography.base, fontFamily: fontFamily.monoBold, color }}>{value}</Text>
+      <Text style={{ fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, marginTop: 2 }}>{label}</Text>
+    </View>
+  );
+}
+
 // ─── Weekly Bar Chart (volume per day, colored by session type) ───────────
 function WorkoutWeekBarChart({ days, colors, width }) {
   const H = 140;
@@ -2514,6 +2523,16 @@ export default function WorkoutScreen() {
     return inRange.map(s => ({ date: s.date, vol: s.total_volume ?? calcSessionVol(s) }));
   }, [sessions, trendRange]);
 
+  const trendStats = useMemo(() => {
+    if (trendData.length < 2) return null;
+    const vols = trendData.map(e => e.vol);
+    const totalVol = vols.reduce((s, v) => s + v, 0);
+    const avgVol = Math.round(totalVol / vols.length);
+    const bestVol = Math.max(...vols);
+    const span = Math.max(1, Math.round((new Date(trendData[trendData.length - 1].date) - new Date(trendData[0].date)) / 86400000)) + 1;
+    return { avgVol, bestVol, totalVol, sessionCount: trendData.length, totalDays: span };
+  }, [trendData]);
+
   const filteredSessions = useMemo(() => {
     const ms = sessions.filter(s => {
       const d = new Date(s.date);
@@ -2793,7 +2812,22 @@ export default function WorkoutScreen() {
                   );
                 })}
               </View>
+              <View style={s.legendRow}>
+                <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.purple }]} /><Text style={s.legendLabel}>Daily</Text></View>
+                <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.accent }]} /><Text style={s.legendLabel}>7D Avg</Text></View>
+              </View>
               <VolumeTrendChart data={trendData} colors={colors} width={chartWidth} />
+              {trendStats && (
+                <View style={s.trendStatsRow}>
+                  <WeekStatCell value={trendStats.avgVol.toLocaleString()} label="AVG/SESSION" color={colors.accent} colors={colors} />
+                  <View style={s.statDividerInline} />
+                  <WeekStatCell value={`${trendStats.sessionCount}/${trendStats.totalDays}`} label="SESSIONS" color={colors.good} colors={colors} />
+                  <View style={s.statDividerInline} />
+                  <WeekStatCell value={trendStats.bestVol.toLocaleString()} label="BEST" color="#22d3ee" colors={colors} />
+                  <View style={s.statDividerInline} />
+                  <WeekStatCell value={trendStats.totalVol.toLocaleString()} label="TOTAL" color={colors.text} colors={colors} />
+                </View>
+              )}
             </View>
 
             {/* Analysis & Insights — Pro */}
@@ -3153,6 +3187,8 @@ const createS = (colors) => StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 9, height: 9, borderRadius: 3 },
   legendLabel: { fontSize: 11, color: colors.textMuted },
+  trendStatsRow: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 8 },
+  statDividerInline: { width: 1, height: 24, backgroundColor: colors.border },
 
   segmentRow: { flexDirection: 'row', gap: 6, marginBottom: 14 },
   segmentBtn: { flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 10, backgroundColor: colors.dim },
