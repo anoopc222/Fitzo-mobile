@@ -362,9 +362,10 @@ async function fetchHome(userId) {
   let recoveryScore = null;
   {
     const last = sleepHist.data?.[0];
-    if (last) {
+    if (last && Number.isFinite(last.hours)) {
+      const qualityScore = Number.isFinite(last.quality) ? last.quality : 3;
       recoveryScore = Math.min(100, Math.max(0,
-        Math.round((last.hours / sleepGoal) * 70 + (last.quality ?? 3) * 6)
+        Math.round((last.hours / sleepGoal) * 70 + qualityScore * 6)
       ));
     }
   }
@@ -1829,7 +1830,10 @@ export default function HomeScreen() {
         />
         <TouchableOpacity
           style={[styles.saveBtn, { marginTop: 18 }]}
-          onPress={() => sleepQuickInput && sleepQuickMut.mutate(parseFloat(sleepQuickInput))}
+          onPress={() => {
+            const hours = parseFloat(sleepQuickInput);
+            if (Number.isFinite(hours)) sleepQuickMut.mutate(hours);
+          }}
           disabled={sleepQuickMut.isPending}
         >
           {sleepQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Sleep</Text>}
