@@ -25,7 +25,6 @@ export default function ScreenHeader({ title, onBack, colors, right }) {
         >
           <Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={isDark ? colors.accent : colors.textMuted} />
         </TouchableOpacity>
-        <View style={styles.onlineDot} />
       </View>
     </View>
   );
@@ -41,5 +40,4 @@ const createStyles = (colors) => StyleSheet.create({
   logoDot: { color: colors.accent },
   screenLabel: { fontSize: typography.xs, fontWeight: weight.bold, letterSpacing: 2, color: colors.textMuted },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 24, justifyContent: 'flex-end' },
-  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success ?? colors.good },
 });
