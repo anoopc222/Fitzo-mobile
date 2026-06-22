@@ -356,7 +356,7 @@ export default function SleepScreen() {
     gcTime: 0,
   });
 
-  const logs = data?.logs ?? [];
+  const logs = (data?.logs ?? []).filter(l => Number.isFinite(l.hours));
   const goal = data?.profile?.sleep_goal_hours ?? 7.5;
   const sessions = data?.sessions ?? [];
   const steps = data?.steps ?? [];
@@ -423,9 +423,10 @@ export default function SleepScreen() {
     const todayStr = localDateStr(new Date());
     const ydayStr = localDateStr(new Date(Date.now() - 86400000));
     const lastNight = sortedDesc[0];
-    const lastNightIsRecent = lastNight.logged_at === todayStr || lastNight.logged_at === ydayStr;
+    const lastNightIsRecent = (lastNight.logged_at === todayStr || lastNight.logged_at === ydayStr) && Number.isFinite(lastNight.hours);
     if (lastNightIsRecent) {
-      const sleepScore = Math.min(100, Math.round((lastNight.hours / goal) * 70) + (lastNight.quality || 3) * 5);
+      const qualityScore = Number.isFinite(lastNight.quality) ? lastNight.quality : 3;
+      const sleepScore = Math.min(100, Math.round((lastNight.hours / goal) * 70) + qualityScore * 5);
       const ydaySessions = sessions.filter(s => s.date === ydayStr || s.date === todayStr);
       const sessionLoad = ydaySessions.length
         ? Math.min(30, ydaySessions.reduce((sum, s) => sum + (s.total_volume || 0) / 1000, 0))
@@ -775,7 +776,11 @@ export default function SleepScreen() {
 
         <TouchableOpacity
           style={styles.saveBtn}
-          onPress={() => { if (hoursInput) logMut.mutate({ date: logDate, hours: parseFloat(hoursInput) }); }}
+          onPress={() => {
+            const hours = parseFloat(hoursInput);
+            if (!Number.isFinite(hours)) return Alert.alert('Required', 'Enter a valid number of hours');
+            logMut.mutate({ date: logDate, hours });
+          }}
           disabled={logMut.isPending}
         >
           {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Sleep</Text>}
