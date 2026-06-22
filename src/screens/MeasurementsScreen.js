@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { typography, weight } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import DatePickerField from '../components/ui/DatePickerField';
 import PaywallModal from '../components/ui/PaywallModal';
 import CircularGauge from '../components/CircularGauge';
 import ScreenHeader from '../components/ScreenHeader';
@@ -60,11 +61,18 @@ async function fetchBodyStats(userId) {
   };
 }
 
-async function logMeasurements(userId, values) {
+function localDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+async function logMeasurements(userId, values, date) {
   const { error } = await supabase.from('body_measurements').insert({
     user_id: userId,
     ...values,
-    logged_at: new Date().toISOString(),
+    logged_at: new Date(`${date}T00:00:00`).toISOString(),
   });
   if (error) throw error;
 }
@@ -234,6 +242,7 @@ export default function MeasurementsScreen({ navigation }) {
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({});
+  const [logDate, setLogDate] = useState(localDateStr(new Date()));
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
@@ -260,7 +269,7 @@ export default function MeasurementsScreen({ navigation }) {
   });
 
   const logMut = useMutation({
-    mutationFn: (values) => logMeasurements(user.id, values),
+    mutationFn: ({ values, date }) => logMeasurements(user.id, values, date),
     onSuccess: () => {
       qc.invalidateQueries(['measurements', user.id]);
       setShowModal(false);
@@ -304,11 +313,12 @@ export default function MeasurementsScreen({ navigation }) {
   const handleSave = () => {
     const hasAny = SITES.some(s => form[s.key]);
     if (!hasAny) return Alert.alert('Required', 'Enter at least one measurement');
+    if (!logDate) return Alert.alert('Required', 'Select a date');
     const values = {};
     SITES.forEach(s => {
       if (form[s.key]) values[s.key] = parseFloat(form[s.key]);
     });
-    logMut.mutate(values);
+    logMut.mutate({ values, date: logDate });
   };
 
   const openProModal = (setter) => {
@@ -479,7 +489,7 @@ export default function MeasurementsScreen({ navigation }) {
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => { setForm({}); setShowModal(true); }}>
+      <TouchableOpacity style={styles.fab} onPress={() => { setForm({}); setLogDate(localDateStr(new Date())); setShowModal(true); }}>
         <Ionicons name="add" size={28} color={colors.bg} />
       </TouchableOpacity>
 
@@ -493,6 +503,16 @@ export default function MeasurementsScreen({ navigation }) {
         </View>
         <Text style={styles.sheetSub}>Enter values in centimetres (cm)</Text>
         <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>Date</Text>
+            <DatePickerField
+              value={logDate}
+              onChange={setLogDate}
+              colors={colors}
+              maxDate={localDateStr(new Date())}
+              style={{ width: 140 }}
+            />
+          </View>
           {SITES.map(site => (
             <View key={site.key} style={styles.fieldRow}>
               <Text style={styles.fieldLabel}>{site.label}</Text>

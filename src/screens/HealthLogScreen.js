@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import DatePickerField from '../components/ui/DatePickerField';
 import CircularGauge from '../components/CircularGauge';
 import ProGate from '../components/ui/ProGate';
 import ScreenHeader from '../components/ScreenHeader';
@@ -635,12 +636,11 @@ export default function HealthLogScreen({ navigation }) {
           <View style={styles.sheetGroup}>
             <Text style={styles.sheetGroupHdr}>📅 DATE</Text>
             <Text style={styles.sheetFieldLabel}>TEST DATE</Text>
-            <TextInput
-              style={styles.sheetInput}
+            <DatePickerField
               value={form.date ?? ''}
-              onChangeText={v => setForm(p => ({ ...p, date: v }))}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textDim}
+              onChange={v => setForm(p => ({ ...p, date: v }))}
+              colors={colors}
+              maxDate={localDateStr(new Date())}
             />
           </View>
 
