@@ -360,7 +360,7 @@ export default function SettingsScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={styles.goalHint}>This drives your streak, consistency %, and weekly goal calculations across the app. Cardio days don't count toward this goal.</Text>
+        <Text style={styles.goalHint}>Drives your streak, consistency %, and weekly goal across the app. Cardio days don't count toward this goal.</Text>
 
         <TouchableOpacity
           style={styles.saveBtn}
