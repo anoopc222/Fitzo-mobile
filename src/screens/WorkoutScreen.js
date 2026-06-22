@@ -2217,7 +2217,6 @@ export default function WorkoutScreen() {
   const today = new Date();
   const [viewYear, setViewYear]   = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
-  const [search, setSearch]       = useState('');
   const [detailSession, setDetailSession] = useState(null);
   const [showDetail, setShowDetail]       = useState(false);
   const [showEdit, setShowEdit]           = useState(false);
@@ -2368,6 +2367,10 @@ export default function WorkoutScreen() {
     return {
       thisVol: Math.round(thisVol),
       lastVol: Math.round(lastVol),
+      thisGymCount: thisWeekSessions.filter(s => getSessionType(s.notes) === 'gym').length,
+      thisCardioCount: thisWeekSessions.filter(s => getSessionType(s.notes) === 'cardio').length,
+      lastGymCount: lastWeekSessions.filter(s => getSessionType(s.notes) === 'gym').length,
+      lastCardioCount: lastWeekSessions.filter(s => getSessionType(s.notes) === 'cardio').length,
       lastCount: lastWeekSessions.filter(s => getSessionType(s.notes) !== 'rest').length,
       pct,
     };
@@ -2536,17 +2539,11 @@ export default function WorkoutScreen() {
   }, [trendData]);
 
   const filteredSessions = useMemo(() => {
-    const ms = sessions.filter(s => {
+    return sessions.filter(s => {
       const d = new Date(s.date);
       return d.getFullYear() === viewYear && d.getMonth() + 1 === viewMonth;
     });
-    if (!search.trim()) return ms;
-    const q = search.toLowerCase();
-    return ms.filter(s =>
-      (s.notes ?? '').toLowerCase().includes(q) ||
-      (s.workout_exercises ?? []).some(ex => (ex.exercise_name ?? '').toLowerCase().includes(q))
-    );
-  }, [sessions, viewYear, viewMonth, search]);
+  }, [sessions, viewYear, viewMonth]);
 
   const dayList = useMemo(() => generateDayList(filteredSessions), [filteredSessions]);
 
@@ -2629,32 +2626,7 @@ export default function WorkoutScreen() {
   return (
     <SafeAreaView style={s.safe}>
       {/* Header */}
-      <ScreenHeader title="WORKOUT" colors={colors} />
-
-      {/* Title */}
-      <View style={s.titleRow}>
-        <Text style={s.pageTitle}>
-          WORKOUT <Text style={s.pageTitleAccent}>HISTORY</Text>
-        </Text>
-        <Text style={s.sessionCount}>{sessions.length} SESSIONS</Text>
-      </View>
-
-      {/* Search */}
-      <View style={s.searchWrap}>
-        <Ionicons name="search" size={15} color={colors.textDim} />
-        <TextInput
-          style={s.searchInput}
-          placeholder="Search by exercise name..."
-          placeholderTextColor={colors.textDim}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={15} color={colors.textDim} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <ScreenHeader title="WORKOUT" colors={colors} right={<Text style={s.sessionCount}>{sessions.length} SESSIONS</Text>} />
 
       {/* Month nav */}
       <View style={s.monthNav}>
@@ -2740,13 +2712,15 @@ export default function WorkoutScreen() {
               <View style={s.weekCompareCardMerged}>
                 <View style={s.weekCompareCell}>
                   <Text style={s.weekCompareTitle}>THIS WEEK</Text>
-                  <Text style={s.weekCompareVal}>{weekDays.filter(d => d.type && d.type !== 'rest').length} / {weeklyGoal} sessions</Text>
+                  <Text style={s.weekCompareVal}>{weekCompare.thisGymCount} / {weeklyGoal} sessions</Text>
+                  <Text style={[s.weekCompareSub, { color: colors.textMuted }]}>{weekCompare.thisCardioCount} cardio</Text>
                   <Text style={[s.weekCompareSub, { color: colors.textMuted }]}>{weekCompare.thisVol.toLocaleString()} kg volume</Text>
                 </View>
                 <View style={s.weekCompareDivider} />
                 <View style={s.weekCompareCell}>
                   <Text style={s.weekCompareTitle}>LAST WEEK</Text>
-                  <Text style={[s.weekCompareVal, { color: colors.textMuted }]}>{weekCompare.lastCount} sessions</Text>
+                  <Text style={[s.weekCompareVal, { color: colors.textMuted }]}>{weekCompare.lastGymCount} sessions</Text>
+                  <Text style={[s.weekCompareSub, { color: colors.textDim }]}>{weekCompare.lastCardioCount} cardio</Text>
                   <Text style={[s.weekCompareSub, { color: colors.textDim }]}>{weekCompare.lastVol.toLocaleString()} kg volume</Text>
                 </View>
               </View>
@@ -3231,18 +3205,7 @@ const createS = (colors) => StyleSheet.create({
   screenLabel: { fontSize: typography.xs, fontWeight: weight.bold, letterSpacing: 2, color: colors.textMuted },
   onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
 
-  titleRow: { paddingHorizontal: 20, paddingBottom: 10 },
-  pageTitle: { fontSize: typography.xxxl, fontFamily: fontFamily.displayItalic, color: colors.text, letterSpacing: -0.5, fontStyle: 'italic' },
-  pageTitleAccent: { color: colors.accent },
-  sessionCount: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.textMuted, letterSpacing: 1.5, marginTop: 2 },
-
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 16, marginBottom: 8,
-    backgroundColor: colors.card, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  searchInput: { flex: 1, color: colors.text, fontSize: typography.sm },
+  sessionCount: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.textMuted, letterSpacing: 1.5 },
 
   monthNav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
