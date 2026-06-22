@@ -1,0 +1,19 @@
+{
+  "name": "fitzo-food-db-ingest",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Offline scripts to sync the public-domain food reference databases (USDA, CoFID, CNF, Open Food Facts) into Supabase. Run monthly.",
+  "type": "commonjs",
+  "scripts": {
+    "ingest:cofid": "node ingest_cofid.js",
+    "ingest:cnf": "node ingest_cnf.js",
+    "ingest:usda": "node ingest_usda.js",
+    "ingest:off": "node ingest_off.js",
+    "ingest:all": "node ingest_cofid.js && node ingest_cnf.js && node ingest_usda.js && node ingest_off.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "csv-parse": "^5.5.6",
+    "xlsx": "^0.18.5"
+  }
+}
