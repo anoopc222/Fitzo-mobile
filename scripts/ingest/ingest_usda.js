@@ -21,7 +21,8 @@ const FOUNDATION_DIR = process.env.USDA_FOUNDATION_DIR || '/tmp/fooddata/usda/fo
 
 // nutrient.id values (see nutrient.csv), with fallbacks for foods missing the primary id.
 const NUTRIENT = {
-  calories: [1008],
+  // 1008 covers SR Legacy; Foundation Foods report energy only via Atwater factors.
+  calories: [1008, 2047, 2048],
   protein: [1003],
   fats: [1004],
   carbs: [1005, 1050],
