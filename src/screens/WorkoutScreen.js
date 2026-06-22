@@ -14,7 +14,6 @@ import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
-import MonthHeatmap from '../components/MonthHeatmap';
 import Sparkline from '../components/Sparkline';
 import BodyHeatmap from '../components/BodyHeatmap';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
@@ -489,6 +488,95 @@ function WorkoutWeekBarChart({ days, colors, width }) {
         );
       })}
     </Svg>
+  );
+}
+
+const HM_TYPE_ICON = { gym: 'barbell-outline', cardio: 'bicycle-outline', rest: 'moon-outline' };
+
+function WorkoutHeatmap({ year, month, sessionsByDate, colors, hasAccess = true, onLockedPress, onDayPress }) {
+  const SCREEN_W = Dimensions.get('window').width;
+  const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
+  const firstDay = new Date(year, month, 1).getDay();
+  let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayStr = localDateStr(new Date());
+  const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
+  const TYPE_COLOR = { gym: colors.accent, cardio: colors.blue, rest: colors.good };
+
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push({ key: `e${i}`, empty: true });
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const info = sessionsByDate[ds];
+    const count = info?.count ?? 0;
+    const type = info?.type ?? null;
+    let lvl = 0;
+    if (type === 'rest') lvl = 1;
+    else if (count === 1) lvl = 2;
+    else if (count === 2) lvl = 3;
+    else if (count >= 3) lvl = 4;
+    const locked = !hasAccess && ds < cutoffStr;
+    cells.push({ key: ds, day: d, count, type, lvl, isToday: ds === todayStr, locked });
+  }
+
+  const ALPHA = { 0: 0, 1: 0.45, 2: 0.4, 3: 0.65, 4: 0.88 };
+
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+        {DOW_LABELS.map(d => (
+          <View key={d} style={{ width: cellSize, marginHorizontal: 2, alignItems: 'center' }}>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted, fontFamily: fontFamily.mono }}>{d}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {cells.map(cell => {
+          if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
+          if (cell.locked) {
+            return (
+              <TouchableOpacity
+                key={cell.key}
+                onPress={onLockedPress}
+                style={[
+                  { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim },
+                  { width: cellSize, height: cellSize },
+                ]}
+              >
+                <Ionicons name="lock-closed" size={11} color={colors.textDim} />
+                <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim, marginTop: 1 }}>{cell.day}</Text>
+              </TouchableOpacity>
+            );
+          }
+          const typeColor = cell.type ? TYPE_COLOR[cell.type] : colors.dim;
+          const bg = cell.lvl === 0 ? colors.dim : `${typeColor}${Math.round(ALPHA[cell.lvl] * 255).toString(16).padStart(2, '0')}`;
+          return (
+            <TouchableOpacity
+              key={cell.key}
+              activeOpacity={onDayPress ? 0.7 : 1}
+              onPress={onDayPress && cell.count > 0 ? () => onDayPress(cell.key) : undefined}
+              style={[
+                { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+                { width: cellSize, height: cellSize, backgroundColor: bg },
+                cell.isToday && { borderWidth: 2, borderColor: '#f59e0b' },
+              ]}
+            >
+              {cell.type && (
+                <Ionicons
+                  name={HM_TYPE_ICON[cell.type]}
+                  size={11}
+                  color={cell.lvl === 0 ? colors.textDim : colors.text}
+                  style={{ opacity: cell.lvl === 0 ? 0.5 : 0.9 }}
+                />
+              )}
+              <Text style={{ fontSize: 10, fontWeight: '700', fontFamily: fontFamily.mono, color: cell.lvl === 0 ? colors.textDim : colors.text, marginTop: 1 }}>
+                {cell.day}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -2196,26 +2284,22 @@ export default function WorkoutScreen() {
   const overtraining = useMemo(() => detectOvertraining(sessions), [sessions]);
   const muscleVolume = useMemo(() => getMuscleVolumeThisWeek(sessions), [sessions]);
 
-  const heatmapData = useMemo(() => {
+  const TYPE_PRIORITY = { gym: 2, cardio: 1, rest: 0 };
+  const heatmapByDate = useMemo(() => {
     const map = {};
     for (const sess of sessions) {
       const d = new Date(sess.date);
       if (d.getFullYear() !== viewYear || d.getMonth() + 1 !== viewMonth) continue;
-      map[sess.date] = (map[sess.date] ?? 0) + calcSessionVol(sess);
+      const type = getSessionType(sess.notes);
+      const vol = calcSessionVol(sess);
+      const entry = map[sess.date] ?? { count: 0, type: null, vol: 0 };
+      entry.count += 1;
+      entry.vol += vol;
+      if (entry.type === null || TYPE_PRIORITY[type] > TYPE_PRIORITY[entry.type]) entry.type = type;
+      map[sess.date] = entry;
     }
     return map;
   }, [sessions, viewYear, viewMonth]);
-
-  const heatmapTypeColors = useMemo(() => {
-    const TYPE_COLOR = { gym: colors.accent, cardio: colors.blue, rest: colors.good };
-    const map = {};
-    for (const sess of sessions) {
-      const d = new Date(sess.date);
-      if (d.getFullYear() !== viewYear || d.getMonth() + 1 !== viewMonth) continue;
-      map[sess.date] = TYPE_COLOR[getSessionType(sess.notes)] ?? colors.accent;
-    }
-    return map;
-  }, [sessions, viewYear, viewMonth, colors]);
 
   const openDetailForDate = (dateStr) => {
     const match = sessions.find(s => s.date === dateStr);
@@ -2674,15 +2758,17 @@ export default function WorkoutScreen() {
               <View style={s.cardTitleRow}>
                 <Text style={s.cardTitle}>MONTHLY HEATMAP</Text>
               </View>
-              <MonthHeatmap
-                data={heatmapData}
-                color={colors.accent}
-                typeColors={heatmapTypeColors}
-                emptyCellColor={colors.surface}
-                mutedTextColor={colors.textDim}
+              <View style={s.legendRow}>
+                <View style={s.legendItem}><Ionicons name="barbell-outline" size={11} color={colors.accent} /><Text style={s.legendLabel}>Gym</Text></View>
+                <View style={s.legendItem}><Ionicons name="bicycle-outline" size={11} color={colors.blue} /><Text style={s.legendLabel}>Cardio</Text></View>
+                <View style={s.legendItem}><Ionicons name="moon-outline" size={11} color={colors.good} /><Text style={s.legendLabel}>Rest</Text></View>
+              </View>
+              <WorkoutHeatmap
+                sessionsByDate={heatmapByDate}
+                colors={colors}
                 month={viewMonth - 1}
                 year={viewYear}
-                onDayPress={(dateStr, value) => { if (value > 0) openDetailForDate(dateStr); }}
+                onDayPress={openDetailForDate}
               />
             </View>
 
