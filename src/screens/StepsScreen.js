@@ -7,8 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -76,10 +74,6 @@ function groupByWeek(items, getDate) {
 function fmtK(n) {
   if (n == null) return '—';
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
-}
-function csvEscape(val) {
-  const s = val === null || val === undefined ? '' : String(val);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 function fmtDateShort(iso) {
   const d = new Date(iso + 'T00:00:00');
@@ -701,29 +695,6 @@ export default function StepsScreen() {
   }, [logs, defaultGoal]);
 
   const [showInsightsPaywall, setShowInsightsPaywall] = useState(false);
-  const [exportingCsv, setExportingCsv] = useState(false);
-
-  const handleExportCsv = async () => {
-    if (!hasAccess) { setShowInsightsPaywall(true); return; }
-    if (!logs.length) return;
-    setExportingCsv(true);
-    try {
-      const header = ['Date', 'Steps', 'Goal', 'Distance (km)', 'Calories', 'Activity', 'Note'];
-      const rows = [...logs].filter(l => l.steps).sort((a, b) => a.logged_at.localeCompare(b.logged_at)).map(l => [
-        l.logged_at, l.steps, l.goal ?? defaultGoal, l.distance_km ?? '', l.calories_burned ?? '', l.activity_type ?? 'walk', l.note ?? '',
-      ]);
-      const csv = [header, ...rows].map(r => r.map(csvEscape).join(',')).join('\n');
-      const path = `${FileSystem.cacheDirectory}fitzo-steps-${Date.now()}.csv`;
-      await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Export Step History' });
-      } else {
-        Alert.alert('Exported', `Saved to ${path}`);
-      }
-    } catch (e) {
-      Alert.alert('Export failed', e.message);
-    } finally { setExportingCsv(false); }
-  };
 
   const [thisWStart, thisWEnd] = getWeekRange(new Date(), 0);
   const [lastWStart, lastWEnd] = getWeekRange(new Date(), 1);
@@ -1133,20 +1104,6 @@ export default function StepsScreen() {
               </View>
             )}
 
-            {/* ── Export History (Pro) ── */}
-            <TouchableOpacity
-              style={styles.exportCsvBtn}
-              onPress={handleExportCsv}
-              disabled={exportingCsv}
-            >
-              {exportingCsv ? (
-                <ActivityIndicator size="small" color={colors.accent} />
-              ) : (
-                <Ionicons name={hasAccess ? 'download-outline' : 'lock-closed'} size={15} color={colors.accent} />
-              )}
-              <Text style={styles.exportCsvText}>Export full step history (CSV)</Text>
-            </TouchableOpacity>
-
             {/* ── Daily Log ── */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>DAILY LOG</Text>
@@ -1460,13 +1417,6 @@ const createStyles = (colors) => StyleSheet.create({
 
   actBreakdownLabel: { fontSize: 11, color: colors.text, fontWeight: weight.semibold },
   actBreakdownVal: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono },
-
-  exportCsvBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border,
-    paddingVertical: 14, marginBottom: 12,
-  },
-  exportCsvText: { fontSize: 12, color: colors.accent, fontWeight: weight.bold },
 
   goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
   goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },

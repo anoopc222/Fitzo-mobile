@@ -157,7 +157,7 @@ function smoothPath(pts) {
   return d;
 }
 
-function ProgressChart({ logsAsc, site, colors, width }) {
+function ProgressChart({ logsAsc, site, colors, width, dir }) {
   const H = 150;
   const P = { t: 16, r: 8, b: 18, l: 8 };
   const pw = width - P.l - P.r;
@@ -181,6 +181,10 @@ function ProgressChart({ logsAsc, site, colors, width }) {
   const linePts = pts.map((p, i) => ({ x: toX(i), y: toY(p.v) }));
   const line = smoothPath(linePts);
 
+  const change = +(vals[vals.length - 1] - vals[0]).toFixed(1);
+  const changeColor = trendColor(change, dir, colors);
+  const days = daysBetween(pts[0].d, pts[pts.length - 1].d);
+
   return (
     <View>
       <Svg width={width} height={H}>
@@ -190,17 +194,36 @@ function ProgressChart({ logsAsc, site, colors, width }) {
           <Circle key={i} cx={p.x} cy={p.y} r={i === linePts.length - 1 ? 4 : 2.5} fill={colors.purple} />
         ))}
       </Svg>
-      <View style={styles_static.chartFooter}>
-        <Text style={{ color: colors.textDim, fontSize: typography.xs }}>{fmtDate(pts[0].d)}</Text>
-        <Text style={{ color: colors.purple, fontSize: typography.sm, fontWeight: weight.bold }}>{fmt(vals[vals.length - 1])}cm</Text>
-        <Text style={{ color: colors.textDim, fontSize: typography.xs }}>{fmtDate(pts[pts.length - 1].d)}</Text>
+      <View style={styles_static.chartStatsRow}>
+        <View style={styles_static.chartStatCell}>
+          <Text style={[styles_static.chartStatLabel, { color: colors.textDim }]}>{fmtDate(pts[0].d)}</Text>
+          <Text style={[styles_static.chartStatVal, { color: colors.text }]}>{fmt(vals[0])}cm</Text>
+        </View>
+        <View style={styles_static.chartStatCell}>
+          <Text style={[styles_static.chartStatLabel, { color: colors.textDim }]}>OVER {days}d</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+            {Math.abs(change) >= 0.05 && (
+              <Ionicons name={change > 0 ? 'arrow-up' : 'arrow-down'} size={11} color={changeColor} />
+            )}
+            <Text style={[styles_static.chartStatVal, { color: Math.abs(change) >= 0.05 ? changeColor : colors.textMuted }]}>
+              {Math.abs(change) >= 0.05 ? `${change > 0 ? '+' : ''}${change}cm` : 'No change'}
+            </Text>
+          </View>
+        </View>
+        <View style={[styles_static.chartStatCell, { alignItems: 'flex-end' }]}>
+          <Text style={[styles_static.chartStatLabel, { color: colors.textDim }]}>{fmtDate(pts[pts.length - 1].d)}</Text>
+          <Text style={[styles_static.chartStatVal, { color: colors.text }]}>{fmt(vals[vals.length - 1])}cm</Text>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles_static = StyleSheet.create({
-  chartFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  chartStatsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  chartStatCell: { alignItems: 'flex-start' },
+  chartStatLabel: { fontSize: 9, fontWeight: weight.bold, letterSpacing: 0.5, marginBottom: 2 },
+  chartStatVal: { fontSize: typography.sm, fontWeight: weight.bold },
 });
 
 export default function MeasurementsScreen({ navigation }) {
@@ -216,8 +239,8 @@ export default function MeasurementsScreen({ navigation }) {
   const [showCompare, setShowCompare] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [progressSite, setProgressSite] = useState('waist');
-  const [compareAIdx, setCompareAIdx] = useState(0);
-  const [compareBIdx, setCompareBIdx] = useState(1);
+  const [compareOldIdx, setCompareOldIdx] = useState(1);
+  const [compareNewIdx, setCompareNewIdx] = useState(0);
   const [openPicker, setOpenPicker] = useState(null);
 
   const { data: logs = [], isLoading, refetch, isRefetching } = useQuery({
@@ -293,8 +316,8 @@ export default function MeasurementsScreen({ navigation }) {
     setter(true);
   };
 
-  const entryA = logs[compareAIdx];
-  const entryB = logs[compareBIdx];
+  const entryOld = logs[compareOldIdx];
+  const entryNew = logs[compareNewIdx];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -413,11 +436,11 @@ export default function MeasurementsScreen({ navigation }) {
                   </TouchableOpacity>
                 ))}
               </View>
-              <ProgressChart logsAsc={logsAsc} site={progressSite} colors={colors} width={328} />
+              <ProgressChart logsAsc={logsAsc} site={progressSite} colors={colors} width={328} dir={SITE_BY_KEY[progressSite].dir} />
             </View>
 
             {/* Compare Entries */}
-            <TouchableOpacity style={styles.compareBtn} activeOpacity={0.85} onPress={() => { setCompareAIdx(0); setCompareBIdx(Math.min(1, logs.length - 1)); setShowCompare(true); }}>
+            <TouchableOpacity style={styles.compareBtn} activeOpacity={0.85} onPress={() => { setCompareOldIdx(Math.min(1, logs.length - 1)); setCompareNewIdx(0); setShowCompare(true); }}>
               <Ionicons name="swap-horizontal" size={16} color={colors.accent} />
               <Text style={styles.compareBtnText}>Compare Entries</Text>
             </TouchableOpacity>
@@ -475,7 +498,7 @@ export default function MeasurementsScreen({ navigation }) {
               <Text style={styles.fieldLabel}>{site.label}</Text>
               <TextInput
                 style={styles.fieldInput}
-                placeholder={`cm (optional)`}
+                placeholder="cm"
                 placeholderTextColor={colors.textDim}
                 value={form[site.key] ?? ''}
                 onChangeText={v => setForm(p => ({ ...p, [site.key]: v }))}
@@ -539,7 +562,7 @@ export default function MeasurementsScreen({ navigation }) {
 
           <View style={[styles.subCard, { borderColor: colors.purple + '55' }]}>
             <View style={styles.scoreHeaderRow}>
-              <CircularGauge percent={bodyScore ?? 0} size={88} strokeWidth={8} color={colors.accent} bgColor={colors.border} value={bodyScore ?? '--'} label="/100" />
+              <CircularGauge percent={bodyScore ?? 0} size={64} strokeWidth={6} color={colors.accent} bgColor={colors.border} value={bodyScore ?? '--'} label="/100" />
               <View style={styles.scoreTextCol}>
                 <Text style={styles.subCardTitleCaps}>🥇 BODY SCORE</Text>
                 <Text style={[styles.scoreLabel, { color: colors.accent }]}>{bodyScoreLabel}</Text>
@@ -636,24 +659,25 @@ export default function MeasurementsScreen({ navigation }) {
       {/* Compare Entries Modal */}
       <BottomSheet visible={showCompare} onClose={() => { setShowCompare(false); setOpenPicker(null); }} style={styles.sheet}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>🆚 Compare Entries</Text>
+          <Text style={styles.sheetTitle}>Compare Entries</Text>
           <TouchableOpacity onPress={() => { setShowCompare(false); setOpenPicker(null); }}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
         <View style={styles.compareSelectRow}>
           <View style={styles.compareSelectCol}>
-            <Text style={[styles.compareSelectLabel, { color: colors.purple }]}>ENTRY A</Text>
-            <TouchableOpacity style={[styles.compareSelectBtn, { borderColor: colors.purple }]} onPress={() => setOpenPicker(openPicker === 'A' ? null : 'A')}>
-              <Text style={[styles.compareSelectBtnText, { color: colors.purple }]}>{entryA ? fmtDate(entryA.logged_at) : '--'}</Text>
-              <Ionicons name="chevron-down" size={14} color={colors.purple} />
+            <Text style={styles.compareSelectLabel}>OLDER</Text>
+            <TouchableOpacity style={styles.compareSelectBtn} onPress={() => setOpenPicker(openPicker === 'OLD' ? null : 'OLD')}>
+              <Text style={styles.compareSelectBtnText}>{entryOld ? fmtDate(entryOld.logged_at) : '--'}</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
+          <Ionicons name="arrow-forward" size={16} color={colors.textDim} style={{ marginTop: 22 }} />
           <View style={styles.compareSelectCol}>
-            <Text style={[styles.compareSelectLabel, { color: colors.accent }]}>ENTRY B</Text>
-            <TouchableOpacity style={[styles.compareSelectBtn, { borderColor: colors.accent }]} onPress={() => setOpenPicker(openPicker === 'B' ? null : 'B')}>
-              <Text style={[styles.compareSelectBtnText, { color: colors.accent }]}>{entryB ? fmtDate(entryB.logged_at) : '--'}</Text>
-              <Ionicons name="chevron-down" size={14} color={colors.accent} />
+            <Text style={styles.compareSelectLabel}>NEWER</Text>
+            <TouchableOpacity style={styles.compareSelectBtn} onPress={() => setOpenPicker(openPicker === 'NEW' ? null : 'NEW')}>
+              <Text style={styles.compareSelectBtnText}>{entryNew ? fmtDate(entryNew.logged_at) : '--'}</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -664,7 +688,19 @@ export default function MeasurementsScreen({ navigation }) {
                 key={l.id}
                 style={styles.pickerItem}
                 onPress={() => {
-                  if (openPicker === 'A') setCompareAIdx(idx); else setCompareBIdx(idx);
+                  if (openPicker === 'OLD') {
+                    if (new Date(l.logged_at) >= new Date(entryNew.logged_at)) {
+                      Alert.alert('Invalid selection', 'The older entry must be before the newer entry. Please reselect.');
+                      return;
+                    }
+                    setCompareOldIdx(idx);
+                  } else {
+                    if (new Date(l.logged_at) <= new Date(entryOld.logged_at)) {
+                      Alert.alert('Invalid selection', 'The newer entry must be after the older entry. Please reselect.');
+                      return;
+                    }
+                    setCompareNewIdx(idx);
+                  }
                   setOpenPicker(null);
                 }}
               >
@@ -673,23 +709,23 @@ export default function MeasurementsScreen({ navigation }) {
             ))}
           </ScrollView>
         )}
-        {entryA && entryB && (
+        {entryOld && entryNew && (
           <ScrollView style={styles.sheetScrollTall}>
             <View style={styles.compareHeaderRow}>
-              <Text style={[styles.compareHeaderCell, { color: colors.purple }]}>A · {fmtDate(entryA.logged_at)}</Text>
-              <Text style={[styles.compareHeaderCell, { color: colors.accent }]}>B · {fmtDate(entryB.logged_at)}</Text>
+              <Text style={styles.compareHeaderCell}>Old · {fmtDate(entryOld.logged_at)}</Text>
+              <Text style={styles.compareHeaderCell}>New · {fmtDate(entryNew.logged_at)}</Text>
             </View>
-            {SITES.filter(s => entryA[s.key] != null || entryB[s.key] != null).map(s => {
-              const av = entryA[s.key];
-              const bv = entryB[s.key];
-              const diff = (av != null && bv != null) ? +(bv - av).toFixed(1) : null;
+            {SITES.filter(s => entryOld[s.key] != null || entryNew[s.key] != null).map(s => {
+              const ov = entryOld[s.key];
+              const nv = entryNew[s.key];
+              const diff = (ov != null && nv != null) ? +(nv - ov).toFixed(1) : null;
               const balanced = diff !== null && Math.abs(diff) < 0.05;
               const color = trendColor(diff, s.dir, colors);
               return (
                 <View key={s.key} style={styles.compareRow}>
                   <Text style={styles.compareLabel}>{s.label}</Text>
-                  <Text style={[styles.compareVal, { color: colors.purple }]}>{fmt(av)}cm</Text>
-                  <Text style={[styles.compareVal, { color: colors.accent }]}>{fmt(bv)}cm</Text>
+                  <Text style={styles.compareVal}>{fmt(ov)}cm</Text>
+                  <Text style={styles.compareVal}>{fmt(nv)}cm</Text>
                   {diff === null ? (
                     <Text style={styles.compareDiffMuted}>--</Text>
                   ) : balanced ? (
@@ -869,32 +905,32 @@ const createStyles = (colors) => StyleSheet.create({
   saveBtnText: { color: colors.bg, fontWeight: weight.bold },
 
   subCard: {
-    backgroundColor: colors.bgElevated, borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: colors.border, marginVertical: 8,
+    backgroundColor: colors.bgElevated, borderRadius: 14, padding: 12,
+    borderWidth: 1, borderColor: colors.border, marginVertical: 6,
   },
-  subCardTitleCaps: { fontSize: 11, fontWeight: weight.bold, letterSpacing: 1, color: colors.textMuted, marginBottom: 10 },
-  muted: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', paddingVertical: 8 },
-  footnote: { fontSize: 10, color: colors.textDim, textAlign: 'center', marginTop: 6 },
+  subCardTitleCaps: { fontSize: 11, fontWeight: weight.bold, letterSpacing: 1, color: colors.textMuted, marginBottom: 8 },
+  muted: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', paddingVertical: 6 },
+  footnote: { fontSize: 10, color: colors.textDim, textAlign: 'center', marginTop: 4 },
 
-  pbGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pbCell: { flexBasis: '31%', backgroundColor: colors.bg, borderRadius: 10, padding: 10, alignItems: 'center' },
-  pbValue: { fontSize: typography.base, fontWeight: weight.black, color: colors.accent },
-  pbLabel: { fontSize: 9, color: colors.textDim, fontWeight: weight.bold, marginTop: 2 },
-  pbDate: { fontSize: 9, color: colors.textDim, marginTop: 1 },
+  pbGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  pbCell: { flexBasis: '23%', backgroundColor: colors.bg, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center' },
+  pbValue: { fontSize: typography.sm, fontWeight: weight.black, color: colors.accent },
+  pbLabel: { fontSize: 8, color: colors.textDim, fontWeight: weight.bold, marginTop: 2 },
+  pbDate: { fontSize: 8, color: colors.textDim, marginTop: 1 },
 
-  bmiBox: { alignItems: 'center', paddingVertical: 4 },
-  bmiValue: { fontSize: 32, fontWeight: weight.black },
-  bmiLabel: { fontSize: 10, color: colors.textDim, fontWeight: weight.bold, letterSpacing: 1 },
-  bmiPill: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3, marginTop: 6 },
+  bmiBox: { alignItems: 'center', paddingVertical: 2 },
+  bmiValue: { fontSize: 26, fontWeight: weight.black },
+  bmiLabel: { fontSize: 9, color: colors.textDim, fontWeight: weight.bold, letterSpacing: 1 },
+  bmiPill: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3, marginTop: 4 },
   bmiPillText: { fontSize: 11, fontWeight: weight.bold },
-  bmiBar: { width: '100%', height: 4, borderRadius: 2, backgroundColor: colors.border, marginTop: 12, overflow: 'hidden' },
+  bmiBar: { width: '100%', height: 4, borderRadius: 2, backgroundColor: colors.border, marginTop: 8, overflow: 'hidden' },
   bmiBarFill: { height: 4, borderRadius: 2 },
 
-  scoreHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 },
+  scoreHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   scoreTextCol: { flex: 1 },
-  scoreLabel: { fontSize: typography.lg, fontWeight: weight.black, marginTop: 2 },
+  scoreLabel: { fontSize: typography.md, fontWeight: weight.black, marginTop: 2 },
   scoreSub: { fontSize: typography.xs, color: colors.textMuted, marginTop: 2 },
-  scoreBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  scoreBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   scoreBarLabel: { width: 90, fontSize: typography.xs, color: colors.textMuted },
   scoreBarTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' },
   scoreBarFill: { height: 5, borderRadius: 3 },
@@ -912,23 +948,23 @@ const createStyles = (colors) => StyleSheet.create({
   rateVal: { fontSize: typography.sm, fontWeight: weight.bold },
   rateSub: { fontSize: 9, color: colors.textDim, marginTop: 1 },
 
-  compareSelectRow: { flexDirection: 'row', gap: 12, marginBottom: 4 },
+  compareSelectRow: { flexDirection: 'row', gap: 10, marginBottom: 4, alignItems: 'flex-start' },
   compareSelectCol: { flex: 1 },
-  compareSelectLabel: { fontSize: 10, fontWeight: weight.bold, letterSpacing: 1, marginBottom: 6 },
+  compareSelectLabel: { fontSize: 10, fontWeight: weight.bold, letterSpacing: 1, marginBottom: 6, color: colors.textMuted },
   compareSelectBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
   },
-  compareSelectBtnText: { fontSize: typography.sm, fontWeight: weight.semibold },
+  compareSelectBtnText: { fontSize: typography.sm, fontWeight: weight.semibold, color: colors.text },
   pickerList: { maxHeight: 160, backgroundColor: colors.bgElevated, borderRadius: 12, marginTop: 8, borderWidth: 1, borderColor: colors.border },
   pickerItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   pickerItemText: { fontSize: typography.sm, color: colors.text },
 
   compareHeaderRow: { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, marginTop: 10 },
-  compareHeaderCell: { flex: 1, fontSize: typography.xs, fontWeight: weight.bold },
+  compareHeaderCell: { flex: 1, fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted },
   compareRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   compareLabel: { flex: 1, fontSize: typography.sm, color: colors.text, fontWeight: weight.medium },
-  compareVal: { flex: 1, fontSize: typography.sm, fontWeight: weight.bold, textAlign: 'left' },
+  compareVal: { flex: 1, fontSize: typography.sm, fontWeight: weight.bold, textAlign: 'left', color: colors.text },
   compareDiffChip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   compareDiffText: { fontSize: 11, fontWeight: weight.bold },
   compareDiffMuted: { fontSize: 11, color: colors.textDim },
