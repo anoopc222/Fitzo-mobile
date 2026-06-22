@@ -653,8 +653,17 @@ export default function WeightScreen() {
     const change = +(lastV - first).toFixed(1);
     const days = Math.max(1, (new Date(trendData[trendData.length - 1].logged_at) - new Date(trendData[0].logged_at)) / 86400000);
     const ratePerWk = days > 6 ? +((change / days) * 7).toFixed(2) : null;
-    return { first, lastV, change, ratePerWk };
-  }, [trendData, unit]);
+
+    const vals = trendData.map(e => toDisp(e.weight, unit));
+    const avg = +(vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
+    const goalDisp = goalKg ? toDisp(goalKg, unit) : null;
+    const best = goalDisp != null
+      ? +vals.reduce((b, v) => Math.abs(v - goalDisp) < Math.abs(b - goalDisp) ? v : b, vals[0]).toFixed(1)
+      : +(change <= 0 ? Math.min(...vals) : Math.max(...vals)).toFixed(1);
+    const totalDays = Math.round(days) + 1;
+
+    return { first, lastV, change, ratePerWk, avg, best, loggedDays: trendData.length, totalDays };
+  }, [trendData, unit, goalKg]);
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
@@ -853,13 +862,13 @@ export default function WeightScreen() {
               <WeightTrendChart data={trendData} unit={unit} goalKg={goalKg} colors={colors} width={chartWidth} />
               {trendStats && (
                 <View style={styles.trendStatsRow}>
-                  <WeekStatCell value={trendStats.first.toFixed(1)} label="START" color={colors.text} colors={colors} />
+                  <WeekStatCell value={trendStats.avg.toFixed(1)} label="AVG" color={colors.accent} colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={trendStats.lastV.toFixed(1)} label="LATEST" color={colors.accent} colors={colors} />
+                  <WeekStatCell value={`${trendStats.loggedDays}/${trendStats.totalDays}`} label="LOGGED DAYS" color={colors.good} colors={colors} />
+                  <View style={styles.statDividerInline} />
+                  <WeekStatCell value={trendStats.best.toFixed(1)} label="BEST" color="#22d3ee" colors={colors} />
                   <View style={styles.statDividerInline} />
                   <WeekStatCell value={`${trendStats.change >= 0 ? '+' : ''}${trendStats.change.toFixed(1)}`} label="CHANGE" color={trendStats.change <= 0 ? colors.good : colors.danger} colors={colors} />
-                  <View style={styles.statDividerInline} />
-                  <WeekStatCell value={trendStats.ratePerWk != null ? trendStats.ratePerWk.toFixed(2) : '—'} label={`${unit}/WK`} color={trendStats.ratePerWk != null ? (trendStats.ratePerWk <= 0 ? colors.good : colors.danger) : colors.textMuted} colors={colors} />
                 </View>
               )}
             </View>
