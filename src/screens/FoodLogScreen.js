@@ -389,14 +389,14 @@ export default function FoodLogScreen() {
         </View>
 
         {/* Meal type chips (shown on every step) */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mealChips}>
+        <View style={styles.mealChips}>
           {MEAL_TYPES.map(m => (
             <TouchableOpacity key={m} style={[styles.mealChip, selectedMeal === m && { backgroundColor: MEAL_COLORS[m], borderColor: MEAL_COLORS[m] }]}
               onPress={() => setSelectedMeal(m)}>
               <Text style={[styles.mealChipText, selectedMeal === m && { color: '#fff' }]}>{m}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         {sheetStep === 'search' && (
           <View style={styles.searchStep}>
@@ -584,8 +584,8 @@ const createStyles = (colors) => StyleSheet.create({
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sheetBackBtn: { width: 22 },
   sheetTitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
-  mealChips: { flexDirection: 'row', gap: 8, paddingBottom: 14 },
-  mealChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgElevated },
+  mealChips: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, paddingBottom: 14 },
+  mealChip: { flexGrow: 0, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgElevated },
   mealChipText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
 
   searchStep: { flex: 1 },
