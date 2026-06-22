@@ -18,6 +18,7 @@ import Sparkline from '../components/Sparkline';
 import BodyHeatmap from '../components/BodyHeatmap';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
+import ScreenHeader from '../components/ScreenHeader';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -2628,14 +2629,7 @@ export default function WorkoutScreen() {
   return (
     <SafeAreaView style={s.safe}>
       {/* Header */}
-      <View style={s.appHeader}>
-        <Text style={s.logoText}>Fitzo<Text style={s.logoDot}>•</Text></Text>
-        <Text style={s.screenLabel}>WORKOUT</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={s.onlineDot} />
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
-        </View>
-      </View>
+      <ScreenHeader title="WORKOUT" colors={colors} />
 
       {/* Title */}
       <View style={s.titleRow}>

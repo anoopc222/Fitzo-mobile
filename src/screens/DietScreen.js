@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import ScreenHeader from '../components/ScreenHeader';
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 async function fetchDietPlans(userId) {
@@ -44,7 +45,7 @@ async function deleteDietWeek(userId, weekNumber) {
   if (error) throw error;
 }
 
-export default function DietScreen() {
+export default function DietScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -185,14 +186,7 @@ export default function DietScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.appHeader}>
-        <Text style={styles.logoText}>Fitzo<Text style={styles.logoDot}>•</Text></Text>
-        <Text style={styles.screenLabel}>DIET PLAN</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={styles.onlineDot} />
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
-        </View>
-      </View>
+      <ScreenHeader title="DIET PLAN" colors={colors} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.content}

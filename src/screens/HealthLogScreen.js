@@ -14,6 +14,7 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import CircularGauge from '../components/CircularGauge';
 import ProGate from '../components/ui/ProGate';
+import ScreenHeader from '../components/ScreenHeader';
 
 // ─── Marker reference data — ports HL_REF / HL_GROUPS from reference app ────
 const HL_REF = {
@@ -203,7 +204,7 @@ function HealthTrendChart({ data, refKey, colors, width }) {
 }
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
-export default function HealthLogScreen() {
+export default function HealthLogScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -329,14 +330,7 @@ export default function HealthLogScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.appHeader}>
-        <Text style={styles.logoText}>Fitzo<Text style={styles.logoDot}>•</Text></Text>
-        <Text style={styles.screenLabel}>HEALTH LOG</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={styles.onlineDot} />
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
-        </View>
-      </View>
+      <ScreenHeader title="HEALTH LOG" colors={colors} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.content}

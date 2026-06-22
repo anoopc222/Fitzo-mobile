@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ProGate from '../components/ui/ProGate';
+import ScreenHeader from '../components/ScreenHeader';
 
 async function fetchProgress(userId) {
   const { data, error } = await supabase
@@ -79,7 +80,7 @@ function TrendIcon({ trend }) {
   );
 }
 
-export default function ProgressScreen() {
+export default function ProgressScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -106,10 +107,8 @@ export default function ProgressScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Progress</Text>
-        <Text style={styles.subtitle}>{grouped.length} exercises tracked</Text>
-      </View>
+      <ScreenHeader title="PROGRESS" colors={colors} onBack={() => navigation.goBack()} />
+      <Text style={styles.subtitle}>{grouped.length} exercises tracked</Text>
 
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={16} color={colors.textDim} />
@@ -239,7 +238,7 @@ const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   title: { fontSize: typography.xl, fontWeight: weight.bold, color: colors.text },
-  subtitle: { fontSize: typography.xs, color: colors.textMuted, marginTop: 2 },
+  subtitle: { fontSize: typography.xs, color: colors.textMuted, marginTop: 2, paddingHorizontal: 20 },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginBottom: 12,

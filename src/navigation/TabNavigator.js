@@ -4,6 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMoreMenu } from '../context/MoreMenuContext';
+import { View } from 'react-native';
 
 import HomeScreen from '../screens/HomeScreen';
 import WorkoutScreen from '../screens/WorkoutScreen';
@@ -11,7 +13,6 @@ import FoodLogScreen from '../screens/FoodLogScreen';
 import StepsScreen from '../screens/StepsScreen';
 import WeightScreen from '../screens/WeightScreen';
 import SleepScreen from '../screens/SleepScreen';
-import MoreScreen from '../screens/MoreScreen';
 import DietScreen from '../screens/DietScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 import MeasurementsScreen from '../screens/MeasurementsScreen';
@@ -27,17 +28,20 @@ const HomeStack = createNativeStackNavigator();
 const TAB_CONFIG = {
   Home:    ['home',      'home-outline'],
   Workout: ['barbell',   'barbell-outline'],
-  Log:     ['clipboard', 'clipboard-outline'],
   Steps:   ['footsteps', 'footsteps-outline'],
   Weight:  ['scale',     'scale-outline'],
   Sleep:   ['moon',      'moon-outline'],
+  MoreTab: ['ellipsis-horizontal', 'ellipsis-horizontal-outline'],
 };
+
+function BlankScreen() {
+  return <View style={{ flex: 1 }} />;
+}
 
 function HomeStackNavigator() {
   return (
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
       <HomeStack.Screen name="HomeMain" component={HomeScreen} />
-      <HomeStack.Screen name="More" component={MoreScreen} />
       <HomeStack.Screen name="Diet" component={DietScreen} />
       <HomeStack.Screen name="Progress" component={ProgressScreen} />
       <HomeStack.Screen name="Measurements" component={MeasurementsScreen} />
@@ -53,6 +57,7 @@ function HomeStackNavigator() {
 export default function TabNavigator() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { open: openMore } = useMoreMenu();
 
   return (
     <Tab.Navigator
@@ -77,10 +82,25 @@ export default function TabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeStackNavigator} />
       <Tab.Screen name="Workout" component={WorkoutScreen} />
-      <Tab.Screen name="Log" component={FoodLogScreen} />
       <Tab.Screen name="Steps" component={StepsScreen} />
       <Tab.Screen name="Weight" component={WeightScreen} />
       <Tab.Screen name="Sleep" component={SleepScreen} />
+      <Tab.Screen
+        name="Log"
+        component={FoodLogScreen}
+        options={{ tabBarButton: () => null }}
+      />
+      <Tab.Screen
+        name="MoreTab"
+        component={BlankScreen}
+        options={{ tabBarLabel: 'More' }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            openMore();
+          },
+        }}
+      />
     </Tab.Navigator>
   );
 }

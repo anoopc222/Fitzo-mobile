@@ -14,6 +14,7 @@ import BottomSheet from '../components/ui/BottomSheet';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
+import ScreenHeader from '../components/ScreenHeader';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -155,6 +156,7 @@ export default function FoodLogScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <ScreenHeader title="LOG" colors={colors} />
       {/* Date nav */}
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={prevDay} style={styles.dateArrow}>

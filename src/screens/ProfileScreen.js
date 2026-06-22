@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
+import ScreenHeader from '../components/ScreenHeader';
 
 const GOALS = [
   'Weight Loss', 'Fat Loss', 'Muscle Gain', 'Recomposition',
@@ -146,18 +147,19 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Profile</Text>
-        <TouchableOpacity onPress={() => editing ? handleSave() : setEditing(true)} disabled={updateMut.isPending}>
-          {updateMut.isPending
-            ? <ActivityIndicator color={colors.accent} />
-            : <Text style={styles.editBtn}>{editing ? 'Save' : 'Edit'}</Text>
-          }
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="PROFILE"
+        colors={colors}
+        onBack={() => navigation.goBack()}
+        right={(
+          <TouchableOpacity onPress={() => editing ? handleSave() : setEditing(true)} disabled={updateMut.isPending}>
+            {updateMut.isPending
+              ? <ActivityIndicator color={colors.accent} />
+              : <Text style={styles.editBtn}>{editing ? 'Save' : 'Edit'}</Text>
+            }
+          </TouchableOpacity>
+        )}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         {isLoading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} /> : (
