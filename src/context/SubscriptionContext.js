@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Linking } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
@@ -129,6 +129,31 @@ export function SubscriptionProvider({ children }) {
     return info;
   }, [configured]);
 
+  // Opens the platform's native subscription management UI (iOS sheet /
+  // Google Play subscriptions page), where the user can cancel or change
+  // their plan. Stores require this — apps cannot cancel subscriptions
+  // directly via API, only the platform billing system can.
+  const manageSubscriptions = useCallback(async () => {
+    if (configured) {
+      try {
+        await Purchases.showManageSubscriptions();
+        return;
+      } catch (e) {
+        // Fall through to a direct link below (e.g. unsupported OS version).
+      }
+    }
+    const managementURL = customerInfo?.managementURL;
+    if (managementURL) {
+      await Linking.openURL(managementURL);
+      return;
+    }
+    await Linking.openURL(
+      Platform.OS === 'ios'
+        ? 'https://apps.apple.com/account/subscriptions'
+        : 'https://play.google.com/store/account/subscriptions'
+    );
+  }, [configured, customerInfo]);
+
   return (
     <SubscriptionContext.Provider
       value={{
@@ -145,6 +170,7 @@ export function SubscriptionProvider({ children }) {
         offering: currentOffering,
         purchasePackage,
         restorePurchases,
+        manageSubscriptions,
         refresh,
       }}
     >
