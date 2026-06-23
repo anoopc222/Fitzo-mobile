@@ -10,6 +10,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import { exportBackup, restoreBackup } from '../lib/backupRestore';
@@ -40,6 +41,15 @@ async function updateSettings(userId, fields) {
 export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
+  const { isPro, isInTrial, manageSubscriptions } = useSubscription() ?? {};
+
+  const handleManageSubscription = async () => {
+    try {
+      await manageSubscriptions();
+    } catch (e) {
+      Alert.alert('Error', "Couldn't open subscription management. Please manage your subscription directly from the App Store / Play Store.");
+    }
+  };
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [notifs, setNotifs] = useState({ weigh_in: false, workout: false, sleep: false, steps: false });
@@ -213,6 +223,14 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow icon="key-outline" label="Change Password" chevron onPress={handlePasswordReset} />
           <SettingRow icon="person-outline" label="Edit Profile" chevron last
             onPress={() => navigation.navigate('Profile')} />
+        </View>
+
+        {/* ── Subscription ───────────────────────────────────────── */}
+        <SectionHeader title="Subscription" />
+        <View style={styles.card}>
+          <SettingRow icon="card-outline" label="Status" value={isPro ? 'Pro' : isInTrial ? 'Free Trial' : 'Free'} />
+          <SettingRow icon="settings-outline" label="Manage / Cancel Subscription" chevron last
+            onPress={handleManageSubscription} />
         </View>
 
         {/* ── Goals ───────────────────────────────────────────────── */}
