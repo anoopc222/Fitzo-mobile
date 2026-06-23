@@ -134,8 +134,6 @@ export default function FoodLogScreen() {
     queryKey: ['food', user?.id, today],
     queryFn: () => fetchFoodLog(user.id, today),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const { data: searchResults, isLoading: searching } = useQuery({

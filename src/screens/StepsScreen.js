@@ -528,8 +528,6 @@ export default function StepsScreen() {
     queryKey: ['steps', user?.id],
     queryFn: () => fetchSteps(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const logs = data?.logs ?? [];
@@ -673,8 +671,6 @@ export default function StepsScreen() {
     queryKey: ['sleepForStepsCorrelation', user?.id],
     queryFn: () => fetchSleepForCorrelation(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
   const sleepCorrelation = useMemo(() => correlateSleepSteps(logs, sleepLogs ?? []), [logs, sleepLogs]);
 

@@ -85,8 +85,6 @@ export default function ProfileScreen({ navigation }) {
     queryKey: ['profile', user?.id],
     queryFn: () => fetchProfile(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   useEffect(() => {

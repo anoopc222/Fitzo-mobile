@@ -91,8 +91,6 @@ export default function ProgressScreen({ navigation }) {
     queryKey: ['progress', user?.id],
     queryFn: () => fetchProgress(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const grouped = useMemo(() => groupByExercise(rawData), [rawData]);

@@ -352,8 +352,6 @@ export default function SleepScreen() {
     queryKey: ['sleep', user?.id],
     queryFn: () => fetchSleep(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const logs = (data?.logs ?? []).filter(l => Number.isFinite(l.hours));

@@ -256,16 +256,12 @@ export default function MeasurementsScreen({ navigation }) {
     queryKey: ['measurements', user?.id],
     queryFn: () => fetchMeasurements(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const { data: bodyStats } = useQuery({
     queryKey: ['measurements-bodystats', user?.id],
     queryFn: () => fetchBodyStats(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const logMut = useMutation({

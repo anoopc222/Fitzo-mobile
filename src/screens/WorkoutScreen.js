@@ -2125,16 +2125,12 @@ export default function WorkoutScreen() {
     queryKey: ['sessions', user?.id],
     queryFn: () => fetchSessions(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const { data: weeklyGoal = DEFAULT_WEEKLY_GOAL } = useQuery({
     queryKey: ['workoutGoal', user?.id],
     queryFn: () => fetchWorkoutGoal(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const saveMut = useMutation({
@@ -2159,8 +2155,6 @@ export default function WorkoutScreen() {
     queryKey: ['workoutTemplates', user?.id],
     queryFn: () => fetchTemplates(user.id),
     enabled: !!user?.id && hasAccess,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const saveTemplateMut = useMutation({
