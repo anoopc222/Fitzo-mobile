@@ -2841,7 +2841,7 @@ export default function WorkoutScreen() {
           <View style={s.cardTitleRow}>
             <Text style={s.cardTitle}>WORKOUT HISTORY</Text>
             <TouchableOpacity onPress={toggleHideRestDays} style={s.collapseToggleWrap} activeOpacity={0.75}>
-              <Text style={s.collapseToggleText}>HIDE REST DAYS</Text>
+              <Text style={s.collapseToggleText}>{hideRestDays ? 'SHOW ALL' : 'HIDE REST DAYS'}</Text>
               <View style={[s.toggleSwitch, hideRestDays && s.toggleSwitchOn]}>
                 <View style={[s.toggleKnob, hideRestDays && s.toggleKnobOn]} />
               </View>
