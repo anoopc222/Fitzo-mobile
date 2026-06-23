@@ -291,12 +291,23 @@ export default function FoodLogScreen() {
         {isLoading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} /> : (
           <>
             {/* Calorie summary */}
-            <View style={{ position: 'relative' }}>
+            <View>
               <View style={styles.summaryCard}>
                 <View style={styles.targetsPillRow}>
                   <TouchableOpacity style={styles.goalPillBtn} onPress={openTargetsSheet}>
                     <Text style={styles.goalPillBtnText}>Edit Targets</Text>
                     <Ionicons name="pencil" size={11} color={colors.accent} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={summaryExport.onExportPress}
+                    disabled={summaryExport.exporting}
+                    style={styles.cardExportBtn}
+                  >
+                    {summaryExport.exporting ? (
+                      <ActivityIndicator size="small" color={colors.textMuted} />
+                    ) : (
+                      <Ionicons name="share-outline" size={13} color={colors.textMuted} />
+                    )}
                   </TouchableOpacity>
                 </View>
                 <View style={styles.calorieRing}>
@@ -324,17 +335,6 @@ export default function FoodLogScreen() {
                   <MacroBar label="Fats" value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
                 </View>
               </View>
-              <TouchableOpacity
-                onPress={summaryExport.onExportPress}
-                disabled={summaryExport.exporting}
-                style={styles.cardExportBtn}
-              >
-                {summaryExport.exporting ? (
-                  <ActivityIndicator size="small" color={colors.textMuted} />
-                ) : (
-                  <Ionicons name="share-outline" size={13} color={colors.textMuted} />
-                )}
-              </TouchableOpacity>
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
@@ -620,7 +620,7 @@ const createStyles = (colors) => StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 12 },
 
   summaryCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
-  targetsPillRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 },
+  targetsPillRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   goalPillBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
@@ -632,7 +632,7 @@ const createStyles = (colors) => StyleSheet.create({
   sheetFieldLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1, marginBottom: 6, fontFamily: fontFamily.mono },
   sheetInput: { backgroundColor: colors.bgElevated, borderRadius: 12, padding: 12, color: colors.text, fontSize: typography.base, borderWidth: 1, borderColor: colors.border },
   targetsFieldRow: { marginBottom: 14 },
-  cardExportBtn: { position: 'absolute', top: 8, right: 8, padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated, zIndex: 1 },
+  cardExportBtn: { padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated },
   calorieRing: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
   ringOuter: { width: 90, height: 90, borderRadius: 45, borderWidth: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
   ringNum: { fontSize: typography.xl, fontWeight: weight.black },
