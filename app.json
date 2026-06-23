@@ -8,9 +8,11 @@
     "sdkVersion": "54.0.0",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fitness.fitzo"
     },
     "android": {
+      "package": "com.fitness.fitzo",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
