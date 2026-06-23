@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
@@ -2104,6 +2105,21 @@ export default function WorkoutScreen() {
   const [showWorkoutGoalSheet, setShowWorkoutGoalSheet] = useState(false);
   const [workoutGoalInput, setWorkoutGoalInput] = useState(4);
   const [showToolsPaywall, setShowToolsPaywall] = useState(false);
+  const [hideRestDays, setHideRestDays] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('fitzo:hideRestDays').then(stored => {
+      if (stored === 'true' || stored === 'false') setHideRestDays(stored === 'true');
+    });
+  }, []);
+
+  const toggleHideRestDays = useCallback(() => {
+    setHideRestDays(prev => {
+      const next = !prev;
+      AsyncStorage.setItem('fitzo:hideRestDays', next ? 'true' : 'false');
+      return next;
+    });
+  }, []);
 
   const { data: sessions = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['sessions', user?.id],
@@ -2420,6 +2436,14 @@ export default function WorkoutScreen() {
   }, [sessions, viewYear, viewMonth]);
 
   const dayList = useMemo(() => generateDayList(filteredSessions), [filteredSessions]);
+
+  const visibleDayList = useMemo(() => {
+    if (!hideRestDays) return dayList;
+    return dayList.filter(item => {
+      if (item.type === 'rest') return false;
+      return getSessionType(item.session?.notes) !== 'rest';
+    });
+  }, [dayList, hideRestDays]);
 
   const canGoNext = viewYear < today.getFullYear() ||
     (viewYear === today.getFullYear() && viewMonth < today.getMonth() + 1);
@@ -2813,15 +2837,30 @@ export default function WorkoutScreen() {
           </>
         )}
 
-        {!isLoading && dayList.length === 0 && (
+        <View style={s.card}>
+          <View style={s.cardTitleRow}>
+            <Text style={s.cardTitle}>WORKOUT HISTORY</Text>
+            <TouchableOpacity onPress={toggleHideRestDays} style={s.collapseToggleWrap} activeOpacity={0.75}>
+              <Text style={s.collapseToggleText}>HIDE REST DAYS</Text>
+              <View style={[s.toggleSwitch, hideRestDays && s.toggleSwitchOn]}>
+                <View style={[s.toggleKnob, hideRestDays && s.toggleKnobOn]} />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+        {!isLoading && visibleDayList.length === 0 && (
           <View style={s.empty}>
             <Ionicons name="barbell-outline" size={52} color={colors.textDim} />
-            <Text style={s.emptyTitle}>No sessions in {MONTH_NAMES[viewMonth - 1]} {viewYear}</Text>
+            <Text style={s.emptyTitle}>
+              {dayList.length === 0
+                ? `No sessions in ${MONTH_NAMES[viewMonth - 1]} ${viewYear}`
+                : 'All sessions this month are rest days'}
+            </Text>
             <Text style={s.emptySub}>Tap + to log a workout</Text>
           </View>
         )}
 
-        {dayList.map(item => {
+        {visibleDayList.map(item => {
           if (item.type === 'rest') {
             return (
               <TouchableOpacity
@@ -2895,6 +2934,7 @@ export default function WorkoutScreen() {
             </TouchableOpacity>
           );
         })}
+        </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
