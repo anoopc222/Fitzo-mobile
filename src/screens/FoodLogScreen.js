@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { typography, weight } from '../theme/typography';
+import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
@@ -51,6 +51,13 @@ async function addFood(userId, food) {
 
 async function deleteFoodLog(id) {
   const { error } = await supabase.from('food_logs').delete().eq('id', id);
+  if (error) throw error;
+}
+
+async function updateMacroTargets(userId, { protein, carbs, fats, calories }) {
+  const { error } = await supabase.from('profiles').update({
+    protein_target: protein, carbs_target: carbs, fats_target: fats, calorie_target: calories,
+  }).eq('id', userId);
   if (error) throw error;
 }
 
@@ -115,6 +122,12 @@ export default function FoodLogScreen() {
   const [selectedFood, setSelectedFood] = useState(null);
   const [amountGrams, setAmountGrams] = useState('100');
 
+  // Macro targets sheet state
+  const [showTargetsSheet, setShowTargetsSheet] = useState(false);
+  const [proteinInput, setProteinInput] = useState('');
+  const [carbsInput, setCarbsInput] = useState('');
+  const [fatsInput, setFatsInput] = useState('');
+
   const today = dateStr(currentDate);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
@@ -148,6 +161,16 @@ export default function FoodLogScreen() {
     onSuccess: () => { qc.invalidateQueries(['food', user.id, today]); qc.invalidateQueries(['home', user.id]); },
   });
 
+  const targetsMut = useMutation({
+    mutationFn: (vals) => updateMacroTargets(user.id, vals),
+    onSuccess: () => {
+      qc.invalidateQueries(['food', user.id, today]);
+      qc.invalidateQueries(['home', user.id]);
+      setShowTargetsSheet(false);
+    },
+    onError: (e) => Alert.alert('Error', e.message),
+  });
+
   const logs = data?.logs ?? [];
   const profile = data?.profile;
   const targets = {
@@ -155,6 +178,23 @@ export default function FoodLogScreen() {
     protein: profile?.protein_target ?? MACRO_TARGETS.protein,
     carbs: profile?.carbs_target ?? MACRO_TARGETS.carbs,
     fats: profile?.fats_target ?? MACRO_TARGETS.fats,
+  };
+
+  const openTargetsSheet = () => {
+    setProteinInput(String(targets.protein));
+    setCarbsInput(String(targets.carbs));
+    setFatsInput(String(targets.fats));
+    setShowTargetsSheet(true);
+  };
+
+  const targetProteinG = parseFloat(proteinInput) || 0;
+  const targetCarbsG = parseFloat(carbsInput) || 0;
+  const targetFatsG = parseFloat(fatsInput) || 0;
+  const computedCalories = Math.round(targetProteinG * 4 + targetCarbsG * 4 + targetFatsG * 9);
+
+  const handleSaveTargets = () => {
+    if (!proteinInput || !carbsInput || !fatsInput) return Alert.alert('Required', 'Enter protein, carbs, and fats targets');
+    targetsMut.mutate({ protein: targetProteinG, carbs: targetCarbsG, fats: targetFatsG, calories: computedCalories });
   };
 
   const totals = logs.reduce((acc, l) => ({
@@ -253,6 +293,12 @@ export default function FoodLogScreen() {
             {/* Calorie summary */}
             <View style={{ position: 'relative' }}>
               <View style={styles.summaryCard}>
+                <View style={styles.targetsPillRow}>
+                  <TouchableOpacity style={styles.goalPillBtn} onPress={openTargetsSheet}>
+                    <Text style={styles.goalPillBtnText}>Edit Targets</Text>
+                    <Ionicons name="pencil" size={11} color={colors.accent} />
+                  </TouchableOpacity>
+                </View>
                 <View style={styles.calorieRing}>
                   <View style={[styles.ringOuter, { borderColor: calPct >= 100 ? colors.danger : colors.accent }]}>
                     <Text style={[styles.ringNum, { color: calPct >= 100 ? colors.danger : colors.accent }]}>
@@ -497,6 +543,35 @@ export default function FoodLogScreen() {
         )}
       </BottomSheet>
 
+      <BottomSheet visible={showTargetsSheet} onClose={() => setShowTargetsSheet(false)}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>SET MACRO TARGETS</Text>
+          <TouchableOpacity onPress={() => setShowTargetsSheet(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.goalBigVal}>{computedCalories} kcal</Text>
+        <Text style={styles.goalBigSub}>auto-calculated calorie target</Text>
+
+        <View style={styles.targetsFieldRow}>
+          <Text style={styles.sheetFieldLabel}>PROTEIN (G)</Text>
+          <TextInput style={styles.sheetInput} value={proteinInput} onChangeText={setProteinInput} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.textDim} />
+        </View>
+        <View style={styles.targetsFieldRow}>
+          <Text style={styles.sheetFieldLabel}>CARBS (G)</Text>
+          <TextInput style={styles.sheetInput} value={carbsInput} onChangeText={setCarbsInput} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.textDim} />
+        </View>
+        <View style={styles.targetsFieldRow}>
+          <Text style={styles.sheetFieldLabel}>FATS (G)</Text>
+          <TextInput style={styles.sheetInput} value={fatsInput} onChangeText={setFatsInput} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.textDim} />
+        </View>
+
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveTargets} disabled={targetsMut.isPending}>
+          {targetsMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Targets</Text>}
+        </TouchableOpacity>
+      </BottomSheet>
+
       <PaywallModal visible={summaryExport.showPaywall} onClose={() => summaryExport.setShowPaywall(false)} />
     </SafeAreaView>
   );
@@ -545,6 +620,18 @@ const createStyles = (colors) => StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 12 },
 
   summaryCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
+  targetsPillRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 },
+  goalPillBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.accent + '1a', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.accent + '66',
+  },
+  goalPillBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
+  goalBigVal: { fontSize: 40, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.accent, textAlign: 'center', marginTop: 8 },
+  goalBigSub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', marginBottom: 16 },
+  sheetFieldLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1, marginBottom: 6, fontFamily: fontFamily.mono },
+  sheetInput: { backgroundColor: colors.bgElevated, borderRadius: 12, padding: 12, color: colors.text, fontSize: typography.base, borderWidth: 1, borderColor: colors.border },
+  targetsFieldRow: { marginBottom: 14 },
   cardExportBtn: { position: 'absolute', top: 8, right: 8, padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated, zIndex: 1 },
   calorieRing: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
   ringOuter: { width: 90, height: 90, borderRadius: 45, borderWidth: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgElevated },
