@@ -18,12 +18,39 @@ const wb = xlsx.readFile(SRC_FILE);
 
 const proximates = xlsx.utils.sheet_to_json(wb.Sheets['1.3 Proximates'], { header: 1, defval: '' }).slice(3);
 const inorganics = xlsx.utils.sheet_to_json(wb.Sheets['1.4 Inorganics'], { header: 1, defval: '' }).slice(3);
+const vitamins = xlsx.utils.sheet_to_json(wb.Sheets['1.5 Vitamins'], { header: 1, defval: '' }).slice(3);
 
-const sodiumByCode = new Map();
+const inorganicsByCode = new Map();
 for (const row of inorganics) {
   const code = row[0];
   if (!code) continue;
-  sodiumByCode.set(code, num(row[7]));
+  inorganicsByCode.set(code, {
+    sodium_mg: num(row[7]),
+    potassium_mg: num(row[8]),
+    calcium_mg: num(row[9]),
+    magnesium_mg: num(row[10]),
+    iron_mg: num(row[12]),
+    zinc_mg: num(row[14]),
+  });
+}
+
+const vitaminsByCode = new Map();
+for (const row of vitamins) {
+  const code = row[0];
+  if (!code) continue;
+  vitaminsByCode.set(code, {
+    vitamin_a_mcg: num(row[9]), // total retinol equivalent
+    vitamin_d_mcg: num(row[10]),
+    vitamin_e_mg: num(row[11]),
+    vitamin_k_mcg: num(row[12]), // phylloquinone
+    thiamin_mg: num(row[13]),
+    riboflavin_mg: num(row[14]),
+    niacin_mg: num(row[17]), // niacin equivalent
+    vitamin_b6_mg: num(row[18]),
+    vitamin_b12_mcg: num(row[19]),
+    folate_mcg: num(row[20]),
+    vitamin_c_mg: num(row[23]),
+  });
 }
 
 const rows = [];
@@ -31,6 +58,8 @@ for (const row of proximates) {
   const code = row[0];
   const name = row[1];
   if (!code || !name) continue;
+  const inorg = inorganicsByCode.get(code);
+  const vit = vitaminsByCode.get(code);
   rows.push({
     source_id: code,
     name,
@@ -44,7 +73,25 @@ for (const row of proximates) {
     fats: num(row[10]),
     fiber: num(row[25]), // AOAC fibre (g)
     sugar: num(row[16]), // Total sugars (g)
-    sodium_mg: sodiumByCode.get(code) ?? null,
+    saturated_fat: num(row[27]), // per 100g food
+    cholesterol_mg: num(row[46]),
+    sodium_mg: inorg?.sodium_mg ?? null,
+    potassium_mg: inorg?.potassium_mg ?? null,
+    calcium_mg: inorg?.calcium_mg ?? null,
+    magnesium_mg: inorg?.magnesium_mg ?? null,
+    iron_mg: inorg?.iron_mg ?? null,
+    zinc_mg: inorg?.zinc_mg ?? null,
+    vitamin_a_mcg: vit?.vitamin_a_mcg ?? null,
+    vitamin_c_mg: vit?.vitamin_c_mg ?? null,
+    vitamin_d_mcg: vit?.vitamin_d_mcg ?? null,
+    vitamin_e_mg: vit?.vitamin_e_mg ?? null,
+    vitamin_k_mcg: vit?.vitamin_k_mcg ?? null,
+    vitamin_b6_mg: vit?.vitamin_b6_mg ?? null,
+    vitamin_b12_mcg: vit?.vitamin_b12_mcg ?? null,
+    thiamin_mg: vit?.thiamin_mg ?? null,
+    riboflavin_mg: vit?.riboflavin_mg ?? null,
+    niacin_mg: vit?.niacin_mg ?? null,
+    folate_mcg: vit?.folate_mcg ?? null,
   });
 }
 

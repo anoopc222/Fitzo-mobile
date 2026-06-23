@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
+import DatePickerField from '../components/ui/DatePickerField';
 import Sparkline from '../components/Sparkline';
 import BodyHeatmap from '../components/BodyHeatmap';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
@@ -1323,118 +1324,6 @@ const createEhS = (colors) => StyleSheet.create({
   deltaMuted: { fontFamily: fontFamily.bodyMedium, fontSize: typography.xs, color: colors.textDim, marginTop: 8 },
 });
 
-// ─── Custom Date Picker Modal ────────────────────────────────────────────────
-const CAL_DAY_NAMES   = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-const CAL_MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-function DatePickerModal({ visible, value, onSelect, onClose }) {
-  const { colors } = useTheme();
-  const dpS = useMemo(() => createDpS(colors), [colors]);
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-
-  const initFromValue = (v) => {
-    const d = v ? new Date(v + 'T00:00:00') : new Date();
-    return isNaN(d.getTime()) ? new Date() : d;
-  };
-
-  const [calYear, setCalYear]   = useState(() => initFromValue(value).getFullYear());
-  const [calMonth, setCalMonth] = useState(() => initFromValue(value).getMonth());
-
-  useEffect(() => {
-    if (visible) {
-      const d = initFromValue(value);
-      setCalYear(d.getFullYear());
-      setCalMonth(d.getMonth());
-    }
-  }, [visible, value]);
-
-  const firstDow   = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const cells = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
-
-  const canGoNext = calYear < today.getFullYear() ||
-    (calYear === today.getFullYear() && calMonth < today.getMonth());
-
-  const prevCal = () => {
-    if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); }
-    else setCalMonth(m => m - 1);
-  };
-  const nextCal = () => {
-    if (!canGoNext) return;
-    if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); }
-    else setCalMonth(m => m + 1);
-  };
-
-  const isoForDay = (day) =>
-    `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-
-  const selectDay = (day) => {
-    const iso = isoForDay(day);
-    if (iso > todayStr) return;
-    onSelect(iso);
-    onClose();
-  };
-
-  return (
-    <BottomSheet visible={visible} onClose={onClose} style={dpS.sheet}>
-          {/* Month / Year nav */}
-          <View style={dpS.calHeader}>
-            <TouchableOpacity onPress={prevCal} style={dpS.calNavBtn}>
-              <Text style={dpS.calNavText}>‹</Text>
-            </TouchableOpacity>
-            <Text style={dpS.calTitle}>{CAL_MONTH_SHORT[calMonth]} {calYear}</Text>
-            <TouchableOpacity onPress={nextCal} style={dpS.calNavBtn} disabled={!canGoNext}>
-              <Text style={[dpS.calNavText, !canGoNext && { color: colors.textDim }]}>›</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Day names */}
-          <View style={dpS.dayNamesRow}>
-            {CAL_DAY_NAMES.map(n => (
-              <View key={n} style={dpS.dayNameCell}>
-                <Text style={dpS.dayNameText}>{n}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Grid */}
-          <View style={dpS.grid}>
-            {cells.map((day, idx) => {
-              if (!day) return <View key={`e${idx}`} style={dpS.dayCell} />;
-              const iso    = isoForDay(day);
-              const future = iso > todayStr;
-              const isT    = iso === todayStr;
-              const isSel  = iso === value;
-              return (
-                <TouchableOpacity
-                  key={day}
-                  style={[dpS.dayCell, isSel && dpS.dayCellSelected, isT && !isSel && dpS.dayCellToday]}
-                  onPress={() => selectDay(day)}
-                  disabled={future}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[
-                    dpS.dayText,
-                    future && dpS.dayTextFuture,
-                    isT && !isSel && dpS.dayTextToday,
-                    isSel && dpS.dayTextSelected,
-                  ]}>
-                    {day}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Today shortcut */}
-          <TouchableOpacity style={dpS.todayBtn} onPress={() => { onSelect(todayStr); onClose(); }}>
-            <Text style={dpS.todayBtnText}>Today</Text>
-          </TouchableOpacity>
-    </BottomSheet>
-  );
-}
-
 // ─── Edit Session Modal ───────────────────────────────────────────────────────
 // Always show these two as default chip suggestions
 const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
@@ -1450,7 +1339,6 @@ function EditSessionModal({
   const [name, setName] = useState('');
   const [exercises, setExercises] = useState([]);
   const [activeExIdx, setActiveExIdx] = useState(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [acOpenIdx, setAcOpenIdx] = useState(null);
   const [subOpenIdx, setSubOpenIdx] = useState(null);
   const [restTimer, setRestTimer] = useState(null); // { exIdx, secondsLeft, total }
@@ -1574,7 +1462,6 @@ function EditSessionModal({
       setName(initialData.name ?? '');
       setExercises(initialData.exercises ?? []);
       setActiveExIdx(null);
-      setShowDatePicker(false);
     }
   }, [visible, initialData]);
 
@@ -1654,13 +1541,6 @@ function EditSessionModal({
   const isRestDay = name.toLowerCase() === 'rest day';
   const isCardio  = !isRestDay && ['cardio','run','stair','hiit','bike','swim','walk','cycle'].some(k => name.toLowerCase().includes(k));
 
-  const fmtDisplayDate = (iso) => {
-    if (!iso) return 'Pick date';
-    const d = new Date(iso + 'T00:00:00');
-    if (isNaN(d.getTime())) return iso;
-    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-  };
-
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -1713,12 +1593,13 @@ function EditSessionModal({
           <View style={eS.fieldRow}>
             <View style={eS.fieldCol}>
               <Text style={eS.fieldLabel}>DATE</Text>
-              <TouchableOpacity style={eS.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Ionicons name="calendar-outline" size={16} color={colors.accent} />
-                <Text style={[eS.dateBtnText, !date && { color: colors.textDim }]}>
-                  {date ? fmtDisplayDate(date) : 'Pick date'}
-                </Text>
-              </TouchableOpacity>
+              <DatePickerField
+                value={date}
+                onChange={setDate}
+                colors={colors}
+                maxDate={localDateStr(new Date())}
+                placeholder="Pick date"
+              />
             </View>
             <View style={eS.fieldCol}>
               <Text style={eS.fieldLabel}>TYPE</Text>
@@ -1726,13 +1607,6 @@ function EditSessionModal({
                 placeholder="e.g. Chest & Back" placeholderTextColor={colors.textDim} />
             </View>
           </View>
-
-          <DatePickerModal
-            visible={showDatePicker}
-            value={date}
-            onSelect={setDate}
-            onClose={() => setShowDatePicker(false)}
-          />
 
           {/* Content area — differs by type */}
           {isRestDay ? (
@@ -3421,12 +3295,6 @@ const createES = (colors) => StyleSheet.create({
   fieldRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: 10 },
   fieldCol: { flex: 1 },
   fieldLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginBottom: 4 },
-  dateBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.accent + '66',
-    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 11,
-  },
-  dateBtnText: { fontSize: typography.sm, color: colors.text, fontWeight: weight.medium },
   fieldInput: {
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 10, color: colors.text, fontSize: typography.sm,
@@ -3621,30 +3489,3 @@ const createES = (colors) => StyleSheet.create({
   cardioAutoValue: { fontFamily: fontFamily.monoBold, fontSize: typography.sm, color: colors.pink, paddingVertical: 6 },
 });
 
-const createDpS = (colors) => StyleSheet.create({
-  sheet: { paddingTop: 4 },
-  calHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  calNavBtn: { padding: 8 },
-  calNavText: { fontSize: 26, color: colors.text, fontWeight: '300' },
-  calTitle: { fontSize: typography.base, fontWeight: weight.bold, color: colors.text },
-  dayNamesRow: { flexDirection: 'row', marginBottom: 4 },
-  dayNameCell: { width: '14.285714%', alignItems: 'center', paddingVertical: 4 },
-  dayNameText: { fontSize: 11, color: colors.textMuted, fontWeight: weight.bold },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: { width: '14.285714%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
-  dayCellSelected: { backgroundColor: colors.accent },
-  dayCellToday: { borderWidth: 1, borderColor: colors.accent },
-  dayText: { fontSize: typography.sm, color: colors.text },
-  dayTextFuture: { color: colors.textDim, opacity: 0.35 },
-  dayTextToday: { color: colors.accent, fontWeight: weight.bold },
-  dayTextSelected: { color: colors.bg, fontWeight: weight.bold },
-  todayBtn: {
-    marginTop: 12, padding: 10, borderRadius: 10,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center',
-  },
-  todayBtnText: { fontSize: typography.sm, color: colors.accent, fontWeight: weight.bold },
-});
