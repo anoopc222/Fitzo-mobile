@@ -2,7 +2,7 @@
 // RevenueCat dashboard once the Apple/Google subscription products exist.
 export const REVENUECAT_API_KEYS = {
   ios: 'appl_REPLACE_ME',
-  android: 'goog_REPLACE_ME',
+  android: 'goog_BjQFCfJrZiMqaMvUFwIFETCzpkX',
 };
 
 // The entitlement identifier configured in RevenueCat (RevenueCat > Entitlements).
