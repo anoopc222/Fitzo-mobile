@@ -1100,17 +1100,18 @@ export default function HomeScreen() {
 
   const insightScrollRef = useRef(null);
   const [insightIdx, setInsightIdx] = useState(0);
+  const insightCardW = SCREEN_W - 32; // full-width card (matches 16px screen padding on each side)
   useEffect(() => {
     if (insights.length <= 1) return;
     const id = setInterval(() => {
       setInsightIdx(prev => {
         const next = (prev + 1) % insights.length;
-        insightScrollRef.current?.scrollTo({ x: next * 246, animated: true });
+        insightScrollRef.current?.scrollTo({ x: next * insightCardW, animated: true });
         return next;
       });
-    }, 2000);
+    }, 6000);
     return () => clearInterval(id);
-  }, [insights.length]);
+  }, [insights.length, insightCardW]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -1156,21 +1157,34 @@ export default function HomeScreen() {
             <ScrollView
               ref={insightScrollRef}
               horizontal
+              pagingEnabled
               showsHorizontalScrollIndicator={false}
               style={styles.insightScroll}
-              contentContainerStyle={styles.insightScrollContent}
+              snapToInterval={insightCardW}
+              decelerationRate="fast"
               onMomentumScrollEnd={(e) => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / 246);
+                const idx = Math.round(e.nativeEvent.contentOffset.x / insightCardW);
                 setInsightIdx(idx);
               }}
             >
               {insights.map((ins, i) => (
-                <View key={i} style={styles.insightCard}>
+                <View key={i} style={[styles.insightCard, { width: insightCardW }]}>
                   <Ionicons name={ins.icon} size={14} color={ins.color} />
                   <Text style={styles.insightText}>{ins.text}</Text>
                 </View>
               ))}
             </ScrollView>
+
+            {insights.length > 1 && (
+              <View style={styles.insightDotsRow}>
+                {insights.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[styles.insightDot, i === insightIdx && { backgroundColor: colors.accent, width: 16 }]}
+                  />
+                ))}
+              </View>
+            )}
 
             {/* ── Stat Overview (merged, line-separated) ─────────── */}
             <View style={styles.overviewCard}>
@@ -1887,10 +1901,11 @@ const createStyles = (colors) => StyleSheet.create({
   goalProgressTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, overflow: 'hidden' },
   goalProgressFill: { height: '100%', borderRadius: 2, backgroundColor: colors.accent },
   goalProgressPct: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono },
-  insightScroll: { marginBottom: 10 },
-  insightScrollContent: { paddingHorizontal: 16, gap: 10 },
-  insightCard: { width: 236, flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border },
+  insightScroll: { marginBottom: 8, marginHorizontal: 16 },
+  insightCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 14, borderRadius: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border },
   insightText: { flex: 1, fontSize: 11, color: colors.textMuted, lineHeight: 15, fontFamily: fontFamily.body },
+  insightDotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5, marginBottom: 10 },
+  insightDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.dim },
   sectionLabel: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase', paddingHorizontal: 16, marginBottom: 8 },
   chartCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, marginHorizontal: 16, marginBottom: 10, padding: 14 },
   chartHdr: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
