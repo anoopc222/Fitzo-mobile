@@ -1690,12 +1690,23 @@ export default function HomeScreen() {
             {/* ── Weekly Tabs ────────────────────────────────────── */}
             <View style={styles.tabsCard}>
               <View style={styles.tabsRow}>
-                {WEEK_TABS.map((t, i) => (
-                  <TouchableOpacity key={t} style={styles.tabBtn} onPress={() => setActiveTab(i)}>
-                    <Text style={[styles.tabLabel, activeTab === i && styles.tabLabelActive]}>{t}</Text>
-                    {activeTab === i && <View style={styles.tabUnderline} />}
-                  </TouchableOpacity>
-                ))}
+                {WEEK_TABS.map((t, i) => {
+                  const isProTab = i === 2 || i === 3;
+                  const tabLocked = isProTab && !hasAccess;
+                  return (
+                    <TouchableOpacity
+                      key={t}
+                      style={styles.tabBtn}
+                      onPress={() => (tabLocked ? setShowProTeaserPaywall(true) : setActiveTab(i))}
+                    >
+                      <View style={styles.tabLabelRow}>
+                        <Text style={[styles.tabLabel, activeTab === i && styles.tabLabelActive]}>{t}</Text>
+                        {tabLocked && <Ionicons name="lock-closed" size={9} color={colors.textDim} style={{ marginLeft: 3 }} />}
+                      </View>
+                      {activeTab === i && <View style={styles.tabUnderline} />}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {activeTab === 3 ? (
@@ -2021,6 +2032,7 @@ const createStyles = (colors) => StyleSheet.create({
   tabsCard: { marginHorizontal: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   tabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative' },
+  tabLabelRow: { flexDirection: 'row', alignItems: 'center' },
   tabLabel: { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.5 },
   tabLabelActive: { color: colors.accent },
   tabUnderline: { position: 'absolute', bottom: 0, left: '15%', right: '15%', height: 2, backgroundColor: colors.accent, borderRadius: 1 },
