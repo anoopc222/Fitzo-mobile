@@ -1028,8 +1028,6 @@ export default function HomeScreen() {
 
   const displayName = (data?.profile?.full_name ?? user?.user_metadata?.full_name ?? 'User').toUpperCase();
   const initial     = displayName[0] ?? 'F';
-  const goal        = data?.profile?.goal ?? 'General Health';
-
   function nav(target) {
     const tabs = ['Home', 'Workout', 'Log', 'Steps', 'Weight', 'Sleep'];
     if (tabs.includes(target)) navigation.navigate(target);
@@ -1153,7 +1151,7 @@ export default function HomeScreen() {
                   <Text style={styles.motivText}>{data?.motivText}</Text>
                 </TouchableOpacity>
                 <View style={styles.goalProgressRow}>
-                  <Text style={styles.goalProgressLabel} numberOfLines={1}>{goal}</Text>
+                  <Text style={styles.goalProgressLabel} numberOfLines={1}>This week</Text>
                   <View style={styles.goalProgressTrack}>
                     <View style={[styles.goalProgressFill, { width: `${cutScore}%` }]} />
                   </View>
