@@ -3016,7 +3016,16 @@ const createS = (colors) => StyleSheet.create({
     borderRadius: 18, padding: 16, marginBottom: 14,
   },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  cardTitle: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: colors.textMuted, fontWeight: weight.bold },
+  cardTitle: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: colors.textMuted, fontWeight: weight.bold, flexShrink: 1, marginRight: 8 },
+  collapseToggleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  collapseToggleText: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1 },
+  toggleSwitch: {
+    width: 34, height: 18, borderRadius: 9, backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border, padding: 2, justifyContent: 'center',
+  },
+  toggleSwitchOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  toggleKnob: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.textDim },
+  toggleKnobOn: { backgroundColor: colors.bg, alignSelf: 'flex-end' },
 
   heroHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   goalPillBtn: {
@@ -3210,7 +3219,7 @@ const createDS = (colors) => StyleSheet.create({
     marginTop: 10, marginBottom: 6,
   },
   exLabel: { fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5 },
-  collapseToggleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  collapseToggleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   collapseToggleText: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1 },
   toggleSwitch: {
     width: 34, height: 18, borderRadius: 9, backgroundColor: colors.surface,
