@@ -11,4 +11,4 @@ export const PRO_ENTITLEMENT_ID = 'Fitzo Pro';
 // The offering identifier to fetch packages from (RevenueCat > Offerings).
 export const DEFAULT_OFFERING_ID = 'default';
 
-export const TRIAL_DAYS = 14;
+export const TRIAL_DAYS = 7;
