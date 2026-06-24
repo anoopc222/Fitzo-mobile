@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,7 +9,7 @@ function toDateStr(d) {
   return `${y}-${m}-${day}`;
 }
 
-export default function DatePickerField({ value, onChange, colors, style, placeholder = 'Select date', maxDate, minDate }) {
+function DatePickerField({ value, onChange, colors, style, placeholder = 'Select date', maxDate, minDate }) {
   const [showPicker, setShowPicker] = useState(false);
 
   if (Platform.OS === 'web') {
@@ -79,3 +79,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
 });
+
+export default memo(DatePickerField);
