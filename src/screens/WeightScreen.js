@@ -725,10 +725,10 @@ export default function WeightScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.goalPillBtn}
-                  onPress={() => { setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
+                  onPress={() => { if (!hasAccess) { setShowPaywall(true); return; } setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
                 >
                   <Text style={styles.goalPillBtnText}>Edit Goal</Text>
-                  <Ionicons name="pencil" size={11} color={colors.accent} />
+                  <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
 
@@ -840,7 +840,7 @@ export default function WeightScreen() {
                       }}
                       style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}
                     >
-                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}</Text>
+                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}{d !== 30 && !hasAccess ? ' 🔒' : ''}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>

@@ -2564,10 +2564,10 @@ export default function WorkoutScreen() {
                 <View style={{ alignItems: 'flex-end', gap: 6 }}>
                   <TouchableOpacity
                     style={s.goalPillBtn}
-                    onPress={() => { setWorkoutGoalInput(weeklyGoal); setShowWorkoutGoalSheet(true); }}
+                    onPress={() => { if (!hasAccess) { setShowToolsPaywall(true); return; } setWorkoutGoalInput(weeklyGoal); setShowWorkoutGoalSheet(true); }}
                   >
                     <Text style={s.goalPillBtnText}>🎯 {weeklyGoal}/wk</Text>
-                    <Ionicons name="pencil" size={11} color={colors.accent} />
+                    <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                   </TouchableOpacity>
                   {weekStreak.current > 0 && (
                     <View style={s.weekStreakPill}>
