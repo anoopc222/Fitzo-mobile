@@ -780,9 +780,9 @@ export default function StepsScreen() {
                       <Ionicons name="share-outline" size={13} color={colors.textMuted} />
                     )}
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
+                  <TouchableOpacity style={styles.goalPillBtn} onPress={() => { if (!hasAccess) { setShowTrendPaywall(true); return; } setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
                     <Text style={styles.goalPillBtnText}>🎯 {fmtK(defaultGoal)}</Text>
-                    <Ionicons name="pencil" size={11} color={colors.accent} />
+                    <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                   </TouchableOpacity>
                 </View>
               </View>

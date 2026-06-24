@@ -286,7 +286,22 @@ function WeekStatCell({ value, label, color, colors }) {
 }
 
 // ─── History row — ports renderSleep()'s log list ───────────────────────────
-function SleepLogRow({ log, goal, colors, onDelete, isLast }) {
+function SleepLogRow({ log, goal, colors, onDelete, isLast, locked, onLockedPress }) {
+  if (locked) {
+    const ld = new Date(log.logged_at + 'T12:00:00');
+    const lockedLabel = `${ld.getDate()} ${MONTH_NAMES[ld.getMonth()]} (${DAY_NAMES[ld.getDay()].slice(0, 1)}${DAY_NAMES[ld.getDay()].slice(1).toLowerCase()})`;
+    return (
+      <TouchableOpacity
+        onPress={onLockedPress}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 10, borderBottomWidth: isLast ? 0 : 1, borderBottomColor: colors.border }}
+      >
+        <View style={{ width: 3, height: 30, borderRadius: 2, backgroundColor: colors.textDim }} />
+        <Text style={{ width: 78, fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{lockedLabel}</Text>
+        <Ionicons name="lock-closed" size={13} color={colors.textDim} />
+        <Text style={{ flex: 1, fontSize: 11, color: colors.textDim, fontFamily: fontFamily.mono }}>Unlock with Pro</Text>
+      </TouchableOpacity>
+    );
+  }
   const diff = +(log.hours - goal).toFixed(1);
   const hitGoal = log.hours >= goal;
   const pct = Math.min(100, Math.round((log.hours / goal) * 100));
@@ -356,6 +371,7 @@ export default function SleepScreen() {
 
   const logs = (data?.logs ?? []).filter(l => Number.isFinite(l.hours));
   const goal = data?.profile?.sleep_goal_hours ?? 7.5;
+  const logCutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
   const sessions = data?.sessions ?? [];
   const steps = data?.steps ?? [];
 
@@ -562,9 +578,9 @@ export default function SleepScreen() {
                     <Ionicons name="share-outline" size={13} color={colors.textMuted} />
                   )}
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.goalPillBtn} onPress={() => { setGoalInput(String(goal)); setShowGoalSheet(true); }}>
+                <TouchableOpacity style={styles.goalPillBtn} onPress={() => { if (!hasAccess) { setShowRangePaywall(true); return; } setGoalInput(String(goal)); setShowGoalSheet(true); }}>
                   <Text style={styles.goalPillBtnText}>🌙 {goal}h</Text>
-                  <Ionicons name="pencil" size={11} color={colors.accent} />
+                  <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
               <View style={styles.recoveryRow}>
@@ -722,6 +738,8 @@ export default function SleepScreen() {
                       goal={goal}
                       colors={colors}
                       isLast={i === week.items.length - 1}
+                      locked={!hasAccess && log.logged_at < logCutoffStr}
+                      onLockedPress={() => setShowRangePaywall(true)}
                       onDelete={() => Alert.alert('Delete entry', 'Remove this entry?', [
                         { text: 'Cancel', style: 'cancel' },
                         { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
