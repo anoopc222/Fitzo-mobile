@@ -1116,8 +1116,12 @@ export default function HomeScreen() {
     const key = `fitzo:seenOnboardingPaywall:${user.id}`;
     AsyncStorage.getItem(key).then(seen => {
       if (seen) return;
-      AsyncStorage.setItem(key, 'true');
-      navigation.navigate('Subscription');
+      try {
+        navigation.navigate('Subscription');
+        AsyncStorage.setItem(key, 'true');
+      } catch (e) {
+        // Navigator not ready yet — leave the flag unset so we retry next mount.
+      }
     });
   }, [subReady, user?.id, isPro, navigation]);
 

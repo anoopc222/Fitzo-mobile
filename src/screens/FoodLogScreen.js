@@ -104,7 +104,7 @@ export default function FoodLogScreen() {
     Breakfast: '#fb923c', Lunch: '#22d3ee', Dinner: colors.purple, Snack: colors.success,
   }), [colors]);
   const qc = useQueryClient();
-  const { hasAccess } = useSubscription();
+  const { isPro } = useSubscription();
   const [showTargetsPaywall, setShowTargetsPaywall] = useState(false);
   const summaryExport = useGatedExport();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -182,7 +182,7 @@ export default function FoodLogScreen() {
   };
 
   const openTargetsSheet = () => {
-    if (!hasAccess) { setShowTargetsPaywall(true); return; }
+    if (!isPro) { setShowTargetsPaywall(true); return; }
     setProteinInput(String(targets.protein));
     setCarbsInput(String(targets.carbs));
     setFatsInput(String(targets.fats));
@@ -298,7 +298,7 @@ export default function FoodLogScreen() {
                 <View style={styles.targetsPillRow}>
                   <TouchableOpacity style={styles.goalPillBtn} onPress={openTargetsSheet}>
                     <Text style={styles.goalPillBtnText}>Edit Targets</Text>
-                    <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
+                    <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={summaryExport.onExportPress}
