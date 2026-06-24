@@ -101,8 +101,8 @@ async function deleteWeightLog(id) {
 }
 
 // ─── Weight Heatmap — ports _renderWeightHeatmap (quartile-relative-to-month) ─
-function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true, onLockedPress }) {
-  const SCREEN_W = Dimensions.get('window').width;
+function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true, onLockedPress, cardWidth }) {
+  const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
@@ -822,7 +822,7 @@ export default function WeightScreen() {
                 colors={colors}
                 width={340}
               >
-                <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={true} />
+                <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={true} cardWidth={258} />
               </ExportCardTemplate>
             </View>
 

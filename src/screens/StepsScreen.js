@@ -420,8 +420,8 @@ function DailyLogBar({ steps, goal, barMax, colors }) {
 }
 
 // ─── Monthly Heatmap — ports _renderStepsHeatmap bucket logic ───────────────
-function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress }) {
-  const SCREEN_W = Dimensions.get('window').width;
+function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress, cardWidth }) {
+  const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
@@ -943,7 +943,7 @@ export default function StepsScreen() {
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
               <ExportCardTemplate ref={heatmapExport.ref} title="Monthly Heatmap" subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
-                <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={true} />
+                <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={true} cardWidth={258} />
               </ExportCardTemplate>
             </View>
 
