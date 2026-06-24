@@ -840,7 +840,7 @@ export default function WeightScreen() {
                       }}
                       style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}
                     >
-                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}</Text>
+                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}{d !== 30 && !hasAccess ? ' 🔒' : ''}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>

@@ -613,18 +613,27 @@ export default function SleepScreen() {
               </ExportCardTemplate>
             </View>
 
-            {/* ── Insights ── */}
+            {/* ── Insights (Pro) ── */}
             {insights.length > 0 && (
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>💡 INSIGHTS</Text>
-                {insights.map((ins, i) => (
-                  <View key={i} style={styles.insightRow}>
-                    <Text style={styles.insightIcon}>{ins.icon}</Text>
-                    <Text style={styles.insightText}>
-                      {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
-                    </Text>
-                  </View>
-                ))}
+                <View style={styles.cardTitleRow}>
+                  <Text style={styles.cardTitle}>💡 INSIGHTS</Text>
+                  {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+                </View>
+                {hasAccess ? (
+                  insights.map((ins, i) => (
+                    <View key={i} style={styles.insightRow}>
+                      <Text style={styles.insightIcon}>{ins.icon}</Text>
+                      <Text style={styles.insightText}>
+                        {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <TouchableOpacity onPress={() => setShowRangePaywall(true)}>
+                    <Text style={styles.emptyText}>🔒 Unlock personalized sleep insights with Pro.</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 
@@ -673,7 +682,7 @@ export default function SleepScreen() {
                       }}
                       style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}
                     >
-                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}</Text>
+                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}{d !== 30 && !hasAccess ? ' 🔒' : ''}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
