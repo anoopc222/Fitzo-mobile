@@ -225,8 +225,6 @@ export default function HealthLogScreen({ navigation }) {
     queryKey: ['healthLogs', user?.id],
     queryFn: () => fetchHealthLogs(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const sorted = useMemo(() => [...records].sort((a, b) => b.date.localeCompare(a.date)), [records]);

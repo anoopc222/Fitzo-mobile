@@ -71,8 +71,6 @@ export default function DietScreen({ navigation }) {
     queryKey: ['dietPlans', user?.id],
     queryFn: () => fetchDietPlans(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -28,7 +29,12 @@ export default function SettingsScreen({ navigation }) {
   const handlePasswordReset = () => {
     Alert.alert('Reset Password', `A password reset link will be sent to ${user?.email}`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Send', onPress: () => supabase.auth.resetPasswordForEmail(user?.email) },
+      {
+        text: 'Send',
+        onPress: () => supabase.auth.resetPasswordForEmail(user?.email, {
+          redirectTo: Linking.createURL('auth/callback'),
+        }),
+      },
     ]);
   };
 

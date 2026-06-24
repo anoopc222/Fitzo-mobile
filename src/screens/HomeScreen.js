@@ -543,7 +543,6 @@ function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
     queryKey: ['day-detail', userId, dateStr],
     queryFn: () => fetchDayData(userId, dateStr),
     enabled: !!(userId && dateStr && visible),
-    staleTime: 0, gcTime: 0,
   });
 
   const fmtLongDate = (iso) => {
@@ -678,7 +677,6 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true, weekl
     queryKey: ['streak-sessions', userId, calYear, calMonth],
     queryFn: () => fetchMonthSessions(userId, calYear, calMonth),
     enabled: !!(userId && visible),
-    staleTime: 0, gcTime: 0,
   });
 
   const prevMonthDate = new Date(calYear, calMonth - 2, 1);
@@ -689,7 +687,6 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true, weekl
     queryKey: ['streak-sessions', userId, prevYear, prevMonth],
     queryFn: () => fetchMonthSessions(userId, prevYear, prevMonth),
     enabled: !!(userId && visible),
-    staleTime: 0, gcTime: 0,
   });
 
   const dayMap = useMemo(() => {
@@ -1004,8 +1001,6 @@ export default function HomeScreen() {
     queryKey: ['home', user?.id],
     queryFn: () => fetchHome(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const weightQuickMut = useMutation({

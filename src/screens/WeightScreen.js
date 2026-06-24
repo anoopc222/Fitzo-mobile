@@ -558,8 +558,6 @@ export default function WeightScreen() {
     queryKey: ['weight', user?.id],
     queryFn: () => fetchWeightData(user.id),
     enabled: !!user?.id,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const logs = data?.logs ?? [];
