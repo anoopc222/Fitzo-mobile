@@ -460,7 +460,7 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true,
           </View>
         ))}
       </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: (cellSize + 4) * 7 }}>
         {cells.map(cell => {
           if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
           if (cell.locked) {
