@@ -7,7 +7,7 @@ import { useMoreMenu } from '../context/MoreMenuContext';
 import { typography, weight } from '../theme/typography';
 import { navigate } from '../navigation/navigationRef';
 
-const getSections = (colors, isAdmin) => [
+const getSections = (colors, isAdmin, isPro) => [
   {
     title: 'LOG',
     items: [
@@ -32,6 +32,9 @@ const getSections = (colors, isAdmin) => [
   {
     title: 'ACCOUNT',
     items: [
+      ...(isPro ? [] : [
+        { label: 'Go Pro', icon: 'rocket', target: ['Home', 'Subscription'], color: colors.accent },
+      ]),
       { label: 'Profile',       icon: 'person',      target: ['Home', 'Profile'],      color: colors.blue },
       { label: 'Settings',      icon: 'settings',    target: ['Home', 'Settings'],      color: colors.textMuted },
     ],
@@ -46,10 +49,10 @@ const getSections = (colors, isAdmin) => [
 
 export default function MoreSheetModal() {
   const { colors } = useTheme();
-  const { isAdmin } = useSubscription();
+  const { isAdmin, isPro } = useSubscription();
   const { visible, close } = useMoreMenu();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const SECTIONS = useMemo(() => getSections(colors, isAdmin), [colors, isAdmin]);
+  const SECTIONS = useMemo(() => getSections(colors, isAdmin, isPro), [colors, isAdmin, isPro]);
 
   const onPressItem = (target) => {
     close();

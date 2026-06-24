@@ -77,6 +77,10 @@ export default function SettingsScreen({ navigation }) {
         <SectionHeader title="Subscription" />
         <View style={styles.card}>
           <SettingRow icon="card-outline" label="Status" value={isPro ? 'Pro' : isInTrial ? 'Free Trial' : 'Free'} />
+          {!isPro && (
+            <SettingRow icon="rocket-outline" label="Upgrade to Pro" chevron
+              onPress={() => navigation.navigate('Subscription')} />
+          )}
           <SettingRow icon="settings-outline" label="Manage / Cancel Subscription" chevron last
             onPress={handleManageSubscription} />
         </View>

@@ -28,6 +28,7 @@ import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useMoreMenu } from '../context/MoreMenuContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -989,7 +990,7 @@ export default function HomeScreen() {
   const [showForecastPaywall, setShowForecastPaywall] = useState(false);
   const [showProTeaserPaywall, setShowProTeaserPaywall] = useState(false);
   const consistencyExport = useGatedExport();
-  const { hasAccess } = useSubscription();
+  const { hasAccess, isPro, isInTrial, trialDaysLeft, ready: subReady } = useSubscription();
   const qc = useQueryClient();
 
   const [showWeightLog, setShowWeightLog] = useState(false);
@@ -1108,6 +1109,19 @@ export default function HomeScreen() {
     return () => clearInterval(id);
   }, [insights.length, insightCardW]);
 
+  // One-time "Go Pro" onboarding screen, shown the first time a free/trial
+  // user lands on Home after signing up — mirrors the post-onboarding
+  // paywall pattern used by Calm/Duolingo.
+  useEffect(() => {
+    if (!subReady || !user?.id || isPro) return;
+    const key = `fitzo:seenOnboardingPaywall:${user.id}`;
+    AsyncStorage.getItem(key).then(seen => {
+      if (seen) return;
+      AsyncStorage.setItem(key, 'true');
+      navigation.navigate('Subscription');
+    });
+  }, [subReady, user?.id, isPro, navigation]);
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* ── App Header ─────────────────────────────────────────── */}
@@ -1147,6 +1161,23 @@ export default function HomeScreen() {
                 </View>
               </View>
             </View>
+
+            {/* ── Go Pro banner ─────────────────────────────────── */}
+            {!isPro && (
+              <TouchableOpacity
+                style={styles.proBanner}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('Subscription')}
+              >
+                <Ionicons name="rocket" size={18} color={colors.accentText} />
+                <Text style={styles.proBannerText}>
+                  {isInTrial
+                    ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in trial — see Pro plans`
+                    : 'Unlock long-range trends, insights & more with Pro'}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
+              </TouchableOpacity>
+            )}
 
             {/* ── Insight Cards (auto-rotating) ──────────────────── */}
             <ScrollView
@@ -1891,6 +1922,12 @@ const createStyles = (colors) => StyleSheet.create({
   profileName: { fontSize: 22, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.text, lineHeight: 26, letterSpacing: -0.5 },
   motivRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   motivText: { fontSize: 11, color: colors.accent, fontFamily: fontFamily.bodySemibold, textDecorationLine: 'underline' },
+  proBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 16, marginBottom: 14, padding: 12, borderRadius: 14,
+    backgroundColor: colors.accent,
+  },
+  proBannerText: { flex: 1, fontSize: 12, fontWeight: weight.bold, color: colors.accentText },
   goalProgressRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
   goalProgressLabel: { fontSize: 10, color: colors.textMuted, width: 76, fontFamily: fontFamily.body },
   goalProgressTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, overflow: 'hidden' },
