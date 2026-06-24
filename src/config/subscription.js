@@ -6,7 +6,7 @@ export const REVENUECAT_API_KEYS = {
 };
 
 // The entitlement identifier configured in RevenueCat (RevenueCat > Entitlements).
-export const PRO_ENTITLEMENT_ID = 'pro';
+export const PRO_ENTITLEMENT_ID = 'Fitzo Pro';
 
 // The offering identifier to fetch packages from (RevenueCat > Offerings).
 export const DEFAULT_OFFERING_ID = 'default';
