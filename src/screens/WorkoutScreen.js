@@ -2649,8 +2649,13 @@ export default function WorkoutScreen() {
                 colors={colors}
                 month={viewMonth - 1}
                 year={viewYear}
+                hasAccess={hasAccess}
+                onLockedPress={() => setShowToolsPaywall(true)}
                 onDayPress={openDetailForDate}
               />
+              {!hasAccess && (
+                <Text style={s.lockedHint}>🔒 Unlock full workout history beyond the last 14 days</Text>
+              )}
             </View>
 
             {/* Volume trend */}
