@@ -339,15 +339,9 @@ export default function MeasurementsScreen({ navigation }) {
       >
         {isLoading ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
-        ) : !latest ? (
-          <View style={styles.empty}>
-            <Ionicons name="body-outline" size={52} color={colors.textDim} />
-            <Text style={styles.emptyTitle}>No measurements yet</Text>
-            <Text style={styles.emptySub}>Tap "Log" to record your first measurements</Text>
-          </View>
         ) : (
           <>
-            {/* Analytics / Insights preview cards */}
+            {/* Analytics / Insights preview cards — always visible so free users can discover Pro features */}
             <View style={styles.previewRow}>
               <TouchableOpacity style={styles.previewCard} activeOpacity={0.85} onPress={() => openProModal(setShowAnalytics)}>
                 <View style={styles.previewTopRow}>
@@ -359,7 +353,7 @@ export default function MeasurementsScreen({ navigation }) {
                   <Text style={styles.previewChip}>🏆 BESTS</Text>
                   <Text style={styles.previewChip}>🥇 SCORE</Text>
                 </View>
-                <Text style={styles.previewSub}>{bmiData ? `BMI ${bmiData.value} · ${personalBests.length} PBs` : `${personalBests.length} PBs logged`}</Text>
+                <Text style={styles.previewSub}>{bmiData ? `BMI ${bmiData.value} · ${personalBests.length} PBs` : (latest ? `${personalBests.length} PBs logged` : 'Log measurements to unlock')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.previewCard} activeOpacity={0.85} onPress={() => openProModal(setShowInsights)}>
@@ -375,6 +369,15 @@ export default function MeasurementsScreen({ navigation }) {
                 <Text style={styles.previewSub}>{whr != null ? `WHR ${whr} · ${rates.length} rates` : 'Log more to unlock'}</Text>
               </TouchableOpacity>
             </View>
+
+            {!latest ? (
+              <View style={styles.empty}>
+                <Ionicons name="body-outline" size={52} color={colors.textDim} />
+                <Text style={styles.emptyTitle}>No measurements yet</Text>
+                <Text style={styles.emptySub}>Tap "Log" to record your first measurements</Text>
+              </View>
+            ) : (
+              <>
 
             {/* Body Map */}
             <View style={styles.card}>
@@ -480,6 +483,8 @@ export default function MeasurementsScreen({ navigation }) {
                 </View>
               ))}
             </View>
+              </>
+            )}
           </>
         )}
       </ScrollView>
