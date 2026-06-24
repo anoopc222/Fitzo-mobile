@@ -101,8 +101,8 @@ async function deleteSleepLog(id) {
 }
 
 // ─── Sleep Heatmap — ports _renderSleepHeatmap (ratio-to-goal buckets) ──────
-function SleepHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress }) {
-  const SCREEN_W = Dimensions.get('window').width;
+function SleepHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress, cardWidth }) {
+  const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
@@ -680,7 +680,7 @@ export default function SleepScreen() {
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
               <ExportCardTemplate ref={heatmapExport.ref} title="Monthly Heatmap" subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
-                <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} hasAccess={true} />
+                <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} hasAccess={true} cardWidth={258} />
               </ExportCardTemplate>
             </View>
 
