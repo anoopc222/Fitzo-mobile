@@ -210,7 +210,7 @@ async function fetchHome(userId) {
       .select('steps, goal').eq('user_id', userId)
       .gte('logged_at', `${monthStart}T00:00:00`).lte('logged_at', `${monthEnd}T23:59:59`),
     supabase.from('food_logs')
-      .select('calories').eq('user_id', userId)
+      .select('calories, logged_at').eq('user_id', userId)
       .gte('logged_at', `${thisWeekStart}T00:00:00`).lte('logged_at', `${thisWeekEnd}T23:59:59`),
     supabase.from('food_logs')
       .select('calories').eq('user_id', userId)
@@ -284,6 +284,7 @@ async function fetchHome(userId) {
   const thisWeekStepsAvg = thisWeekStepsArr.length ? Math.round(thisWeekStepsSum / thisWeekStepsArr.length) : 0;
   const lastWeekStepsAvg = lastWeekStepsArr.length ? Math.round(lastWeekStepsSum / lastWeekStepsArr.length) : 0;
   const thisWeekKcal = (thisWeekFood.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0);
+  const thisWeekKcalDays = new Set((thisWeekFood.data ?? []).map(r => r.logged_at.slice(0, 10))).size;
   const lastWeekKcal = (lastWeekFood.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0);
   const monthKcal    = (monthFood.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0);
   const thisWeekGoalDays = thisWeekStepsArr.filter(l => l.steps >= (l.goal ?? stepGoal)).length;
@@ -482,7 +483,7 @@ async function fetchHome(userId) {
     lastWorkoutDate, lastWorkoutNotes, daysSinceWorkout,
     daysSinceWeight, daysSinceSleep,
     motivText, streak, stepsWeekSeries,
-    thisWeek: { sessions: thisWeekSessions, steps: thisWeekStepsAvg, kcal: thisWeekKcal, goalDays: thisWeekGoalDays, weightDelta: weekWeightDelta },
+    thisWeek: { sessions: thisWeekSessions, steps: thisWeekStepsAvg, kcal: thisWeekKcal, kcalDays: thisWeekKcalDays, goalDays: thisWeekGoalDays, weightDelta: weekWeightDelta },
     lastWeek: { sessions: lastWeekSessions, steps: lastWeekStepsAvg, kcal: lastWeekKcal, goalDays: lastWeekGoalDays, weightDelta: lastWeekWeightDelta },
     thisMonth: {
       sessions: monthSessions, steps: monthStepsTotal, kcal: monthKcal, goalDays: monthGoalDays, weightDelta: monthWeightDelta,
@@ -1044,7 +1045,7 @@ export default function HomeScreen() {
 
   const stepGoalForWeek = data?.stepGoal ?? 10000;
   const stepsPct    = Math.min(100, Math.round(((data?.thisWeek?.steps ?? 0) / (stepGoalForWeek * periodDays[0])) * 100));
-  const caloriesPct = (data?.thisWeek?.kcal ?? 0) > 0 ? 100 : 0;
+  const caloriesPct = Math.min(100, Math.round(((data?.thisWeek?.kcalDays ?? 0) / periodDays[0]) * 100));
   const sessionsPct = Math.min(100, Math.round((thisWeekSessions / weeklyGoal) * 100));
   const weightDelta = data?.thisWeek?.weightDelta;
   const wtTrendPct  = weightDelta == null ? 0 : Math.max(0, Math.min(100, Math.round(50 - weightDelta * 50)));
