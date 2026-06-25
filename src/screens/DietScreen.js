@@ -12,9 +12,10 @@ import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
-async function fetchDietPlans(userId) {
+export async function fetchDietPlans(userId) {
   const { data, error } = await supabase
     .from('diet_plans')
     .select('*')
@@ -244,7 +245,7 @@ export default function DietScreen({ navigation }) {
         </Text>
 
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <SkeletonScreen cards={4} linesPerCard={3} />
         ) : !plans.length ? (
           <View style={{ alignItems: 'center', paddingVertical: 60 }}>
             <Text style={{ fontSize: 36 }}>🥗</Text>

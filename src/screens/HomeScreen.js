@@ -24,6 +24,7 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import Svg, { Polyline, Line } from 'react-native-svg';
 import Sparkline from '../components/Sparkline';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
+import { SkeletonBlock, SkeletonCard } from '../components/Skeleton';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -613,7 +614,10 @@ function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
           </View>
 
           {isLoading ? (
-            <ActivityIndicator color={colors.accent} style={{ margin: 20 }} />
+            <View style={{ paddingHorizontal: 2 }}>
+              <SkeletonCard lines={2} />
+              <SkeletonCard lines={2} />
+            </View>
           ) : (
             <ScrollView style={ddS.exScroll} showsVerticalScrollIndicator={false}>
               {sType === 'rest' ? (
@@ -857,7 +861,17 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true, weekl
 
             {/* Calendar grid */}
             {isLoading ? (
-              <ActivityIndicator color={colors.accent} style={{ marginVertical: 30 }} />
+              <View style={[scS.grid, { paddingVertical: 4 }]}>
+                {Array.from({ length: 35 }).map((_, idx) => (
+                  <SkeletonBlock
+                    key={idx}
+                    width={CAL_CELL}
+                    height={CAL_CELL}
+                    radius={8}
+                    style={{ marginBottom: CAL_GAP, marginRight: CAL_GAP }}
+                  />
+                ))}
+              </View>
             ) : (
               <View style={scS.grid}>
                 {cells.map((day, idx) => {
@@ -1235,7 +1249,28 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 60 }} size="large" />
+          <View>
+            {/* Profile / greeting placeholder */}
+            <View style={[styles.profileRow, { alignItems: 'center' }]}>
+              <SkeletonBlock width={56} height={56} radius={28} />
+              <View style={[styles.profileInfo, { marginLeft: 12 }]}>
+                <SkeletonBlock width="50%" height={16} style={{ marginBottom: 8 }} />
+                <SkeletonBlock width="70%" height={20} style={{ marginBottom: 8 }} />
+                <SkeletonBlock width="90%" height={14} />
+              </View>
+            </View>
+
+            {/* 4 sparkline-style stat rows placeholder */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
+              <SkeletonCard lines={2} style={{ width: '47%' }} />
+              <SkeletonCard lines={2} style={{ width: '47%' }} />
+              <SkeletonCard lines={2} style={{ width: '47%' }} />
+              <SkeletonCard lines={2} style={{ width: '47%' }} />
+            </View>
+
+            {/* Pro insights / calendar section placeholder */}
+            <SkeletonCard lines={4} style={{ marginTop: 12 }} />
+          </View>
         ) : (
           <>
             {/* ── Profile ────────────────────────────────────────── */}

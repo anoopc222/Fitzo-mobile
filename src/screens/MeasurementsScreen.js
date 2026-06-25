@@ -17,6 +17,7 @@ import DatePickerField from '../components/ui/DatePickerField';
 import PaywallModal from '../components/ui/PaywallModal';
 import CircularGauge from '../components/CircularGauge';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 const SITES = [
   { key: 'chest',       label: 'Chest',        icon: 'body',    dir: 'up' },
@@ -38,7 +39,7 @@ const SYMMETRY_PAIRS = [
 ];
 const PROGRESS_SITES = ['chest', 'waist', 'hips', 'left_arm', 'right_arm'];
 
-async function fetchMeasurements(userId) {
+export async function fetchMeasurements(userId) {
   const { data, error } = await supabase
     .from('body_measurements')
     .select('id, chest, waist, hips, left_arm, right_arm, left_thigh, right_thigh, neck, calf_left, calf_right, logged_at')
@@ -49,7 +50,7 @@ async function fetchMeasurements(userId) {
   return data ?? [];
 }
 
-async function fetchBodyStats(userId) {
+export async function fetchBodyStats(userId) {
   const [profile, weight] = await Promise.all([
     supabase.from('profiles').select('height_cm, sex').eq('id', userId).single(),
     supabase.from('weight_logs').select('weight').eq('user_id', userId).order('logged_at', { ascending: false }).limit(1),
@@ -365,7 +366,7 @@ export default function MeasurementsScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
       >
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <SkeletonScreen cards={3} linesPerCard={4} />
         ) : (
           <>
             {/* Analytics / Insights preview cards — always visible so free users can discover Pro features */}

@@ -16,6 +16,7 @@ import DatePickerField from '../components/ui/DatePickerField';
 import CircularGauge from '../components/CircularGauge';
 import ProGate from '../components/ui/ProGate';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 // ─── Marker reference data — ports HL_REF / HL_GROUPS from reference app ────
 const HL_REF = {
@@ -81,7 +82,7 @@ function withComputed(rec) {
 }
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
-async function fetchHealthLogs(userId) {
+export async function fetchHealthLogs(userId) {
   const { data, error } = await supabase
     .from('health_logs')
     .select('id, logged_at, notes, custom, sugar, hba1c, avg_glucose, total_cholesterol, triglycerides, hdl, ldl, vldl, urea, creatinine, uric, tsh, t3, t4, vitamin_d, vitamin_b12, hemoglobin')
@@ -396,7 +397,7 @@ export default function HealthLogScreen({ navigation }) {
         ) : null}
 
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <SkeletonScreen cards={4} linesPerCard={2} />
         ) : (
         <ProGate label="Health log">
         {search ? (

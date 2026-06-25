@@ -21,6 +21,7 @@ import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -574,7 +575,7 @@ export default function SleepScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
       >
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <SkeletonScreen cards={4} linesPerCard={3} />
         ) : (
           <>
             {/* ── Recovery card ── */}
