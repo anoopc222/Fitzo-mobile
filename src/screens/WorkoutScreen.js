@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
@@ -25,6 +25,7 @@ import SkeletonScreen from '../components/Skeleton';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useOnboarding } from '../context/OnboardingContext';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -1347,6 +1348,32 @@ function EditSessionModal({
   const [programTemplate, setProgramTemplate] = useState(null);
   const [programWeeks, setProgramWeeks] = useState(4);
 
+  const { startTour } = useOnboarding();
+  const addExBtnRef = useRef(null);
+  const firstSetRowRef = useRef(null);
+  const saveBtnRef = useRef(null);
+
+  useEffect(() => {
+    if (!visible || !isNew) return;
+    startTour('workout-session', [
+      {
+        ref: addExBtnRef,
+        title: 'Add an exercise',
+        description: 'Tap here to add an exercise to track in this session.',
+      },
+      {
+        ref: firstSetRowRef,
+        title: 'Log your sets',
+        description: 'Enter weight, reps, and RPE (perceived effort, 1-10) for each set.',
+      },
+      {
+        ref: saveBtnRef,
+        title: 'Save your session',
+        description: 'Tap here to save the session once you’re done logging.',
+      },
+    ]);
+  }, [visible, isNew, startTour]);
+
   useEffect(() => {
     if (!restTimer) return;
     if (restTimer.secondsLeft <= 0) return;
@@ -1884,7 +1911,7 @@ function EditSessionModal({
                             const oneRM = hasAccess ? estimate1RM(s.weight_kg, s.reps) : null;
                             return (
                               <View key={s._key}>
-                                <View style={eS.setRow}>
+                                <View ref={exIdx === 0 && sIdx === 0 ? firstSetRowRef : undefined} style={eS.setRow}>
                                   <Text style={eS.setNumLabel}>{sIdx + 1}</Text>
                                   <TextInput
                                     style={eS.setInput}
@@ -2028,7 +2055,7 @@ function EditSessionModal({
                 </View>
               )}
 
-              <TouchableOpacity style={eS.addExBtn} onPress={addExercise}>
+              <TouchableOpacity ref={addExBtnRef} style={eS.addExBtn} onPress={addExercise}>
                 <Ionicons name="add" size={18} color={colors.accent} />
                 <Text style={eS.addExText}>{isCardio ? 'Add Activity' : 'Add Exercise'}</Text>
               </TouchableOpacity>
@@ -2067,7 +2094,7 @@ function EditSessionModal({
             <TouchableOpacity style={eS.cancelBtn} onPress={onCancel}>
               <Text style={eS.cancelText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={eS.saveBtn} onPress={handleSave} disabled={isSaving}>
+            <TouchableOpacity ref={saveBtnRef} style={eS.saveBtn} onPress={handleSave} disabled={isSaving}>
               {isSaving
                 ? <ActivityIndicator color={colors.bg} />
                 : <Text style={eS.saveBtnText}>{isNew ? 'Save Session' : 'Update Session'}</Text>

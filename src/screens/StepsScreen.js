@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -22,6 +22,7 @@ import SkeletonScreen from '../components/Skeleton';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useOnboarding } from '../context/OnboardingContext';
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 // Steps km/kcal are derived on the fly (matches reference app: totalKm =
@@ -509,6 +510,10 @@ export default function StepsScreen() {
   const heroExport = useGatedExport();
   const heatmapExport = useExportCard();
   const { hasAccess, isPro } = useSubscription();
+  const { startTour } = useOnboarding();
+  const unitToggleRef = useRef(null);
+  const streakRef = useRef(null);
+  const heatmapRef = useRef(null);
 
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
@@ -748,6 +753,27 @@ export default function StepsScreen() {
     setNote(yesterdayLog.note || '');
   };
 
+  useEffect(() => {
+    if (!data) return;
+    startTour('steps', [
+      {
+        ref: unitToggleRef,
+        title: 'Switch units',
+        description: 'Toggle between kilometers and miles to display your walking distance in the unit you prefer.',
+      },
+      {
+        ref: streakRef,
+        title: 'Your streak',
+        description: 'Counts consecutive days you hit your step goal. Log steps daily to keep it climbing.',
+      },
+      {
+        ref: heatmapRef,
+        title: 'Monthly heatmap',
+        description: 'Darker cells mean more steps that day — use it to spot consistency gaps across the month.',
+      },
+    ]);
+  }, [data, startTour]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
@@ -766,7 +792,7 @@ export default function StepsScreen() {
             <Text style={styles.monthChevron}>›</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.segmentRow}>
+        <View style={styles.segmentRow} ref={unitToggleRef}>
           {['km', 'mi'].map(u => (
             <TouchableOpacity key={u} onPress={() => setDistUnit(u)} style={[styles.segmentBtn, distUnit === u && styles.segmentBtnActive]}>
               <Text style={[styles.segmentText, distUnit === u && styles.segmentTextActive]}>{u.toUpperCase()}</Text>
@@ -847,7 +873,7 @@ export default function StepsScreen() {
                 )}
               </View>
 
-              <View style={styles.streakRow}>
+              <View style={styles.streakRow} ref={streakRef}>
                 <View style={styles.streakPill}>
                   <Text style={styles.streakPillEmoji}>🔥</Text>
                   <Text style={styles.streakPillText}>{streaks.current} day streak</Text>
@@ -943,7 +969,7 @@ export default function StepsScreen() {
             )}
 
             {/* ── Monthly Heatmap ── */}
-            <View style={styles.card}>
+            <View style={styles.card} ref={heatmapRef}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
                 <TouchableOpacity
