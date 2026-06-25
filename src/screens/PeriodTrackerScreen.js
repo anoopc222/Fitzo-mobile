@@ -211,8 +211,9 @@ function buildHeatmapData(logs) {
   const data = {};
   const typeColors = {};
   logs.forEach(log => {
-    const start = log.start_date;
-    const end = log.end_date || start;
+    const start = log.start_date?.slice(0, 10);
+    const end = log.end_date?.slice(0, 10) || start;
+    if (!start) return;
     let cursor = start;
     let guard = 0;
     while (cursor <= end && guard < 15) {
@@ -230,8 +231,9 @@ function buildMoodHeatmapData(logs) {
   const typeColors = {};
   logs.forEach(log => {
     if (!log.mood) return;
-    const start = log.start_date;
-    const end = log.end_date || start;
+    const start = log.start_date?.slice(0, 10);
+    const end = log.end_date?.slice(0, 10) || start;
+    if (!start) return;
     let cursor = start;
     let guard = 0;
     while (cursor <= end && guard < 15) {
