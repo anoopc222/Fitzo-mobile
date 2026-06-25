@@ -365,6 +365,7 @@ export default function PeriodTrackerScreen({ navigation }) {
 
   const [showModal, setShowModal] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCycleSettings, setShowCycleSettings] = useState(false);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
@@ -744,32 +745,15 @@ export default function PeriodTrackerScreen({ navigation }) {
               <Text style={styles.previewSub}>Fertile window, predictions & symptom trends</Text>
             </TouchableOpacity>
 
-            {/* Cycle & Period Guide — free educational reference */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitleCaps}>CYCLE & PERIOD GUIDE</Text>
-              {CYCLE_GUIDE.map(section => {
-                const isOpen = openGuide === section.key;
-                return (
-                  <View key={section.key} style={styles.guideSection}>
-                    <TouchableOpacity style={styles.guideHeaderRow} activeOpacity={0.7} onPress={() => setOpenGuide(isOpen ? null : section.key)}>
-                      <Text style={styles.guideIcon}>{section.icon}</Text>
-                      <Text style={styles.guideTitle}>{section.title}</Text>
-                      <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textDim} />
-                    </TouchableOpacity>
-                    {isOpen && (
-                      <View style={styles.guideBody}>
-                        {section.body.map(item => (
-                          <View key={item.h} style={styles.guideItem}>
-                            <Text style={styles.guideItemH}>{item.h}</Text>
-                            <Text style={styles.guideItemT}>{item.t}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
+            {/* Cycle & Period Guide link */}
+            <TouchableOpacity style={styles.insightsLinkCard} activeOpacity={0.85} onPress={() => openProModal(setShowGuide)}>
+              <View style={styles.previewTopRow}>
+                <Text style={styles.previewIcon}>📖</Text>
+                {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+              </View>
+              <Text style={styles.previewTitle}>Cycle & Period Guide</Text>
+              <Text style={styles.previewSub}>Phases, ovulation signs, symptom care & more</Text>
+            </TouchableOpacity>
 
             {/* History */}
             {logs.length > 0 && (
@@ -1023,6 +1007,40 @@ export default function PeriodTrackerScreen({ navigation }) {
               });
             })()}
           </View>
+        </ScrollView>
+      </BottomSheet>
+
+      {/* Cycle & Period Guide modal (Pro) */}
+      <BottomSheet visible={showGuide} onClose={() => setShowGuide(false)} style={styles.sheet}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>📖 Cycle & Period Guide</Text>
+          <TouchableOpacity onPress={() => setShowGuide(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.sheetScrollTall} showsVerticalScrollIndicator={false}>
+          {CYCLE_GUIDE.map(section => {
+            const isOpen = openGuide === section.key;
+            return (
+              <View key={section.key} style={styles.guideSection}>
+                <TouchableOpacity style={styles.guideHeaderRow} activeOpacity={0.7} onPress={() => setOpenGuide(isOpen ? null : section.key)}>
+                  <Text style={styles.guideIcon}>{section.icon}</Text>
+                  <Text style={styles.guideTitle}>{section.title}</Text>
+                  <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textDim} />
+                </TouchableOpacity>
+                {isOpen && (
+                  <View style={styles.guideBody}>
+                    {section.body.map(item => (
+                      <View key={item.h} style={styles.guideItem}>
+                        <Text style={styles.guideItemH}>{item.h}</Text>
+                        <Text style={styles.guideItemT}>{item.t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </ScrollView>
       </BottomSheet>
 
