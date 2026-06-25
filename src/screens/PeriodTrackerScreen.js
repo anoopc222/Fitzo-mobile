@@ -500,7 +500,7 @@ export default function PeriodTrackerScreen({ navigation }) {
                 color={colors.pink}
                 month={calMonth}
                 year={calYear}
-                containerPad={32}
+                containerPad={64}
                 emptyCellColor={colors.bgElevated}
                 mutedTextColor={colors.textDim}
               />
