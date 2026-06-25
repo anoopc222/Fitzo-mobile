@@ -86,7 +86,8 @@ async function fetchHealthLogs(userId) {
     .from('health_logs')
     .select('id, logged_at, notes, custom, sugar, hba1c, avg_glucose, total_cholesterol, triglycerides, hdl, ldl, vldl, urea, creatinine, uric, tsh, t3, t4, vitamin_d, vitamin_b12, hemoglobin')
     .eq('user_id', userId)
-    .order('logged_at', { ascending: false });
+    .order('logged_at', { ascending: false })
+    .limit(200);
   if (error) throw error;
   return (data ?? []).map(row => withComputed({
     id: row.id,
