@@ -160,6 +160,7 @@ async function fetchHome(userId) {
   const [thisWeekStart, thisWeekEnd] = getWeekRange(0);
   const [lastWeekStart, lastWeekEnd] = getWeekRange(1);
   const [monthStart, monthEnd] = getMonthRange();
+  const oneYearAgo = localDateStr(new Date(Date.now() - 365 * 86400000));
 
   const [
     profile,
@@ -238,7 +239,9 @@ async function fetchHome(userId) {
     supabase.from('workout_exercises')
       .select('exercise_name, sets(weight_kg), workout_sessions!inner(date, user_id)')
       .eq('workout_sessions.user_id', userId)
-      .order('exercise_name', { ascending: true }),
+      .gte('workout_sessions.date', oneYearAgo)
+      .order('exercise_name', { ascending: true })
+      .limit(500),
     supabase.from('step_logs')
       .select('logged_at').eq('user_id', userId)
       .order('logged_at', { ascending: false }).limit(120),
