@@ -143,8 +143,7 @@ export default function FoodLogScreen() {
     queryKey: ['foodSearch', debouncedQuery],
     queryFn: () => searchFoods(debouncedQuery),
     enabled: debouncedQuery.length >= 2,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 60 * 1000,
   });
 
   const addMut = useMutation({
