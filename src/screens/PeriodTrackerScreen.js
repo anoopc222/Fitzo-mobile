@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, RefreshControl,
+  TextInput, Alert, ActivityIndicator, RefreshControl, Share, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,7 @@ import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useNotificationPrefs } from '../context/NotificationContext';
-import { scheduleDateReminder, cancelNotificationsByTag } from '../lib/notifications';
+import { scheduleDateReminder, cancelNotificationsByTag, scheduleDailyReminder } from '../lib/notifications';
 import { typography, weight } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import DatePickerField from '../components/ui/DatePickerField';
@@ -130,7 +130,7 @@ const CYCLE_GUIDE = [
 export async function fetchPeriodLogs(userId) {
   const { data, error } = await supabase
     .from('period_logs')
-    .select('id, start_date, end_date, flow, symptoms, mood, notes, pain_level')
+    .select('id, start_date, end_date, flow, symptoms, mood, notes, pain_level, bbt')
     .eq('user_id', userId)
     .order('start_date', { ascending: false })
     .limit(60);
@@ -141,11 +141,29 @@ export async function fetchPeriodLogs(userId) {
 export async function fetchCycleSettings(userId) {
   const { data, error } = await supabase
     .from('cycle_settings')
-    .select('avg_cycle_length, avg_period_length')
+    .select('avg_cycle_length, avg_period_length, pill_reminder_enabled, pill_reminder_time, ttc_mode')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
-  return data ?? { avg_cycle_length: 28, avg_period_length: 5 };
+  return data ?? { avg_cycle_length: 28, avg_period_length: 5, pill_reminder_enabled: false, pill_reminder_time: '08:00', ttc_mode: false };
+}
+
+export async function fetchTodayMedicationLog(userId, todayStr) {
+  const { data, error } = await supabase
+    .from('medication_logs')
+    .select('id, date, taken')
+    .eq('user_id', userId)
+    .eq('date', todayStr)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
+async function upsertMedicationLog(userId, dateStr, taken) {
+  const { error } = await supabase
+    .from('medication_logs')
+    .upsert({ user_id: userId, date: dateStr, taken }, { onConflict: 'user_id,date' });
+  if (error) throw error;
 }
 
 async function logPeriod(userId, values, editingId) {
@@ -235,7 +253,7 @@ function buildSymptomTrend(logs) {
 
 function computeCycleInsights(logs, avgCycleLenSetting, avgPeriodLenSetting) {
   if (logs.length === 0) {
-    return { avgCycleLength: avgCycleLenSetting, avgPeriodLength: avgPeriodLenSetting, nextPeriodStart: null, fertileStart: null, ovulationDay: null, cycleDay: null, phase: null, regularity: null, streak: 0, cycleLengths: [], upcoming: [] };
+    return { avgCycleLength: avgCycleLenSetting, avgPeriodLength: avgPeriodLenSetting, nextPeriodStart: null, fertileStart: null, ovulationDay: null, cycleDay: null, phase: null, regularity: null, streak: 0, cycleLengths: [], upcoming: [], irregularAlert: false };
   }
   const sorted = [...logs].sort((a, b) => a.start_date.localeCompare(b.start_date));
   const cycleLengths = [];
@@ -271,6 +289,16 @@ function computeCycleInsights(logs, avgCycleLenSetting, avgPeriodLenSetting) {
     regularity = { spread, label: spread <= 4 ? 'Regular' : spread <= 9 ? 'Slightly irregular' : 'Irregular' };
   }
 
+  // Irregularity alert: flag if 3+ of the most recent cycle-to-cycle gaps deviate
+  // from the average by more than the "regular" threshold (mirrors the spread logic above).
+  let irregularAlert = false;
+  if (cycleLengths.length >= 3) {
+    const recent = cycleLengths.slice(-4);
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const offCount = recent.filter(len => Math.abs(len - recentAvg) > 4).length;
+    irregularAlert = offCount >= 3;
+  }
+
   // Tracking streak: consecutive logged cycles (newest-first) with no gap > 45 days between starts.
   const newestFirst = [...sorted].reverse();
   let streak = newestFirst.length ? 1 : 0;
@@ -290,7 +318,7 @@ function computeCycleInsights(logs, avgCycleLenSetting, avgPeriodLenSetting) {
     cursorStart = periodStart;
   }
 
-  return { avgCycleLength, avgPeriodLength, nextPeriodStart, fertileStart, ovulationDay, cycleDay, phase, regularity, streak, cycleLengths, upcoming };
+  return { avgCycleLength, avgPeriodLength, nextPeriodStart, fertileStart, ovulationDay, cycleDay, phase, regularity, streak, cycleLengths, upcoming, irregularAlert };
 }
 
 function SymptomTrendChart({ trend, colors, width }) {
@@ -365,6 +393,7 @@ export default function PeriodTrackerScreen({ navigation }) {
 
   const [showModal, setShowModal] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCycleSettings, setShowCycleSettings] = useState(false);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
@@ -375,6 +404,10 @@ export default function PeriodTrackerScreen({ navigation }) {
   const [cycleLenInput, setCycleLenInput] = useState('');
   const [periodLenInput, setPeriodLenInput] = useState('');
   const [pmsChecked, setPmsChecked] = useState({});
+  const [pillReminderEnabled, setPillReminderEnabled] = useState(false);
+  const [pillReminderTime, setPillReminderTime] = useState('08:00');
+  const [ttcMode, setTtcMode] = useState(false);
+  const [irregularBannerDismissed, setIrregularBannerDismissed] = useState(false);
 
   const [startDate, setStartDate] = useState(localDateStr(new Date()));
   const [endDate, setEndDate] = useState('');
@@ -383,6 +416,7 @@ export default function PeriodTrackerScreen({ navigation }) {
   const [mood, setMood] = useState(null);
   const [notes, setNotes] = useState('');
   const [painLevel, setPainLevel] = useState(null);
+  const [bbt, setBbt] = useState('');
   const [editingId, setEditingId] = useState(null);
 
   const { data: logs = [], isLoading, refetch } = useQuery({
@@ -394,6 +428,13 @@ export default function PeriodTrackerScreen({ navigation }) {
   const { data: cycleSettings } = useQuery({
     queryKey: ['cycleSettings', user?.id],
     queryFn: () => fetchCycleSettings(user.id),
+    enabled: !!user?.id,
+  });
+
+  const todayStr = localDateStr(new Date());
+  const { data: todayMedicationLog } = useQuery({
+    queryKey: ['medicationLog', user?.id, todayStr],
+    queryFn: () => fetchTodayMedicationLog(user.id, todayStr),
     enabled: !!user?.id,
   });
 
@@ -464,6 +505,23 @@ export default function PeriodTrackerScreen({ navigation }) {
     },
   });
 
+  const medicationMut = useMutation({
+    mutationFn: (taken) => upsertMedicationLog(user.id, todayStr, taken),
+    onMutate: async (taken) => {
+      await qc.cancelQueries(['medicationLog', user.id, todayStr]);
+      const previous = qc.getQueryData(['medicationLog', user.id, todayStr]);
+      qc.setQueryData(['medicationLog', user.id, todayStr], { id: previous?.id, date: todayStr, taken });
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous !== undefined) qc.setQueryData(['medicationLog', user.id, todayStr], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['medicationLog', user.id, todayStr]);
+    },
+  });
+
   const insights = useMemo(
     () => computeCycleInsights(logs, cycleSettings?.avg_cycle_length ?? 28, cycleSettings?.avg_period_length ?? 5),
     [logs, cycleSettings]
@@ -489,6 +547,7 @@ export default function PeriodTrackerScreen({ navigation }) {
     if (!notifPrefs.periodReminders) return;
     cancelNotificationsByTag('periodReminder');
     cancelNotificationsByTag('ovulationReminder');
+    cancelNotificationsByTag('pmsReminder');
     if (insights.nextPeriodStart) {
       scheduleDateReminder('periodReminder', addDays(insights.nextPeriodStart, -2), 9, 0,
         'Period coming up', 'Your period is expected in 2 days — time to get prepared.');
@@ -497,7 +556,24 @@ export default function PeriodTrackerScreen({ navigation }) {
       scheduleDateReminder('ovulationReminder', insights.ovulationDay, 9, 0,
         'Ovulation day', 'Today is your estimated ovulation day — peak fertility window.');
     }
-  }, [notifPrefs.periodReminders, insights.nextPeriodStart, insights.ovulationDay]);
+    if (daysUntilNext != null && daysUntilNext >= 1 && daysUntilNext <= 5) {
+      const loggedToday = logs.some(l => l.start_date === todayStr);
+      if (!loggedToday) {
+        scheduleDateReminder('pmsReminder', todayStr, 19, 0,
+          'PMS check-in', 'You may be in your PMS window — log how your mood and symptoms feel today.');
+      }
+    }
+  }, [notifPrefs.periodReminders, insights.nextPeriodStart, insights.ovulationDay, daysUntilNext, logs, todayStr]);
+
+  useEffect(() => {
+    if (!cycleSettings?.pill_reminder_enabled) {
+      cancelNotificationsByTag('pillReminder');
+      return;
+    }
+    const [hourStr, minuteStr] = (cycleSettings.pill_reminder_time || '08:00').split(':');
+    scheduleDailyReminder('pillReminder', parseInt(hourStr, 10) || 8, parseInt(minuteStr, 10) || 0,
+      'Pill reminder', "Don't forget to take today's pill.");
+  }, [cycleSettings?.pill_reminder_enabled, cycleSettings?.pill_reminder_time]);
 
   const togglePmsItem = (item) => {
     setPmsChecked(prev => {
@@ -510,6 +586,9 @@ export default function PeriodTrackerScreen({ navigation }) {
   const openCycleSettings = () => {
     setCycleLenInput(String(cycleSettings?.avg_cycle_length ?? insights.avgCycleLength ?? 28));
     setPeriodLenInput(String(cycleSettings?.avg_period_length ?? insights.avgPeriodLength ?? 5));
+    setPillReminderEnabled(!!cycleSettings?.pill_reminder_enabled);
+    setPillReminderTime(cycleSettings?.pill_reminder_time || '08:00');
+    setTtcMode(!!cycleSettings?.ttc_mode);
     setShowCycleSettings(true);
   };
 
@@ -518,7 +597,13 @@ export default function PeriodTrackerScreen({ navigation }) {
     const periodLen = parseInt(periodLenInput, 10);
     if (!cycleLen || cycleLen < 10 || cycleLen > 60) return Alert.alert('Invalid', 'Cycle length must be between 10 and 60 days');
     if (!periodLen || periodLen < 1 || periodLen > 14) return Alert.alert('Invalid', 'Period length must be between 1 and 14 days');
-    cycleSettingsMut.mutate({ avg_cycle_length: cycleLen, avg_period_length: periodLen });
+    cycleSettingsMut.mutate({
+      avg_cycle_length: cycleLen,
+      avg_period_length: periodLen,
+      pill_reminder_enabled: pillReminderEnabled,
+      pill_reminder_time: pillReminderTime || '08:00',
+      ttc_mode: ttcMode,
+    });
   };
 
   const resetForm = () => {
@@ -530,6 +615,7 @@ export default function PeriodTrackerScreen({ navigation }) {
     setMood(null);
     setNotes('');
     setPainLevel(null);
+    setBbt('');
   };
 
   const openEdit = (log) => {
@@ -541,6 +627,7 @@ export default function PeriodTrackerScreen({ navigation }) {
     setMood(log.mood || null);
     setNotes(log.notes || '');
     setPainLevel(log.pain_level ?? null);
+    setBbt(log.bbt != null ? String(log.bbt) : '');
     setShowModal(true);
   };
 
@@ -561,6 +648,7 @@ export default function PeriodTrackerScreen({ navigation }) {
         mood,
         notes: notes || null,
         pain_level: painLevel,
+        bbt: ttcMode && bbt ? parseFloat(bbt) : null,
       },
     });
   };
@@ -568,6 +656,17 @@ export default function PeriodTrackerScreen({ navigation }) {
   const openProModal = (setter) => {
     if (!hasAccess) { setShowPaywall(true); return; }
     setter(true);
+  };
+
+  const handleShare = () => {
+    const recentSymptoms = [...new Set(logs.slice(0, 3).flatMap(l => l.symptoms || []))];
+    const lines = [
+      insights.cycleDay != null ? `Cycle day: ${insights.cycleDay} of ${insights.avgCycleLength}` : null,
+      daysUntilNext != null ? (daysUntilNext <= 0 ? 'Period due today' : `Days until next period: ${daysUntilNext}`) : null,
+      insights.regularity ? `Cycle regularity: ${insights.regularity.label}` : null,
+      recentSymptoms.length ? `Recent symptoms: ${recentSymptoms.join(', ')}` : null,
+    ].filter(Boolean);
+    Share.share({ message: lines.join('\n') || 'No cycle data logged yet.' });
   };
 
   const phaseColor = {
@@ -581,9 +680,14 @@ export default function PeriodTrackerScreen({ navigation }) {
         colors={colors}
         onBack={() => navigation.goBack()}
         right={
-          <TouchableOpacity onPress={() => openProModal(openCycleSettings)}>
-            <Ionicons name="settings-outline" size={20} color={colors.text} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={handleShare}>
+              <Ionicons name="share-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => openProModal(openCycleSettings)}>
+              <Ionicons name="settings-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -655,6 +759,44 @@ export default function PeriodTrackerScreen({ navigation }) {
                     : `Ovulation expected in ${daysUntilOvulation} day${daysUntilOvulation === 1 ? '' : 's'}`}
                 </Text>
               </View>
+            )}
+
+            {/* Irregularity alert */}
+            {insights.irregularAlert && !irregularBannerDismissed && (
+              <View style={[styles.reminderBanner, { borderColor: colors.warn + '55' }]}>
+                <Ionicons name="alert-circle" size={18} color={colors.warn} />
+                <Text style={styles.reminderText}>
+                  Your last few cycles have varied quite a bit in length. If this continues, it may be worth checking in with a doctor.
+                </Text>
+                <TouchableOpacity onPress={() => setIrregularBannerDismissed(true)}>
+                  <Ionicons name="close" size={18} color={colors.textDim} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Fertile window banner (TTC mode) */}
+            {cycleSettings?.ttc_mode && insights.fertileStart && insights.ovulationDay
+              && todayStr >= insights.fertileStart && todayStr <= insights.ovulationDay && (
+              <View style={[styles.reminderBanner, { borderColor: colors.good + '55' }]}>
+                <Ionicons name="heart" size={18} color={colors.good} />
+                <Text style={styles.reminderText}>Fertile window today</Text>
+              </View>
+            )}
+
+            {/* Medication check-off */}
+            {cycleSettings?.pill_reminder_enabled && (
+              <TouchableOpacity
+                style={[styles.reminderBanner, { borderColor: colors.border }]}
+                activeOpacity={0.7}
+                onPress={() => medicationMut.mutate(!todayMedicationLog?.taken)}
+              >
+                <Ionicons
+                  name={todayMedicationLog?.taken ? 'checkbox' : 'square-outline'}
+                  size={18}
+                  color={todayMedicationLog?.taken ? colors.pink : colors.textDim}
+                />
+                <Text style={styles.reminderText}>Took pill today?</Text>
+              </TouchableOpacity>
             )}
 
             {/* PMS prep checklist */}
@@ -744,32 +886,15 @@ export default function PeriodTrackerScreen({ navigation }) {
               <Text style={styles.previewSub}>Fertile window, predictions & symptom trends</Text>
             </TouchableOpacity>
 
-            {/* Cycle & Period Guide — free educational reference */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitleCaps}>CYCLE & PERIOD GUIDE</Text>
-              {CYCLE_GUIDE.map(section => {
-                const isOpen = openGuide === section.key;
-                return (
-                  <View key={section.key} style={styles.guideSection}>
-                    <TouchableOpacity style={styles.guideHeaderRow} activeOpacity={0.7} onPress={() => setOpenGuide(isOpen ? null : section.key)}>
-                      <Text style={styles.guideIcon}>{section.icon}</Text>
-                      <Text style={styles.guideTitle}>{section.title}</Text>
-                      <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textDim} />
-                    </TouchableOpacity>
-                    {isOpen && (
-                      <View style={styles.guideBody}>
-                        {section.body.map(item => (
-                          <View key={item.h} style={styles.guideItem}>
-                            <Text style={styles.guideItemH}>{item.h}</Text>
-                            <Text style={styles.guideItemT}>{item.t}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
+            {/* Cycle & Period Guide link */}
+            <TouchableOpacity style={styles.insightsLinkCard} activeOpacity={0.85} onPress={() => openProModal(setShowGuide)}>
+              <View style={styles.previewTopRow}>
+                <Text style={styles.previewIcon}>📖</Text>
+                {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+              </View>
+              <Text style={styles.previewTitle}>Cycle & Period Guide</Text>
+              <Text style={styles.previewSub}>Phases, ovulation signs, symptom care & more</Text>
+            </TouchableOpacity>
 
             {/* History */}
             {logs.length > 0 && (
@@ -830,6 +955,20 @@ export default function PeriodTrackerScreen({ navigation }) {
             <Text style={styles.fieldLabel}>End date (optional)</Text>
             <DatePickerField value={endDate} onChange={setEndDate} colors={colors} minDate={startDate} maxDate={localDateStr(new Date())} style={{ width: 140 }} />
           </View>
+
+          {ttcMode && (
+            <View style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>BBT (°C, optional)</Text>
+              <TextInput
+                style={styles.numInput}
+                keyboardType="decimal-pad"
+                value={bbt}
+                onChangeText={setBbt}
+                placeholder="36.50"
+                placeholderTextColor={colors.textDim}
+              />
+            </View>
+          )}
 
           <Text style={styles.groupLabel}>Flow</Text>
           <View style={styles.chipRow}>
@@ -1026,6 +1165,40 @@ export default function PeriodTrackerScreen({ navigation }) {
         </ScrollView>
       </BottomSheet>
 
+      {/* Cycle & Period Guide modal (Pro) */}
+      <BottomSheet visible={showGuide} onClose={() => setShowGuide(false)} style={styles.sheet}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>📖 Cycle & Period Guide</Text>
+          <TouchableOpacity onPress={() => setShowGuide(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.sheetScrollTall} showsVerticalScrollIndicator={false}>
+          {CYCLE_GUIDE.map(section => {
+            const isOpen = openGuide === section.key;
+            return (
+              <View key={section.key} style={styles.guideSection}>
+                <TouchableOpacity style={styles.guideHeaderRow} activeOpacity={0.7} onPress={() => setOpenGuide(isOpen ? null : section.key)}>
+                  <Text style={styles.guideIcon}>{section.icon}</Text>
+                  <Text style={styles.guideTitle}>{section.title}</Text>
+                  <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textDim} />
+                </TouchableOpacity>
+                {isOpen && (
+                  <View style={styles.guideBody}>
+                    {section.body.map(item => (
+                      <View key={item.h} style={styles.guideItem}>
+                        <Text style={styles.guideItemH}>{item.h}</Text>
+                        <Text style={styles.guideItemT}>{item.t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      </BottomSheet>
+
       {/* Cycle Settings modal (Pro) */}
       <BottomSheet visible={showCycleSettings} onClose={() => setShowCycleSettings(false)} style={styles.sheet}>
         <View style={styles.sheetHeader}>
@@ -1056,6 +1229,36 @@ export default function PeriodTrackerScreen({ navigation }) {
             placeholderTextColor={colors.textDim}
           />
         </View>
+        <View style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Pill reminder</Text>
+          <Switch
+            value={pillReminderEnabled}
+            onValueChange={setPillReminderEnabled}
+            trackColor={{ false: colors.border, true: colors.pink }}
+            thumbColor="#fff"
+          />
+        </View>
+        {pillReminderEnabled && (
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>Reminder time (HH:MM)</Text>
+            <TextInput
+              style={styles.numInput}
+              value={pillReminderTime}
+              onChangeText={setPillReminderTime}
+              placeholder="08:00"
+              placeholderTextColor={colors.textDim}
+            />
+          </View>
+        )}
+        <View style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Trying to conceive</Text>
+          <Switch
+            value={ttcMode}
+            onValueChange={setTtcMode}
+            trackColor={{ false: colors.border, true: colors.pink }}
+            thumbColor="#fff"
+          />
+        </View>
         <View style={styles.sheetBtns}>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCycleSettings(false)}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -1074,6 +1277,7 @@ export default function PeriodTrackerScreen({ navigation }) {
 const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: 16, paddingBottom: 90 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   fab: {
     position: 'absolute', bottom: 24, right: 24,
     width: 56, height: 56, borderRadius: 28,
