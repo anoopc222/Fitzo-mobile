@@ -583,7 +583,7 @@ export default function MeasurementsScreen({ navigation }) {
 
           <View style={[styles.subCard, { borderColor: colors.purple + '55' }]}>
             <View style={styles.scoreHeaderRow}>
-              <CircularGauge percent={bodyScore ?? 0} size={64} strokeWidth={6} color={colors.accent} bgColor={colors.border} value={bodyScore ?? '--'} label="/100" />
+              <CircularGauge percent={bodyScore ?? 0} size={64} strokeWidth={6} color={colors.accent} bgColor={colors.border} value={bodyScore ?? '--'} label="/100" valueStyle={{ color: colors.text }} labelStyle={{ color: colors.textMuted }} />
               <View style={styles.scoreTextCol}>
                 <Text style={styles.subCardTitleCaps}>🥇 BODY SCORE</Text>
                 <Text style={[styles.scoreLabel, { color: colors.accent }]}>{bodyScoreLabel}</Text>

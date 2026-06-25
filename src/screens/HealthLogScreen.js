@@ -411,7 +411,7 @@ export default function HealthLogScreen({ navigation }) {
           ) : (
             <>
               <View style={styles.scoreBanner}>
-                <CircularGauge percent={score} size={64} strokeWidth={5} color={scoreColor} value={score} label={`/ 100`} />
+                <CircularGauge percent={score} size={64} strokeWidth={5} color={scoreColor} value={score} label={`/ 100`} valueStyle={{ color: colors.text }} labelStyle={{ color: colors.textMuted }} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.scoreMeta}>LATEST · {_hlFmtDate(latest.date).toUpperCase()}</Text>
                   <Text style={[styles.scoreTitle, { color: scoreColor }]}>{scoreLabel}</Text>
