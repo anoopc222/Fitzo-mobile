@@ -17,6 +17,12 @@ import { fetchDietPlans } from '../screens/DietScreen';
 
 const getSections = (colors, isAdmin, isPro, subReady) => [
   {
+    title: 'LADIES',
+    items: [
+      { label: 'Period Tracker', icon: 'water', target: ['Home', 'PeriodTracker'], color: colors.pink },
+    ],
+  },
+  {
     title: 'LOG',
     items: [
       { label: 'Food Log', icon: 'clipboard', target: ['Log'], color: colors.accent },
@@ -29,12 +35,6 @@ const getSections = (colors, isAdmin, isPro, subReady) => [
       { label: 'Progress',      icon: 'trending-up', target: ['Home', 'Progress'],     color: colors.success },
       { label: 'Measurements',  icon: 'body',        target: ['Home', 'Measurements'], color: colors.accent },
       { label: 'Health Log',    icon: 'heart-half',  target: ['Home', 'HealthLog'],    color: colors.danger },
-    ],
-  },
-  {
-    title: 'LADIES',
-    items: [
-      { label: 'Period Tracker', icon: 'water', target: ['Home', 'PeriodTracker'], color: colors.pink },
     ],
   },
   {
