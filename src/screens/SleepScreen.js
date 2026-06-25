@@ -379,12 +379,26 @@ export default function SleepScreen() {
 
   const logMut = useMutation({
     mutationFn: ({ date, hours }) => logSleep(user.id, { date, hours }),
-    onSuccess: () => {
+    onMutate: async ({ date, hours }) => {
+      await qc.cancelQueries(['sleep', user.id]);
+      const previous = qc.getQueryData(['sleep', user.id]);
+      qc.setQueryData(['sleep', user.id], (old) => {
+        if (!old) return old;
+        const rest = old.logs.filter(l => l.logged_at !== date);
+        const optimisticLog = { id: `optimistic-${date}`, hours, quality: null, notes: null, logged_at: date };
+        return { ...old, logs: [optimisticLog, ...rest] };
+      });
+      setShowLogSheet(false); setHoursInput('');
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['sleep', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['sleep', user.id]);
       qc.invalidateQueries(['home', user.id]);
-      setShowLogSheet(false); setHoursInput('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const goalMut = useMutation({

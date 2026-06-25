@@ -568,12 +568,26 @@ export default function WeightScreen() {
 
   const logMut = useMutation({
     mutationFn: ({ date, weight: w, note: logNote }) => logWeight(user.id, { date, weight: w, note: logNote }),
-    onSuccess: () => {
+    onMutate: async ({ date, weight: w, note: logNote }) => {
+      await qc.cancelQueries(['weight', user.id]);
+      const previous = qc.getQueryData(['weight', user.id]);
+      qc.setQueryData(['weight', user.id], (old) => {
+        if (!old) return old;
+        const rest = old.logs.filter(l => l.logged_at !== date);
+        const optimisticLog = { id: `optimistic-${date}`, weight: w, notes: logNote || null, logged_at: date };
+        return { ...old, logs: [optimisticLog, ...rest] };
+      });
+      setShowLogSheet(false); setWeightInput(''); setNote('');
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['weight', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['weight', user.id]);
       qc.invalidateQueries(['home', user.id]);
-      setShowLogSheet(false); setWeightInput(''); setNote('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const goalMut = useMutation({
