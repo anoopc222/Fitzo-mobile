@@ -68,9 +68,14 @@ export async function fetchCycleSettings(userId) {
   return data ?? { avg_cycle_length: 28, avg_period_length: 5 };
 }
 
-async function logPeriod(userId, values) {
-  const { error } = await supabase.from('period_logs').insert({ user_id: userId, ...values });
-  if (error) throw error;
+async function logPeriod(userId, values, editingId) {
+  if (editingId) {
+    const { error } = await supabase.from('period_logs').update(values).eq('id', editingId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('period_logs').insert({ user_id: userId, ...values });
+    if (error) throw error;
+  }
 }
 
 async function deletePeriodLog(id) {
@@ -266,6 +271,7 @@ export default function PeriodTrackerScreen({ navigation }) {
   const [mood, setMood] = useState(null);
   const [notes, setNotes] = useState('');
   const [painLevel, setPainLevel] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   const { data: logs = [], isLoading, refetch } = useQuery({
     queryKey: ['periodLogs', user?.id],
@@ -287,11 +293,15 @@ export default function PeriodTrackerScreen({ navigation }) {
   };
 
   const logMut = useMutation({
-    mutationFn: (values) => logPeriod(user.id, values),
-    onMutate: async (values) => {
+    mutationFn: ({ values, editingId }) => logPeriod(user.id, values, editingId),
+    onMutate: async ({ values, editingId }) => {
       await qc.cancelQueries(['periodLogs', user.id]);
       const previous = qc.getQueryData(['periodLogs', user.id]);
       qc.setQueryData(['periodLogs', user.id], (old) => {
+        if (editingId) {
+          return (old || []).map(l => (l.id === editingId ? { ...l, ...values } : l))
+            .sort((a, b) => b.start_date.localeCompare(a.start_date));
+        }
         const optimisticLog = { id: `optimistic-${values.start_date}`, ...values };
         return [optimisticLog, ...(old || [])].sort((a, b) => b.start_date.localeCompare(a.start_date));
       });
@@ -385,6 +395,7 @@ export default function PeriodTrackerScreen({ navigation }) {
   };
 
   const resetForm = () => {
+    setEditingId(null);
     setStartDate(localDateStr(new Date()));
     setEndDate('');
     setFlow('medium');
@@ -392,6 +403,18 @@ export default function PeriodTrackerScreen({ navigation }) {
     setMood(null);
     setNotes('');
     setPainLevel(null);
+  };
+
+  const openEdit = (log) => {
+    setEditingId(log.id);
+    setStartDate(log.start_date);
+    setEndDate(log.end_date || '');
+    setFlow(log.flow || 'medium');
+    setSymptoms(log.symptoms || []);
+    setMood(log.mood || null);
+    setNotes(log.notes || '');
+    setPainLevel(log.pain_level ?? null);
+    setShowModal(true);
   };
 
   const toggleSymptom = (s) => {
@@ -402,13 +425,16 @@ export default function PeriodTrackerScreen({ navigation }) {
     if (!startDate) return Alert.alert('Required', 'Select a start date');
     if (endDate && endDate < startDate) return Alert.alert('Invalid', 'End date must be after start date');
     logMut.mutate({
-      start_date: startDate,
-      end_date: endDate || null,
-      flow,
-      symptoms,
-      mood,
-      notes: notes || null,
-      pain_level: painLevel,
+      editingId,
+      values: {
+        start_date: startDate,
+        end_date: endDate || null,
+        flow,
+        symptoms,
+        mood,
+        notes: notes || null,
+        pain_level: painLevel,
+      },
     });
   };
 
@@ -578,7 +604,7 @@ export default function PeriodTrackerScreen({ navigation }) {
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>History</Text>
                 {logs.map((log) => (
-                  <View key={log.id} style={styles.historyItem}>
+                  <TouchableOpacity key={log.id} style={styles.historyItem} activeOpacity={0.7} onPress={() => openEdit(log)}>
                     <View style={[styles.flowDot, { backgroundColor: FLOW_BY_KEY[log.flow]?.color || colors.pink }]} />
                     <View style={styles.historyLeft}>
                       <Text style={styles.historyDate}>
@@ -602,7 +628,8 @@ export default function PeriodTrackerScreen({ navigation }) {
                     >
                       <Ionicons name="trash-outline" size={16} color={colors.textDim} />
                     </TouchableOpacity>
-                  </View>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textDim} />
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -617,7 +644,7 @@ export default function PeriodTrackerScreen({ navigation }) {
       {/* Log Modal */}
       <BottomSheet visible={showModal} onClose={() => setShowModal(false)} style={styles.sheet}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Log Period</Text>
+          <Text style={styles.sheetTitle}>{editingId ? 'Edit Period' : 'Log Period'}</Text>
           <TouchableOpacity onPress={() => setShowModal(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
