@@ -1195,7 +1195,7 @@ export default function HomeScreen() {
             </View>
 
             {/* ── Go Pro banner ─────────────────────────────────── */}
-            {!isPro && (
+            {subReady && !isPro && (
               <TouchableOpacity
                 style={styles.proBanner}
                 activeOpacity={0.85}
