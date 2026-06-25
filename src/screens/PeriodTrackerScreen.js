@@ -386,7 +386,8 @@ const styles_trend = StyleSheet.create({
 export default function PeriodTrackerScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
-  const { hasAccess } = useSubscription();
+  const { hasAccess, isPro, isAdmin } = useSubscription();
+  const isProOnly = isPro || isAdmin;
   const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
@@ -1230,15 +1231,21 @@ export default function PeriodTrackerScreen({ navigation }) {
           />
         </View>
         <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>Pill reminder</Text>
+          <View style={styles.fieldLabelRow}>
+            <Text style={styles.fieldLabel}>Pill reminder</Text>
+            {!isProOnly && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+          </View>
           <Switch
             value={pillReminderEnabled}
-            onValueChange={setPillReminderEnabled}
+            onValueChange={(v) => {
+              if (!isProOnly) { setShowPaywall(true); return; }
+              setPillReminderEnabled(v);
+            }}
             trackColor={{ false: colors.border, true: colors.pink }}
             thumbColor="#fff"
           />
         </View>
-        {pillReminderEnabled && (
+        {isProOnly && pillReminderEnabled && (
           <View style={styles.fieldRow}>
             <Text style={styles.fieldLabel}>Reminder time (HH:MM)</Text>
             <TextInput
@@ -1251,10 +1258,16 @@ export default function PeriodTrackerScreen({ navigation }) {
           </View>
         )}
         <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>Trying to conceive</Text>
+          <View style={styles.fieldLabelRow}>
+            <Text style={styles.fieldLabel}>Trying to conceive</Text>
+            {!isProOnly && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+          </View>
           <Switch
             value={ttcMode}
-            onValueChange={setTtcMode}
+            onValueChange={(v) => {
+              if (!isProOnly) { setShowPaywall(true); return; }
+              setTtcMode(v);
+            }}
             trackColor={{ false: colors.border, true: colors.pink }}
             thumbColor="#fff"
           />
@@ -1355,6 +1368,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   fieldLabel: { flex: 1, fontSize: typography.sm, color: colors.text, fontWeight: weight.medium },
+  fieldLabelRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
 
   groupLabel: { fontSize: 11, fontWeight: weight.bold, letterSpacing: 1, color: colors.textMuted, marginTop: 14, marginBottom: 8 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
