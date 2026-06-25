@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -22,7 +22,6 @@ import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
-import { useOnboarding } from '../context/OnboardingContext';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -352,10 +351,6 @@ export default function SleepScreen() {
   const heatmapExport = useExportCard();
   const { hasAccess, isPro } = useSubscription();
   const [showRangePaywall, setShowRangePaywall] = useState(false);
-  const { startTour } = useOnboarding();
-  const recoveryGaugeRef = useRef(null);
-  const sleepDebtRef = useRef(null);
-  const heatmapRef = useRef(null);
 
   const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
   const [showLogSheet, setShowLogSheet] = useState(false);
@@ -561,27 +556,6 @@ export default function SleepScreen() {
     setShowLogSheet(true);
   };
 
-  useEffect(() => {
-    if (!data) return;
-    startTour('sleep', [
-      {
-        ref: recoveryGaugeRef,
-        title: 'Recovery score',
-        description: 'Blends last night\'s sleep duration vs. your goal with sleep quality to estimate how recovered you are today.',
-      },
-      {
-        ref: sleepDebtRef,
-        title: 'Sleep debt',
-        description: 'The total shortfall between your sleep goal and your actual hours over the last 7 nights.',
-      },
-      {
-        ref: heatmapRef,
-        title: 'Monthly heatmap',
-        description: 'Each day is colored by how close you got to your sleep goal — a quick way to spot consistency over the month.',
-      },
-    ]);
-  }, [data, startTour]);
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
@@ -631,7 +605,7 @@ export default function SleepScreen() {
                   <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
-              <View style={styles.recoveryRow} ref={recoveryGaugeRef}>
+              <View style={styles.recoveryRow}>
                 <CircularGauge
                   percent={recoveryScore} size={92} strokeWidth={9} color={recoveryColor}
                   value={recoveryScore || '—'} label="RECOVERY"
@@ -646,9 +620,7 @@ export default function SleepScreen() {
               <View style={styles.statTileRow}>
                 <StatTile value={`${avg7}h`} label="7D AVG HRS" colors={colors} />
                 <View style={styles.statTileDivider} />
-                <View ref={sleepDebtRef}>
-                  <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
-                </View>
+                <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
                 <View style={styles.statTileDivider} />
                 <StatTile value={`${streak}d`} label="GOAL STREAK" color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} colors={colors} />
                 <View style={styles.statTileDivider} />
@@ -706,7 +678,7 @@ export default function SleepScreen() {
             )}
 
             {/* ── Monthly Heatmap ── */}
-            <View style={styles.card} ref={heatmapRef}>
+            <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
                 <TouchableOpacity

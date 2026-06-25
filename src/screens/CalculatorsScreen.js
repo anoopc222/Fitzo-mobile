@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
 } from 'react-native';
@@ -9,7 +9,6 @@ import { typography, weight } from '../theme/typography';
 import { useSubscription } from '../context/SubscriptionContext';
 import PaywallModal from '../components/ui/PaywallModal';
 import ScreenHeader from '../components/ScreenHeader';
-import { useOnboarding } from '../context/OnboardingContext';
 
 // Some calculator entries below use a theme token name (e.g. 'accent') instead of
 // a literal hex value for their `color` field, since CALCULATORS is static module
@@ -419,24 +418,6 @@ export default function CalculatorsScreen({ navigation }) {
   const [results, setResults] = useState({});
   const { hasAccess } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
-  const { startTour } = useOnboarding();
-  const countRef = useRef(null);
-  const firstCalcRef = useRef(null);
-
-  useEffect(() => {
-    startTour('calculators', [
-      {
-        ref: countRef,
-        title: `${CALCULATORS.length} calculators`,
-        description: 'Browse all available calculators here — scroll down to find the one you need.',
-      },
-      {
-        ref: firstCalcRef,
-        title: 'Tap to expand',
-        description: 'Tap any calculator card to expand it, enter your numbers, and see the results.',
-      },
-    ]);
-  }, []);
 
   const handleCompute = (calc) => {
     try {
@@ -458,11 +439,11 @@ export default function CalculatorsScreen({ navigation }) {
         title="CALCULATORS"
         colors={colors}
         onBack={() => navigation.goBack()}
-        right={<View ref={countRef}><Text style={styles.count}>{CALCULATORS.length}</Text></View>}
+        right={<Text style={styles.count}>{CALCULATORS.length}</Text>}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        {CALCULATORS.map((calc, index) => {
+        {CALCULATORS.map((calc) => {
           const isOpen = openId === calc.id;
           const calcResults = results[calc.id] ?? [];
           const calcColor = resolveColor(calc.color, colors);
@@ -470,7 +451,6 @@ export default function CalculatorsScreen({ navigation }) {
           return (
             <View key={calc.id} style={styles.calcCard}>
               <TouchableOpacity
-                ref={index === 0 ? firstCalcRef : undefined}
                 style={styles.calcHeader}
                 onPress={() => {
                   if (calc.pro && !hasAccess) { setShowPaywall(true); return; }
