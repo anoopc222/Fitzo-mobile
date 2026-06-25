@@ -62,7 +62,7 @@ function fromDisp(val, unit) { return unit === 'lbs' ? +(val / KG_TO_LBS).toFixe
 async function fetchWeightData(userId) {
   const [logs, profile] = await Promise.all([
     supabase.from('weight_logs').select('id, weight, notes, logged_at').eq('user_id', userId).order('logged_at', { ascending: false }).limit(400),
-    supabase.from('profiles').select('weight_goal_kg, full_name').eq('id', userId).single(),
+    supabase.from('profiles').select('weight_goal_kg, weight_goal_set_once, full_name').eq('id', userId).single(),
   ]);
   if (logs.error) throw logs.error;
   const normLogs = (logs.data ?? []).map(l => ({ ...l, logged_at: l.logged_at.slice(0, 10) }));
@@ -90,8 +90,10 @@ async function logWeight(userId, { date, weight: weightKg, note }) {
   }
 }
 
-async function updateWeightGoal(userId, goalKg) {
-  const { error } = await supabase.from('profiles').update({ weight_goal_kg: goalKg }).eq('id', userId);
+async function updateWeightGoal(userId, goalKg, markSetOnce) {
+  const fields = { weight_goal_kg: goalKg };
+  if (markSetOnce) fields.weight_goal_set_once = true;
+  const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
   if (error) throw error;
 }
 
@@ -562,6 +564,8 @@ export default function WeightScreen() {
 
   const logs = data?.logs ?? [];
   const goalKg = data?.profile?.weight_goal_kg ?? 70;
+  const weightGoalSetOnce = data?.profile?.weight_goal_set_once ?? false;
+  const canEditGoal = isPro || !weightGoalSetOnce;
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
   const sortedAsc = useMemo(() => [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at)), [logs]);
@@ -577,7 +581,7 @@ export default function WeightScreen() {
   });
 
   const goalMut = useMutation({
-    mutationFn: (goal) => updateWeightGoal(user.id, fromDisp(parseFloat(goal), unit)),
+    mutationFn: (goal) => updateWeightGoal(user.id, fromDisp(parseFloat(goal), unit), !isPro),
     onSuccess: () => { qc.invalidateQueries(['weight', user.id]); setGoalInput(''); setShowGoalSheet(false); },
   });
 
@@ -723,10 +727,10 @@ export default function WeightScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.goalPillBtn}
-                  onPress={() => { if (!isPro) { setShowPaywall(true); return; } setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
+                  onPress={() => { if (!canEditGoal) { setShowPaywall(true); return; } setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
                 >
                   <Text style={styles.goalPillBtnText}>Edit Goal</Text>
-                  <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
+                  <Ionicons name={canEditGoal ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
 
