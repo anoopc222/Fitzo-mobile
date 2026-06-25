@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import * as Linking from 'expo-linking';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useNotificationPrefs } from '../context/NotificationContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
@@ -16,6 +17,12 @@ export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
   const { isPro, isInTrial, manageSubscriptions, ready: subReady } = useSubscription() ?? {};
+  const { prefs: notifPrefs, setPref: setNotifPref } = useNotificationPrefs() ?? { prefs: {}, setPref: () => {} };
+
+  const handleToggleNotif = async (key, value) => {
+    const ok = await setNotifPref(key, value);
+    if (!ok) Alert.alert('Permission needed', 'Enable notifications for FitZo in your device settings to use reminders.');
+  };
 
   const handleManageSubscription = async () => {
     try {
@@ -85,6 +92,27 @@ export default function SettingsScreen({ navigation }) {
             onPress={handleManageSubscription} />
         </View>
 
+        {/* ── Notifications ──────────────────────────────────────── */}
+        <SectionHeader title="Notifications" />
+        <View style={styles.card}>
+          <SwitchRow
+            icon="water-outline" label="Period & ovulation reminders"
+            value={!!notifPrefs.periodReminders}
+            onValueChange={(v) => handleToggleNotif('periodReminders', v)}
+          />
+          <SwitchRow
+            icon="clipboard-outline" label="Daily log reminder (8 PM)"
+            value={!!notifPrefs.dailyLogReminder}
+            onValueChange={(v) => handleToggleNotif('dailyLogReminder', v)}
+          />
+          <SwitchRow
+            icon="barbell-outline" label="Workout reminder (6 PM)"
+            value={!!notifPrefs.workoutReminder}
+            onValueChange={(v) => handleToggleNotif('workoutReminder', v)}
+            last
+          />
+        </View>
+
         {/* ── Danger Zone ─────────────────────────────────────────── */}
         <SectionHeader title="Danger Zone" />
         <View style={[styles.card, { borderColor: colors.danger + '44' }]}>
@@ -124,6 +152,23 @@ function SettingRow({ icon, label, value, chevron, onPress, last, danger }) {
       {value && <Text style={styles.settingValue}>{value}</Text>}
       {chevron && <Ionicons name="chevron-forward" size={15} color={colors.textDim} />}
     </TouchableOpacity>
+  );
+}
+
+function SwitchRow({ icon, label, value, onValueChange, last }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return (
+    <View style={[styles.settingRow, !last && styles.rowBorder]}>
+      <Ionicons name={icon} size={18} color={colors.textMuted} />
+      <Text style={styles.settingLabel}>{label}</Text>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: colors.border, true: colors.accent }}
+        thumbColor="#fff"
+      />
+    </View>
   );
 }
 

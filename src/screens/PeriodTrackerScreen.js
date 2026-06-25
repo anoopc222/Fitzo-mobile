@@ -12,6 +12,8 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useNotificationPrefs } from '../context/NotificationContext';
+import { scheduleDateReminder, cancelNotificationsByTag } from '../lib/notifications';
 import { typography, weight } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import DatePickerField from '../components/ui/DatePickerField';
@@ -357,6 +359,7 @@ export default function PeriodTrackerScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { hasAccess } = useSubscription();
+  const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
 
@@ -481,6 +484,20 @@ export default function PeriodTrackerScreen({ navigation }) {
       setPmsChecked(raw ? JSON.parse(raw) : {});
     });
   }, [pmsKey]);
+
+  useEffect(() => {
+    if (!notifPrefs.periodReminders) return;
+    cancelNotificationsByTag('periodReminder');
+    cancelNotificationsByTag('ovulationReminder');
+    if (insights.nextPeriodStart) {
+      scheduleDateReminder('periodReminder', addDays(insights.nextPeriodStart, -2), 9, 0,
+        'Period coming up', 'Your period is expected in 2 days — time to get prepared.');
+    }
+    if (insights.ovulationDay) {
+      scheduleDateReminder('ovulationReminder', insights.ovulationDay, 9, 0,
+        'Ovulation day', 'Today is your estimated ovulation day — peak fertility window.');
+    }
+  }, [notifPrefs.periodReminders, insights.nextPeriodStart, insights.ovulationDay]);
 
   const togglePmsItem = (item) => {
     setPmsChecked(prev => {
