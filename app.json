@@ -7,15 +7,17 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "sdkVersion": "54.0.0",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0c0c0f",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fitness.fitzo"
     },
     "android": {
       "package": "com.fitness.fitzo",
+      "backgroundColor": "#0c0c0f",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0c0c0f",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -27,7 +29,15 @@
     "plugins": [
       "expo-secure-store",
       "expo-font",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0c0c0f"
+        }
+      ]
     ],
     "extra": {
       "eas": {

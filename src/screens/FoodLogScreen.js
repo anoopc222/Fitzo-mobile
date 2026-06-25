@@ -16,6 +16,7 @@ import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -148,27 +149,77 @@ export default function FoodLogScreen() {
 
   const addMut = useMutation({
     mutationFn: (food) => addFood(user.id, food),
-    onSuccess: () => {
+    onMutate: async (food) => {
+      await qc.cancelQueries(['food', user.id, today]);
+      const previous = qc.getQueryData(['food', user.id, today]);
+      qc.setQueryData(['food', user.id, today], (old) => {
+        if (!old) return old;
+        const optimisticLog = { id: `optimistic-${Date.now()}`, ...food, serving_size: food.serving_size ?? null, logged_at: new Date().toISOString() };
+        return { ...old, logs: [...old.logs, optimisticLog] };
+      });
+      closeSheet();
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['food', user.id, today], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['food', user.id, today]);
       qc.invalidateQueries(['home', user.id]);
-      closeSheet();
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const deleteMut = useMutation({
     mutationFn: deleteFoodLog,
-    onSuccess: () => { qc.invalidateQueries(['food', user.id, today]); qc.invalidateQueries(['home', user.id]); },
+    onMutate: async (id) => {
+      await qc.cancelQueries(['food', user.id, today]);
+      const previous = qc.getQueryData(['food', user.id, today]);
+      qc.setQueryData(['food', user.id, today], (old) => {
+        if (!old) return old;
+        return { ...old, logs: old.logs.filter(l => l.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['food', user.id, today], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['food', user.id, today]);
+      qc.invalidateQueries(['home', user.id]);
+    },
   });
 
   const targetsMut = useMutation({
     mutationFn: (vals) => updateMacroTargets(user.id, vals),
-    onSuccess: () => {
+    onMutate: async (vals) => {
+      await qc.cancelQueries(['food', user.id, today]);
+      const previous = qc.getQueryData(['food', user.id, today]);
+      qc.setQueryData(['food', user.id, today], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          profile: {
+            ...old.profile,
+            calorie_target: vals.calories,
+            protein_target: vals.protein,
+            carbs_target: vals.carbs,
+            fats_target: vals.fats,
+          },
+        };
+      });
+      setShowTargetsSheet(false);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['food', user.id, today], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['food', user.id, today]);
       qc.invalidateQueries(['home', user.id]);
-      setShowTargetsSheet(false);
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const logs = data?.logs ?? [];
@@ -289,7 +340,7 @@ export default function FoodLogScreen() {
 
       <ScrollView contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}>
-        {isLoading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} /> : (
+        {isLoading ? <SkeletonScreen cards={5} linesPerCard={2} /> : (
           <>
             {/* Calorie summary */}
             <View>

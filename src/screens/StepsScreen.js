@@ -18,6 +18,7 @@ import Chip from '../components/ui/Chip';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -422,7 +423,7 @@ function DailyLogBar({ steps, goal, barMax, colors }) {
 // ─── Monthly Heatmap — ports _renderStepsHeatmap bucket logic ───────────────
 function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress, cardWidth }) {
   const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
-  const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
+  const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -536,12 +537,30 @@ export default function StepsScreen() {
   const logMut = useMutation({
     mutationFn: ({ date, steps, activityType, note: logNote }) =>
       logSteps(user.id, { date, steps, goal: defaultGoal, activityType, note: logNote }),
-    onSuccess: () => {
+    onMutate: async ({ date, steps, activityType, note: logNote }) => {
+      await qc.cancelQueries(['steps', user.id]);
+      const previous = qc.getQueryData(['steps', user.id]);
+      qc.setQueryData(['steps', user.id], (old) => {
+        if (!old) return old;
+        const rest = old.logs.filter(l => l.logged_at !== date);
+        const optimisticLog = {
+          id: `optimistic-${date}`, steps, goal: defaultGoal,
+          distance_km: +(steps * KM_PER_STEP).toFixed(3), calories_burned: Math.round(steps * KCAL_PER_STEP),
+          activity_type: activityType || 'walk', note: logNote || null, logged_at: date,
+        };
+        return { ...old, logs: [optimisticLog, ...rest] };
+      });
+      setShowLogSheet(false); setStepsInput(''); setNote('');
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['steps', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['steps', user.id]);
       qc.invalidateQueries(['home', user.id]);
-      setShowLogSheet(false); setStepsInput(''); setNote('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const goalMut = useMutation({
@@ -754,7 +773,7 @@ export default function StepsScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
       >
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <SkeletonScreen cards={4} linesPerCard={3} />
         ) : (
           <>
             {/* ── Hero ── */}

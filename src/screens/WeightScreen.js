@@ -20,6 +20,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import CircularGauge from '../components/CircularGauge';
 import ScreenHeader from '../components/ScreenHeader';
 import { useExportCard } from '../hooks/useExportCard';
+import { SkeletonCard } from '../components/Skeleton';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const KG_TO_LBS = 2.20462;
@@ -103,7 +104,7 @@ async function deleteWeightLog(id) {
 // ─── Weight Heatmap — ports _renderWeightHeatmap (quartile-relative-to-month) ─
 function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true, onLockedPress, cardWidth }) {
   const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
-  const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
+  const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -568,12 +569,26 @@ export default function WeightScreen() {
 
   const logMut = useMutation({
     mutationFn: ({ date, weight: w, note: logNote }) => logWeight(user.id, { date, weight: w, note: logNote }),
-    onSuccess: () => {
+    onMutate: async ({ date, weight: w, note: logNote }) => {
+      await qc.cancelQueries(['weight', user.id]);
+      const previous = qc.getQueryData(['weight', user.id]);
+      qc.setQueryData(['weight', user.id], (old) => {
+        if (!old) return old;
+        const rest = old.logs.filter(l => l.logged_at !== date);
+        const optimisticLog = { id: `optimistic-${date}`, weight: w, notes: logNote || null, logged_at: date };
+        return { ...old, logs: [optimisticLog, ...rest] };
+      });
+      setShowLogSheet(false); setWeightInput(''); setNote('');
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['weight', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['weight', user.id]);
       qc.invalidateQueries(['home', user.id]);
-      setShowLogSheet(false); setWeightInput(''); setNote('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const goalMut = useMutation({
@@ -708,7 +723,17 @@ export default function WeightScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
       >
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <View>
+            {/* Hero + goal ring */}
+            <SkeletonCard lines={2} style={{ height: 140 }} />
+            {/* Trend chart */}
+            <SkeletonCard lines={1} style={{ height: 160 }} />
+            {/* Month heatmap */}
+            <SkeletonCard lines={4} />
+            {/* History list rows */}
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={3} />
+          </View>
         ) : (
           <>
             {/* ── Hero + Goal Progress + Stats (merged) ── */}

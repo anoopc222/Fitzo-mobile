@@ -65,6 +65,10 @@ export default function TabNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        // Mount all tab screens up front instead of lazily on first focus, so
+        // their useQuery calls fire in parallel at launch and switching tabs
+        // never shows a cold loading spinner.
+        lazy: false,
         tabBarStyle: {
           backgroundColor: colors.bgCard,
           borderTopColor: colors.border,

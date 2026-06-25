@@ -1,13 +1,20 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, Text, Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useMoreMenu } from '../context/MoreMenuContext';
 import { typography, weight } from '../theme/typography';
 import { navigate } from '../navigation/navigationRef';
+import { fetchProgress } from '../screens/ProgressScreen';
+import { fetchMeasurements, fetchBodyStats } from '../screens/MeasurementsScreen';
+import { fetchHealthLogs } from '../screens/HealthLogScreen';
+import { fetchProfile } from '../screens/ProfileScreen';
+import { fetchDietPlans } from '../screens/DietScreen';
 
-const getSections = (colors, isAdmin, isPro) => [
+const getSections = (colors, isAdmin, isPro, subReady) => [
   {
     title: 'LOG',
     items: [
@@ -32,9 +39,9 @@ const getSections = (colors, isAdmin, isPro) => [
   {
     title: 'ACCOUNT',
     items: [
-      ...(isPro ? [] : [
+      ...(subReady && !isPro ? [
         { label: 'Go Pro', icon: 'rocket', target: ['Home', 'Subscription'], color: colors.accent },
-      ]),
+      ] : []),
       { label: 'Profile',       icon: 'person',      target: ['Home', 'Profile'],      color: colors.blue },
       { label: 'Settings',      icon: 'settings',    target: ['Home', 'Settings'],      color: colors.textMuted },
     ],
@@ -49,10 +56,26 @@ const getSections = (colors, isAdmin, isPro) => [
 
 export default function MoreSheetModal() {
   const { colors } = useTheme();
-  const { isAdmin, isPro } = useSubscription();
+  const { user } = useAuth();
+  const { isAdmin, isPro, ready: subReady } = useSubscription();
   const { visible, close } = useMoreMenu();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const SECTIONS = useMemo(() => getSections(colors, isAdmin, isPro), [colors, isAdmin, isPro]);
+  const SECTIONS = useMemo(() => getSections(colors, isAdmin, isPro, subReady), [colors, isAdmin, isPro, subReady]);
+  const qc = useQueryClient();
+
+  // Prefetch the screens reachable from this sheet as soon as it opens, so
+  // by the time the user taps a row its data is already in cache instead of
+  // loading fresh after navigation. prefetchQuery is a no-op network-wise if
+  // the cached data for that key is still within staleTime.
+  useEffect(() => {
+    if (!visible || !user?.id) return;
+    qc.prefetchQuery({ queryKey: ['progress', user.id], queryFn: () => fetchProgress(user.id) });
+    qc.prefetchQuery({ queryKey: ['measurements', user.id], queryFn: () => fetchMeasurements(user.id) });
+    qc.prefetchQuery({ queryKey: ['measurements-bodystats', user.id], queryFn: () => fetchBodyStats(user.id) });
+    qc.prefetchQuery({ queryKey: ['healthLogs', user.id], queryFn: () => fetchHealthLogs(user.id) });
+    qc.prefetchQuery({ queryKey: ['profile', user.id], queryFn: () => fetchProfile(user.id) });
+    qc.prefetchQuery({ queryKey: ['dietPlans', user.id], queryFn: () => fetchDietPlans(user.id) });
+  }, [visible, user?.id, qc]);
 
   const onPressItem = (target) => {
     close();

@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import DatePickerField from '../components/ui/DatePickerField';
+import SkeletonScreen from '../components/Skeleton';
 
 function localDateStr(d) {
   const y = d.getFullYear();
@@ -29,7 +30,7 @@ const GOALS = [
 
 const SEX_OPTIONS = ['Male', 'Female', 'Other'];
 
-async function fetchProfile(userId) {
+export async function fetchProfile(userId) {
   const [profile, stats] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
     Promise.all([
@@ -102,12 +103,21 @@ export default function ProfileScreen({ navigation }) {
 
   const updateMut = useMutation({
     mutationFn: (fields) => updateProfile(user.id, fields),
-    onSuccess: () => {
+    onMutate: async (fields) => {
+      await qc.cancelQueries(['profile', user.id]);
+      const previous = qc.getQueryData(['profile', user.id]);
+      qc.setQueryData(['profile', user.id], (old) => old ? { ...old, profile: { ...old.profile, ...fields } } : old);
+      setEditing(false);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['profile', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['profile', user.id]);
       qc.invalidateQueries(['home', user.id]);
-      setEditing(false);
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const handleSave = () => {
@@ -168,7 +178,9 @@ export default function ProfileScreen({ navigation }) {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        {isLoading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} /> : (
+        {isLoading ? (
+          <SkeletonScreen cards={4} linesPerCard={3} />
+        ) : (
           <>
             {/* Avatar */}
             <View style={styles.avatarSection}>

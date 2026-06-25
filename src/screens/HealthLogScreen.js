@@ -16,6 +16,7 @@ import DatePickerField from '../components/ui/DatePickerField';
 import CircularGauge from '../components/CircularGauge';
 import ProGate from '../components/ui/ProGate';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 // ─── Marker reference data — ports HL_REF / HL_GROUPS from reference app ────
 const HL_REF = {
@@ -81,7 +82,7 @@ function withComputed(rec) {
 }
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
-async function fetchHealthLogs(userId) {
+export async function fetchHealthLogs(userId) {
   const { data, error } = await supabase
     .from('health_logs')
     .select('id, logged_at, notes, custom, sugar, hba1c, avg_glucose, total_cholesterol, triglycerides, hdl, ldl, vldl, urea, creatinine, uric, tsh, t3, t4, vitamin_d, vitamin_b12, hemoglobin')
@@ -232,13 +233,40 @@ export default function HealthLogScreen({ navigation }) {
 
   const saveMut = useMutation({
     mutationFn: ({ id, rec }) => saveSession(user.id, id, rec),
-    onSuccess: () => { qc.invalidateQueries(['healthLogs', user.id]); setShowSheet(false); },
-    onError: (e) => Alert.alert('Error', e.message),
+    onMutate: async ({ id, rec }) => {
+      await qc.cancelQueries(['healthLogs', user.id]);
+      const previous = qc.getQueryData(['healthLogs', user.id]);
+      qc.setQueryData(['healthLogs', user.id], (old) => {
+        if (!old) return old;
+        if (id) {
+          return old.map(r => r.id === id ? withComputed({ id, date: rec.date, _custom: rec._custom || [], ...rec }) : r);
+        }
+        const optimisticRec = withComputed({ id: `optimistic-${rec.date}`, date: rec.date, _custom: rec._custom || [], ...rec });
+        return [optimisticRec, ...old];
+      });
+      setShowSheet(false);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['healthLogs', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => qc.invalidateQueries(['healthLogs', user.id]),
   });
 
   const deleteMut = useMutation({
     mutationFn: deleteSession,
-    onSuccess: () => qc.invalidateQueries(['healthLogs', user.id]),
+    onMutate: async (id) => {
+      await qc.cancelQueries(['healthLogs', user.id]);
+      const previous = qc.getQueryData(['healthLogs', user.id]);
+      qc.setQueryData(['healthLogs', user.id], (old) => old ? old.filter(r => r.id !== id) : old);
+      return { previous };
+    },
+    onError: (e, id, context) => {
+      if (context?.previous) qc.setQueryData(['healthLogs', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => qc.invalidateQueries(['healthLogs', user.id]),
   });
 
   const openAdd = () => {
@@ -369,7 +397,7 @@ export default function HealthLogScreen({ navigation }) {
         ) : null}
 
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <SkeletonScreen cards={4} linesPerCard={2} />
         ) : (
         <ProGate label="Health log">
         {search ? (

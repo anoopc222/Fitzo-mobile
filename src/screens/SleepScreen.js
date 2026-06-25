@@ -21,6 +21,7 @@ import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -103,7 +104,7 @@ async function deleteSleepLog(id) {
 // ─── Sleep Heatmap — ports _renderSleepHeatmap (ratio-to-goal buckets) ──────
 function SleepHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress, cardWidth }) {
   const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
-  const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
+  const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -379,12 +380,26 @@ export default function SleepScreen() {
 
   const logMut = useMutation({
     mutationFn: ({ date, hours }) => logSleep(user.id, { date, hours }),
-    onSuccess: () => {
+    onMutate: async ({ date, hours }) => {
+      await qc.cancelQueries(['sleep', user.id]);
+      const previous = qc.getQueryData(['sleep', user.id]);
+      qc.setQueryData(['sleep', user.id], (old) => {
+        if (!old) return old;
+        const rest = old.logs.filter(l => l.logged_at !== date);
+        const optimisticLog = { id: `optimistic-${date}`, hours, quality: null, notes: null, logged_at: date };
+        return { ...old, logs: [optimisticLog, ...rest] };
+      });
+      setShowLogSheet(false); setHoursInput('');
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['sleep', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['sleep', user.id]);
       qc.invalidateQueries(['home', user.id]);
-      setShowLogSheet(false); setHoursInput('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const goalMut = useMutation({
@@ -560,7 +575,7 @@ export default function SleepScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
       >
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <SkeletonScreen cards={4} linesPerCard={3} />
         ) : (
           <>
             {/* ── Recovery card ── */}

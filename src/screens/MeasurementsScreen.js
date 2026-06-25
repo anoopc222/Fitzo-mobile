@@ -17,6 +17,7 @@ import DatePickerField from '../components/ui/DatePickerField';
 import PaywallModal from '../components/ui/PaywallModal';
 import CircularGauge from '../components/CircularGauge';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 const SITES = [
   { key: 'chest',       label: 'Chest',        icon: 'body',    dir: 'up' },
@@ -38,7 +39,7 @@ const SYMMETRY_PAIRS = [
 ];
 const PROGRESS_SITES = ['chest', 'waist', 'hips', 'left_arm', 'right_arm'];
 
-async function fetchMeasurements(userId) {
+export async function fetchMeasurements(userId) {
   const { data, error } = await supabase
     .from('body_measurements')
     .select('id, chest, waist, hips, left_arm, right_arm, left_thigh, right_thigh, neck, calf_left, calf_right, logged_at')
@@ -49,7 +50,7 @@ async function fetchMeasurements(userId) {
   return data ?? [];
 }
 
-async function fetchBodyStats(userId) {
+export async function fetchBodyStats(userId) {
   const [profile, weight] = await Promise.all([
     supabase.from('profiles').select('height_cm, sex').eq('id', userId).single(),
     supabase.from('weight_logs').select('weight').eq('user_id', userId).order('logged_at', { ascending: false }).limit(1),
@@ -266,17 +267,44 @@ export default function MeasurementsScreen({ navigation }) {
 
   const logMut = useMutation({
     mutationFn: ({ values, date }) => logMeasurements(user.id, values, date),
-    onSuccess: () => {
-      qc.invalidateQueries(['measurements', user.id]);
+    onMutate: async ({ values, date }) => {
+      await qc.cancelQueries(['measurements', user.id]);
+      const previous = qc.getQueryData(['measurements', user.id]);
+      qc.setQueryData(['measurements', user.id], (old) => {
+        if (!old) return old;
+        const isoDate = new Date(`${date}T00:00:00`).toISOString();
+        const rest = old.filter(l => l.logged_at.slice(0, 10) !== date);
+        const optimisticLog = { id: `optimistic-${date}`, chest: null, waist: null, hips: null, left_arm: null, right_arm: null, left_thigh: null, right_thigh: null, neck: null, calf_left: null, calf_right: null, ...values, logged_at: isoDate };
+        return [optimisticLog, ...rest].sort((a, b) => b.logged_at.localeCompare(a.logged_at));
+      });
       setShowModal(false);
       setForm({});
+      return { previous };
     },
-    onError: (e) => Alert.alert('Error', e.message),
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['measurements', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['measurements', user.id]);
+    },
   });
 
   const deleteMut = useMutation({
     mutationFn: deleteMeasurement,
-    onSuccess: () => qc.invalidateQueries(['measurements', user.id]),
+    onMutate: async (id) => {
+      await qc.cancelQueries(['measurements', user.id]);
+      const previous = qc.getQueryData(['measurements', user.id]);
+      qc.setQueryData(['measurements', user.id], (old) => old ? old.filter(l => l.id !== id) : old);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['measurements', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['measurements', user.id]);
+    },
   });
 
   const latest = logs[0];
@@ -338,7 +366,7 @@ export default function MeasurementsScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
       >
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <SkeletonScreen cards={3} linesPerCard={4} />
         ) : (
           <>
             {/* Analytics / Insights preview cards — always visible so free users can discover Pro features */}

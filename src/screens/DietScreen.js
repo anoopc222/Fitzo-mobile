@@ -12,9 +12,10 @@ import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
-async function fetchDietPlans(userId) {
+export async function fetchDietPlans(userId) {
   const { data, error } = await supabase
     .from('diet_plans')
     .select('*')
@@ -88,24 +89,72 @@ export default function DietScreen({ navigation }) {
 
   const weekMut = useMutation({
     mutationFn: ({ weekNumber, fields }) => saveDietWeek(user.id, weekNumber, fields),
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries(['dietPlans', user.id]);
-      setActiveWeek(vars.weekNumber);
+    onMutate: async ({ weekNumber, fields }) => {
+      await qc.cancelQueries(['dietPlans', user.id]);
+      const previous = qc.getQueryData(['dietPlans', user.id]);
+      qc.setQueryData(['dietPlans', user.id], (old) => {
+        if (!old) return old;
+        const idx = old.findIndex(p => p.week_number === weekNumber);
+        if (idx === -1) {
+          const merged = [...old, { id: `optimistic-${weekNumber}`, user_id: user.id, week_number: weekNumber, ...fields }];
+          return merged.sort((a, b) => a.week_number - b.week_number);
+        }
+        const updated = [...old];
+        updated[idx] = { ...updated[idx], ...fields };
+        return updated;
+      });
+      setActiveWeek(weekNumber);
       setShowEditor(false);
+      return { previous };
     },
-    onError: (e) => Alert.alert('Error', e.message),
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['dietPlans', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['dietPlans', user.id]);
+    },
   });
 
   const notesMut = useMutation({
     mutationFn: ({ weekNumber, fields }) => saveDietNotes(user.id, weekNumber, fields),
-    onSuccess: () => qc.invalidateQueries(['dietPlans', user.id]),
-    onError: (e) => Alert.alert('Error', e.message),
+    onMutate: async ({ weekNumber, fields }) => {
+      await qc.cancelQueries(['dietPlans', user.id]);
+      const previous = qc.getQueryData(['dietPlans', user.id]);
+      qc.setQueryData(['dietPlans', user.id], (old) => {
+        if (!old) return old;
+        return old.map(p => p.week_number === weekNumber ? { ...p, ...fields } : p);
+      });
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['dietPlans', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['dietPlans', user.id]);
+    },
   });
 
   const deleteMut = useMutation({
     mutationFn: (weekNumber) => deleteDietWeek(user.id, weekNumber),
-    onSuccess: () => { qc.invalidateQueries(['dietPlans', user.id]); setShowEditor(false); },
-    onError: (e) => Alert.alert('Error', e.message),
+    onMutate: async (weekNumber) => {
+      await qc.cancelQueries(['dietPlans', user.id]);
+      const previous = qc.getQueryData(['dietPlans', user.id]);
+      qc.setQueryData(['dietPlans', user.id], (old) => {
+        if (!old) return old;
+        return old.filter(p => p.week_number !== weekNumber);
+      });
+      setShowEditor(false);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['dietPlans', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['dietPlans', user.id]);
+    },
   });
 
   const calories = useMemo(() => {
@@ -196,7 +245,7 @@ export default function DietScreen({ navigation }) {
         </Text>
 
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <SkeletonScreen cards={4} linesPerCard={3} />
         ) : !plans.length ? (
           <View style={{ alignItems: 'center', paddingVertical: 60 }}>
             <Text style={{ fontSize: 36 }}>🥗</Text>

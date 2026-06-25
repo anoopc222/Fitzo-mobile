@@ -2,7 +2,11 @@ import React from 'react';
 import { View, AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
+import { focusManager } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { queryClient, CACHE_MAX_AGE } from './src/lib/queryClient';
 import { AuthProvider } from './src/context/AuthContext';
 import { SubscriptionProvider } from './src/context/SubscriptionContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -20,22 +24,9 @@ focusManager.setEventListener((handleFocus) => {
   return () => sub.remove();
 });
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Data is fetched fresh on every screen-mount-after-mutation via explicit
-      // invalidateQueries() calls, so a non-zero staleTime here only avoids
-      // redundant refetches on quick re-mounts/focus, it never serves data the
-      // app itself just changed.
-      staleTime: 30 * 1000,
-      gcTime: 5 * 60 * 1000,
-      retry: 1,
-      refetchOnReconnect: true,
-      // Mutations already invalidate the exact queries they affect, so a focus
-      // refetch only adds redundant network round-trips on top of staleTime.
-      refetchOnWindowFocus: false,
-    },
-  },
+const persister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: 'fitzo-query-cache',
 });
 
 function Root() {
@@ -58,7 +49,17 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister,
+          maxAge: CACHE_MAX_AGE,
+          buster: 'v1',
+          dehydrateOptions: {
+            shouldDehydrateQuery: (query) => query.state.status === 'success',
+          },
+        }}
+      >
         <ThemeProvider>
           <AuthProvider>
             <SubscriptionProvider>
@@ -68,7 +69,7 @@ export default function App() {
             </SubscriptionProvider>
           </AuthProvider>
         </ThemeProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </SafeAreaProvider>
   );
 }
