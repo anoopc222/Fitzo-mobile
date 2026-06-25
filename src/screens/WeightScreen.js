@@ -561,7 +561,7 @@ export default function WeightScreen() {
   });
 
   const logs = data?.logs ?? [];
-  const goalKg = data?.profile?.weight_goal_kg ?? 70;
+  const goalKg = data?.profile?.weight_goal_kg ?? 60;
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
   const sortedAsc = useMemo(() => [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at)), [logs]);
