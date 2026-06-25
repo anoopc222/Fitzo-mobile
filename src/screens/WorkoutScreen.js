@@ -2210,14 +2210,18 @@ export default function WorkoutScreen() {
     });
     const activeSessions = monthSessions.filter(s => getSessionType(s.notes) !== 'rest');
     const totalVol = monthSessions.reduce((sum, s) => sum + (s.total_volume ?? calcSessionVol(s)), 0);
-    const totalKcal = monthSessions.reduce((sum, s) => sum + (s.calories_burned ?? 0), 0);
-    const totalMin = monthSessions.reduce((sum, s) => sum + (s.duration_min ?? 0), 0);
+    const allSets = monthSessions.flatMap(s => (s.workout_exercises ?? []).flatMap(ex => ex.sets ?? []));
+    const totalSets = allSets.length;
+    const rpeSets = allSets.filter(st => st.rpe != null);
+    const avgRpe = rpeSets.length
+      ? (rpeSets.reduce((sum, st) => sum + st.rpe, 0) / rpeSets.length).toFixed(1)
+      : null;
     const pbCount = activeSessions.reduce((sum, s) => sum + (pbMap[s.id]?.size ?? 0), 0);
     return {
       totalVol: Math.round(totalVol),
       sessionCount: activeSessions.length,
-      durationHrs: (totalMin / 60).toFixed(1),
-      totalKcal: Math.round(totalKcal),
+      totalSets,
+      avgRpe,
       pbCount,
     };
   }, [sessions, viewYear, viewMonth, pbMap]);
@@ -2583,13 +2587,13 @@ export default function WorkoutScreen() {
                 </View>
                 <View style={s.tileColDivider} />
                 <View style={s.tile}>
-                  <Text style={s.tileVal}>{heroStats.durationHrs}h</Text>
-                  <Text style={s.tileLbl}>DURATION</Text>
+                  <Text style={s.tileVal}>{heroStats.totalSets}</Text>
+                  <Text style={s.tileLbl}>TOTAL SETS</Text>
                 </View>
                 <View style={s.tileColDivider} />
                 <View style={s.tile}>
-                  <Text style={s.tileVal}>{heroStats.totalKcal.toLocaleString()}</Text>
-                  <Text style={s.tileLbl}>KCAL BURNED</Text>
+                  <Text style={s.tileVal}>{heroStats.avgRpe ?? '—'}</Text>
+                  <Text style={s.tileLbl}>AVG RPE</Text>
                 </View>
               </View>
               {heroStats.pbCount > 0 && (
