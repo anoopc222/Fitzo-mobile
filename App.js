@@ -11,6 +11,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { SubscriptionProvider } from './src/context/SubscriptionContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { MoreMenuProvider } from './src/context/MoreMenuContext';
+import { NotificationProvider } from './src/context/NotificationContext';
 import { useAppFonts } from './src/theme/useAppFonts';
 import AppNavigator from './src/navigation/AppNavigator';
 import MoreSheetModal from './src/components/MoreSheetModal';
@@ -63,9 +64,11 @@ export default function App() {
         <ThemeProvider>
           <AuthProvider>
             <SubscriptionProvider>
-              <MoreMenuProvider>
-                <Root />
-              </MoreMenuProvider>
+              <NotificationProvider>
+                <MoreMenuProvider>
+                  <Root />
+                </MoreMenuProvider>
+              </NotificationProvider>
             </SubscriptionProvider>
           </AuthProvider>
         </ThemeProvider>

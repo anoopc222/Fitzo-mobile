@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -20,6 +20,8 @@ import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useNotificationPrefs } from '../context/NotificationContext';
+import { syncConditionalReminder } from '../lib/notifications';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
 
@@ -382,6 +384,19 @@ export default function SleepScreen() {
   const logCutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
   const sessions = data?.sessions ?? [];
   const steps = data?.steps ?? [];
+
+  const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
+  useEffect(() => {
+    if (isLoading || !notifPrefs.sleepReminder) {
+      if (!notifPrefs.sleepReminder) syncConditionalReminder('sleepReminder', true, 22, 0, '', '');
+      return;
+    }
+    const todayStr = localDateStr(new Date());
+    const ydayStr = localDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const loggedRecently = logs.some(l => l.logged_at === todayStr || l.logged_at === ydayStr);
+    syncConditionalReminder('sleepReminder', loggedRecently, 22, 0,
+      "Log last night's sleep", "You haven't logged your sleep yet.");
+  }, [isLoading, notifPrefs.sleepReminder, logs]);
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
 
