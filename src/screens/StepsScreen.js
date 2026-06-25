@@ -107,7 +107,7 @@ async function logSteps(userId, { date, steps, goal, activityType, note }) {
   if (existing.error) throw existing.error;
 
   const fields = {
-    steps, goal: goal ?? 10000, distance_km, calories_burned,
+    steps, goal: goal ?? 12000, distance_km, calories_burned,
     activity_type: activityType || 'walk', note: note || null,
   };
 
@@ -507,7 +507,7 @@ export default function StepsScreen() {
   const qc = useQueryClient();
   const heroExport = useGatedExport();
   const heatmapExport = useExportCard();
-  const { hasAccess } = useSubscription();
+  const { hasAccess, isPro } = useSubscription();
 
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
@@ -531,7 +531,7 @@ export default function StepsScreen() {
   });
 
   const logs = data?.logs ?? [];
-  const defaultGoal = data?.profile?.step_goal ?? logs[0]?.goal ?? 10000;
+  const defaultGoal = data?.profile?.step_goal ?? logs[0]?.goal ?? 12000;
 
   const logMut = useMutation({
     mutationFn: ({ date, steps, activityType, note: logNote }) =>
@@ -780,9 +780,9 @@ export default function StepsScreen() {
                       <Ionicons name="share-outline" size={13} color={colors.textMuted} />
                     )}
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.goalPillBtn} onPress={() => { if (!hasAccess) { setShowTrendPaywall(true); return; } setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
+                  <TouchableOpacity style={styles.goalPillBtn} onPress={() => { if (!isPro) { setShowTrendPaywall(true); return; } setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
                     <Text style={styles.goalPillBtnText}>🎯 {fmtK(defaultGoal)}</Text>
-                    <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
+                    <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                   </TouchableOpacity>
                 </View>
               </View>

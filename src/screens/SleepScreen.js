@@ -348,7 +348,7 @@ export default function SleepScreen() {
   const qc = useQueryClient();
   const recoveryExport = useGatedExport();
   const heatmapExport = useExportCard();
-  const { hasAccess } = useSubscription();
+  const { hasAccess, isPro } = useSubscription();
   const [showRangePaywall, setShowRangePaywall] = useState(false);
 
   const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
@@ -370,7 +370,7 @@ export default function SleepScreen() {
   });
 
   const logs = (data?.logs ?? []).filter(l => Number.isFinite(l.hours));
-  const goal = data?.profile?.sleep_goal_hours ?? 7.5;
+  const goal = data?.profile?.sleep_goal_hours ?? 8;
   const logCutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
   const sessions = data?.sessions ?? [];
   const steps = data?.steps ?? [];
@@ -578,9 +578,9 @@ export default function SleepScreen() {
                     <Ionicons name="share-outline" size={13} color={colors.textMuted} />
                   )}
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.goalPillBtn} onPress={() => { if (!hasAccess) { setShowRangePaywall(true); return; } setGoalInput(String(goal)); setShowGoalSheet(true); }}>
+                <TouchableOpacity style={styles.goalPillBtn} onPress={() => { if (!isPro) { setShowRangePaywall(true); return; } setGoalInput(String(goal)); setShowGoalSheet(true); }}>
                   <Text style={styles.goalPillBtnText}>🌙 {goal}h</Text>
-                  <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
+                  <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
               <View style={styles.recoveryRow}>

@@ -256,7 +256,7 @@ async function fetchHome(userId) {
   const latestSteps  = stepsHist.data?.[0];
   const latestSleep  = sleepHist.data?.[0];
 
-  const stepGoal   = profile.data?.step_goal ?? 10000;
+  const stepGoal   = profile.data?.step_goal ?? 12000;
   const sleepGoal  = profile.data?.sleep_goal_hours ?? 8;
   const weeklyGoal = profile.data?.workout_weekly_goal ?? 4;
 
@@ -1072,7 +1072,7 @@ export default function HomeScreen() {
   const todayIsoDow = (() => { const d = new Date().getDay(); return d === 0 ? 7 : d; })();
   const periodDays = [todayIsoDow, 7, new Date().getDate()];
 
-  const stepGoalForWeek = data?.stepGoal ?? 10000;
+  const stepGoalForWeek = data?.stepGoal ?? 12000;
   const stepsPct    = Math.min(100, Math.round(((data?.thisWeek?.steps ?? 0) / (stepGoalForWeek * periodDays[0])) * 100));
   const caloriesPct = Math.min(100, Math.round(((data?.thisWeek?.kcalDays ?? 0) / periodDays[0]) * 100));
   const sessionsPct = Math.min(100, Math.round((thisWeekSessions / weeklyGoal) * 100));
