@@ -579,7 +579,7 @@ export default function SleepScreen() {
                   )}
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.goalPillBtn} onPress={() => { if (!isPro) { setShowRangePaywall(true); return; } setGoalInput(String(goal)); setShowGoalSheet(true); }}>
-                  <Text style={styles.goalPillBtnText}>🌙 {goal}h</Text>
+                  <Text style={styles.goalPillBtnText}>🎯 {goal}h</Text>
                   <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
