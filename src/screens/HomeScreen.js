@@ -140,6 +140,20 @@ async function quickLogSleep(userId, hours) {
   }
 }
 
+async function quickLogSteps(userId, steps) {
+  const date = localDateStr(new Date());
+  const existing = await supabase
+    .from('step_logs').select('id').eq('user_id', userId).eq('logged_at', date).limit(1).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data) {
+    const { error } = await supabase.from('step_logs').update({ steps }).eq('id', existing.data.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('step_logs').insert({ user_id: userId, steps, logged_at: date });
+    if (error) throw error;
+  }
+}
+
 // ─── data fetch ─────────────────────────────────────────────────────────────
 async function fetchHome(userId) {
   const today = localDateStr(new Date());
@@ -998,6 +1012,8 @@ export default function HomeScreen() {
   const [weightQuickInput, setWeightQuickInput] = useState('');
   const [showSleepLog, setShowSleepLog] = useState(false);
   const [sleepQuickInput, setSleepQuickInput] = useState('');
+  const [showStepsLog, setShowStepsLog] = useState(false);
+  const [stepsQuickInput, setStepsQuickInput] = useState('');
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['home', user?.id],
@@ -1021,6 +1037,16 @@ export default function HomeScreen() {
       qc.invalidateQueries(['home', user.id]);
       qc.invalidateQueries(['sleep', user.id]);
       setShowSleepLog(false); setSleepQuickInput('');
+    },
+    onError: (e) => Alert.alert('Error', e.message),
+  });
+
+  const stepsQuickMut = useMutation({
+    mutationFn: (steps) => quickLogSteps(user.id, steps),
+    onSuccess: () => {
+      qc.invalidateQueries(['home', user.id]);
+      qc.invalidateQueries(['steps', user.id]);
+      setShowStepsLog(false); setStepsQuickInput('');
     },
     onError: (e) => Alert.alert('Error', e.message),
   });
@@ -1519,12 +1545,14 @@ export default function HomeScreen() {
             </View>
 
             {/* ── Actionable nudge cards ────────────────────────── */}
-            {data?.daysSinceWeight != null && data.daysSinceWeight >= 2 && (
+            {(!data?.latestWeight || data.daysSinceWeight >= 2) && (
               <NudgeCard
                 icon="scale-outline"
                 color={C_WEIGHT}
-                title={`No weigh-in for ${data.daysSinceWeight} days`}
-                sub={`Last: ${data.latestWeight.weight}KG · ${data.daysSinceWeight} days ago`}
+                title={data?.latestWeight ? `No weigh-in for ${data.daysSinceWeight} days` : 'No weigh-ins yet'}
+                sub={data?.latestWeight
+                  ? `Last: ${data.latestWeight.weight}KG · ${data.daysSinceWeight} days ago`
+                  : 'Tap to log your first weight'}
                 styles={styles}
                 onPress={() => setShowWeightLog(true)}
               />
@@ -1541,12 +1569,26 @@ export default function HomeScreen() {
                 onPress={() => navigation.navigate('Workout')}
               />
             )}
-            {data?.daysSinceSleep != null && data.daysSinceSleep >= 1 && (
+            {(!data?.latestSteps || data.daysSinceSteps >= 1) && (
+              <NudgeCard
+                icon="footsteps-outline"
+                color={C_STEPS}
+                title={data?.latestSteps ? `No steps logged for ${data.daysSinceSteps} day${data.daysSinceSteps === 1 ? '' : 's'}` : 'No steps logged yet'}
+                sub={data?.latestSteps
+                  ? `Last: ${data.latestSteps.steps.toLocaleString()} · ${data.daysSinceSteps} day${data.daysSinceSteps === 1 ? '' : 's'} ago`
+                  : 'Tap to log your first steps'}
+                styles={styles}
+                onPress={() => setShowStepsLog(true)}
+              />
+            )}
+            {(!data?.latestSleep || data.daysSinceSleep >= 1) && (
               <NudgeCard
                 icon="moon-outline"
                 color={C_SLEEP}
-                title={`No sleep logged for ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'}`}
-                sub={`Last: ${data.latestSleep.hours}h · ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'} ago`}
+                title={data?.latestSleep ? `No sleep logged for ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'}` : 'No sleep logged yet'}
+                sub={data?.latestSleep
+                  ? `Last: ${data.latestSleep.hours}h · ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'} ago`
+                  : 'Tap to log your first sleep'}
                 styles={styles}
                 onPress={() => setShowSleepLog(true)}
               />
@@ -1891,6 +1933,39 @@ export default function HomeScreen() {
           disabled={sleepQuickMut.isPending}
         >
           {sleepQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Sleep</Text>}
+        </TouchableOpacity>
+      </BottomSheet>
+
+      {/* Quick log: Steps */}
+      <BottomSheet visible={showStepsLog} onClose={() => setShowStepsLog(false)}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>LOG STEPS</Text>
+          <TouchableOpacity onPress={() => setShowStepsLog(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <Text style={styles.sheetFieldLabel}>STEPS</Text>
+          {data?.latestSteps && <Text style={styles.lastHint}>↑ LAST: {data.latestSteps.steps.toLocaleString()}</Text>}
+        </View>
+        <TextInput
+          style={styles.sheetInput}
+          value={stepsQuickInput}
+          onChangeText={setStepsQuickInput}
+          placeholder={data?.latestSteps ? String(data.latestSteps.steps) : '10000'}
+          placeholderTextColor={colors.textDim}
+          keyboardType="numeric"
+          autoFocus
+        />
+        <TouchableOpacity
+          style={[styles.saveBtn, { marginTop: 18 }]}
+          onPress={() => {
+            const steps = parseInt(stepsQuickInput, 10);
+            if (Number.isFinite(steps)) stepsQuickMut.mutate(steps);
+          }}
+          disabled={stepsQuickMut.isPending}
+        >
+          {stepsQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Steps</Text>}
         </TouchableOpacity>
       </BottomSheet>
     </SafeAreaView>
