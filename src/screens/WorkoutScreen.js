@@ -2136,20 +2136,46 @@ export default function WorkoutScreen() {
 
   const saveMut = useMutation({
     mutationFn: (params) => saveSession(user.id, params),
+    // NOTE: not optimistic — server computes total_volume and generates
+    // exercise/set ids across multiple round trips (delete-then-reinsert),
+    // so the cached shape can't be reliably reconstructed client-side
+    // without risking incorrect derived data (PRs, volume, trend badges).
     onSuccess: () => { qc.invalidateQueries(['sessions', user.id]); setShowEdit(false); },
     onError: (e) => Alert.alert('Error saving', e.message),
   });
 
   const deleteMut = useMutation({
     mutationFn: deleteFullSession,
-    onSuccess: () => { qc.invalidateQueries(['sessions', user.id]); setShowDetail(false); },
-    onError: (e) => Alert.alert('Error', e.message),
+    onMutate: async (sessionId) => {
+      await qc.cancelQueries(['sessions', user.id]);
+      const previous = qc.getQueryData(['sessions', user.id]);
+      qc.setQueryData(['sessions', user.id], (old) =>
+        (old ?? []).filter((s) => s.id !== sessionId)
+      );
+      setShowDetail(false);
+      return { previous };
+    },
+    onError: (e, sessionId, context) => {
+      if (context?.previous) qc.setQueryData(['sessions', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => { qc.invalidateQueries(['sessions', user.id]); },
   });
 
   const goalMut = useMutation({
     mutationFn: (goal) => updateWorkoutGoal(user.id, goal),
-    onSuccess: () => { qc.invalidateQueries(['workoutGoal', user.id]); setShowWorkoutGoalSheet(false); },
-    onError: (e) => Alert.alert('Error', e.message),
+    onMutate: async (goal) => {
+      await qc.cancelQueries(['workoutGoal', user.id]);
+      const previous = qc.getQueryData(['workoutGoal', user.id]);
+      qc.setQueryData(['workoutGoal', user.id], goal);
+      setShowWorkoutGoalSheet(false);
+      return { previous };
+    },
+    onError: (e, goal, context) => {
+      if (context?.previous !== undefined) qc.setQueryData(['workoutGoal', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => { qc.invalidateQueries(['workoutGoal', user.id]); },
   });
 
   const { data: templates = [] } = useQuery({

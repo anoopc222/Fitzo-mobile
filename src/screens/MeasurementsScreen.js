@@ -266,17 +266,44 @@ export default function MeasurementsScreen({ navigation }) {
 
   const logMut = useMutation({
     mutationFn: ({ values, date }) => logMeasurements(user.id, values, date),
-    onSuccess: () => {
-      qc.invalidateQueries(['measurements', user.id]);
+    onMutate: async ({ values, date }) => {
+      await qc.cancelQueries(['measurements', user.id]);
+      const previous = qc.getQueryData(['measurements', user.id]);
+      qc.setQueryData(['measurements', user.id], (old) => {
+        if (!old) return old;
+        const isoDate = new Date(`${date}T00:00:00`).toISOString();
+        const rest = old.filter(l => l.logged_at.slice(0, 10) !== date);
+        const optimisticLog = { id: `optimistic-${date}`, chest: null, waist: null, hips: null, left_arm: null, right_arm: null, left_thigh: null, right_thigh: null, neck: null, calf_left: null, calf_right: null, ...values, logged_at: isoDate };
+        return [optimisticLog, ...rest].sort((a, b) => b.logged_at.localeCompare(a.logged_at));
+      });
       setShowModal(false);
       setForm({});
+      return { previous };
     },
-    onError: (e) => Alert.alert('Error', e.message),
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['measurements', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['measurements', user.id]);
+    },
   });
 
   const deleteMut = useMutation({
     mutationFn: deleteMeasurement,
-    onSuccess: () => qc.invalidateQueries(['measurements', user.id]),
+    onMutate: async (id) => {
+      await qc.cancelQueries(['measurements', user.id]);
+      const previous = qc.getQueryData(['measurements', user.id]);
+      qc.setQueryData(['measurements', user.id], (old) => old ? old.filter(l => l.id !== id) : old);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['measurements', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['measurements', user.id]);
+    },
   });
 
   const latest = logs[0];
