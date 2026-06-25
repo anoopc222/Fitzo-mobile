@@ -239,11 +239,11 @@ const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   title: { fontSize: typography.xl, fontWeight: weight.bold, color: colors.text },
-  subtitle: { fontSize: typography.xl, fontWeight: weight.bold, color: colors.text, marginTop: 4, paddingHorizontal: 20 },
+  subtitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text, marginTop: 4, paddingHorizontal: 20 },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginBottom: 12,
-    backgroundColor: colors.bgCard, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: colors.bgCard, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 7,
     borderWidth: 1, borderColor: colors.border,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: typography.sm },
