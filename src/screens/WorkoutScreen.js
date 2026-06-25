@@ -2217,12 +2217,18 @@ export default function WorkoutScreen() {
       ? (rpeSets.reduce((sum, st) => sum + st.rpe, 0) / rpeSets.length).toFixed(1)
       : null;
     const pbCount = activeSessions.reduce((sum, s) => sum + (pbMap[s.id]?.size ?? 0), 0);
+    const avgVolPerSession = activeSessions.length ? Math.round(totalVol / activeSessions.length) : 0;
+    const heaviestLift = allSets.reduce((max, st) => Math.max(max, st.weight_kg ?? 0), 0);
+    const muscleGroupsHit = getMuscleGroups(monthSessions.flatMap(s => s.workout_exercises ?? [])).length;
     return {
       totalVol: Math.round(totalVol),
       sessionCount: activeSessions.length,
       totalSets,
       avgRpe,
       pbCount,
+      avgVolPerSession,
+      heaviestLift,
+      muscleGroupsHit,
     };
   }, [sessions, viewYear, viewMonth, pbMap]);
 
@@ -2594,6 +2600,22 @@ export default function WorkoutScreen() {
                 <View style={s.tile}>
                   <Text style={s.tileVal}>{heroStats.avgRpe ?? '—'}</Text>
                   <Text style={s.tileLbl}>AVG RPE</Text>
+                </View>
+              </View>
+              <View style={[s.tileRow, s.tileRow2]}>
+                <View style={s.tile}>
+                  <Text style={s.tileVal}>{heroStats.avgVolPerSession.toLocaleString()}</Text>
+                  <Text style={s.tileLbl}>AVG VOL/SESSION</Text>
+                </View>
+                <View style={s.tileColDivider} />
+                <View style={s.tile}>
+                  <Text style={s.tileVal}>{heroStats.heaviestLift > 0 ? `${heroStats.heaviestLift}kg` : '—'}</Text>
+                  <Text style={s.tileLbl}>HEAVIEST LIFT</Text>
+                </View>
+                <View style={s.tileColDivider} />
+                <View style={s.tile}>
+                  <Text style={s.tileVal}>{heroStats.muscleGroupsHit}</Text>
+                  <Text style={s.tileLbl}>MUSCLE GROUPS</Text>
                 </View>
               </View>
               {heroStats.pbCount > 0 && (
@@ -3071,6 +3093,7 @@ const createS = (colors) => StyleSheet.create({
   heroLabel: { fontSize: 13, color: colors.textMuted, fontWeight: weight.bold },
   heroSub: { fontSize: 12, color: colors.textDim, marginBottom: 14 },
   tileRow: { flexDirection: 'row' },
+  tileRow2: { marginTop: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
   tile: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   tileColDivider: { width: 1, backgroundColor: colors.border },
   tileVal: { fontSize: 18, fontWeight: weight.black, color: colors.text },
