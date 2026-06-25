@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Svg, { Rect } from 'react-native-svg';
+import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
@@ -168,10 +168,12 @@ function SymptomTrendChart({ trend, colors, width }) {
   const pw = width - P.l - P.r;
   const ph = H - P.t - P.b;
 
-  if (trend.length < 2) {
+  if (trend.length < 2 || trend.every(t => t.count === 0)) {
     return (
       <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Log at least 2 cycles to see this trend</Text>
+        <Text style={{ color: colors.textDim, fontSize: typography.sm, textAlign: 'center' }}>
+          {trend.length < 2 ? 'Log at least 2 cycles to see this trend' : 'No symptoms logged yet for recent cycles'}
+        </Text>
       </View>
     );
   }
@@ -179,30 +181,35 @@ function SymptomTrendChart({ trend, colors, width }) {
   const maxCount = Math.max(1, ...trend.map(t => t.count));
   const slot = pw / trend.length;
   const barW = Math.min(28, slot - 8);
-  const labelW = Math.min(40, slot);
+  const labelW = Math.min(48, slot);
 
   return (
     <View>
+      <Text style={[styles_trend.axisCaption, { color: colors.textDim }]}>Symptoms logged per cycle</Text>
       <Svg width={width} height={H}>
         {trend.map((t, i) => {
           const barH = (t.count / maxCount) * ph;
           const cx = P.l + i * slot + slot / 2;
           const x = cx - barW / 2;
           const y = P.t + ph - barH;
-          return <Rect key={t.date} x={x} y={y} width={barW} height={Math.max(2, barH)} rx={4} fill={colors.pink} />;
+          return (
+            <React.Fragment key={t.date}>
+              <Rect x={x} y={y} width={barW} height={Math.max(2, barH)} rx={4} fill={colors.pink} />
+              <SvgText x={cx} y={y - 4} fontSize={10} fontWeight="700" fill={colors.text} textAnchor="middle">
+                {t.count}
+              </SvgText>
+            </React.Fragment>
+          );
         })}
       </Svg>
       <View style={[styles_trend.labelRow, { width }]}>
         {trend.map((t, i) => {
           const cx = P.l + i * slot + slot / 2;
           return (
-            <Text
-              key={t.date}
-              style={[styles_trend.label, { color: colors.textDim, position: 'absolute', left: cx - labelW / 2, width: labelW }]}
-              numberOfLines={1}
-            >
-              {fmtDate(t.date)}
-            </Text>
+            <View key={t.date} style={{ position: 'absolute', left: cx - labelW / 2, width: labelW, alignItems: 'center' }}>
+              <Text style={[styles_trend.label, { color: colors.textDim }]} numberOfLines={1}>{fmtDate(t.date)}</Text>
+              {t.mood ? <Text style={[styles_trend.moodLabel, { color: colors.textDim }]} numberOfLines={1}>{t.mood}</Text> : null}
+            </View>
           );
         })}
       </View>
@@ -211,8 +218,10 @@ function SymptomTrendChart({ trend, colors, width }) {
 }
 
 const styles_trend = StyleSheet.create({
-  labelRow: { height: 14, marginTop: 4 },
+  axisCaption: { fontSize: 9, marginBottom: 2 },
+  labelRow: { height: 26, marginTop: 4 },
   label: { fontSize: 8, textAlign: 'center' },
+  moodLabel: { fontSize: 8, textAlign: 'center', marginTop: 1 },
 });
 
 export default function PeriodTrackerScreen({ navigation }) {
