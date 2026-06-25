@@ -215,7 +215,6 @@ export default function PeriodTrackerScreen({ navigation }) {
 
   const [showModal, setShowModal] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCycleSettings, setShowCycleSettings] = useState(false);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
@@ -464,25 +463,57 @@ export default function PeriodTrackerScreen({ navigation }) {
               </View>
             )}
 
-            {/* Preview row */}
-            <View style={styles.previewRow}>
-              <TouchableOpacity style={styles.previewCard} activeOpacity={0.85} onPress={() => setShowCalendar(true)}>
-                <View style={styles.previewTopRow}>
-                  <Text style={styles.previewIcon}>🗓️</Text>
+            {/* Period Calendar — monthly heatmap */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitleCaps}>PERIOD CALENDAR</Text>
+                <View style={styles.monthNav}>
+                  <TouchableOpacity onPress={() => {
+                    const d = new Date(calYear, calMonth - 1, 1);
+                    setCalMonth(d.getMonth()); setCalYear(d.getFullYear());
+                  }}>
+                    <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                  <Text style={styles.monthNavLabel}>
+                    {new Date(calYear, calMonth, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                  </Text>
+                  <TouchableOpacity onPress={() => {
+                    const d = new Date(calYear, calMonth + 1, 1);
+                    setCalMonth(d.getMonth()); setCalYear(d.getFullYear());
+                  }}>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.previewTitle}>Calendar</Text>
-                <Text style={styles.previewSub}>Heatmap of logged cycles</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.previewCard} activeOpacity={0.85} onPress={() => openProModal(setShowInsights)}>
-                <View style={styles.previewTopRow}>
-                  <Text style={styles.previewIcon}>🔬</Text>
-                  {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
-                </View>
-                <Text style={styles.previewTitle}>Insights</Text>
-                <Text style={styles.previewSub}>Fertile window & predictions</Text>
-              </TouchableOpacity>
+              </View>
+              <MonthHeatmap
+                data={heatmapData}
+                typeColors={heatmapColors}
+                color={colors.pink}
+                month={calMonth}
+                year={calYear}
+                containerPad={32}
+                emptyCellColor={colors.bgElevated}
+                mutedTextColor={colors.textDim}
+              />
+              <View style={styles.legendRow}>
+                {FLOWS.map(f => (
+                  <View key={f.key} style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: f.color }]} />
+                    <Text style={styles.legendText}>{f.label}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
+
+            {/* Insights link */}
+            <TouchableOpacity style={styles.insightsLinkCard} activeOpacity={0.85} onPress={() => openProModal(setShowInsights)}>
+              <View style={styles.previewTopRow}>
+                <Text style={styles.previewIcon}>🔬</Text>
+                {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+              </View>
+              <Text style={styles.previewTitle}>Insights</Text>
+              <Text style={styles.previewSub}>Fertile window, predictions & symptom trends</Text>
+            </TouchableOpacity>
 
             {/* History */}
             {logs.length > 0 && (
@@ -599,51 +630,6 @@ export default function PeriodTrackerScreen({ navigation }) {
           <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.pink }]} onPress={handleSave} disabled={logMut.isPending}>
             {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save</Text>}
           </TouchableOpacity>
-        </View>
-      </BottomSheet>
-
-      {/* Calendar / Heatmap modal */}
-      <BottomSheet visible={showCalendar} onClose={() => setShowCalendar(false)} style={styles.sheet}>
-        <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>🗓️ Cycle Calendar</Text>
-          <TouchableOpacity onPress={() => setShowCalendar(false)}>
-            <Ionicons name="close" size={22} color={colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.monthNavRow}>
-          <TouchableOpacity onPress={() => {
-            const d = new Date(calYear, calMonth - 1, 1);
-            setCalMonth(d.getMonth()); setCalYear(d.getFullYear());
-          }}>
-            <Ionicons name="chevron-back" size={20} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.monthNavLabel}>
-            {new Date(calYear, calMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-          </Text>
-          <TouchableOpacity onPress={() => {
-            const d = new Date(calYear, calMonth + 1, 1);
-            setCalMonth(d.getMonth()); setCalYear(d.getFullYear());
-          }}>
-            <Ionicons name="chevron-forward" size={20} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-        <MonthHeatmap
-          data={heatmapData}
-          typeColors={heatmapColors}
-          color={colors.pink}
-          month={calMonth}
-          year={calYear}
-          containerPad={32}
-          emptyCellColor={colors.bgElevated}
-          mutedTextColor={colors.textDim}
-        />
-        <View style={styles.legendRow}>
-          {FLOWS.map(f => (
-            <View key={f.key} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: f.color }]} />
-              <Text style={styles.legendText}>{f.label}</Text>
-            </View>
-          ))}
         </View>
       </BottomSheet>
 
@@ -806,10 +792,9 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text, fontSize: typography.sm, borderWidth: 1, borderColor: colors.border, textAlign: 'center',
   },
 
-  previewRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
-  previewCard: {
-    flex: 1, backgroundColor: colors.bgCard, borderRadius: 16, padding: 14,
-    borderWidth: 1, borderColor: colors.border,
+  insightsLinkCard: {
+    backgroundColor: colors.bgCard, borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: colors.border, marginBottom: 14,
   },
   previewTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   previewIcon: { fontSize: 20 },
@@ -821,6 +806,9 @@ const createStyles = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, marginBottom: 14,
   },
   cardTitle: { fontSize: typography.base, fontWeight: weight.semibold, color: colors.text, marginBottom: 12 },
+  cardTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  cardTitleCaps: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5 },
+  monthNav: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   historyItem: {
     flexDirection: 'row', alignItems: 'flex-start',
@@ -874,8 +862,7 @@ const createStyles = (colors) => StyleSheet.create({
   saveBtn: { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center' },
   saveBtnText: { color: colors.bg, fontWeight: weight.bold },
 
-  monthNavRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  monthNavLabel: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text },
+  monthNavLabel: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.text },
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 14, justifyContent: 'center' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
