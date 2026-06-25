@@ -20,6 +20,7 @@ import CircularGauge from '../components/CircularGauge';
 import MonthHeatmap from '../components/MonthHeatmap';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
+import Sparkline from '../components/Sparkline';
 
 const PMS_CHECKLIST_ITEMS = [
   'Pads / tampons / cup stocked up',
@@ -44,8 +45,85 @@ const SYMPTOMS = [
 ];
 
 const MOODS = ['Happy', 'Calm', 'Sensitive', 'Irritable', 'Sad', 'Anxious'];
+const MOOD_COLORS = {
+  Happy: '#5fd97a', Calm: '#5fb7d9', Sensitive: '#c98ae0',
+  Irritable: '#e0a346', Sad: '#6a7be0', Anxious: '#e05a5a',
+};
 
 const PAIN_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const CYCLE_GUIDE = [
+  {
+    key: 'phases',
+    icon: '🌙',
+    title: 'Cycle Phase Guide',
+    body: [
+      { h: 'Menstrual (Days 1–5)', t: 'Estrogen & progesterone are at their lowest. The uterine lining sheds. Common: cramps, fatigue, low energy. Tips: gentle movement, iron-rich food, rest.' },
+      { h: 'Follicular (Days ~1–13)', t: 'Estrogen rises as follicles mature. Energy and mood typically improve. Tips: good window for strength training and trying new things.' },
+      { h: 'Ovulation (~Day 14)', t: 'LH surge triggers egg release. Estrogen peaks, libido often rises. Tips: peak fertility window — track if trying to conceive or avoid.' },
+      { h: 'Luteal (Days ~15–28)', t: 'Progesterone rises then falls if no pregnancy, causing PMS in the late phase. Common: bloating, mood swings, cravings. Tips: magnesium-rich food, prioritize sleep.' },
+    ],
+  },
+  {
+    key: 'ovulation',
+    icon: '🥚',
+    title: 'Ovulation Signs',
+    body: [
+      { h: 'Cervical mucus', t: 'Becomes clear, stretchy and slippery (egg-white-like) near ovulation — the most fertile sign.' },
+      { h: 'Basal body temperature (BBT)', t: 'Rises slightly (~0.3–0.5°C) right after ovulation due to progesterone; track each morning before getting up.' },
+      { h: 'Mittelschmerz', t: 'A one-sided mild pelvic twinge or ache some people feel around ovulation.' },
+      { h: 'Libido & energy', t: 'Often increases in the day or two surrounding ovulation.' },
+    ],
+  },
+  {
+    key: 'symptoms',
+    icon: '💊',
+    title: 'Symptom Care Guide',
+    body: [
+      { h: 'Cramps', t: 'Caused by uterine contractions (prostaglandins). Ease with heat, gentle stretching, ibuprofen, or magnesium.' },
+      { h: 'Headache', t: 'Often linked to the estrogen drop before/during a period. Stay hydrated, manage caffeine intake, rest in a dark room.' },
+      { h: 'Bloating', t: 'Progesterone and water retention. Reduce salt, increase potassium-rich foods, light movement helps.' },
+      { h: 'Fatigue', t: 'Low iron from blood loss plus hormone shifts. Prioritize sleep and iron-rich meals during your period.' },
+      { h: 'Mood swings', t: 'Hormone fluctuations affect serotonin. Light exercise, sleep, and reducing sugar/caffeine can help.' },
+      { h: 'Tender breasts', t: 'Caused by rising progesterone in the luteal phase; usually eases once the period starts.' },
+    ],
+  },
+  {
+    key: 'flow',
+    icon: '🩸',
+    title: 'Flow & Color Guide',
+    body: [
+      { h: 'Bright/dark red', t: 'Normal — fresh blood (bright) early on, older blood (darker) later in the period.' },
+      { h: 'Brown/spotting', t: 'Usually old blood at the very start/end of a period — normal in small amounts.' },
+      { h: 'Pink', t: 'Can mean mixing with cervical fluid, often around ovulation or a lighter flow day.' },
+      { h: 'Grey or with strong odor', t: 'Atypical — can indicate infection. Worth checking with a doctor.' },
+      { h: 'Heavy clots / soaking through hourly', t: 'May indicate heavy menstrual bleeding — worth discussing with a doctor if it happens repeatedly.' },
+    ],
+  },
+  {
+    key: 'redflags',
+    icon: '🚩',
+    title: 'When to See a Doctor',
+    body: [
+      { h: 'Severe pain', t: 'Pain that stops daily activities or doesn’t respond to OTC pain relief.' },
+      { h: 'Very heavy bleeding', t: 'Soaking a pad/tampon every hour for several hours, or passing large clots.' },
+      { h: 'Irregular cycles', t: 'Cycles consistently shorter than 21 days or longer than 35 days, or missed periods (when not pregnant).' },
+      { h: 'Bleeding between periods', t: 'Or bleeding after sex — should be evaluated.' },
+      { h: 'No period by age 15', t: 'Or periods stopping for 3+ months without pregnancy/menopause.' },
+    ],
+  },
+  {
+    key: 'myths',
+    icon: '❓',
+    title: 'Myths vs. Facts',
+    body: [
+      { h: 'Myth: You can’t get pregnant during your period', t: 'Fact: It’s less likely but possible, especially with shorter cycles or longer periods.' },
+      { h: 'Myth: A 28-day cycle is "normal" for everyone', t: 'Fact: Healthy cycles range from about 21 to 35 days — what matters is your own consistency.' },
+      { h: 'Myth: Exercise should stop during your period', t: 'Fact: Light-to-moderate exercise can actually ease cramps and improve mood.' },
+      { h: 'Myth: PMS is "just in your head"', t: 'Fact: PMS is driven by real hormonal fluctuations and is a recognized physiological pattern.' },
+    ],
+  },
+];
 
 export async function fetchPeriodLogs(userId) {
   const { data, error } = await supabase
@@ -127,6 +205,25 @@ function buildHeatmapData(logs) {
   return { data, typeColors };
 }
 
+function buildMoodHeatmapData(logs) {
+  const data = {};
+  const typeColors = {};
+  logs.forEach(log => {
+    if (!log.mood) return;
+    const start = log.start_date;
+    const end = log.end_date || start;
+    let cursor = start;
+    let guard = 0;
+    while (cursor <= end && guard < 15) {
+      data[cursor] = 1;
+      typeColors[cursor] = MOOD_COLORS[log.mood] || '#9d4edd';
+      cursor = addDays(cursor, 1);
+      guard++;
+    }
+  });
+  return { data, typeColors };
+}
+
 function buildSymptomTrend(logs) {
   return [...logs]
     .sort((a, b) => a.start_date.localeCompare(b.start_date))
@@ -136,7 +233,7 @@ function buildSymptomTrend(logs) {
 
 function computeCycleInsights(logs, avgCycleLenSetting, avgPeriodLenSetting) {
   if (logs.length === 0) {
-    return { avgCycleLength: avgCycleLenSetting, avgPeriodLength: avgPeriodLenSetting, nextPeriodStart: null, fertileStart: null, ovulationDay: null, cycleDay: null, phase: null, regularity: null, streak: 0 };
+    return { avgCycleLength: avgCycleLenSetting, avgPeriodLength: avgPeriodLenSetting, nextPeriodStart: null, fertileStart: null, ovulationDay: null, cycleDay: null, phase: null, regularity: null, streak: 0, cycleLengths: [], upcoming: [] };
   }
   const sorted = [...logs].sort((a, b) => a.start_date.localeCompare(b.start_date));
   const cycleLengths = [];
@@ -181,7 +278,17 @@ function computeCycleInsights(logs, avgCycleLenSetting, avgPeriodLenSetting) {
     streak++;
   }
 
-  return { avgCycleLength, avgPeriodLength, nextPeriodStart, fertileStart, ovulationDay, cycleDay, phase, regularity, streak };
+  const upcoming = [];
+  let cursorStart = latest.start_date;
+  for (let i = 0; i < 3; i++) {
+    const periodStart = i === 0 ? nextPeriodStart : addDays(cursorStart, avgCycleLength);
+    const ovDay = addDays(periodStart, -14);
+    const fertStart = addDays(ovDay, -5);
+    upcoming.push({ periodStart, fertileStart: fertStart, ovulationDay: ovDay });
+    cursorStart = periodStart;
+  }
+
+  return { avgCycleLength, avgPeriodLength, nextPeriodStart, fertileStart, ovulationDay, cycleDay, phase, regularity, streak, cycleLengths, upcoming };
 }
 
 function SymptomTrendChart({ trend, colors, width }) {
@@ -259,6 +366,8 @@ export default function PeriodTrackerScreen({ navigation }) {
   const [showCycleSettings, setShowCycleSettings] = useState(false);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
+  const [calMode, setCalMode] = useState('flow');
+  const [openGuide, setOpenGuide] = useState(null);
 
   const [cycleLenInput, setCycleLenInput] = useState('');
   const [periodLenInput, setPeriodLenInput] = useState('');
@@ -358,6 +467,7 @@ export default function PeriodTrackerScreen({ navigation }) {
   );
 
   const { data: heatmapData, typeColors: heatmapColors } = useMemo(() => buildHeatmapData(logs), [logs]);
+  const { data: moodHeatmapData, typeColors: moodHeatmapColors } = useMemo(() => buildMoodHeatmapData(logs), [logs]);
   const symptomTrend = useMemo(() => buildSymptomTrend(logs), [logs]);
 
   const daysUntilNext = insights.nextPeriodStart ? daysBetween(localDateStr(new Date()), insights.nextPeriodStart) : null;
@@ -569,9 +679,20 @@ export default function PeriodTrackerScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
               </View>
+              <View style={styles.calModeRow}>
+                {['flow', 'mood'].map(m => (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.calModeChip, calMode === m && { backgroundColor: colors.pink + '22', borderColor: colors.pink }]}
+                    onPress={() => setCalMode(m)}
+                  >
+                    <Text style={[styles.calModeChipText, calMode === m && { color: colors.pink }]}>{m === 'flow' ? 'Flow' : 'Mood'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <MonthHeatmap
-                data={heatmapData}
-                typeColors={heatmapColors}
+                data={calMode === 'flow' ? heatmapData : moodHeatmapData}
+                typeColors={calMode === 'flow' ? heatmapColors : moodHeatmapColors}
                 color={colors.pink}
                 month={calMonth}
                 year={calYear}
@@ -580,12 +701,19 @@ export default function PeriodTrackerScreen({ navigation }) {
                 mutedTextColor={colors.textDim}
               />
               <View style={styles.legendRow}>
-                {FLOWS.map(f => (
-                  <View key={f.key} style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: f.color }]} />
-                    <Text style={styles.legendText}>{f.label}</Text>
-                  </View>
-                ))}
+                {calMode === 'flow'
+                  ? FLOWS.map(f => (
+                      <View key={f.key} style={styles.legendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: f.color }]} />
+                        <Text style={styles.legendText}>{f.label}</Text>
+                      </View>
+                    ))
+                  : MOODS.map(m => (
+                      <View key={m} style={styles.legendItem}>
+                        <View style={[styles.legendDot, { backgroundColor: MOOD_COLORS[m] }]} />
+                        <Text style={styles.legendText}>{m}</Text>
+                      </View>
+                    ))}
               </View>
             </View>
 
@@ -598,6 +726,33 @@ export default function PeriodTrackerScreen({ navigation }) {
               <Text style={styles.previewTitle}>Insights</Text>
               <Text style={styles.previewSub}>Fertile window, predictions & symptom trends</Text>
             </TouchableOpacity>
+
+            {/* Cycle & Period Guide — free educational reference */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitleCaps}>CYCLE & PERIOD GUIDE</Text>
+              {CYCLE_GUIDE.map(section => {
+                const isOpen = openGuide === section.key;
+                return (
+                  <View key={section.key} style={styles.guideSection}>
+                    <TouchableOpacity style={styles.guideHeaderRow} activeOpacity={0.7} onPress={() => setOpenGuide(isOpen ? null : section.key)}>
+                      <Text style={styles.guideIcon}>{section.icon}</Text>
+                      <Text style={styles.guideTitle}>{section.title}</Text>
+                      <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textDim} />
+                    </TouchableOpacity>
+                    {isOpen && (
+                      <View style={styles.guideBody}>
+                        {section.body.map(item => (
+                          <View key={item.h} style={styles.guideItem}>
+                            <Text style={styles.guideItemH}>{item.h}</Text>
+                            <Text style={styles.guideItemT}>{item.t}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
 
             {/* History */}
             {logs.length > 0 && (
@@ -775,11 +930,30 @@ export default function PeriodTrackerScreen({ navigation }) {
           </View>
 
           <View style={[styles.subCard, { borderColor: colors.pink + '55' }]}>
-            <Text style={styles.subCardTitleCaps}>🔮 NEXT PERIOD</Text>
-            {insights.nextPeriodStart ? (
-              <Text style={styles.predictionText}>Expected to start {fmtDate(insights.nextPeriodStart)}</Text>
+            <Text style={styles.subCardTitleCaps}>🔮 UPCOMING CYCLES</Text>
+            {insights.upcoming && insights.upcoming.length > 0 ? (
+              insights.upcoming.map((u, i) => (
+                <View key={u.periodStart} style={styles.upcomingRow}>
+                  <Text style={styles.upcomingLabel}>Cycle {i + 1}</Text>
+                  <Text style={styles.upcomingText}>
+                    Period {fmtDate(u.periodStart)} · Fertile {fmtDate(u.fertileStart)}–{fmtDate(u.ovulationDay)}
+                  </Text>
+                </View>
+              ))
             ) : (
               <Text style={styles.muted}>Log a period to start predicting</Text>
+            )}
+          </View>
+
+          <View style={styles.subCard}>
+            <Text style={styles.subCardTitleCaps}>📉 CYCLE LENGTH TREND</Text>
+            {insights.cycleLengths && insights.cycleLengths.length >= 2 ? (
+              <View>
+                <Sparkline data={insights.cycleLengths} color={colors.pink} width={272} height={40} filled />
+                <Text style={styles.muted}>{insights.cycleLengths.length} cycles tracked</Text>
+              </View>
+            ) : (
+              <Text style={styles.muted}>Log at least 3 cycles to see this trend</Text>
             )}
           </View>
 
@@ -1002,6 +1176,26 @@ const createStyles = (colors) => StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 10, color: colors.textMuted },
+
+  calModeRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  calModeChip: {
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border,
+  },
+  calModeChipText: { fontSize: 11, fontWeight: weight.semibold, color: colors.textMuted },
+
+  guideSection: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  guideHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
+  guideIcon: { fontSize: 16 },
+  guideTitle: { flex: 1, fontSize: typography.sm, fontWeight: weight.semibold, color: colors.text },
+  guideBody: { paddingBottom: 12, paddingLeft: 4 },
+  guideItem: { marginBottom: 10 },
+  guideItemH: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.pink, marginBottom: 2 },
+  guideItemT: { fontSize: typography.xs, color: colors.textMuted, lineHeight: 17 },
+
+  upcomingRow: { marginBottom: 8 },
+  upcomingLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.pink, marginBottom: 2 },
+  upcomingText: { fontSize: typography.xs, color: colors.textMuted },
 
   subCard: {
     backgroundColor: colors.bgElevated, borderRadius: 14, padding: 12,
