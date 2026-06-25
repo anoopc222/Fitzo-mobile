@@ -1,11 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Svg, { Rect } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
@@ -18,6 +20,15 @@ import CircularGauge from '../components/CircularGauge';
 import MonthHeatmap from '../components/MonthHeatmap';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
+
+const PMS_CHECKLIST_ITEMS = [
+  'Pads / tampons / cup stocked up',
+  'Pain relief on hand',
+  'Heating pad ready',
+  'Comfortable clothes set aside',
+  'Snacks & water stocked',
+  'Track mood & symptoms daily',
+];
 
 const FLOWS = [
   { key: 'spotting', label: 'Spotting', color: '#f4a6c8' },
@@ -65,6 +76,11 @@ async function deletePeriodLog(id) {
   if (error) throw error;
 }
 
+async function upsertCycleSettings(userId, values) {
+  const { error } = await supabase.from('cycle_settings').upsert({ user_id: userId, ...values });
+  if (error) throw error;
+}
+
 function localDateStr(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -104,6 +120,13 @@ function buildHeatmapData(logs) {
   return { data, typeColors };
 }
 
+function buildSymptomTrend(logs) {
+  return [...logs]
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))
+    .slice(-8)
+    .map(l => ({ date: l.start_date, count: (l.symptoms || []).length, mood: l.mood }));
+}
+
 function computeCycleInsights(logs, avgCycleLenSetting, avgPeriodLenSetting) {
   if (logs.length === 0) {
     return { avgCycleLength: avgCycleLenSetting, avgPeriodLength: avgPeriodLenSetting, nextPeriodStart: null, fertileStart: null, ovulationDay: null, cycleDay: null, phase: null };
@@ -139,6 +162,50 @@ function computeCycleInsights(logs, avgCycleLenSetting, avgPeriodLenSetting) {
   return { avgCycleLength, avgPeriodLength, nextPeriodStart, fertileStart, ovulationDay, cycleDay, phase };
 }
 
+function SymptomTrendChart({ trend, colors, width }) {
+  const H = 110;
+  const P = { t: 14, r: 8, b: 18, l: 8 };
+  const pw = width - P.l - P.r;
+  const ph = H - P.t - P.b;
+
+  if (trend.length < 2) {
+    return (
+      <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Log at least 2 cycles to see this trend</Text>
+      </View>
+    );
+  }
+
+  const maxCount = Math.max(1, ...trend.map(t => t.count));
+  const barW = Math.min(28, pw / trend.length - 8);
+  const gap = (pw - barW * trend.length) / Math.max(trend.length - 1, 1);
+
+  return (
+    <View>
+      <Svg width={width} height={H}>
+        {trend.map((t, i) => {
+          const barH = (t.count / maxCount) * ph;
+          const x = P.l + i * (barW + gap);
+          const y = P.t + ph - barH;
+          return <Rect key={t.date} x={x} y={y} width={barW} height={Math.max(2, barH)} rx={4} fill={colors.pink} />;
+        })}
+      </Svg>
+      <View style={styles_trend.labelRow}>
+        {trend.map(t => (
+          <Text key={t.date} style={[styles_trend.label, { color: colors.textDim, width: barW + gap }]} numberOfLines={1}>
+            {fmtDate(t.date)}
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const styles_trend = StyleSheet.create({
+  labelRow: { flexDirection: 'row', marginTop: 4 },
+  label: { fontSize: 8, textAlign: 'center' },
+});
+
 export default function PeriodTrackerScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -150,8 +217,13 @@ export default function PeriodTrackerScreen({ navigation }) {
   const [showInsights, setShowInsights] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showCycleSettings, setShowCycleSettings] = useState(false);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
+
+  const [cycleLenInput, setCycleLenInput] = useState('');
+  const [periodLenInput, setPeriodLenInput] = useState('');
+  const [pmsChecked, setPmsChecked] = useState({});
 
   const [startDate, setStartDate] = useState(localDateStr(new Date()));
   const [endDate, setEndDate] = useState('');
@@ -217,14 +289,64 @@ export default function PeriodTrackerScreen({ navigation }) {
     },
   });
 
+  const cycleSettingsMut = useMutation({
+    mutationFn: (values) => upsertCycleSettings(user.id, values),
+    onMutate: async (values) => {
+      await qc.cancelQueries(['cycleSettings', user.id]);
+      const previous = qc.getQueryData(['cycleSettings', user.id]);
+      qc.setQueryData(['cycleSettings', user.id], (old) => ({ ...old, ...values }));
+      setShowCycleSettings(false);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['cycleSettings', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['cycleSettings', user.id]);
+    },
+  });
+
   const insights = useMemo(
     () => computeCycleInsights(logs, cycleSettings?.avg_cycle_length ?? 28, cycleSettings?.avg_period_length ?? 5),
     [logs, cycleSettings]
   );
 
   const { data: heatmapData, typeColors: heatmapColors } = useMemo(() => buildHeatmapData(logs), [logs]);
+  const symptomTrend = useMemo(() => buildSymptomTrend(logs), [logs]);
 
   const daysUntilNext = insights.nextPeriodStart ? daysBetween(localDateStr(new Date()), insights.nextPeriodStart) : null;
+
+  const pmsKey = insights.nextPeriodStart ? `pmsChecklist:${insights.nextPeriodStart}` : null;
+
+  useEffect(() => {
+    if (!pmsKey) return;
+    AsyncStorage.getItem(pmsKey).then(raw => {
+      setPmsChecked(raw ? JSON.parse(raw) : {});
+    });
+  }, [pmsKey]);
+
+  const togglePmsItem = (item) => {
+    setPmsChecked(prev => {
+      const next = { ...prev, [item]: !prev[item] };
+      if (pmsKey) AsyncStorage.setItem(pmsKey, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const openCycleSettings = () => {
+    setCycleLenInput(String(cycleSettings?.avg_cycle_length ?? insights.avgCycleLength ?? 28));
+    setPeriodLenInput(String(cycleSettings?.avg_period_length ?? insights.avgPeriodLength ?? 5));
+    setShowCycleSettings(true);
+  };
+
+  const handleSaveCycleSettings = () => {
+    const cycleLen = parseInt(cycleLenInput, 10);
+    const periodLen = parseInt(periodLenInput, 10);
+    if (!cycleLen || cycleLen < 10 || cycleLen > 60) return Alert.alert('Invalid', 'Cycle length must be between 10 and 60 days');
+    if (!periodLen || periodLen < 1 || periodLen > 14) return Alert.alert('Invalid', 'Period length must be between 1 and 14 days');
+    cycleSettingsMut.mutate({ avg_cycle_length: cycleLen, avg_period_length: periodLen });
+  };
 
   const resetForm = () => {
     setStartDate(localDateStr(new Date()));
@@ -263,7 +385,16 @@ export default function PeriodTrackerScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenHeader title="LADIES" colors={colors} onBack={() => navigation.goBack()} />
+      <ScreenHeader
+        title="LADIES"
+        colors={colors}
+        onBack={() => navigation.goBack()}
+        right={
+          <TouchableOpacity onPress={() => openProModal(openCycleSettings)}>
+            <Ionicons name="settings-outline" size={20} color={colors.text} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -303,6 +434,35 @@ export default function PeriodTrackerScreen({ navigation }) {
                 </View>
               )}
             </View>
+
+            {/* Reminder banner */}
+            {daysUntilNext != null && daysUntilNext <= 3 && (
+              <View style={[styles.reminderBanner, { borderColor: colors.pink + '55' }]}>
+                <Ionicons name="notifications" size={18} color={colors.pink} />
+                <Text style={styles.reminderText}>
+                  {daysUntilNext <= 0
+                    ? 'Your period is expected today'
+                    : `Your period is expected in ${daysUntilNext} day${daysUntilNext === 1 ? '' : 's'}`}
+                </Text>
+              </View>
+            )}
+
+            {/* PMS prep checklist */}
+            {daysUntilNext != null && daysUntilNext > 0 && daysUntilNext <= 5 && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>PMS Prep Checklist</Text>
+                {PMS_CHECKLIST_ITEMS.map(item => (
+                  <TouchableOpacity key={item} style={styles.checklistRow} onPress={() => togglePmsItem(item)} activeOpacity={0.7}>
+                    <Ionicons
+                      name={pmsChecked[item] ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={pmsChecked[item] ? colors.pink : colors.textDim}
+                    />
+                    <Text style={[styles.checklistText, pmsChecked[item] && styles.checklistTextDone]}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
             {/* Preview row */}
             <View style={styles.previewRow}>
@@ -535,6 +695,11 @@ export default function PeriodTrackerScreen({ navigation }) {
           </View>
 
           <View style={styles.subCard}>
+            <Text style={styles.subCardTitleCaps}>📊 SYMPTOM TREND</Text>
+            <SymptomTrendChart trend={symptomTrend} colors={colors} width={296} />
+          </View>
+
+          <View style={styles.subCard}>
             <Text style={styles.subCardTitleCaps}>😣 TOP SYMPTOMS</Text>
             {(() => {
               const counts = {};
@@ -553,6 +718,46 @@ export default function PeriodTrackerScreen({ navigation }) {
             })()}
           </View>
         </ScrollView>
+      </BottomSheet>
+
+      {/* Cycle Settings modal (Pro) */}
+      <BottomSheet visible={showCycleSettings} onClose={() => setShowCycleSettings(false)} style={styles.sheet}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>⚙️ Cycle Settings</Text>
+          <TouchableOpacity onPress={() => setShowCycleSettings(false)}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Average cycle length (days)</Text>
+          <TextInput
+            style={styles.numInput}
+            keyboardType="number-pad"
+            value={cycleLenInput}
+            onChangeText={setCycleLenInput}
+            placeholder="28"
+            placeholderTextColor={colors.textDim}
+          />
+        </View>
+        <View style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Average period length (days)</Text>
+          <TextInput
+            style={styles.numInput}
+            keyboardType="number-pad"
+            value={periodLenInput}
+            onChangeText={setPeriodLenInput}
+            placeholder="5"
+            placeholderTextColor={colors.textDim}
+          />
+        </View>
+        <View style={styles.sheetBtns}>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCycleSettings(false)}>
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.pink }]} onPress={handleSaveCycleSettings} disabled={cycleSettingsMut.isPending}>
+            {cycleSettingsMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save</Text>}
+          </TouchableOpacity>
+        </View>
       </BottomSheet>
 
       <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
@@ -584,6 +789,22 @@ const createStyles = (colors) => StyleSheet.create({
   phasePillText: { fontSize: 11, fontWeight: weight.bold },
   heroBig: { fontSize: typography.md, fontWeight: weight.black, color: colors.text },
   heroSub: { fontSize: typography.sm, color: colors.textMuted, marginTop: 2 },
+
+  reminderBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: colors.bgCard, borderRadius: 14, padding: 12,
+    borderWidth: 1, marginBottom: 14,
+  },
+  reminderText: { flex: 1, fontSize: typography.sm, color: colors.text, fontWeight: weight.medium },
+
+  checklistRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  checklistText: { flex: 1, fontSize: typography.sm, color: colors.text },
+  checklistTextDone: { color: colors.textDim, textDecorationLine: 'line-through' },
+
+  numInput: {
+    width: 80, backgroundColor: colors.bgElevated, borderRadius: 10, padding: 10,
+    color: colors.text, fontSize: typography.sm, borderWidth: 1, borderColor: colors.border, textAlign: 'center',
+  },
 
   previewRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
   previewCard: {
