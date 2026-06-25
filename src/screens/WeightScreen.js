@@ -734,8 +734,8 @@ export default function WeightScreen() {
                 <CircularGauge
                   percent={goalProgress ? goalProgress.pct : 0}
                   size={56} strokeWidth={6} color={colors.accent}
-                  value={goalProgress ? `${Math.round(goalProgress.pct)}%` : '—'}
-                  label="DONE"
+                  value={goalProgress ? `${Math.abs(toDisp(goalProgress.toGo, unit)).toFixed(1)}${unit}` : '—'}
+                  label="TO GO"
                   valueStyle={{ color: colors.text }}
                   labelStyle={{ color: colors.textMuted }}
                 />
