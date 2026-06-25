@@ -725,7 +725,7 @@ export default function WeightScreen() {
                   style={styles.goalPillBtn}
                   onPress={() => { if (!isPro) { setShowPaywall(true); return; } setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
                 >
-                  <Text style={styles.goalPillBtnText}>Edit Goal</Text>
+                  <Text style={styles.goalPillBtnText}>🎯 {toDisp(goalKg, unit).toFixed(1)}{unit}</Text>
                   <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
