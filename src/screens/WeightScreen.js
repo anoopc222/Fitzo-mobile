@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -21,7 +21,6 @@ import CircularGauge from '../components/CircularGauge';
 import ScreenHeader from '../components/ScreenHeader';
 import { useExportCard } from '../hooks/useExportCard';
 import { SkeletonCard } from '../components/Skeleton';
-import { useOnboarding } from '../context/OnboardingContext';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const KG_TO_LBS = 2.20462;
@@ -534,10 +533,6 @@ export default function WeightScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
-  const { startTour } = useOnboarding();
-  const unitToggleRef = useRef(null);
-  const goalRingRef = useRef(null);
-  const heatmapRef = useRef(null);
 
   const [unit, setUnit] = useState('kg');
   const [wkViewMode, setWkViewMode] = useState('week'); // 'week' | 'month'
@@ -703,27 +698,6 @@ export default function WeightScreen() {
     setShowLogSheet(true);
   };
 
-  useEffect(() => {
-    if (!data) return;
-    startTour('weight', [
-      {
-        ref: unitToggleRef,
-        title: 'Switch units',
-        description: 'Toggle between KG and LBS to display your weight in the unit you prefer.',
-      },
-      {
-        ref: goalRingRef,
-        title: 'Goal progress',
-        description: 'This ring shows how close you are to your target weight goal.',
-      },
-      {
-        ref: heatmapRef,
-        title: 'Logging consistency',
-        description: 'The monthly heatmap shows at a glance which days you logged your weight.',
-      },
-    ]);
-  }, [data, startTour]);
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
@@ -742,7 +716,7 @@ export default function WeightScreen() {
             <Text style={styles.monthChevron}>›</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.segmentRow} ref={unitToggleRef}>
+        <View style={styles.segmentRow}>
           {['kg', 'lbs'].map(u => (
             <TouchableOpacity key={u} onPress={() => setUnit(u)} style={[styles.segmentBtn, unit === u && styles.segmentBtnActive]}>
               <Text style={[styles.segmentText, unit === u && styles.segmentTextActive]}>{u.toUpperCase()}</Text>
@@ -788,7 +762,7 @@ export default function WeightScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.goalProgressRow} ref={goalRingRef}>
+              <View style={styles.goalProgressRow}>
                 <CircularGauge
                   percent={goalProgress ? goalProgress.pct : 0}
                   size={56} strokeWidth={6} color={colors.accent}
@@ -847,7 +821,7 @@ export default function WeightScreen() {
             </View>
 
             {/* ── Monthly Heatmap ── */}
-            <View style={styles.card} ref={heatmapRef}>
+            <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
                 <TouchableOpacity

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, FlatList, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Keyboard,
@@ -17,7 +17,6 @@ import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
-import { useOnboarding } from '../context/OnboardingContext';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -106,10 +105,6 @@ export default function FoodLogScreen() {
     Breakfast: '#fb923c', Lunch: '#22d3ee', Dinner: colors.purple, Snack: colors.success,
   }), [colors]);
   const qc = useQueryClient();
-  const { startTour } = useOnboarding();
-  const dateNavRef = useRef(null);
-  const calorieRingRef = useRef(null);
-  const breakfastMealRef = useRef(null);
   const { isPro } = useSubscription();
   const [showTargetsPaywall, setShowTargetsPaywall] = useState(false);
   const summaryExport = useGatedExport();
@@ -336,32 +331,11 @@ export default function FoodLogScreen() {
   // Calorie ring percentage
   const calPct = Math.min(100, Math.round((totals.calories / targets.calories) * 100));
 
-  useEffect(() => {
-    if (!data) return;
-    startTour('foodlog', [
-      {
-        ref: dateNavRef,
-        title: 'Browse your log',
-        description: 'Use the arrows to move between days and review past or future food logs.',
-      },
-      {
-        ref: calorieRingRef,
-        title: 'Calorie progress',
-        description: 'This ring shows how many calories you\'ve logged today against your daily target.',
-      },
-      {
-        ref: breakfastMealRef,
-        title: 'Add food',
-        description: 'Tap the + button on any meal to search foods or add a custom entry.',
-      },
-    ]);
-  }, [data, startTour]);
-
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenHeader title="LOG" colors={colors} />
       {/* Date nav */}
-      <View style={styles.dateNav} ref={dateNavRef}>
+      <View style={styles.dateNav}>
         <TouchableOpacity onPress={prevDay} style={styles.dateArrow}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
@@ -395,7 +369,7 @@ export default function FoodLogScreen() {
                     )}
                   </TouchableOpacity>
                 </View>
-                <View style={styles.calorieRing} ref={calorieRingRef}>
+                <View style={styles.calorieRing}>
                   <View style={[styles.ringOuter, { borderColor: calPct >= 100 ? colors.danger : colors.accent }]}>
                     <Text style={[styles.ringNum, { color: calPct >= 100 ? colors.danger : colors.accent }]}>
                       {totals.calories.toFixed(0)}
@@ -468,10 +442,7 @@ export default function FoodLogScreen() {
                     </View>
                     <Text style={styles.mealTitle}>{meal}</Text>
                     <Text style={[styles.mealCals, { color: mealColor }]}>{mealCals.toFixed(0)} kcal</Text>
-                    <TouchableOpacity
-                      onPress={() => openSheet(meal)}
-                      ref={meal === 'Breakfast' ? breakfastMealRef : undefined}
-                    >
+                    <TouchableOpacity onPress={() => openSheet(meal)}>
                       <Ionicons name="add-circle-outline" size={22} color={mealColor} />
                     </TouchableOpacity>
                   </View>

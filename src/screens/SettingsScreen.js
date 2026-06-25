@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
 } from 'react-native';
@@ -8,7 +8,6 @@ import * as Linking from 'expo-linking';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
-import { useOnboarding } from '../context/OnboardingContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
@@ -17,24 +16,6 @@ export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
   const { isPro, isInTrial, manageSubscriptions, ready: subReady } = useSubscription() ?? {};
-  const { startTour } = useOnboarding();
-  const editProfileRef = useRef(null);
-  const manageSubRef = useRef(null);
-
-  useEffect(() => {
-    startTour('settings', [
-      {
-        ref: editProfileRef,
-        title: 'Edit your profile',
-        description: 'Set your body stats and goal here — used across the app for targets and calculations.',
-      },
-      {
-        ref: manageSubRef,
-        title: 'Manage subscription',
-        description: 'Check your plan status or manage/cancel your subscription from here.',
-      },
-    ]);
-  }, []);
 
   const handleManageSubscription = async () => {
     try {
@@ -88,7 +69,7 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.card}>
           <SettingRow icon="mail-outline" label="Email" value={user?.email} />
           <SettingRow icon="key-outline" label="Change Password" chevron onPress={handlePasswordReset} />
-          <SettingRow ref={editProfileRef} icon="person-outline" label="Edit Profile" chevron last
+          <SettingRow icon="person-outline" label="Edit Profile" chevron last
             onPress={() => navigation.navigate('Profile')} />
         </View>
 
@@ -100,7 +81,7 @@ export default function SettingsScreen({ navigation }) {
             <SettingRow icon="rocket-outline" label="Upgrade to Pro" chevron
               onPress={() => navigation.navigate('Subscription')} />
           )}
-          <SettingRow ref={manageSubRef} icon="settings-outline" label="Manage / Cancel Subscription" chevron last
+          <SettingRow icon="settings-outline" label="Manage / Cancel Subscription" chevron last
             onPress={handleManageSubscription} />
         </View>
 
@@ -129,12 +110,11 @@ function SectionHeader({ title }) {
   return <Text style={styles.sectionTitle}>{title}</Text>;
 }
 
-const SettingRow = React.forwardRef(function SettingRow({ icon, label, value, chevron, onPress, last, danger }, ref) {
+function SettingRow({ icon, label, value, chevron, onPress, last, danger }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <TouchableOpacity
-      ref={ref}
       style={[styles.settingRow, !last && styles.rowBorder]}
       onPress={onPress}
       disabled={!onPress}
@@ -145,7 +125,7 @@ const SettingRow = React.forwardRef(function SettingRow({ icon, label, value, ch
       {chevron && <Ionicons name="chevron-forward" size={15} color={colors.textDim} />}
     </TouchableOpacity>
   );
-});
+}
 
 const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },

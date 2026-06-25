@@ -29,7 +29,6 @@ import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useMoreMenu } from '../context/MoreMenuContext';
-import { useOnboarding } from '../context/OnboardingContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
@@ -1145,22 +1144,6 @@ export default function HomeScreen() {
     setManualRefreshing(false);
   }, [refetch]);
 
-  useEffect(() => {
-    if (!data) return;
-    startTour('home', [
-      {
-        ref: goalProgressRef,
-        title: 'Your weekly goal',
-        description: 'This bar tracks workout sessions completed this week against your goal.',
-      },
-      {
-        ref: overviewCardRef,
-        title: 'Quick stats',
-        description: 'Tap any row — Weight, Steps, Today Kcal or Sleep — to jump straight to that screen.',
-      },
-    ]);
-  }, [data, startTour]);
-
   const displayName = (data?.profile?.full_name ?? user?.user_metadata?.full_name ?? 'User').toUpperCase();
   const initial     = displayName[0] ?? 'F';
   function nav(target) {
@@ -1228,9 +1211,6 @@ export default function HomeScreen() {
   }
 
   const insightScrollRef = useRef(null);
-  const overviewCardRef = useRef(null);
-  const goalProgressRef = useRef(null);
-  const { startTour } = useOnboarding();
   const [insightIdx, setInsightIdx] = useState(0);
   const insightCardW = SCREEN_W - 32; // full-width card (matches 16px screen padding on each side)
   useEffect(() => {
@@ -1313,7 +1293,7 @@ export default function HomeScreen() {
                   <Ionicons name="walk" size={12} color={colors.accent} />
                   <Text style={styles.motivText}>{data?.motivText}</Text>
                 </TouchableOpacity>
-                <View style={styles.goalProgressRow} ref={goalProgressRef}>
+                <View style={styles.goalProgressRow}>
                   <Text style={styles.goalProgressLabel} numberOfLines={1}>This week</Text>
                   <View style={styles.goalProgressTrack}>
                     <View style={[styles.goalProgressFill, { width: `${cutScore}%` }]} />
@@ -1374,7 +1354,7 @@ export default function HomeScreen() {
             )}
 
             {/* ── Stat Overview (merged, line-separated) ─────────── */}
-            <View style={styles.overviewCard} ref={overviewCardRef}>
+            <View style={styles.overviewCard}>
               <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Weight')} activeOpacity={0.7}>
                 <View style={styles.overviewIconWrap}>
                   <Ionicons name="scale-outline" size={15} color={C_WEIGHT} />
