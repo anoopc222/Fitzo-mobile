@@ -2083,7 +2083,7 @@ function EditSessionModal({
 export default function WorkoutScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
-  const { hasAccess } = useSubscription();
+  const { hasAccess, isPro } = useSubscription();
   const s = useMemo(() => createS(colors), [colors]);
   const qc = useQueryClient();
   const screenWidth = Dimensions.get('window').width;
@@ -2574,10 +2574,10 @@ export default function WorkoutScreen() {
                 <View style={{ alignItems: 'flex-end', gap: 6 }}>
                   <TouchableOpacity
                     style={s.goalPillBtn}
-                    onPress={() => { if (!hasAccess) { setShowToolsPaywall(true); return; } setWorkoutGoalInput(weeklyGoal); setShowWorkoutGoalSheet(true); }}
+                    onPress={() => { if (!isPro) { setShowToolsPaywall(true); return; } setWorkoutGoalInput(weeklyGoal); setShowWorkoutGoalSheet(true); }}
                   >
                     <Text style={s.goalPillBtnText}>🎯 {weeklyGoal}/wk</Text>
-                    <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
+                    <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                   </TouchableOpacity>
                   {weekStreak.current > 0 && (
                     <View style={s.weekStreakPill}>

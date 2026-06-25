@@ -507,7 +507,7 @@ export default function StepsScreen() {
   const qc = useQueryClient();
   const heroExport = useGatedExport();
   const heatmapExport = useExportCard();
-  const { hasAccess } = useSubscription();
+  const { hasAccess, isPro } = useSubscription();
 
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
@@ -780,9 +780,9 @@ export default function StepsScreen() {
                       <Ionicons name="share-outline" size={13} color={colors.textMuted} />
                     )}
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.goalPillBtn} onPress={() => { if (!hasAccess) { setShowTrendPaywall(true); return; } setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
+                  <TouchableOpacity style={styles.goalPillBtn} onPress={() => { if (!isPro) { setShowTrendPaywall(true); return; } setGoalInput(String(defaultGoal)); setShowGoalSheet(true); }}>
                     <Text style={styles.goalPillBtnText}>🎯 {fmtK(defaultGoal)}</Text>
-                    <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
+                    <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                   </TouchableOpacity>
                 </View>
               </View>

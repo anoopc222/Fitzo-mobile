@@ -538,7 +538,7 @@ export default function WeightScreen() {
   const [avgExpanded, setAvgExpanded] = useState(false);
   const avgWeightExport = useExportCard();
   const heatmapExport = useExportCard();
-  const { hasAccess } = useSubscription();
+  const { hasAccess, isPro } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
   const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
 
@@ -725,10 +725,10 @@ export default function WeightScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.goalPillBtn}
-                  onPress={() => { if (!hasAccess) { setShowPaywall(true); return; } setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
+                  onPress={() => { if (!isPro) { setShowPaywall(true); return; } setGoalInput(goalKg ? String(toDisp(goalKg, unit)) : ''); setShowGoalSheet(true); }}
                 >
                   <Text style={styles.goalPillBtnText}>Edit Goal</Text>
-                  <Ionicons name={hasAccess ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
+                  <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                 </TouchableOpacity>
               </View>
 
