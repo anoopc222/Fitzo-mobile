@@ -31,6 +31,9 @@ const queryClient = new QueryClient({
       gcTime: 5 * 60 * 1000,
       retry: 1,
       refetchOnReconnect: true,
+      // Mutations already invalidate the exact queries they affect, so a focus
+      // refetch only adds redundant network round-trips on top of staleTime.
+      refetchOnWindowFocus: false,
     },
   },
 });

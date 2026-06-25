@@ -14,6 +14,7 @@ import ProGate from '../components/ui/ProGate';
 import ScreenHeader from '../components/ScreenHeader';
 
 async function fetchProgress(userId) {
+  const oneYearAgo = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('workout_exercises')
     .select(`
@@ -22,7 +23,9 @@ async function fetchProgress(userId) {
       workout_sessions!inner ( id, date, user_id )
     `)
     .eq('workout_sessions.user_id', userId)
-    .order('exercise_name', { ascending: true });
+    .gte('workout_sessions.date', oneYearAgo)
+    .order('exercise_name', { ascending: true })
+    .limit(500);
   if (error) throw error;
   return data ?? [];
 }
