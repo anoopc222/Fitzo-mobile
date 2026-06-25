@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import DatePickerField from '../components/ui/DatePickerField';
+import SkeletonScreen from '../components/Skeleton';
 
 function localDateStr(d) {
   const y = d.getFullYear();
@@ -29,7 +30,7 @@ const GOALS = [
 
 const SEX_OPTIONS = ['Male', 'Female', 'Other'];
 
-async function fetchProfile(userId) {
+export async function fetchProfile(userId) {
   const [profile, stats] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
     Promise.all([
@@ -177,7 +178,9 @@ export default function ProfileScreen({ navigation }) {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        {isLoading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} /> : (
+        {isLoading ? (
+          <SkeletonScreen cards={4} linesPerCard={3} />
+        ) : (
           <>
             {/* Avatar */}
             <View style={styles.avatarSection}>

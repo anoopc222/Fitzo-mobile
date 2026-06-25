@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, RefreshControl,
+  TextInput, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,8 +12,9 @@ import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ProGate from '../components/ui/ProGate';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
-async function fetchProgress(userId) {
+export async function fetchProgress(userId) {
   const oneYearAgo = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('workout_exercises')
@@ -132,7 +133,7 @@ export default function ProgressScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
       >
       <ProGate label="Progress tracking">
-        {isLoading && <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />}
+        {isLoading && <SkeletonScreen cards={5} linesPerCard={3} />}
         {!isLoading && grouped.length === 0 && (
           <View style={styles.empty}>
             <Ionicons name="barbell-outline" size={48} color={colors.textDim} />

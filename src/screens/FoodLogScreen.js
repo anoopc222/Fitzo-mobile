@@ -16,6 +16,7 @@ import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
 import ScreenHeader from '../components/ScreenHeader';
+import SkeletonScreen from '../components/Skeleton';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -339,7 +340,7 @@ export default function FoodLogScreen() {
 
       <ScrollView contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}>
-        {isLoading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} /> : (
+        {isLoading ? <SkeletonScreen cards={5} linesPerCard={2} /> : (
           <>
             {/* Calorie summary */}
             <View>

@@ -20,6 +20,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import CircularGauge from '../components/CircularGauge';
 import ScreenHeader from '../components/ScreenHeader';
 import { useExportCard } from '../hooks/useExportCard';
+import { SkeletonCard } from '../components/Skeleton';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const KG_TO_LBS = 2.20462;
@@ -722,7 +723,17 @@ export default function WeightScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
       >
         {isLoading ? (
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+          <View>
+            {/* Hero + goal ring */}
+            <SkeletonCard lines={2} style={{ height: 140 }} />
+            {/* Trend chart */}
+            <SkeletonCard lines={1} style={{ height: 160 }} />
+            {/* Month heatmap */}
+            <SkeletonCard lines={4} />
+            {/* History list rows */}
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={3} />
+          </View>
         ) : (
           <>
             {/* ── Hero + Goal Progress + Stats (merged) ── */}
