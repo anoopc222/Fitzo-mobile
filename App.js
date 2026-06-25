@@ -11,9 +11,11 @@ import { AuthProvider } from './src/context/AuthContext';
 import { SubscriptionProvider } from './src/context/SubscriptionContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { MoreMenuProvider } from './src/context/MoreMenuContext';
+import { OnboardingProvider } from './src/context/OnboardingContext';
 import { useAppFonts } from './src/theme/useAppFonts';
 import AppNavigator from './src/navigation/AppNavigator';
 import MoreSheetModal from './src/components/MoreSheetModal';
+import Spotlight from './src/components/Spotlight';
 
 // RN doesn't fire the browser `visibilitychange`/`focus` events React Query
 // listens for by default, so foreground-refetch needs AppState wired in manually.
@@ -36,6 +38,7 @@ function Root() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <AppNavigator />
       <MoreSheetModal />
+      <Spotlight />
     </>
   );
 }
@@ -64,7 +67,9 @@ export default function App() {
           <AuthProvider>
             <SubscriptionProvider>
               <MoreMenuProvider>
-                <Root />
+                <OnboardingProvider>
+                  <Root />
+                </OnboardingProvider>
               </MoreMenuProvider>
             </SubscriptionProvider>
           </AuthProvider>
