@@ -619,10 +619,8 @@ export default function WeightScreen() {
     if (!goalKg || sortedAsc.length === 0) return null;
     const curKg = sortedDesc[0].weight;
     const startKg = sortedAsc[0].weight;
-    const totalNeeded = Math.abs(startKg - goalKg) || 0.001;
-    const done = Math.abs(startKg - curKg);
-    const pct = Math.min(done / totalNeeded, 1) * 100;
     const toGo = curKg - goalKg;
+    const pct = Math.min(100, Math.max(0, 100 - (Math.abs(toGo) / curKg) * 100));
     const days = Math.max(1, (new Date(sortedDesc[0].logged_at) - new Date(sortedAsc[0].logged_at)) / 86400000);
     const ratePerDay = (startKg - curKg) / days;
     let etaText = null;
