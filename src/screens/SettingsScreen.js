@@ -109,6 +109,21 @@ export default function SettingsScreen({ navigation }) {
             icon="barbell-outline" label="Workout reminder (6 PM)"
             value={!!notifPrefs.workoutReminder}
             onValueChange={(v) => handleToggleNotif('workoutReminder', v)}
+          />
+          <SwitchRow
+            icon="scale-outline" label="Remind me if weight isn't logged"
+            value={!!notifPrefs.weightReminder}
+            onValueChange={(v) => handleToggleNotif('weightReminder', v)}
+          />
+          <SwitchRow
+            icon="footsteps-outline" label="Remind me if steps aren't logged"
+            value={!!notifPrefs.stepsReminder}
+            onValueChange={(v) => handleToggleNotif('stepsReminder', v)}
+          />
+          <SwitchRow
+            icon="moon-outline" label="Remind me if sleep isn't logged"
+            value={!!notifPrefs.sleepReminder}
+            onValueChange={(v) => handleToggleNotif('sleepReminder', v)}
             last
           />
         </View>

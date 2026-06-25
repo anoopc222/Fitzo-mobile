@@ -7,7 +7,10 @@ import {
 } from '../lib/notifications';
 
 const PREFS_KEY = 'notificationPrefs';
-const DEFAULT_PREFS = { periodReminders: false, dailyLogReminder: false, workoutReminder: false };
+const DEFAULT_PREFS = {
+  periodReminders: false, dailyLogReminder: false, workoutReminder: false,
+  weightReminder: false, stepsReminder: false, sleepReminder: false,
+};
 
 const NotificationContext = createContext(null);
 
@@ -52,9 +55,14 @@ export function NotificationProvider({ children }) {
       AsyncStorage.setItem(PREFS_KEY, JSON.stringify(next));
       return next;
     });
-    if (!value && key === 'periodReminders') {
-      cancelNotificationsByTag('periodReminder');
-      cancelNotificationsByTag('ovulationReminder');
+    if (!value) {
+      const tag = { periodReminders: null, weightReminder: 'weightReminder', stepsReminder: 'stepsReminder', sleepReminder: 'sleepReminder' }[key];
+      if (key === 'periodReminders') {
+        cancelNotificationsByTag('periodReminder');
+        cancelNotificationsByTag('ovulationReminder');
+      } else if (tag) {
+        cancelNotificationsByTag(tag);
+      }
     }
     return true;
   }, []);

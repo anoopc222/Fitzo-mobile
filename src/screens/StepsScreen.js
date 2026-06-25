@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -22,6 +22,8 @@ import SkeletonScreen from '../components/Skeleton';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useNotificationPrefs } from '../context/NotificationContext';
+import { syncConditionalReminder } from '../lib/notifications';
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 // Steps km/kcal are derived on the fly (matches reference app: totalKm =
@@ -540,6 +542,18 @@ export default function StepsScreen() {
 
   const logs = data?.logs ?? [];
   const defaultGoal = data?.profile?.step_goal ?? logs[0]?.goal ?? 12000;
+
+  const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
+  useEffect(() => {
+    if (isLoading || !notifPrefs.stepsReminder) {
+      if (!notifPrefs.stepsReminder) syncConditionalReminder('stepsReminder', true, 21, 0, '', '');
+      return;
+    }
+    const todayStr = localDateStr(new Date());
+    const loggedToday = logs.some(l => l.logged_at === todayStr);
+    syncConditionalReminder('stepsReminder', loggedToday, 21, 0,
+      "Log today's steps", "You haven't logged your steps for today yet.");
+  }, [isLoading, notifPrefs.stepsReminder, logs]);
 
   const logMut = useMutation({
     mutationFn: ({ date, steps, activityType, note: logNote }) =>

@@ -42,6 +42,16 @@ export async function scheduleDailyReminder(tag, hour, minute, title, body) {
   });
 }
 
+// Cancels any pending same-day notification for `tag`, then re-schedules one
+// for later today only if `loggedToday` is false — so it's a no-op once the
+// user logs that metric, and self-corrects each time the screen re-renders.
+export async function syncConditionalReminder(tag, loggedToday, hour, minute, title, body) {
+  await cancelNotificationsByTag(tag);
+  if (loggedToday) return;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  await scheduleDateReminder(tag, todayStr, hour, minute, title, body);
+}
+
 export async function scheduleDateReminder(tag, date, hour, minute, title, body) {
   const fireDate = new Date(`${date}T00:00:00`);
   fireDate.setHours(hour, minute, 0, 0);

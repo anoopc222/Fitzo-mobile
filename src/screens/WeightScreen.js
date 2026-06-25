@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -17,6 +17,8 @@ import MonthYearPicker from '../components/ui/MonthYearPicker';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useNotificationPrefs } from '../context/NotificationContext';
+import { syncConditionalReminder } from '../lib/notifications';
 import CircularGauge from '../components/CircularGauge';
 import ScreenHeader from '../components/ScreenHeader';
 import { useExportCard } from '../hooks/useExportCard';
@@ -570,6 +572,19 @@ export default function WeightScreen() {
 
   const logs = data?.logs ?? [];
   const goalKg = data?.profile?.weight_goal_kg ?? 60;
+
+  const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
+  useEffect(() => {
+    if (isLoading || !notifPrefs.weightReminder) {
+      if (!notifPrefs.weightReminder) syncConditionalReminder('weightReminder', true, 20, 0, '', '');
+      return;
+    }
+    const yday = new Date(); yday.setDate(yday.getDate() - 1);
+    const ydayStr = localDateStr(yday);
+    const loggedYesterday = logs.some(l => l.logged_at === ydayStr);
+    syncConditionalReminder('weightReminder', loggedYesterday, 20, 0,
+      "Don't forget your weigh-in", "You haven't logged yesterday's weight yet.");
+  }, [isLoading, notifPrefs.weightReminder, logs]);
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
   const sortedAsc = useMemo(() => [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at)), [logs]);
