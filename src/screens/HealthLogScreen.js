@@ -232,13 +232,40 @@ export default function HealthLogScreen({ navigation }) {
 
   const saveMut = useMutation({
     mutationFn: ({ id, rec }) => saveSession(user.id, id, rec),
-    onSuccess: () => { qc.invalidateQueries(['healthLogs', user.id]); setShowSheet(false); },
-    onError: (e) => Alert.alert('Error', e.message),
+    onMutate: async ({ id, rec }) => {
+      await qc.cancelQueries(['healthLogs', user.id]);
+      const previous = qc.getQueryData(['healthLogs', user.id]);
+      qc.setQueryData(['healthLogs', user.id], (old) => {
+        if (!old) return old;
+        if (id) {
+          return old.map(r => r.id === id ? withComputed({ id, date: rec.date, _custom: rec._custom || [], ...rec }) : r);
+        }
+        const optimisticRec = withComputed({ id: `optimistic-${rec.date}`, date: rec.date, _custom: rec._custom || [], ...rec });
+        return [optimisticRec, ...old];
+      });
+      setShowSheet(false);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['healthLogs', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => qc.invalidateQueries(['healthLogs', user.id]),
   });
 
   const deleteMut = useMutation({
     mutationFn: deleteSession,
-    onSuccess: () => qc.invalidateQueries(['healthLogs', user.id]),
+    onMutate: async (id) => {
+      await qc.cancelQueries(['healthLogs', user.id]);
+      const previous = qc.getQueryData(['healthLogs', user.id]);
+      qc.setQueryData(['healthLogs', user.id], (old) => old ? old.filter(r => r.id !== id) : old);
+      return { previous };
+    },
+    onError: (e, id, context) => {
+      if (context?.previous) qc.setQueryData(['healthLogs', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => qc.invalidateQueries(['healthLogs', user.id]),
   });
 
   const openAdd = () => {

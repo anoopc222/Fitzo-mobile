@@ -536,12 +536,30 @@ export default function StepsScreen() {
   const logMut = useMutation({
     mutationFn: ({ date, steps, activityType, note: logNote }) =>
       logSteps(user.id, { date, steps, goal: defaultGoal, activityType, note: logNote }),
-    onSuccess: () => {
+    onMutate: async ({ date, steps, activityType, note: logNote }) => {
+      await qc.cancelQueries(['steps', user.id]);
+      const previous = qc.getQueryData(['steps', user.id]);
+      qc.setQueryData(['steps', user.id], (old) => {
+        if (!old) return old;
+        const rest = old.logs.filter(l => l.logged_at !== date);
+        const optimisticLog = {
+          id: `optimistic-${date}`, steps, goal: defaultGoal,
+          distance_km: +(steps * KM_PER_STEP).toFixed(3), calories_burned: Math.round(steps * KCAL_PER_STEP),
+          activity_type: activityType || 'walk', note: logNote || null, logged_at: date,
+        };
+        return { ...old, logs: [optimisticLog, ...rest] };
+      });
+      setShowLogSheet(false); setStepsInput(''); setNote('');
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['steps', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['steps', user.id]);
       qc.invalidateQueries(['home', user.id]);
-      setShowLogSheet(false); setStepsInput(''); setNote('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const goalMut = useMutation({

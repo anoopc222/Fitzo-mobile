@@ -1026,32 +1026,101 @@ export default function HomeScreen() {
 
   const weightQuickMut = useMutation({
     mutationFn: (kg) => quickLogWeight(user.id, kg),
-    onSuccess: () => {
+    onMutate: async (kg) => {
+      await qc.cancelQueries(['home', user.id]);
+      await qc.cancelQueries(['weight', user.id]);
+      const previousHome = qc.getQueryData(['home', user.id]);
+      const previousWeight = qc.getQueryData(['weight', user.id]);
+      const today = localDateStr(new Date());
+      qc.setQueryData(['home', user.id], (old) => {
+        if (!old) return old;
+        const weightArr = [...old.weightArr.slice(0, -1), kg];
+        return { ...old, weightArr, latestWeight: { ...old.latestWeight, weight: kg, logged_at: today } };
+      });
+      qc.setQueryData(['weight', user.id], (old) => {
+        if (!old) return old;
+        const rest = old.logs.filter(l => l.logged_at !== today);
+        const optimisticLog = { id: `optimistic-${today}`, weight: kg, notes: null, logged_at: today };
+        return { ...old, logs: [optimisticLog, ...rest] };
+      });
+      setShowWeightLog(false); setWeightQuickInput('');
+      return { previousHome, previousWeight };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previousHome) qc.setQueryData(['home', user.id], context.previousHome);
+      if (context?.previousWeight) qc.setQueryData(['weight', user.id], context.previousWeight);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['home', user.id]);
       qc.invalidateQueries(['weight', user.id]);
-      setShowWeightLog(false); setWeightQuickInput('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const sleepQuickMut = useMutation({
     mutationFn: (hours) => quickLogSleep(user.id, hours),
-    onSuccess: () => {
+    onMutate: async (hours) => {
+      await qc.cancelQueries(['home', user.id]);
+      await qc.cancelQueries(['sleep', user.id]);
+      const previousHome = qc.getQueryData(['home', user.id]);
+      const previousSleep = qc.getQueryData(['sleep', user.id]);
+      const today = localDateStr(new Date());
+      qc.setQueryData(['home', user.id], (old) => {
+        if (!old) return old;
+        const sleepArr = [...old.sleepArr.slice(0, -1), hours];
+        return { ...old, sleepArr, latestSleep: { ...old.latestSleep, hours, logged_at: today } };
+      });
+      qc.setQueryData(['sleep', user.id], (old) => {
+        if (!old) return old;
+        const rest = old.logs.filter(l => l.logged_at !== today);
+        const optimisticLog = { id: `optimistic-${today}`, hours, quality: old.logs.find(l => l.logged_at === today)?.quality ?? null, notes: null, logged_at: today };
+        return { ...old, logs: [optimisticLog, ...rest] };
+      });
+      setShowSleepLog(false); setSleepQuickInput('');
+      return { previousHome, previousSleep };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previousHome) qc.setQueryData(['home', user.id], context.previousHome);
+      if (context?.previousSleep) qc.setQueryData(['sleep', user.id], context.previousSleep);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['home', user.id]);
       qc.invalidateQueries(['sleep', user.id]);
-      setShowSleepLog(false); setSleepQuickInput('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const stepsQuickMut = useMutation({
     mutationFn: (steps) => quickLogSteps(user.id, steps),
-    onSuccess: () => {
+    onMutate: async (steps) => {
+      await qc.cancelQueries(['home', user.id]);
+      await qc.cancelQueries(['steps', user.id]);
+      const previousHome = qc.getQueryData(['home', user.id]);
+      const previousSteps = qc.getQueryData(['steps', user.id]);
+      const today = localDateStr(new Date());
+      qc.setQueryData(['home', user.id], (old) => {
+        if (!old) return old;
+        const stepsArr = [...old.stepsArr.slice(0, -1), steps];
+        return { ...old, stepsArr, latestSteps: { ...old.latestSteps, steps, logged_at: today } };
+      });
+      qc.setQueryData(['steps', user.id], (old) => {
+        if (!old) return old;
+        const rest = old.logs.filter(l => l.logged_at !== today);
+        const optimisticLog = { id: `optimistic-${today}`, steps, goal: old.logs.find(l => l.logged_at === today)?.goal ?? null, logged_at: today };
+        return { ...old, logs: [optimisticLog, ...rest] };
+      });
+      setShowStepsLog(false); setStepsQuickInput('');
+      return { previousHome, previousSteps };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previousHome) qc.setQueryData(['home', user.id], context.previousHome);
+      if (context?.previousSteps) qc.setQueryData(['steps', user.id], context.previousSteps);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['home', user.id]);
       qc.invalidateQueries(['steps', user.id]);
-      setShowStepsLog(false); setStepsQuickInput('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const onRefresh = useCallback(() => refetch(), [refetch]);

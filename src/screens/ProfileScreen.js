@@ -102,12 +102,21 @@ export default function ProfileScreen({ navigation }) {
 
   const updateMut = useMutation({
     mutationFn: (fields) => updateProfile(user.id, fields),
-    onSuccess: () => {
+    onMutate: async (fields) => {
+      await qc.cancelQueries(['profile', user.id]);
+      const previous = qc.getQueryData(['profile', user.id]);
+      qc.setQueryData(['profile', user.id], (old) => old ? { ...old, profile: { ...old.profile, ...fields } } : old);
+      setEditing(false);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['profile', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries(['profile', user.id]);
       qc.invalidateQueries(['home', user.id]);
-      setEditing(false);
     },
-    onError: (e) => Alert.alert('Error', e.message),
   });
 
   const handleSave = () => {
