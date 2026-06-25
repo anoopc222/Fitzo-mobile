@@ -1519,12 +1519,14 @@ export default function HomeScreen() {
             </View>
 
             {/* ── Actionable nudge cards ────────────────────────── */}
-            {data?.daysSinceWeight != null && data.daysSinceWeight >= 2 && (
+            {(!data?.latestWeight || data.daysSinceWeight >= 2) && (
               <NudgeCard
                 icon="scale-outline"
                 color={C_WEIGHT}
-                title={`No weigh-in for ${data.daysSinceWeight} days`}
-                sub={`Last: ${data.latestWeight.weight}KG · ${data.daysSinceWeight} days ago`}
+                title={data?.latestWeight ? `No weigh-in for ${data.daysSinceWeight} days` : 'No weigh-ins yet'}
+                sub={data?.latestWeight
+                  ? `Last: ${data.latestWeight.weight}KG · ${data.daysSinceWeight} days ago`
+                  : 'Tap to log your first weight'}
                 styles={styles}
                 onPress={() => setShowWeightLog(true)}
               />
@@ -1541,12 +1543,26 @@ export default function HomeScreen() {
                 onPress={() => navigation.navigate('Workout')}
               />
             )}
-            {data?.daysSinceSleep != null && data.daysSinceSleep >= 1 && (
+            {(!data?.latestSteps || data.daysSinceSteps >= 1) && (
+              <NudgeCard
+                icon="footsteps-outline"
+                color={C_STEPS}
+                title={data?.latestSteps ? `No steps logged for ${data.daysSinceSteps} day${data.daysSinceSteps === 1 ? '' : 's'}` : 'No steps logged yet'}
+                sub={data?.latestSteps
+                  ? `Last: ${data.latestSteps.steps.toLocaleString()} · ${data.daysSinceSteps} day${data.daysSinceSteps === 1 ? '' : 's'} ago`
+                  : 'Tap to log your first steps'}
+                styles={styles}
+                onPress={() => navigation.navigate('Steps')}
+              />
+            )}
+            {(!data?.latestSleep || data.daysSinceSleep >= 1) && (
               <NudgeCard
                 icon="moon-outline"
                 color={C_SLEEP}
-                title={`No sleep logged for ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'}`}
-                sub={`Last: ${data.latestSleep.hours}h · ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'} ago`}
+                title={data?.latestSleep ? `No sleep logged for ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'}` : 'No sleep logged yet'}
+                sub={data?.latestSleep
+                  ? `Last: ${data.latestSleep.hours}h · ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'} ago`
+                  : 'Tap to log your first sleep'}
                 styles={styles}
                 onPress={() => setShowSleepLog(true)}
               />
