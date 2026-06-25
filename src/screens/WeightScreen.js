@@ -103,7 +103,7 @@ async function deleteWeightLog(id) {
 // ─── Weight Heatmap — ports _renderWeightHeatmap (quartile-relative-to-month) ─
 function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true, onLockedPress, cardWidth }) {
   const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
-  const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
+  const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
