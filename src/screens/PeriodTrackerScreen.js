@@ -45,10 +45,12 @@ const SYMPTOMS = [
 
 const MOODS = ['Happy', 'Calm', 'Sensitive', 'Irritable', 'Sad', 'Anxious'];
 
+const PAIN_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
 export async function fetchPeriodLogs(userId) {
   const { data, error } = await supabase
     .from('period_logs')
-    .select('id, start_date, end_date, flow, symptoms, mood, notes')
+    .select('id, start_date, end_date, flow, symptoms, mood, notes, pain_level')
     .eq('user_id', userId)
     .order('start_date', { ascending: false })
     .limit(60);
@@ -66,9 +68,14 @@ export async function fetchCycleSettings(userId) {
   return data ?? { avg_cycle_length: 28, avg_period_length: 5 };
 }
 
-async function logPeriod(userId, values) {
-  const { error } = await supabase.from('period_logs').insert({ user_id: userId, ...values });
-  if (error) throw error;
+async function logPeriod(userId, values, editingId) {
+  if (editingId) {
+    const { error } = await supabase.from('period_logs').update(values).eq('id', editingId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('period_logs').insert({ user_id: userId, ...values });
+    if (error) throw error;
+  }
 }
 
 async function deletePeriodLog(id) {
@@ -129,7 +136,7 @@ function buildSymptomTrend(logs) {
 
 function computeCycleInsights(logs, avgCycleLenSetting, avgPeriodLenSetting) {
   if (logs.length === 0) {
-    return { avgCycleLength: avgCycleLenSetting, avgPeriodLength: avgPeriodLenSetting, nextPeriodStart: null, fertileStart: null, ovulationDay: null, cycleDay: null, phase: null };
+    return { avgCycleLength: avgCycleLenSetting, avgPeriodLength: avgPeriodLenSetting, nextPeriodStart: null, fertileStart: null, ovulationDay: null, cycleDay: null, phase: null, regularity: null, streak: 0 };
   }
   const sorted = [...logs].sort((a, b) => a.start_date.localeCompare(b.start_date));
   const cycleLengths = [];
@@ -159,7 +166,22 @@ function computeCycleInsights(logs, avgCycleLenSetting, avgPeriodLenSetting) {
   else if (todayStr >= fertileStart && todayStr <= ovulationDay) phase = 'Ovulation';
   else if (sinceStart > daysBetween(latest.start_date, ovulationDay)) phase = 'Luteal';
 
-  return { avgCycleLength, avgPeriodLength, nextPeriodStart, fertileStart, ovulationDay, cycleDay, phase };
+  let regularity = null;
+  if (cycleLengths.length >= 2) {
+    const spread = Math.max(...cycleLengths) - Math.min(...cycleLengths);
+    regularity = { spread, label: spread <= 4 ? 'Regular' : spread <= 9 ? 'Slightly irregular' : 'Irregular' };
+  }
+
+  // Tracking streak: consecutive logged cycles (newest-first) with no gap > 45 days between starts.
+  const newestFirst = [...sorted].reverse();
+  let streak = newestFirst.length ? 1 : 0;
+  for (let i = 1; i < newestFirst.length; i++) {
+    const gap = daysBetween(newestFirst[i].start_date, newestFirst[i - 1].start_date);
+    if (gap > 45) break;
+    streak++;
+  }
+
+  return { avgCycleLength, avgPeriodLength, nextPeriodStart, fertileStart, ovulationDay, cycleDay, phase, regularity, streak };
 }
 
 function SymptomTrendChart({ trend, colors, width }) {
@@ -248,6 +270,8 @@ export default function PeriodTrackerScreen({ navigation }) {
   const [symptoms, setSymptoms] = useState([]);
   const [mood, setMood] = useState(null);
   const [notes, setNotes] = useState('');
+  const [painLevel, setPainLevel] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   const { data: logs = [], isLoading, refetch } = useQuery({
     queryKey: ['periodLogs', user?.id],
@@ -269,11 +293,15 @@ export default function PeriodTrackerScreen({ navigation }) {
   };
 
   const logMut = useMutation({
-    mutationFn: (values) => logPeriod(user.id, values),
-    onMutate: async (values) => {
+    mutationFn: ({ values, editingId }) => logPeriod(user.id, values, editingId),
+    onMutate: async ({ values, editingId }) => {
       await qc.cancelQueries(['periodLogs', user.id]);
       const previous = qc.getQueryData(['periodLogs', user.id]);
       qc.setQueryData(['periodLogs', user.id], (old) => {
+        if (editingId) {
+          return (old || []).map(l => (l.id === editingId ? { ...l, ...values } : l))
+            .sort((a, b) => b.start_date.localeCompare(a.start_date));
+        }
         const optimisticLog = { id: `optimistic-${values.start_date}`, ...values };
         return [optimisticLog, ...(old || [])].sort((a, b) => b.start_date.localeCompare(a.start_date));
       });
@@ -333,6 +361,7 @@ export default function PeriodTrackerScreen({ navigation }) {
   const symptomTrend = useMemo(() => buildSymptomTrend(logs), [logs]);
 
   const daysUntilNext = insights.nextPeriodStart ? daysBetween(localDateStr(new Date()), insights.nextPeriodStart) : null;
+  const daysUntilOvulation = insights.ovulationDay ? daysBetween(localDateStr(new Date()), insights.ovulationDay) : null;
 
   const pmsKey = insights.nextPeriodStart ? `pmsChecklist:${insights.nextPeriodStart}` : null;
 
@@ -366,12 +395,26 @@ export default function PeriodTrackerScreen({ navigation }) {
   };
 
   const resetForm = () => {
+    setEditingId(null);
     setStartDate(localDateStr(new Date()));
     setEndDate('');
     setFlow('medium');
     setSymptoms([]);
     setMood(null);
     setNotes('');
+    setPainLevel(null);
+  };
+
+  const openEdit = (log) => {
+    setEditingId(log.id);
+    setStartDate(log.start_date);
+    setEndDate(log.end_date || '');
+    setFlow(log.flow || 'medium');
+    setSymptoms(log.symptoms || []);
+    setMood(log.mood || null);
+    setNotes(log.notes || '');
+    setPainLevel(log.pain_level ?? null);
+    setShowModal(true);
   };
 
   const toggleSymptom = (s) => {
@@ -382,12 +425,16 @@ export default function PeriodTrackerScreen({ navigation }) {
     if (!startDate) return Alert.alert('Required', 'Select a start date');
     if (endDate && endDate < startDate) return Alert.alert('Invalid', 'End date must be after start date');
     logMut.mutate({
-      start_date: startDate,
-      end_date: endDate || null,
-      flow,
-      symptoms,
-      mood,
-      notes: notes || null,
+      editingId,
+      values: {
+        start_date: startDate,
+        end_date: endDate || null,
+        flow,
+        symptoms,
+        mood,
+        notes: notes || null,
+        pain_level: painLevel,
+      },
     });
   };
 
@@ -438,8 +485,15 @@ export default function PeriodTrackerScreen({ navigation }) {
                     valueStyle={{ color: colors.text }} labelStyle={{ color: colors.textMuted }}
                   />
                   <View style={styles.heroTextCol}>
-                    <View style={[styles.phasePill, { backgroundColor: phaseColor + '22' }]}>
-                      <Text style={[styles.phasePillText, { color: phaseColor }]}>{insights.phase} Phase</Text>
+                    <View style={styles.pillRow}>
+                      <View style={[styles.phasePill, { backgroundColor: phaseColor + '22' }]}>
+                        <Text style={[styles.phasePillText, { color: phaseColor }]}>{insights.phase} Phase</Text>
+                      </View>
+                      {insights.regularity && (
+                        <View style={[styles.phasePill, { backgroundColor: colors.bgElevated }]}>
+                          <Text style={[styles.phasePillText, { color: colors.textMuted }]}>{insights.regularity.label}</Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.heroBig}>
                       {daysUntilNext != null ? (daysUntilNext <= 0 ? 'Period due' : `${daysUntilNext}d to next period`) : '--'}
@@ -460,6 +514,18 @@ export default function PeriodTrackerScreen({ navigation }) {
                   {daysUntilNext <= 0
                     ? 'Your period is expected today'
                     : `Your period is expected in ${daysUntilNext} day${daysUntilNext === 1 ? '' : 's'}`}
+                </Text>
+              </View>
+            )}
+
+            {/* Ovulation countdown banner */}
+            {daysUntilOvulation != null && daysUntilOvulation >= 0 && daysUntilOvulation <= 3 && insights.phase !== 'Menstrual' && (
+              <View style={[styles.reminderBanner, { borderColor: colors.warn + '55' }]}>
+                <Ionicons name="sparkles" size={18} color={colors.warn} />
+                <Text style={styles.reminderText}>
+                  {daysUntilOvulation === 0
+                    ? 'Ovulation expected today — peak fertility'
+                    : `Ovulation expected in ${daysUntilOvulation} day${daysUntilOvulation === 1 ? '' : 's'}`}
                 </Text>
               </View>
             )}
@@ -538,7 +604,7 @@ export default function PeriodTrackerScreen({ navigation }) {
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>History</Text>
                 {logs.map((log) => (
-                  <View key={log.id} style={styles.historyItem}>
+                  <TouchableOpacity key={log.id} style={styles.historyItem} activeOpacity={0.7} onPress={() => openEdit(log)}>
                     <View style={[styles.flowDot, { backgroundColor: FLOW_BY_KEY[log.flow]?.color || colors.pink }]} />
                     <View style={styles.historyLeft}>
                       <Text style={styles.historyDate}>
@@ -547,6 +613,7 @@ export default function PeriodTrackerScreen({ navigation }) {
                       <View style={styles.historyValues}>
                         <Text style={styles.historyValue}>{FLOW_BY_KEY[log.flow]?.label || 'Medium'} flow</Text>
                         {log.mood && <Text style={styles.historyValue}>· {log.mood}</Text>}
+                        {log.pain_level != null && <Text style={styles.historyValue}>· Pain {log.pain_level}/10</Text>}
                         {(log.symptoms || []).slice(0, 3).map(s => (
                           <Text key={s} style={styles.historyValue}>· {s}</Text>
                         ))}
@@ -561,7 +628,8 @@ export default function PeriodTrackerScreen({ navigation }) {
                     >
                       <Ionicons name="trash-outline" size={16} color={colors.textDim} />
                     </TouchableOpacity>
-                  </View>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textDim} />
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -576,7 +644,7 @@ export default function PeriodTrackerScreen({ navigation }) {
       {/* Log Modal */}
       <BottomSheet visible={showModal} onClose={() => setShowModal(false)} style={styles.sheet}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Log Period</Text>
+          <Text style={styles.sheetTitle}>{editingId ? 'Edit Period' : 'Log Period'}</Text>
           <TouchableOpacity onPress={() => setShowModal(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
@@ -601,6 +669,19 @@ export default function PeriodTrackerScreen({ navigation }) {
               >
                 <View style={[styles.flowChipDot, { backgroundColor: f.color }]} />
                 <Text style={[styles.flowChipText, flow === f.key && { color: f.color }]}>{f.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.groupLabel}>Pain level (optional)</Text>
+          <View style={styles.chipRow}>
+            {PAIN_LEVELS.map(n => (
+              <TouchableOpacity
+                key={n}
+                style={[styles.painChip, painLevel === n && { backgroundColor: colors.pink + '22', borderColor: colors.pink }]}
+                onPress={() => setPainLevel(painLevel === n ? null : n)}
+              >
+                <Text style={[styles.painChipText, painLevel === n && { color: colors.pink }]}>{n}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -675,6 +756,10 @@ export default function PeriodTrackerScreen({ navigation }) {
                 <Text style={styles.statValue}>{logs.length}</Text>
                 <Text style={styles.statLabel}>LOGGED</Text>
               </View>
+              <View style={styles.statCell}>
+                <Text style={styles.statValue}>{insights.streak}</Text>
+                <Text style={styles.statLabel}>STREAK</Text>
+              </View>
             </View>
           </View>
 
@@ -719,6 +804,32 @@ export default function PeriodTrackerScreen({ navigation }) {
                   <Text style={styles.scoreBarVal}>{count}x</Text>
                 </View>
               ));
+            })()}
+          </View>
+
+          <View style={styles.subCard}>
+            <Text style={styles.subCardTitleCaps}>🩸 SYMPTOMS BY FLOW</Text>
+            {(() => {
+              const byFlow = {};
+              logs.forEach(l => {
+                if (!l.flow) return;
+                byFlow[l.flow] = byFlow[l.flow] || {};
+                (l.symptoms || []).forEach(s => {
+                  byFlow[l.flow][s] = (byFlow[l.flow][s] || 0) + 1;
+                });
+              });
+              const flowsWithData = FLOWS.filter(f => byFlow[f.key] && Object.keys(byFlow[f.key]).length > 0);
+              if (!flowsWithData.length) return <Text style={styles.muted}>Log symptoms with your flow to see patterns</Text>;
+              return flowsWithData.map(f => {
+                const top = Object.entries(byFlow[f.key]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                return (
+                  <View key={f.key} style={styles.flowCorrelRow}>
+                    <View style={[styles.flowChipDot, { backgroundColor: f.color }]} />
+                    <Text style={styles.flowCorrelLabel}>{f.label}:</Text>
+                    <Text style={styles.flowCorrelText}>{top.map(([s]) => s).join(', ')}</Text>
+                  </View>
+                );
+              });
             })()}
           </View>
         </ScrollView>
@@ -789,7 +900,8 @@ const createStyles = (colors) => StyleSheet.create({
   emptySub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center' },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   heroTextCol: { flex: 1 },
-  phasePill: { alignSelf: 'flex-start', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 },
+  pillRow: { flexDirection: 'row', gap: 6, marginBottom: 8 },
+  phasePill: { alignSelf: 'flex-start', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
   phasePillText: { fontSize: 11, fontWeight: weight.bold },
   heroBig: { fontSize: typography.md, fontWeight: weight.black, color: colors.text },
   heroSub: { fontSize: typography.sm, color: colors.textMuted, marginTop: 2 },
@@ -865,6 +977,11 @@ const createStyles = (colors) => StyleSheet.create({
   tagChipActive: { backgroundColor: colors.pink + '22', borderColor: colors.pink },
   tagChipText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
   tagChipTextActive: { color: colors.pink },
+  painChip: {
+    width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border,
+  },
+  painChipText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
   notesInput: {
     backgroundColor: colors.bgElevated, borderRadius: 12, padding: 12,
     color: colors.text, fontSize: typography.sm, borderWidth: 1, borderColor: colors.border,
@@ -904,4 +1021,8 @@ const createStyles = (colors) => StyleSheet.create({
   scoreBarTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' },
   scoreBarFill: { height: 5, borderRadius: 3 },
   scoreBarVal: { width: 28, fontSize: typography.xs, color: colors.textMuted, textAlign: 'right' },
+
+  flowCorrelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  flowCorrelLabel: { fontSize: typography.xs, fontWeight: weight.semibold, color: colors.text, width: 64 },
+  flowCorrelText: { flex: 1, fontSize: typography.xs, color: colors.textMuted },
 });
