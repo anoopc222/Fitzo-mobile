@@ -177,32 +177,41 @@ function SymptomTrendChart({ trend, colors, width }) {
   }
 
   const maxCount = Math.max(1, ...trend.map(t => t.count));
-  const barW = Math.min(28, pw / trend.length - 8);
-  const gap = (pw - barW * trend.length) / Math.max(trend.length - 1, 1);
+  const slot = pw / trend.length;
+  const barW = Math.min(28, slot - 8);
+  const labelW = Math.min(40, slot);
 
   return (
     <View>
       <Svg width={width} height={H}>
         {trend.map((t, i) => {
           const barH = (t.count / maxCount) * ph;
-          const x = P.l + i * (barW + gap);
+          const cx = P.l + i * slot + slot / 2;
+          const x = cx - barW / 2;
           const y = P.t + ph - barH;
           return <Rect key={t.date} x={x} y={y} width={barW} height={Math.max(2, barH)} rx={4} fill={colors.pink} />;
         })}
       </Svg>
-      <View style={styles_trend.labelRow}>
-        {trend.map(t => (
-          <Text key={t.date} style={[styles_trend.label, { color: colors.textDim, width: barW + gap }]} numberOfLines={1}>
-            {fmtDate(t.date)}
-          </Text>
-        ))}
+      <View style={[styles_trend.labelRow, { width }]}>
+        {trend.map((t, i) => {
+          const cx = P.l + i * slot + slot / 2;
+          return (
+            <Text
+              key={t.date}
+              style={[styles_trend.label, { color: colors.textDim, position: 'absolute', left: cx - labelW / 2, width: labelW }]}
+              numberOfLines={1}
+            >
+              {fmtDate(t.date)}
+            </Text>
+          );
+        })}
       </View>
     </View>
   );
 }
 
 const styles_trend = StyleSheet.create({
-  labelRow: { flexDirection: 'row', marginTop: 4 },
+  labelRow: { height: 14, marginTop: 4 },
   label: { fontSize: 8, textAlign: 'center' },
 });
 
