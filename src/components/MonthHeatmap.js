@@ -73,8 +73,8 @@ export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year
                 style={[
                   styles.dayNum,
                   { color: mutedTextColor },
-                  hasSession && { color: '#fff', fontWeight: '600' },
                   isToday && { color: cellColor },
+                  hasSession && { color: '#fff', fontWeight: '600' },
                 ]}
               >
                 {cell.day}
