@@ -370,7 +370,7 @@ export default function SleepScreen() {
   });
 
   const logs = (data?.logs ?? []).filter(l => Number.isFinite(l.hours));
-  const goal = data?.profile?.sleep_goal_hours ?? 7.5;
+  const goal = data?.profile?.sleep_goal_hours ?? 8;
   const logCutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
   const sessions = data?.sessions ?? [];
   const steps = data?.steps ?? [];

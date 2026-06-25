@@ -107,7 +107,7 @@ async function logSteps(userId, { date, steps, goal, activityType, note }) {
   if (existing.error) throw existing.error;
 
   const fields = {
-    steps, goal: goal ?? 10000, distance_km, calories_burned,
+    steps, goal: goal ?? 12000, distance_km, calories_burned,
     activity_type: activityType || 'walk', note: note || null,
   };
 
@@ -531,7 +531,7 @@ export default function StepsScreen() {
   });
 
   const logs = data?.logs ?? [];
-  const defaultGoal = data?.profile?.step_goal ?? logs[0]?.goal ?? 10000;
+  const defaultGoal = data?.profile?.step_goal ?? logs[0]?.goal ?? 12000;
 
   const logMut = useMutation({
     mutationFn: ({ date, steps, activityType, note: logNote }) =>
