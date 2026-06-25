@@ -587,6 +587,7 @@ export default function SleepScreen() {
                 <CircularGauge
                   percent={recoveryScore} size={92} strokeWidth={9} color={recoveryColor}
                   value={recoveryScore || '—'} label="RECOVERY"
+                  valueStyle={{ color: colors.text }} labelStyle={{ color: colors.textMuted }}
                 />
                 <Text style={styles.recoveryVerdict}>{verdict}</Text>
               </View>
@@ -612,6 +613,7 @@ export default function SleepScreen() {
                     <CircularGauge
                       percent={recoveryScore} size={92} strokeWidth={9} color={recoveryColor}
                       value={recoveryScore || '—'} label="RECOVERY"
+                      valueStyle={{ color: colors.text }} labelStyle={{ color: colors.textMuted }}
                     />
                     <Text style={styles.recoveryVerdict}>{verdict}</Text>
                   </View>

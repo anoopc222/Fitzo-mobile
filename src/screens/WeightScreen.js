@@ -738,6 +738,8 @@ export default function WeightScreen() {
                   size={56} strokeWidth={6} color={colors.accent}
                   value={goalProgress ? `${Math.round(goalProgress.pct)}%` : '—'}
                   label="DONE"
+                  valueStyle={{ color: colors.text }}
+                  labelStyle={{ color: colors.textMuted }}
                 />
                 <View style={{ flex: 1, marginLeft: 16 }}>
                   <View style={styles.statTileRowInline}>
