@@ -15,7 +15,7 @@ import ScreenHeader from '../components/ScreenHeader';
 export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
-  const { isPro, isInTrial, manageSubscriptions } = useSubscription() ?? {};
+  const { isPro, isInTrial, manageSubscriptions, ready: subReady } = useSubscription() ?? {};
 
   const handleManageSubscription = async () => {
     try {
@@ -77,7 +77,7 @@ export default function SettingsScreen({ navigation }) {
         <SectionHeader title="Subscription" />
         <View style={styles.card}>
           <SettingRow icon="card-outline" label="Status" value={isPro ? 'Pro' : isInTrial ? 'Free Trial' : 'Free'} />
-          {!isPro && (
+          {subReady && !isPro && (
             <SettingRow icon="rocket-outline" label="Upgrade to Pro" chevron
               onPress={() => navigation.navigate('Subscription')} />
           )}

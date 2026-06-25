@@ -7,7 +7,7 @@ import { useMoreMenu } from '../context/MoreMenuContext';
 import { typography, weight } from '../theme/typography';
 import { navigate } from '../navigation/navigationRef';
 
-const getSections = (colors, isAdmin, isPro) => [
+const getSections = (colors, isAdmin, isPro, subReady) => [
   {
     title: 'LOG',
     items: [
@@ -32,9 +32,9 @@ const getSections = (colors, isAdmin, isPro) => [
   {
     title: 'ACCOUNT',
     items: [
-      ...(isPro ? [] : [
+      ...(subReady && !isPro ? [
         { label: 'Go Pro', icon: 'rocket', target: ['Home', 'Subscription'], color: colors.accent },
-      ]),
+      ] : []),
       { label: 'Profile',       icon: 'person',      target: ['Home', 'Profile'],      color: colors.blue },
       { label: 'Settings',      icon: 'settings',    target: ['Home', 'Settings'],      color: colors.textMuted },
     ],
@@ -49,10 +49,10 @@ const getSections = (colors, isAdmin, isPro) => [
 
 export default function MoreSheetModal() {
   const { colors } = useTheme();
-  const { isAdmin, isPro } = useSubscription();
+  const { isAdmin, isPro, ready: subReady } = useSubscription();
   const { visible, close } = useMoreMenu();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const SECTIONS = useMemo(() => getSections(colors, isAdmin, isPro), [colors, isAdmin, isPro]);
+  const SECTIONS = useMemo(() => getSections(colors, isAdmin, isPro, subReady), [colors, isAdmin, isPro, subReady]);
 
   const onPressItem = (target) => {
     close();
