@@ -606,12 +606,12 @@ export default function WeightScreen() {
   const mChange = mSortedAsc.length >= 2 ? mSortedAsc[mSortedAsc.length - 1].weight - mSortedAsc[0].weight : null;
 
   const allTimeStats = useMemo(() => {
-    if (sortedAsc.length < 2) return null;
+    if (sortedAsc.length < 1) return null;
     const first = sortedAsc[0];
     const lastE = sortedAsc[sortedAsc.length - 1];
     const lost = first.weight - lastE.weight;
     const days = Math.max(1, (new Date(lastE.logged_at) - new Date(first.logged_at)) / 86400000);
-    const rateKgWk = (lost / days) * 7;
+    const rateKgWk = sortedAsc.length < 2 ? 0 : (lost / days) * 7;
     return { first, lost, rateKgWk, days };
   }, [sortedAsc]);
 
