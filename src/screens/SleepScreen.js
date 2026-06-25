@@ -364,11 +364,18 @@ export default function SleepScreen() {
   const [year, setYear] = useState(now.getFullYear());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['sleep', user?.id],
     queryFn: () => fetchSleep(user.id),
     enabled: !!user?.id,
   });
+
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  };
 
   const logs = (data?.logs ?? []).filter(l => Number.isFinite(l.hours));
   const goal = data?.profile?.sleep_goal_hours ?? 8;
@@ -572,7 +579,7 @@ export default function SleepScreen() {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
         {isLoading ? (
           <SkeletonScreen cards={4} linesPerCard={3} />

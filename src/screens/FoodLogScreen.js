@@ -134,11 +134,18 @@ export default function FoodLogScreen() {
 
   const today = dateStr(currentDate);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['food', user?.id, today],
     queryFn: () => fetchFoodLog(user.id, today),
     enabled: !!user?.id,
   });
+
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  };
 
   const { data: searchResults, isLoading: searching } = useQuery({
     queryKey: ['foodSearch', debouncedQuery],
@@ -339,7 +346,7 @@ export default function FoodLogScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}>
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}>
         {isLoading ? <SkeletonScreen cards={5} linesPerCard={2} /> : (
           <>
             {/* Calorie summary */}

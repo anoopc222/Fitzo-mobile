@@ -525,11 +525,18 @@ export default function StepsScreen() {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const isCurrentMonth = month === now.getMonth() && year === now.getFullYear();
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['steps', user?.id],
     queryFn: () => fetchSteps(user.id),
     enabled: !!user?.id,
   });
+
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  };
 
   const logs = data?.logs ?? [];
   const defaultGoal = data?.profile?.step_goal ?? logs[0]?.goal ?? 12000;
@@ -770,7 +777,7 @@ export default function StepsScreen() {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
         {isLoading ? (
           <SkeletonScreen cards={4} linesPerCard={3} />

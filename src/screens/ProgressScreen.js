@@ -91,11 +91,18 @@ export default function ProgressScreen({ navigation }) {
   const [search, setSearch] = useState('');
   const [expandedEx, setExpandedEx] = useState(null);
 
-  const { data: rawData = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: rawData = [], isLoading, refetch } = useQuery({
     queryKey: ['progress', user?.id],
     queryFn: () => fetchProgress(user.id),
     enabled: !!user?.id,
   });
+
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  };
 
   const grouped = useMemo(() => groupByExercise(rawData), [rawData]);
 
@@ -130,7 +137,7 @@ export default function ProgressScreen({ navigation }) {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
       <ProGate label="Progress tracking">
         {isLoading && <SkeletonScreen cards={5} linesPerCard={3} />}

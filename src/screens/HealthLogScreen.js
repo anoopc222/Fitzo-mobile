@@ -223,11 +223,18 @@ export default function HealthLogScreen({ navigation }) {
   const [form, setForm] = useState({});
   const [customRows, setCustomRows] = useState([]); // [{name,unit,value}]
 
-  const { data: records = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: records = [], isLoading, refetch } = useQuery({
     queryKey: ['healthLogs', user?.id],
     queryFn: () => fetchHealthLogs(user.id),
     enabled: !!user?.id,
   });
+
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  };
 
   const sorted = useMemo(() => [...records].sort((a, b) => b.date.localeCompare(a.date)), [records]);
 
@@ -362,7 +369,7 @@ export default function HealthLogScreen({ navigation }) {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
         <Text style={styles.titleRow}>
           <Text style={styles.titleWhite}>HEALTH </Text>

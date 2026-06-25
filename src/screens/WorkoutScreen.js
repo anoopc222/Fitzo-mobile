@@ -2123,11 +2123,18 @@ export default function WorkoutScreen() {
     });
   }, [hasAccess]);
 
-  const { data: sessions = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: sessions = [], isLoading, refetch } = useQuery({
     queryKey: ['sessions', user?.id],
     queryFn: () => fetchSessions(user.id),
     enabled: !!user?.id,
   });
+
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  };
 
   const { data: weeklyGoal = DEFAULT_WEEKLY_GOAL } = useQuery({
     queryKey: ['workoutGoal', user?.id],
@@ -2582,7 +2589,7 @@ export default function WorkoutScreen() {
       {/* List */}
       <ScrollView
         contentContainerStyle={s.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
         {isLoading && <SkeletonScreen cards={4} linesPerCard={3} />}
 

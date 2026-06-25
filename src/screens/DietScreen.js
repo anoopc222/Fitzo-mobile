@@ -55,6 +55,7 @@ export default function DietScreen({ navigation }) {
   const [activeWeek, setActiveWeek] = useState(null);
   const [showEditor, setShowEditor] = useState(false);
   const [editorWeek, setEditorWeek] = useState(null); // null = new week
+  const [manualRefreshing, setManualRefreshing] = useState(false);
 
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -68,11 +69,17 @@ export default function DietScreen({ navigation }) {
   const [calsBurned, setCalsBurned] = useState('');
   const [overview, setOverview] = useState('');
 
-  const { data: plans = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: plans = [], isLoading, refetch } = useQuery({
     queryKey: ['dietPlans', user?.id],
     queryFn: () => fetchDietPlans(user.id),
     enabled: !!user?.id,
   });
+
+  const onRefresh = async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  };
 
   useEffect(() => {
     if (!plans.length) { setActiveWeek(null); return; }
@@ -237,7 +244,7 @@ export default function DietScreen({ navigation }) {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
         <Text style={styles.titleRow}>
           <Text style={styles.titleWhite}>DIET </Text>

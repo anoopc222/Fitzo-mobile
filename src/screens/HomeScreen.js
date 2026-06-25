@@ -1032,7 +1032,7 @@ export default function HomeScreen() {
   const [showStepsLog, setShowStepsLog] = useState(false);
   const [stepsQuickInput, setStepsQuickInput] = useState('');
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['home', user?.id],
     queryFn: () => fetchHome(user.id),
     enabled: !!user?.id,
@@ -1137,7 +1137,12 @@ export default function HomeScreen() {
     },
   });
 
-  const onRefresh = useCallback(() => refetch(), [refetch]);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  }, [refetch]);
 
   const displayName = (data?.profile?.full_name ?? user?.user_metadata?.full_name ?? 'User').toUpperCase();
   const initial     = displayName[0] ?? 'F';
@@ -1245,7 +1250,7 @@ export default function HomeScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
