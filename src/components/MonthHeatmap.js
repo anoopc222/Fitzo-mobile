@@ -5,7 +5,7 @@ const SCREEN_W = Dimensions.get('window').width;
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function MonthHeatmap({ data = {}, color = '#d4ff00', month, year, containerPad = 32, onDayPress, typeColors = {}, emptyCellColor = '#16162a', mutedTextColor = '#555570' }) {
-  const cellSize = Math.floor((SCREEN_W - containerPad - 2) / 7);
+  const cellSize = Math.floor((SCREEN_W - containerPad - 14) / 7);
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
