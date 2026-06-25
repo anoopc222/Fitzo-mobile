@@ -422,7 +422,7 @@ function DailyLogBar({ steps, goal, barMax, colors }) {
 // ─── Monthly Heatmap — ports _renderStepsHeatmap bucket logic ───────────────
 function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress, cardWidth }) {
   const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
-  const cellSize = Math.floor((SCREEN_W - 32 - 48 - 12) / 7);
+  const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
   let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
