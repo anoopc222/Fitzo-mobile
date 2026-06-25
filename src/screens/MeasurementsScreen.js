@@ -253,7 +253,7 @@ export default function MeasurementsScreen({ navigation }) {
   const [compareNewIdx, setCompareNewIdx] = useState(0);
   const [openPicker, setOpenPicker] = useState(null);
 
-  const { data: logs = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: logs = [], isLoading, refetch } = useQuery({
     queryKey: ['measurements', user?.id],
     queryFn: () => fetchMeasurements(user.id),
     enabled: !!user?.id,
@@ -264,6 +264,13 @@ export default function MeasurementsScreen({ navigation }) {
     queryFn: () => fetchBodyStats(user.id),
     enabled: !!user?.id,
   });
+
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  };
 
   const logMut = useMutation({
     mutationFn: ({ values, date }) => logMeasurements(user.id, values, date),
@@ -363,7 +370,7 @@ export default function MeasurementsScreen({ navigation }) {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
         {isLoading ? (
           <SkeletonScreen cards={3} linesPerCard={4} />

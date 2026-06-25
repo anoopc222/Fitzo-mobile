@@ -555,11 +555,18 @@ export default function WeightScreen() {
   const [year, setYear] = useState(now.getFullYear());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['weight', user?.id],
     queryFn: () => fetchWeightData(user.id),
     enabled: !!user?.id,
   });
+
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  };
 
   const logs = data?.logs ?? [];
   const goalKg = data?.profile?.weight_goal_kg ?? 60;
@@ -720,7 +727,7 @@ export default function WeightScreen() {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
         {isLoading ? (
           <View>
