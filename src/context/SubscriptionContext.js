@@ -107,7 +107,11 @@ export function SubscriptionProvider({ children }) {
 
   const isPro = isAdmin || !!customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID];
   const { isInTrial, trialDaysLeft, trialEndsAt } = trialInfo(user);
-  const hasAccess = isAdmin || isPro || isInTrial;
+  // Assume access while RevenueCat's entitlement check is still in flight —
+  // otherwise a Pro user briefly reads as locked until customerInfo loads,
+  // then "unlocks" a moment later. Screens that need to distinguish "still
+  // checking" from "actually Pro" should pair this with `ready`.
+  const hasAccess = !ready || isAdmin || isPro || isInTrial;
 
   const currentOffering = offerings?.all?.[DEFAULT_OFFERING_ID] ?? offerings?.current ?? null;
 
