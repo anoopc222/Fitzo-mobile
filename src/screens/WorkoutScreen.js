@@ -3401,10 +3401,10 @@ const createES = (colors) => StyleSheet.create({
   },
   prBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: colors.accent + '1a', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
-    marginLeft: 28, marginTop: -4, marginBottom: 6, alignSelf: 'flex-start',
+    backgroundColor: colors.accent + '1a', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2,
+    marginLeft: 24, marginTop: -2, marginBottom: 4, alignSelf: 'flex-start',
   },
-  prBannerText: { fontSize: 10, fontWeight: weight.bold, color: colors.accent },
+  prBannerText: { fontSize: 9, fontWeight: weight.bold, color: colors.accent },
 
   typeScroll: { maxHeight: 52 },
   typeRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center', paddingVertical: 8 },
@@ -3432,7 +3432,7 @@ const createES = (colors) => StyleSheet.create({
     overflow: 'hidden', borderWidth: 1, borderColor: colors.border,
   },
   exCardActive: { borderColor: colors.accent, borderWidth: 1.5 },
-  exCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
+  exCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 10 },
   exNumBadge: {
     width: 26, height: 26, borderRadius: 8,
     backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
@@ -3449,8 +3449,8 @@ const createES = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.danger + '55', alignItems: 'center', justifyContent: 'center',
   },
 
-  exExpanded: { borderTopWidth: 1, borderTopColor: colors.border, padding: 12 },
-  exNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  exExpanded: { borderTopWidth: 1, borderTopColor: colors.border, padding: 10 },
+  exNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   hashIcon: {
     width: 32, height: 40, borderRadius: 8, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
@@ -3462,15 +3462,15 @@ const createES = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
 
-  setRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  setNumLabel: { width: 20, fontSize: typography.xs, color: colors.textDim, textAlign: 'center', fontWeight: weight.bold },
+  setRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  setNumLabel: { width: 18, fontSize: typography.xs, color: colors.textDim, textAlign: 'center', fontWeight: weight.bold },
   setInput: {
     flex: 1, minWidth: 0, backgroundColor: colors.surface, borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 9, color: colors.text, fontSize: typography.sm,
+    paddingHorizontal: 8, paddingVertical: 6, color: colors.text, fontSize: typography.sm,
     textAlign: 'center', borderWidth: 1, borderColor: colors.border,
   },
   setX: { fontSize: typography.sm, color: colors.textDim },
-  setDeleteBtn: { padding: 6 },
+  setDeleteBtn: { padding: 4 },
 
   addSetBtn: {
     borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, borderRadius: 8,
@@ -3552,10 +3552,10 @@ const createES = (colors) => StyleSheet.create({
   restBannerText: { fontSize: typography.sm, color: colors.blue, fontWeight: weight.bold },
   restBannerCancel: { fontSize: typography.xs, color: colors.textDim, fontWeight: weight.semibold },
 
-  plateText: { fontSize: 10, color: colors.textDim, marginTop: -4, marginBottom: 6, marginLeft: 28 },
-  autoRegText: { fontSize: 10, color: colors.accent, marginTop: -4, marginBottom: 6, marginLeft: 28 },
-  oneRmText: { fontSize: 10, color: colors.purple, marginTop: -4, marginBottom: 6, marginLeft: 28 },
-  oneRmTextLocked: { fontSize: 10, color: colors.textDim, marginTop: -4, marginBottom: 6, marginLeft: 28, textDecorationLine: 'underline' },
+  plateText: { fontSize: 9, color: colors.textDim, marginTop: -2, marginBottom: 2, marginLeft: 24, lineHeight: 12 },
+  autoRegText: { fontSize: 9, color: colors.accent, marginTop: -2, marginBottom: 2, marginLeft: 24, lineHeight: 12 },
+  oneRmText: { fontSize: 9, color: colors.purple, marginTop: -2, marginBottom: 2, marginLeft: 24, lineHeight: 12 },
+  oneRmTextLocked: { fontSize: 9, color: colors.textDim, marginTop: -2, marginBottom: 2, marginLeft: 24, lineHeight: 12, textDecorationLine: 'underline' },
 
   trendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   trendLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 },
