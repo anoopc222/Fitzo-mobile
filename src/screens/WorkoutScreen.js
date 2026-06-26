@@ -3500,16 +3500,16 @@ const createES = (colors) => StyleSheet.create({
   saveBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg },
 
   restDayWrap: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 32, gap: 12,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 28, paddingVertical: 12, gap: 6,
   },
-  restDayEmoji: { fontSize: 64 },
-  restDayTitle: { fontSize: typography.xl, fontFamily: fontFamily.bodyExtraBold, color: colors.good, textAlign: 'center' },
-  restDaySub: { fontSize: typography.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
-  restDayBadges: { flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' },
+  restDayEmoji: { fontSize: 40 },
+  restDayTitle: { fontSize: typography.lg, fontFamily: fontFamily.bodyExtraBold, color: colors.good, textAlign: 'center' },
+  restDaySub: { fontSize: typography.xs, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
+  restDayBadges: { flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap', justifyContent: 'center' },
   restBadge: {
     backgroundColor: colors.good + '14', borderWidth: 1, borderColor: colors.good + '55',
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 16, paddingHorizontal: 11, paddingVertical: 5,
   },
   restBadgeText: { fontSize: typography.xs, color: colors.good, fontFamily: fontFamily.bodyMedium },
 
