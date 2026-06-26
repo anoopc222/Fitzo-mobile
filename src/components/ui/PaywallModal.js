@@ -10,7 +10,7 @@ const PRO_FEATURES = [
   'Long-range trend charts (60D / 90D / ALL)',
   'Month heatmaps for Weight, Steps & Sleep',
   'Progress tracking with PR badges & trend insights',
-  'Body measurements & blood health log history',
+  'Body measurements history',
   'Recovery, Cut Score & sleep-debt analysis',
   'Full calculator suite',
   'Branded export/share cards',

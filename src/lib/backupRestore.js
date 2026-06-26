@@ -1,14 +1,5 @@
 import { supabase } from './supabase';
 
-// ─── Health Log marker key → DB column mapping (kept in sync with HealthLogScreen.js) ──
-const HL_DB_COL = {
-  sugar: 'sugar', hba1c: 'hba1c', avgGlucose: 'avg_glucose',
-  chol: 'total_cholesterol', trig: 'triglycerides', hdl: 'hdl', ldl: 'ldl', vldl: 'vldl',
-  urea: 'urea', creatinine: 'creatinine', uric: 'uric',
-  thyroid: 'tsh', t3: 't3', t4: 't4',
-  vitd: 'vitamin_d', vitb12: 'vitamin_b12', hb: 'hemoglobin',
-};
-
 function toISO(dateStr) {
   if (!dateStr) return new Date().toISOString();
   // date-only strings get a fixed noon-UTC time so the calendar date never drifts across timezones
@@ -26,7 +17,7 @@ function ageToDob(age) {
 export async function exportBackup(userId) {
   const [
     sessionsRes, weightRes, stepsRes, sleepRes, foodRes,
-    measureRes, healthRes, dietRes, profileRes,
+    measureRes, dietRes, profileRes,
   ] = await Promise.all([
     supabase.from('workout_sessions').select('id, date, notes, total_volume, duration_min, calories_burned').eq('user_id', userId).order('date'),
     supabase.from('weight_logs').select('weight, logged_at').eq('user_id', userId).order('logged_at'),
@@ -34,7 +25,6 @@ export async function exportBackup(userId) {
     supabase.from('sleep_logs').select('hours, quality, notes, logged_at').eq('user_id', userId).order('logged_at'),
     supabase.from('food_logs').select('food_name, calories, protein, carbs, fats, serving_size, meal_type, logged_at').eq('user_id', userId).order('logged_at'),
     supabase.from('body_measurements').select('chest, waist, hips, left_arm, right_arm, left_thigh, right_thigh, neck, calf_left, calf_right, logged_at').eq('user_id', userId).order('logged_at'),
-    supabase.from('health_logs').select('*').eq('user_id', userId).order('logged_at'),
     supabase.from('diet_plans').select('*').eq('user_id', userId).order('week_number'),
     supabase.from('profiles').select('*').eq('id', userId).single(),
   ]);
@@ -101,15 +91,6 @@ export async function exportBackup(userId) {
     calfL: m.calf_left, calfR: m.calf_right, neck: m.neck,
   }));
 
-  const healthLog = (healthRes.data ?? []).map(rec => {
-    const out = { date: rec.logged_at.slice(0, 10) };
-    for (const [key, col] of Object.entries(HL_DB_COL)) {
-      if (rec[col] != null) out[key] = rec[col];
-    }
-    if (rec.custom?.length) out._custom = rec.custom;
-    return out;
-  });
-
   const diet = (dietRes.data ?? []).map(d => ({
     week: d.week_number, calories: d.calories, carbs: d.carbs, protein: d.protein, fats: d.fats,
     veggies: d.veggies, water: d.water, steps: d.steps_goal, cardio: d.cardio ?? [], sessions: d.sessions_note,
@@ -132,7 +113,6 @@ export async function exportBackup(userId) {
       diet, dietActiveWeek: diet.length ? Math.max(...diet.map(d => d.week)) : null,
       measurements, progressPhotos: [],
       profile, theme: 'classic',
-      healthLog, healthLogDefs: [],
     },
   };
 }
@@ -254,20 +234,6 @@ export async function restoreBackup(userId, backup) {
     }));
     if (rows.length) { const { error } = await supabase.from('body_measurements').insert(rows); if (error) throw error; }
     counts.measurements = rows.length;
-  }
-
-  // ── Health log ──
-  if (Array.isArray(data.healthLog)) {
-    await supabase.from('health_logs').delete().eq('user_id', userId);
-    const rows = data.healthLog.map(rec => {
-      const fields = { user_id: userId, logged_at: toISO(rec.date), custom: rec._custom || [] };
-      for (const [key, col] of Object.entries(HL_DB_COL)) {
-        if (rec[key] != null) fields[col] = rec[key];
-      }
-      return fields;
-    });
-    if (rows.length) { const { error } = await supabase.from('health_logs').insert(rows); if (error) throw error; }
-    counts.healthLog = rows.length;
   }
 
   // ── Profile ──

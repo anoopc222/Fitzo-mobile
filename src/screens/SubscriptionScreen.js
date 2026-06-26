@@ -11,7 +11,7 @@ const PRO_FEATURES = [
   { icon: 'trending-up', text: 'Long-range trend charts (60D / 90D / ALL)' },
   { icon: 'calendar', text: 'Month heatmaps for Weight, Steps & Sleep' },
   { icon: 'trophy', text: 'Progress tracking with PR badges & trend insights' },
-  { icon: 'body', text: 'Body measurements & blood health log history' },
+  { icon: 'body', text: 'Body measurements history' },
   { icon: 'pulse', text: 'Recovery, Cut Score & sleep-debt analysis' },
   { icon: 'calculator', text: 'Full calculator suite' },
   { icon: 'share-social', text: 'Branded export/share cards' },
