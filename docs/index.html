@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fitzo — Track Everything. Skip Nothing.</title>
+<meta name="description" content="Fitzo is the all-in-one fitness tracker for workouts, weight, steps, sleep, nutrition, body measurements and health markers — with zero guesswork.">
+<link rel="icon" href="favicon.png">
+<style>
+  :root {
+    --bg: #080810;
+    --bg-card: #11111c;
+    --accent: #d4ff00;
+    --purple: #9d4edd;
+    --text: #f5f5f7;
+    --text-dim: #9a9aab;
+    --border: rgba(255,255,255,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* Background glow effects */
+  .glow {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.25;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .glow-1 { width: 500px; height: 500px; background: var(--accent); top: -150px; left: -150px; }
+  .glow-2 { width: 600px; height: 600px; background: var(--purple); top: 30%; right: -250px; }
+  .glow-3 { width: 450px; height: 450px; background: var(--accent); bottom: -200px; left: 20%; opacity: 0.15; }
+
+  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 24px; position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(16px); background: rgba(8,8,16,0.7);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 20px; letter-spacing: -0.5px; }
+  .logo-mark {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #a8d600);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 900; color: #080810;
+  }
+  .nav-links { display: flex; gap: 32px; font-size: 14px; font-weight: 600; color: var(--text-dim); }
+  .nav-links a:hover { color: var(--text); }
+  @media (max-width: 720px) { .nav-links { display: none; } }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #080810; font-weight: 800;
+    padding: 11px 22px; border-radius: 100px; font-size: 14px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 0 0 0 rgba(212,255,0,0);
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(212,255,0,0.25); }
+  .btn-ghost {
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+    font-weight: 700;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+
+  /* Hero */
+  .hero {
+    text-align: center; padding: 100px 24px 60px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(212,255,0,0.1); border: 1px solid rgba(212,255,0,0.3);
+    color: var(--accent); font-size: 13px; font-weight: 700;
+    padding: 7px 16px; border-radius: 100px; margin-bottom: 28px;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  h1.hero-title {
+    font-size: clamp(38px, 7vw, 76px); font-weight: 900; line-height: 1.05; letter-spacing: -2px;
+    margin-bottom: 22px;
+  }
+  h1.hero-title .accent { color: var(--accent); }
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px); color: var(--text-dim); max-width: 600px;
+    margin: 0 auto 36px; line-height: 1.6;
+  }
+  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+  .btn-lg { padding: 15px 30px; font-size: 15px; }
+
+  .store-badges { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .store-badge {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 10px 18px; font-size: 13px; background: var(--bg-card);
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .store-badge:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .store-badge .sb-icon { font-size: 22px; }
+  .store-badge .sb-text { text-align: left; line-height: 1.3; }
+  .store-badge .sb-small { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .store-badge .sb-big { font-size: 15px; font-weight: 800; }
+
+  /* Phone mock */
+  .phone-mock {
+    max-width: 320px; margin: 0 auto 0; position: relative;
+  }
+  .phone-frame {
+    border: 1px solid var(--border); border-radius: 36px;
+    background: linear-gradient(160deg, #14141f, #0a0a12);
+    padding: 18px; box-shadow: 0 40px 100px -20px rgba(212,255,0,0.08), 0 0 0 1px rgba(255,255,255,0.03);
+  }
+  .phone-screen { border-radius: 22px; overflow: hidden; background: #08080f; }
+  .stat-row { display: flex; gap: 10px; padding: 16px; }
+  .mini-card { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+  .mini-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+  .mini-value { font-size: 20px; font-weight: 900; margin-top: 4px; }
+  .mini-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); margin-top: 8px; overflow: hidden; }
+  .mini-bar i { display: block; height: 100%; border-radius: 2px; }
+
+  /* Sections */
+  section { padding: 90px 0; position: relative; }
+  .section-head { text-align: center; max-width: 600px; margin: 0 auto 56px; }
+  .eyebrow { color: var(--accent); font-weight: 800; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px; }
+  .section-title { font-size: clamp(28px, 4vw, 42px); font-weight: 900; letter-spacing: -1px; line-height: 1.15; }
+  .section-sub { color: var(--text-dim); margin-top: 14px; font-size: 16px; line-height: 1.6; }
+
+  .grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px;
+    padding: 26px; transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(212,255,0,0.3); }
+  .card-icon {
+    width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 16px;
+  }
+  .card h3 { font-size: 17px; font-weight: 800; margin-bottom: 8px; }
+  .card p { font-size: 14px; color: var(--text-dim); line-height: 1.55; }
+
+  .ic-accent { background: rgba(212,255,0,0.12); }
+  .ic-purple { background: rgba(157,78,221,0.18); }
+
+  /* Stats strip */
+  .stats-strip {
+    display: flex; justify-content: center; gap: 56px; flex-wrap: wrap;
+    text-align: center; padding: 50px 24px;
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .stat-num { font-size: 38px; font-weight: 900; color: var(--accent); }
+  .stat-label { font-size: 13px; color: var(--text-dim); margin-top: 4px; font-weight: 600; }
+
+  /* Calculators strip */
+  .pill-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .pill {
+    border: 1px solid var(--border); background: var(--bg-card); border-radius: 100px;
+    padding: 9px 18px; font-size: 13px; font-weight: 600; color: var(--text-dim);
+  }
+
+  /* CTA */
+  .cta-band {
+    text-align: center; border-radius: 28px;
+    background: linear-gradient(135deg, rgba(212,255,0,0.1), rgba(157,78,221,0.08));
+    border: 1px solid rgba(212,255,0,0.25);
+    padding: 70px 32px; margin: 0 auto;
+  }
+  .cta-band h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 900; letter-spacing: -1px; margin-bottom: 16px; }
+  .cta-band p { color: var(--text-dim); margin-bottom: 30px; font-size: 16px; }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 40px 24px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+  }
+  .footer-links { display: flex; gap: 24px; font-size: 14px; color: var(--text-dim); }
+  .footer-links a:hover { color: var(--accent); }
+  .footer-copy { font-size: 13px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+<div class="glow glow-3"></div>
+
+<nav>
+  <div class="wrap" style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+    <div class="logo"><span class="logo-mark">F</span> Fitzo</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#calculators">Calculators</a>
+      <a href="#privacy">Privacy</a>
+    </div>
+    <a href="#download" class="btn">Get the App</a>
+  </div>
+</nav>
+
+<header class="hero wrap">
+  <div class="badge"><span class="dot"></span> Built for people who actually track their progress</div>
+  <h1 class="hero-title">Train hard.<br>Track <span class="accent">everything.</span><br>Guess nothing.</h1>
+  <p class="hero-sub">Fitzo is the all-in-one fitness companion — workouts, weight, steps, sleep, nutrition, body measurements and health markers, unified in one beautifully simple app.</p>
+  <div class="hero-ctas">
+    <a href="#download" class="btn btn-lg">Download Fitzo — Free</a>
+    <a href="#features" class="btn btn-ghost btn-lg">See what it tracks</a>
+  </div>
+
+  <div class="phone-mock">
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="stat-row">
+          <div class="mini-card">
+            <div class="mini-label">Weight</div>
+            <div class="mini-value">78.2<span style="font-size:11px;color:var(--text-dim);">kg</span></div>
+            <div class="mini-bar"><i style="width:68%; background:var(--accent);"></i></div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-label">Steps</div>
+            <div class="mini-value">9,842</div>
+            <div class="mini-bar"><i style="width:82%; background:var(--purple);"></i></div>
+          </div>
+        </div>
+        <div class="stat-row" style="padding-top:0;">
+          <div class="mini-card">
+            <div class="mini-label">Sleep</div>
+            <div class="mini-value">7.4<span style="font-size:11px;color:var(--text-dim);">h</span></div>
+            <div class="mini-bar"><i style="width:91%; background:var(--accent);"></i></div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-label">Volume</div>
+            <div class="mini-value">12.4<span style="font-size:11px;color:var(--text-dim);">k kg</span></div>
+            <div class="mini-bar"><i style="width:75%; background:var(--purple);"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="stats-strip">
+    <div><div class="stat-num">10</div><div class="stat-label">Tracking Modules</div></div>
+    <div><div class="stat-num">20+</div><div class="stat-label">Built-in Calculators</div></div>
+    <div><div class="stat-num">0</div><div class="stat-label">Ads, Ever</div></div>
+    <div><div class="stat-num">100%</div><div class="stat-label">Your Data, Yours</div></div>
+  </div>
+</div>
+
+<section id="features" class="wrap">
+  <div class="section-head">
+    <div class="eyebrow">Everything in one place</div>
+    <h2 class="section-title">One app. Every metric that matters.</h2>
+    <p class="section-sub">No more juggling five different apps for weight, workouts, and sleep. Fitzo brings it all together with clean charts and zero clutter.</p>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-icon ic-accent">🏋️</div>
+      <h3>Workout Logging</h3>
+      <p>Log sessions, exercises, and sets with reps, weight, and RPE. Track total volume and session history at a glance.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon ic-purple">⚖️</div>
+      <h3>Weight Tracking</h3>
+      <p>KG/LBS toggle, goal ring, trend charts across 30/60/90 days, and a full monthly heatmap of your progress.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon ic-accent">👟</div>
+      <h3>Steps & Activity</h3>
+      <p>Daily step counts, distance, streaks, and week-over-week comparisons with customizable goal presets.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon ic-purple">😴</div>
+      <h3>Sleep & Recovery</h3>
+      <p>A recovery score gauge, sleep debt tracking, consistency scoring, and nightly trend visualization.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon ic-accent">🍽️</div>
+      <h3>Nutrition Logging</h3>
+      <p>Track calories and macros across all your meals with a clean calorie ring and macro breakdown bars.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon ic-purple">📈</div>
+      <h3>Progress & PRs</h3>
+      <p>Automatic PR detection, trend badges (improving / plateau / declining), and your last 10 sessions per exercise.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon ic-accent">📏</div>
+      <h3>Body Measurements</h3>
+      <p>Track 7 body sites with now/previous/difference comparisons so you can see exactly what's changing.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon ic-purple">🩺</div>
+      <h3>Health Markers</h3>
+      <p>Log glucose, cholesterol, vitamin levels and more with reference ranges and traffic-light status indicators.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon ic-accent">🎯</div>
+      <h3>Goals That Adapt</h3>
+      <p>Pick from 10 goal types and let Fitzo tailor your daily targets, calorie goals, and weekly workout cadence.</p>
+    </div>
+  </div>
+</section>
+
+<section id="calculators" class="wrap">
+  <div class="section-head">
+    <div class="eyebrow">No spreadsheets needed</div>
+    <h2 class="section-title">20+ calculators, built right in</h2>
+    <p class="section-sub">From BMI to Wilks score, every formula you'd normally Google is one tap away inside the app.</p>
+  </div>
+  <div class="pill-row">
+    <span class="pill">BMI</span>
+    <span class="pill">TDEE</span>
+    <span class="pill">1RM</span>
+    <span class="pill">Body Fat %</span>
+    <span class="pill">Macro Split</span>
+    <span class="pill">Heart Rate Zones</span>
+    <span class="pill">Wilks Score</span>
+    <span class="pill">Lean Body Mass</span>
+    <span class="pill">Water Intake</span>
+    <span class="pill">Calorie Deficit</span>
+    <span class="pill">Protein Target</span>
+    <span class="pill">+ 9 more</span>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="cta-band">
+    <h2>Your progress deserves better than a notes app.</h2>
+    <p>Free to download. No ads. No clutter. Just the numbers that matter.</p>
+    <a href="#download" class="btn btn-lg">Start Tracking Today</a>
+  </div>
+</div>
+
+<section id="download" class="wrap" style="text-align:center;">
+  <div class="section-head" style="margin-bottom:36px;">
+    <div class="eyebrow">Get Fitzo</div>
+    <h2 class="section-title">Available wherever you train</h2>
+  </div>
+  <div class="store-badges">
+    <a href="#" class="store-badge">
+      <span class="sb-icon">▶️</span>
+      <span class="sb-text"><span class="sb-small">Get it on</span><br><span class="sb-big">Google Play</span></span>
+    </a>
+    <a href="#" class="store-badge">
+      <span class="sb-icon">🍎</span>
+      <span class="sb-text"><span class="sb-small">Download on the</span><br><span class="sb-big">App Store</span></span>
+    </a>
+  </div>
+</section>
+
+<footer class="wrap" id="privacy">
+  <div class="logo" style="font-size:16px;"><span class="logo-mark" style="width:26px;height:26px;font-size:14px;">F</span> Fitzo</div>
+  <div class="footer-links">
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="mailto:anoopc222@gmail.com">Contact</a>
+  </div>
+  <div class="footer-copy">© 2026 Fitzo. All rights reserved.</div>
+</footer>
+
+</body>
+</html>
