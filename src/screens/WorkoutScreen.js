@@ -1549,6 +1549,7 @@ function EditSessionModal({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <SafeAreaView style={eS.container}>
+          <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
           {/* Header */}
           <View style={eS.header}>
             <View style={{ flex: 1 }}>
@@ -1629,7 +1630,7 @@ function EditSessionModal({
             </View>
           ) : (
             /* ── Workout / Cardio exercise list ── */
-            <ScrollView style={eS.exScroll} keyboardShouldPersistTaps="handled">
+            <View style={eS.exScroll}>
               {isCardio && (
                 <View style={eS.cardioHint}>
                   <Ionicons name="fitness-outline" size={14} color={colors.blue} />
@@ -2047,7 +2048,7 @@ function EditSessionModal({
                 </TouchableOpacity>
               )}
               <View style={{ height: 20 }} />
-            </ScrollView>
+            </View>
           )}
 
           {isNew && !isRestDay && (
@@ -2063,6 +2064,7 @@ function EditSessionModal({
               />
             </View>
           )}
+          </ScrollView>
 
           {/* Bottom buttons */}
           <View style={eS.bottomRow}>
