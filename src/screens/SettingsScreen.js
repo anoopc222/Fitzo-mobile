@@ -23,7 +23,7 @@ function formatTime(hour, minute) {
 export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
-  const { isPro, manageSubscriptions, ready: subReady } = useSubscription() ?? {};
+  const { isPro, isInTrial, manageSubscriptions, ready: subReady } = useSubscription() ?? {};
   const { prefs: notifPrefs, times: notifTimes, setPref: setNotifPref, setReminderTime } =
     useNotificationPrefs() ?? { prefs: {}, times: {}, setPref: () => {}, setReminderTime: () => {} };
   const [showPaywall, setShowPaywall] = useState(false);
