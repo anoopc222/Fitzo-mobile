@@ -410,7 +410,9 @@ function trendPillFor(row, colors) {
 
 function AvgWeightRow({ row, unit, colors }) {
   const pill = trendPillFor(row, colors);
-  const barColor = row.cumLost > 0 ? colors.danger : colors.good;
+  const barColor = row.isFirst || Math.abs(row.delta) < 0.05
+    ? colors.textMuted
+    : row.delta < 0 ? colors.good : colors.danger;
   return (
     <View style={[
       { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
