@@ -388,13 +388,13 @@ export default function SleepScreen() {
   const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
   useEffect(() => {
     if (isLoading || !notifPrefs.sleepReminder) {
-      if (!notifPrefs.sleepReminder) syncConditionalReminder('sleepReminder', true, 8, 0, '', '');
+      if (!notifPrefs.sleepReminder) syncConditionalReminder('sleepReminder', true, 10, 10, '', '');
       return;
     }
     const todayStr = localDateStr(new Date());
     const ydayStr = localDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000));
     const loggedRecently = logs.some(l => l.logged_at === todayStr || l.logged_at === ydayStr);
-    syncConditionalReminder('sleepReminder', loggedRecently, 8, 0,
+    syncConditionalReminder('sleepReminder', loggedRecently, 10, 10,
       "Log last night's sleep", "You haven't logged your sleep yet.");
   }, [isLoading, notifPrefs.sleepReminder, logs]);
 
