@@ -36,15 +36,6 @@ export function NotificationProvider({ children }) {
     }
   }, [loaded, prefs.dailyLogReminder]);
 
-  useEffect(() => {
-    if (!loaded) return;
-    if (prefs.workoutReminder) {
-      scheduleDailyReminder('workoutReminder', 18, 0, 'Time to train', "Keep your workout streak going — log today's session.");
-    } else {
-      cancelNotificationsByTag('workoutReminder');
-    }
-  }, [loaded, prefs.workoutReminder]);
-
   const setPref = useCallback(async (key, value) => {
     if (value) {
       const granted = await requestNotificationPermissions();
@@ -56,7 +47,10 @@ export function NotificationProvider({ children }) {
       return next;
     });
     if (!value) {
-      const tag = { weightReminder: 'weightReminder', stepsReminder: 'stepsReminder', sleepReminder: 'sleepReminder' }[key];
+      const tag = {
+        weightReminder: 'weightReminder', stepsReminder: 'stepsReminder',
+        sleepReminder: 'sleepReminder', workoutReminder: 'workoutReminder',
+      }[key];
       if (tag) cancelNotificationsByTag(tag);
     }
     return true;

@@ -25,6 +25,8 @@ import SkeletonScreen from '../components/Skeleton';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useNotificationPrefs } from '../context/NotificationContext';
+import { syncConditionalReminder } from '../lib/notifications';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -2135,6 +2137,18 @@ export default function WorkoutScreen() {
     await refetch();
     setManualRefreshing(false);
   };
+
+  const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
+  useEffect(() => {
+    if (isLoading || !notifPrefs.workoutReminder) {
+      if (!notifPrefs.workoutReminder) syncConditionalReminder('workoutReminder', true, 22, 0, '', '');
+      return;
+    }
+    const todayStr = localDateStr(new Date());
+    const loggedToday = sessions.some(sess => sess.date === todayStr);
+    syncConditionalReminder('workoutReminder', loggedToday, 22, 0,
+      "Log today's workout", "You haven't logged a workout session today.");
+  }, [isLoading, notifPrefs.workoutReminder, sessions]);
 
   const { data: weeklyGoal = DEFAULT_WEEKLY_GOAL } = useQuery({
     queryKey: ['workoutGoal', user?.id],

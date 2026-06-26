@@ -576,13 +576,13 @@ export default function WeightScreen() {
   const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
   useEffect(() => {
     if (isLoading || !notifPrefs.weightReminder) {
-      if (!notifPrefs.weightReminder) syncConditionalReminder('weightReminder', true, 10, 10, '', '');
+      if (!notifPrefs.weightReminder) syncConditionalReminder('weightReminder', true, 8, 0, '', '');
       return;
     }
     const yday = new Date(); yday.setDate(yday.getDate() - 1);
     const ydayStr = localDateStr(yday);
     const loggedYesterday = logs.some(l => l.logged_at === ydayStr);
-    syncConditionalReminder('weightReminder', loggedYesterday, 10, 10,
+    syncConditionalReminder('weightReminder', loggedYesterday, 8, 0,
       "Don't forget your weigh-in", "You haven't logged yesterday's weight yet.");
   }, [isLoading, notifPrefs.weightReminder, logs]);
 
