@@ -160,25 +160,7 @@ export default function AdminDashboardScreen({ navigation }) {
           <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
         ) : (
           <>
-            <View style={styles.statsGrid}>
-              <StatCard label="Total Users" value={summary.total} icon="people" color={colors.accent} styles={styles} />
-              <StatCard label="Pro Users" value={summary.pro} icon="star" color={colors.success} styles={styles} />
-              <StatCard label="In Trial" value={summary.trial} icon="time" color={colors.warning} styles={styles} />
-              <StatCard label="Admins" value={summary.admins} icon="shield-checkmark" color={colors.purple} styles={styles} />
-            </View>
-
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={16} color={colors.textDim} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search by name or email"
-                placeholderTextColor={colors.textDim}
-                value={search}
-                onChangeText={setSearch}
-              />
-            </View>
-
-            <View style={styles.section}>
+            <View style={styles.dbUsageTile}>
               <Text style={styles.sectionTitle}>DATABASE USAGE</Text>
               {!showDbUsage ? (
                 <TouchableOpacity
@@ -214,6 +196,24 @@ export default function AdminDashboardScreen({ navigation }) {
                   </View>
                 </>
               ) : null}
+            </View>
+
+            <View style={styles.statsGrid}>
+              <StatCard label="Total Users" value={summary.total} icon="people" color={colors.accent} styles={styles} />
+              <StatCard label="Pro Users" value={summary.pro} icon="star" color={colors.success} styles={styles} />
+              <StatCard label="In Trial" value={summary.trial} icon="time" color={colors.warning} styles={styles} />
+              <StatCard label="Admins" value={summary.admins} icon="shield-checkmark" color={colors.purple} styles={styles} />
+            </View>
+
+            <View style={styles.searchBar}>
+              <Ionicons name="search" size={16} color={colors.textDim} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by name or email"
+                placeholderTextColor={colors.textDim}
+                value={search}
+                onChangeText={setSearch}
+              />
             </View>
 
             <View style={styles.section}>
@@ -377,7 +377,7 @@ const createStyles = (colors) => StyleSheet.create({
   statusBadgeText: { fontSize: 10, fontWeight: weight.bold },
   adminToggle: { padding: 4 },
 
-  dbCard: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border },
+  dbCard: { paddingTop: 4 },
   dbHeaderRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 },
   dbTotalText: { fontSize: typography.lg, fontWeight: weight.black, color: colors.text },
   dbLimitText: { fontSize: typography.xs, color: colors.textMuted },
@@ -391,4 +391,5 @@ const createStyles = (colors) => StyleSheet.create({
   dbTableSize: { fontSize: 10, color: colors.textDim, minWidth: 50, textAlign: 'right' },
   showUsageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: colors.bgCard, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: colors.border },
   showUsageBtnText: { fontSize: typography.sm, fontWeight: weight.semibold, color: colors.accent },
+  dbUsageTile: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 18, borderWidth: 1, borderColor: colors.border, gap: 10 },
 });
