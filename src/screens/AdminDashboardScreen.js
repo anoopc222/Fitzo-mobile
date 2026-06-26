@@ -37,12 +37,6 @@ async function fetchDbUsage() {
   return { totalBytes, tables };
 }
 
-async function fetchTopUsers() {
-  const { data, error } = await supabase.rpc('get_top_users_by_data_volume', { result_limit: 10 });
-  if (error) throw error;
-  return data ?? [];
-}
-
 async function fetchUsers() {
   const [{ data: profiles, error: pErr }, { data: subs, error: sErr }] = await Promise.all([
     supabase.from('profiles').select('id, full_name, email, is_admin, is_super_admin, created_at'),
@@ -94,12 +88,6 @@ export default function AdminDashboardScreen({ navigation }) {
     gcTime: 0,
   });
 
-  const { data: topUsers, isLoading: topUsersLoading } = useQuery({
-    queryKey: ['admin-top-users'],
-    queryFn: fetchTopUsers,
-    staleTime: 0,
-    gcTime: 0,
-  });
 
   const filtered = useMemo(() => {
     if (!users) return [];
@@ -198,20 +186,6 @@ export default function AdminDashboardScreen({ navigation }) {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>TOP USERS BY DATA VOLUME</Text>
-              {topUsersLoading ? (
-                <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
-              ) : (
-                (topUsers ?? []).map(u => (
-                  <TopUserRow key={u.user_id} user={u} styles={styles} colors={colors} />
-                ))
-              )}
-              {!topUsersLoading && !(topUsers ?? []).length && (
-                <Text style={styles.emptyText}>No usage data yet.</Text>
-              )}
-            </View>
-
-            <View style={styles.section}>
               <Text style={styles.sectionTitle}>USERS ({filtered.length})</Text>
               {filtered.map(u => (
                 <UserRow key={u.id} user={u} styles={styles} colors={colors} isSuperAdmin={isSuperAdmin} onChanged={refetch} />
@@ -265,24 +239,6 @@ function DbUsageCard({ usage, styles, colors }) {
             <Text style={styles.dbTableSize}>{formatBytes(t.bytes)}</Text>
           </View>
         ))}
-      </View>
-    </View>
-  );
-}
-
-function TopUserRow({ user, styles, colors }) {
-  return (
-    <View style={styles.userRow}>
-      <View style={styles.userAvatar}>
-        <Text style={styles.userAvatarText}>{(user.full_name?.[0] ?? user.email?.[0] ?? '?').toUpperCase()}</Text>
-      </View>
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{user.full_name || 'Unnamed'}</Text>
-        <Text style={styles.userEmail}>{user.email}</Text>
-      </View>
-      <View style={styles.userRight}>
-        <Text style={[styles.statusBadgeText, { color: colors.accent, fontSize: typography.sm }]}>{user.total_rows}</Text>
-        <Text style={{ fontSize: 10, color: colors.textDim }}>rows</Text>
       </View>
     </View>
   );
