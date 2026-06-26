@@ -15,6 +15,34 @@ import { typography, weight } from '../theme/typography';
 import { TRIAL_DAYS } from '../config/subscription';
 import ScreenHeader from '../components/ScreenHeader';
 
+const DB_LIMIT_BYTES = 500 * 1024 * 1024; // Supabase free-tier database cap
+
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let i = 0;
+  let n = bytes;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
+}
+
+async function fetchDbUsage() {
+  const { data, error } = await supabase.rpc('get_db_usage_stats');
+  if (error) throw error;
+  const rows = data ?? [];
+  const totalBytes = rows[0]?.total_db_size_bytes ?? 0;
+  const tables = rows
+    .map(r => ({ name: r.table_name, bytes: r.table_size_bytes }))
+    .slice(0, 8);
+  return { totalBytes, tables };
+}
+
+async function fetchTopUsers() {
+  const { data, error } = await supabase.rpc('get_top_users_by_data_volume', { result_limit: 10 });
+  if (error) throw error;
+  return data ?? [];
+}
+
 async function fetchUsers() {
   const [{ data: profiles, error: pErr }, { data: subs, error: sErr }] = await Promise.all([
     supabase.from('profiles').select('id, full_name, email, is_admin, is_super_admin, created_at'),
@@ -55,6 +83,20 @@ export default function AdminDashboardScreen({ navigation }) {
   const { data: users, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['admin-users'],
     queryFn: fetchUsers,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const { data: dbUsage, isLoading: dbUsageLoading } = useQuery({
+    queryKey: ['admin-db-usage'],
+    queryFn: fetchDbUsage,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const { data: topUsers, isLoading: topUsersLoading } = useQuery({
+    queryKey: ['admin-top-users'],
+    queryFn: fetchTopUsers,
     staleTime: 0,
     gcTime: 0,
   });
@@ -147,6 +189,29 @@ export default function AdminDashboardScreen({ navigation }) {
             </View>
 
             <View style={styles.section}>
+              <Text style={styles.sectionTitle}>DATABASE USAGE</Text>
+              {dbUsageLoading ? (
+                <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
+              ) : dbUsage ? (
+                <DbUsageCard usage={dbUsage} styles={styles} colors={colors} />
+              ) : null}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>TOP USERS BY DATA VOLUME</Text>
+              {topUsersLoading ? (
+                <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
+              ) : (
+                (topUsers ?? []).map(u => (
+                  <TopUserRow key={u.user_id} user={u} styles={styles} colors={colors} />
+                ))
+              )}
+              {!topUsersLoading && !(topUsers ?? []).length && (
+                <Text style={styles.emptyText}>No usage data yet.</Text>
+              )}
+            </View>
+
+            <View style={styles.section}>
               <Text style={styles.sectionTitle}>USERS ({filtered.length})</Text>
               {filtered.map(u => (
                 <UserRow key={u.id} user={u} styles={styles} colors={colors} isSuperAdmin={isSuperAdmin} onChanged={refetch} />
@@ -170,6 +235,55 @@ function StatCard({ label, value, icon, color, styles }) {
       </View>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function DbUsageCard({ usage, styles, colors }) {
+  const pct = Math.min(100, (usage.totalBytes / DB_LIMIT_BYTES) * 100);
+  const barColor = pct >= 90 ? colors.danger : pct >= 70 ? colors.warning : colors.success;
+  const maxTableBytes = Math.max(1, ...usage.tables.map(t => t.bytes));
+
+  return (
+    <View style={styles.dbCard}>
+      <View style={styles.dbHeaderRow}>
+        <Text style={styles.dbTotalText}>{formatBytes(usage.totalBytes)}</Text>
+        <Text style={styles.dbLimitText}> / {formatBytes(DB_LIMIT_BYTES)} free tier</Text>
+      </View>
+      <View style={styles.dbBarTrack}>
+        <View style={[styles.dbBarFill, { width: `${pct}%`, backgroundColor: barColor }]} />
+      </View>
+      <Text style={[styles.dbPctText, { color: barColor }]}>{pct.toFixed(1)}% used</Text>
+
+      <View style={{ marginTop: 12, gap: 8 }}>
+        {usage.tables.map(t => (
+          <View key={t.name} style={styles.dbTableRow}>
+            <Text style={styles.dbTableName} numberOfLines={1}>{t.name}</Text>
+            <View style={styles.dbTableBarTrack}>
+              <View style={[styles.dbTableBarFill, { width: `${(t.bytes / maxTableBytes) * 100}%` }]} />
+            </View>
+            <Text style={styles.dbTableSize}>{formatBytes(t.bytes)}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function TopUserRow({ user, styles, colors }) {
+  return (
+    <View style={styles.userRow}>
+      <View style={styles.userAvatar}>
+        <Text style={styles.userAvatarText}>{(user.full_name?.[0] ?? user.email?.[0] ?? '?').toUpperCase()}</Text>
+      </View>
+      <View style={styles.userInfo}>
+        <Text style={styles.userName}>{user.full_name || 'Unnamed'}</Text>
+        <Text style={styles.userEmail}>{user.email}</Text>
+      </View>
+      <View style={styles.userRight}>
+        <Text style={[styles.statusBadgeText, { color: colors.accent, fontSize: typography.sm }]}>{user.total_rows}</Text>
+        <Text style={{ fontSize: 10, color: colors.textDim }}>rows</Text>
+      </View>
     </View>
   );
 }
@@ -275,4 +389,17 @@ const createStyles = (colors) => StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   statusBadgeText: { fontSize: 10, fontWeight: weight.bold },
   adminToggle: { padding: 4 },
+
+  dbCard: { backgroundColor: colors.bgCard, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border },
+  dbHeaderRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 },
+  dbTotalText: { fontSize: typography.lg, fontWeight: weight.black, color: colors.text },
+  dbLimitText: { fontSize: typography.xs, color: colors.textMuted },
+  dbBarTrack: { height: 8, borderRadius: 4, backgroundColor: colors.dim, overflow: 'hidden' },
+  dbBarFill: { height: 8, borderRadius: 4 },
+  dbPctText: { fontSize: typography.xs, fontWeight: weight.bold, marginTop: 6 },
+  dbTableRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dbTableName: { flex: 0.9, fontSize: 11, color: colors.textMuted, fontFamily: 'monospace' },
+  dbTableBarTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.dim, overflow: 'hidden' },
+  dbTableBarFill: { height: 5, borderRadius: 3, backgroundColor: colors.accent },
+  dbTableSize: { fontSize: 10, color: colors.textDim, minWidth: 50, textAlign: 'right' },
 });
