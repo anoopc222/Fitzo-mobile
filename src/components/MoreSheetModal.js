@@ -10,18 +10,10 @@ import { typography, weight } from '../theme/typography';
 import { navigate } from '../navigation/navigationRef';
 import { fetchProgress } from '../screens/ProgressScreen';
 import { fetchMeasurements, fetchBodyStats } from '../screens/MeasurementsScreen';
-import { fetchPeriodLogs } from '../screens/PeriodTrackerScreen';
-import { fetchHealthLogs } from '../screens/HealthLogScreen';
 import { fetchProfile } from '../screens/ProfileScreen';
 import { fetchDietPlans } from '../screens/DietScreen';
 
 const getSections = (colors, isAdmin, isPro, subReady) => [
-  {
-    title: 'LADIES',
-    items: [
-      { label: 'Period Tracker', icon: 'water', target: ['Home', 'PeriodTracker'], color: colors.pink },
-    ],
-  },
   {
     title: 'LOG',
     items: [
@@ -34,7 +26,6 @@ const getSections = (colors, isAdmin, isPro, subReady) => [
       { label: 'Diet Plan',     icon: 'restaurant',  target: ['Home', 'Diet'],         color: colors.warning },
       { label: 'Progress',      icon: 'trending-up', target: ['Home', 'Progress'],     color: colors.success },
       { label: 'Measurements',  icon: 'body',        target: ['Home', 'Measurements'], color: colors.accent },
-      { label: 'Health Log',    icon: 'heart-half',  target: ['Home', 'HealthLog'],    color: colors.danger },
     ],
   },
   {
@@ -79,8 +70,6 @@ export default function MoreSheetModal() {
     qc.prefetchQuery({ queryKey: ['progress', user.id], queryFn: () => fetchProgress(user.id) });
     qc.prefetchQuery({ queryKey: ['measurements', user.id], queryFn: () => fetchMeasurements(user.id) });
     qc.prefetchQuery({ queryKey: ['measurements-bodystats', user.id], queryFn: () => fetchBodyStats(user.id) });
-    qc.prefetchQuery({ queryKey: ['periodLogs', user.id], queryFn: () => fetchPeriodLogs(user.id) });
-    qc.prefetchQuery({ queryKey: ['healthLogs', user.id], queryFn: () => fetchHealthLogs(user.id) });
     qc.prefetchQuery({ queryKey: ['profile', user.id], queryFn: () => fetchProfile(user.id) });
     qc.prefetchQuery({ queryKey: ['dietPlans', user.id], queryFn: () => fetchDietPlans(user.id) });
   }, [visible, user?.id, qc]);
