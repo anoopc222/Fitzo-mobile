@@ -546,12 +546,12 @@ export default function StepsScreen() {
   const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
   useEffect(() => {
     if (isLoading || !notifPrefs.stepsReminder) {
-      if (!notifPrefs.stepsReminder) syncConditionalReminder('stepsReminder', true, 21, 0, '', '');
+      if (!notifPrefs.stepsReminder) syncConditionalReminder('stepsReminder', true, 8, 0, '', '');
       return;
     }
     const todayStr = localDateStr(new Date());
     const loggedToday = logs.some(l => l.logged_at === todayStr);
-    syncConditionalReminder('stepsReminder', loggedToday, 21, 0,
+    syncConditionalReminder('stepsReminder', loggedToday, 8, 0,
       "Log today's steps", "You haven't logged your steps for today yet.");
   }, [isLoading, notifPrefs.stepsReminder, logs]);
 

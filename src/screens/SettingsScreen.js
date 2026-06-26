@@ -96,11 +96,6 @@ export default function SettingsScreen({ navigation }) {
         <SectionHeader title="Notifications" />
         <View style={styles.card}>
           <SwitchRow
-            icon="water-outline" label="Period & ovulation reminders"
-            value={!!notifPrefs.periodReminders}
-            onValueChange={(v) => handleToggleNotif('periodReminders', v)}
-          />
-          <SwitchRow
             icon="clipboard-outline" label="Daily log reminder (8 PM)"
             value={!!notifPrefs.dailyLogReminder}
             onValueChange={(v) => handleToggleNotif('dailyLogReminder', v)}

@@ -8,7 +8,7 @@ import {
 
 const PREFS_KEY = 'notificationPrefs';
 const DEFAULT_PREFS = {
-  periodReminders: false, dailyLogReminder: false, workoutReminder: false,
+  dailyLogReminder: false, workoutReminder: false,
   weightReminder: false, stepsReminder: false, sleepReminder: false,
 };
 
@@ -56,13 +56,8 @@ export function NotificationProvider({ children }) {
       return next;
     });
     if (!value) {
-      const tag = { periodReminders: null, weightReminder: 'weightReminder', stepsReminder: 'stepsReminder', sleepReminder: 'sleepReminder' }[key];
-      if (key === 'periodReminders') {
-        cancelNotificationsByTag('periodReminder');
-        cancelNotificationsByTag('ovulationReminder');
-      } else if (tag) {
-        cancelNotificationsByTag(tag);
-      }
+      const tag = { weightReminder: 'weightReminder', stepsReminder: 'stepsReminder', sleepReminder: 'sleepReminder' }[key];
+      if (tag) cancelNotificationsByTag(tag);
     }
     return true;
   }, []);
