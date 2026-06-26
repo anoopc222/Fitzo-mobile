@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { usePostHog } from 'posthog-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import AuthNavigator from './AuthNavigator';
@@ -13,6 +14,8 @@ const Stack = createNativeStackNavigator();
 export default function AppNavigator() {
   const { user, loading } = useAuth();
   const { colors, isDark } = useTheme();
+  const posthog = usePostHog();
+  const routeNameRef = useRef(null);
 
   const navTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
@@ -35,7 +38,22 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer ref={navigationRef} theme={navTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navTheme}
+      onReady={() => {
+        routeNameRef.current = navigationRef.getCurrentRoute()?.name;
+      }}
+      onStateChange={() => {
+        const prevName = routeNameRef.current;
+        const currentRoute = navigationRef.getCurrentRoute();
+        const currentName = currentRoute?.name;
+        if (currentName && currentName !== prevName) {
+          posthog?.screen(currentName, { params: currentRoute?.params });
+        }
+        routeNameRef.current = currentName;
+      }}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           <Stack.Screen name="App" component={TabNavigator} />

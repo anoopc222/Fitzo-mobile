@@ -7,8 +7,9 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { queryClient, CACHE_MAX_AGE } from './src/lib/queryClient';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SubscriptionProvider } from './src/context/SubscriptionContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { MoreMenuProvider } from './src/context/MoreMenuContext';
@@ -17,6 +18,7 @@ import { useAppFonts } from './src/theme/useAppFonts';
 import AppNavigator from './src/navigation/AppNavigator';
 import MoreSheetModal from './src/components/MoreSheetModal';
 import { navigate } from './src/navigation/navigationRef';
+import { POSTHOG_API_KEY, POSTHOG_HOST } from './src/config/analytics';
 
 const REMINDER_TAG_TO_TAB = {
   dailyLog: 'Log',
@@ -48,6 +50,8 @@ const persister = createAsyncStoragePersister({
 
 function Root() {
   const { isDark } = useTheme();
+  const { user } = useAuth();
+  const posthog = usePostHog();
 
   useEffect(() => {
     Notifications.getLastNotificationResponseAsync().then((response) => {
@@ -56,6 +60,16 @@ function Root() {
     const sub = Notifications.addNotificationResponseReceivedListener(navigateForNotification);
     return () => sub.remove();
   }, []);
+
+  // Tie events to the logged-in user (or reset to anonymous on sign-out) so
+  // PostHog can group sessions by account instead of just by device.
+  useEffect(() => {
+    if (user?.id) {
+      posthog?.identify(user.id, { email: user.email });
+    } else {
+      posthog?.reset();
+    }
+  }, [user?.id, posthog]);
 
   return (
     <>
@@ -74,30 +88,32 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{
-          persister,
-          maxAge: CACHE_MAX_AGE,
-          buster: 'v1',
-          dehydrateOptions: {
-            shouldDehydrateQuery: (query) => query.state.status === 'success',
-          },
-        }}
-      >
-        <ThemeProvider>
-          <AuthProvider>
-            <SubscriptionProvider>
-              <NotificationProvider>
-                <MoreMenuProvider>
-                  <Root />
-                </MoreMenuProvider>
-              </NotificationProvider>
-            </SubscriptionProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </PersistQueryClientProvider>
-    </SafeAreaProvider>
+    <PostHogProvider apiKey={POSTHOG_API_KEY} options={{ host: POSTHOG_HOST }} autocapture>
+      <SafeAreaProvider>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{
+            persister,
+            maxAge: CACHE_MAX_AGE,
+            buster: 'v1',
+            dehydrateOptions: {
+              shouldDehydrateQuery: (query) => query.state.status === 'success',
+            },
+          }}
+        >
+          <ThemeProvider>
+            <AuthProvider>
+              <SubscriptionProvider>
+                <NotificationProvider>
+                  <MoreMenuProvider>
+                    <Root />
+                  </MoreMenuProvider>
+                </NotificationProvider>
+              </SubscriptionProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </PersistQueryClientProvider>
+      </SafeAreaProvider>
+    </PostHogProvider>
   );
 }
