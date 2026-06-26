@@ -573,18 +573,19 @@ export default function WeightScreen() {
   const logs = data?.logs ?? [];
   const goalKg = data?.profile?.weight_goal_kg ?? 60;
 
-  const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
+  const { prefs: notifPrefs, times: notifTimes } = useNotificationPrefs() ?? { prefs: {}, times: {} };
+  const reminderTime = notifTimes.weightReminder ?? { hour: 8, minute: 0 };
   useEffect(() => {
     if (isLoading || !notifPrefs.weightReminder) {
-      if (!notifPrefs.weightReminder) syncConditionalReminder('weightReminder', true, 8, 0, '', '');
+      if (!notifPrefs.weightReminder) syncConditionalReminder('weightReminder', true, reminderTime.hour, reminderTime.minute, '', '');
       return;
     }
     const yday = new Date(); yday.setDate(yday.getDate() - 1);
     const ydayStr = localDateStr(yday);
     const loggedYesterday = logs.some(l => l.logged_at === ydayStr);
-    syncConditionalReminder('weightReminder', loggedYesterday, 8, 0,
+    syncConditionalReminder('weightReminder', loggedYesterday, reminderTime.hour, reminderTime.minute,
       "Don't forget your weigh-in", "You haven't logged yesterday's weight yet.");
-  }, [isLoading, notifPrefs.weightReminder, logs]);
+  }, [isLoading, notifPrefs.weightReminder, logs, reminderTime.hour, reminderTime.minute]);
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
   const sortedAsc = useMemo(() => [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at)), [logs]);
