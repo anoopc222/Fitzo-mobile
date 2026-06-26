@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, RefreshControl, Share, Switch,
+  TextInput, Alert, ActivityIndicator, RefreshControl, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -661,17 +661,6 @@ export default function PeriodTrackerScreen({ navigation }) {
     setter(true);
   };
 
-  const handleShare = () => {
-    const recentSymptoms = [...new Set(logs.slice(0, 3).flatMap(l => l.symptoms || []))];
-    const lines = [
-      insights.cycleDay != null ? `Cycle day: ${insights.cycleDay} of ${insights.avgCycleLength}` : null,
-      daysUntilNext != null ? (daysUntilNext <= 0 ? 'Period due today' : `Days until next period: ${daysUntilNext}`) : null,
-      insights.regularity ? `Cycle regularity: ${insights.regularity.label}` : null,
-      recentSymptoms.length ? `Recent symptoms: ${recentSymptoms.join(', ')}` : null,
-    ].filter(Boolean);
-    Share.share({ message: lines.join('\n') || 'No cycle data logged yet.' });
-  };
-
   const phaseColor = {
     Menstrual: colors.pink, Follicular: colors.good, Ovulation: colors.warn, Luteal: colors.blue,
   }[insights.phase] || colors.textMuted;
@@ -684,10 +673,7 @@ export default function PeriodTrackerScreen({ navigation }) {
         onBack={() => navigation.goBack()}
         right={
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={handleShare}>
-              <Ionicons name="share-outline" size={20} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => openProModal(openCycleSettings)}>
+            <TouchableOpacity onPress={openCycleSettings}>
               <Ionicons name="settings-outline" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
@@ -880,10 +866,9 @@ export default function PeriodTrackerScreen({ navigation }) {
             </View>
 
             {/* Insights link */}
-            <TouchableOpacity style={styles.insightsLinkCard} activeOpacity={0.85} onPress={() => openProModal(setShowInsights)}>
+            <TouchableOpacity style={styles.insightsLinkCard} activeOpacity={0.85} onPress={() => setShowInsights(true)}>
               <View style={styles.previewTopRow}>
                 <Text style={styles.previewIcon}>🔬</Text>
-                {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
               </View>
               <Text style={styles.previewTitle}>Insights</Text>
               <Text style={styles.previewSub}>Fertile window, predictions & symptom trends</Text>
