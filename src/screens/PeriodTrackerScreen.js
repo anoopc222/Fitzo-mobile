@@ -388,7 +388,7 @@ const styles_trend = StyleSheet.create({
 export default function PeriodTrackerScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
-  const { hasAccess, isPro, isAdmin } = useSubscription();
+  const { isPro, isAdmin } = useSubscription();
   const isProOnly = isPro || isAdmin;
   const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -656,11 +656,6 @@ export default function PeriodTrackerScreen({ navigation }) {
     });
   };
 
-  const openProModal = (setter) => {
-    if (!hasAccess) { setShowPaywall(true); return; }
-    setter(true);
-  };
-
   const phaseColor = {
     Menstrual: colors.pink, Follicular: colors.good, Ovulation: colors.warn, Luteal: colors.blue,
   }[insights.phase] || colors.textMuted;
@@ -875,10 +870,14 @@ export default function PeriodTrackerScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Cycle & Period Guide link */}
-            <TouchableOpacity style={styles.insightsLinkCard} activeOpacity={0.85} onPress={() => openProModal(setShowGuide)}>
+            <TouchableOpacity
+              style={styles.insightsLinkCard}
+              activeOpacity={0.85}
+              onPress={() => { if (!isProOnly) { setShowPaywall(true); return; } setShowGuide(true); }}
+            >
               <View style={styles.previewTopRow}>
                 <Text style={styles.previewIcon}>📖</Text>
-                {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+                {!isProOnly && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
               </View>
               <Text style={styles.previewTitle}>Cycle & Period Guide</Text>
               <Text style={styles.previewSub}>Phases, ovulation signs, symptom care & more</Text>
