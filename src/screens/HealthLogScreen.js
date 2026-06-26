@@ -459,13 +459,13 @@ export default function HealthLogScreen({ navigation }) {
                 </View>
               </View>
 
-              {sorted.map(rec => {
+              {sorted.map((rec, recIndex) => {
                 let totalMetrics = 0, anom = 0;
                 HL_BUILTIN.forEach(k => { if (rec[k] != null) { totalMetrics++; if (_hlSt(k, rec[k]) !== 'ok') anom++; } });
                 totalMetrics += (rec._custom || []).length;
                 const isOpen = !!expanded[rec.id];
-                return (
-                  <View key={rec.id} style={styles.sessionCard}>
+                const card = (
+                  <View style={styles.sessionCard}>
                     <TouchableOpacity style={styles.sessionHdr} onPress={() => setExpanded(p => ({ ...p, [rec.id]: !p[rec.id] }))}>
                       <View>
                         <Text style={styles.sessionDate}>{_hlFmtDate(rec.date)}</Text>
@@ -544,6 +544,14 @@ export default function HealthLogScreen({ navigation }) {
                         </View>
                       </View>
                     )}
+                  </View>
+                );
+
+                return recIndex === 0 ? (
+                  <View key={rec.id}>{card}</View>
+                ) : (
+                  <View key={rec.id}>
+                    <ProGate label="Lab session">{card}</ProGate>
                   </View>
                 );
               })}
