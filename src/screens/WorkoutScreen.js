@@ -3373,29 +3373,29 @@ const createES = (colors) => StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerTop: { fontSize: typography.xl },
+  headerTop: { fontSize: typography.lg },
   headerLOG: { fontWeight: weight.black, fontStyle: 'italic', color: colors.text },
   headerSub: { fontWeight: weight.bold, fontStyle: 'italic', color: colors.accent },
-  trackLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 2, marginTop: 4 },
-  closeBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.card, marginTop: 2 },
+  trackLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 2, marginTop: 2 },
+  closeBtn: { padding: 6, borderRadius: 18, backgroundColor: colors.card, marginTop: 0 },
 
-  toolsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginTop: 10, alignItems: 'center' },
+  toolsRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, marginTop: 6, alignItems: 'center' },
   timerPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: colors.accent + '14', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.accent + '14', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5,
     borderWidth: 1, borderColor: colors.accent + '55',
   },
-  timerPillText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
+  timerPillText: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.monoBold },
   copyLastBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: colors.purple + '14', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.purple + '14', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5,
     borderWidth: 1, borderColor: colors.purple + '55',
   },
   copyLastBtnText: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.purple },
-  durationOverrideRow: { paddingHorizontal: 16, marginTop: 6, marginBottom: 4 },
+  durationOverrideRow: { paddingHorizontal: 16, marginTop: 4, marginBottom: 2 },
   durationOverrideLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginBottom: 4 },
   durationOverrideInput: {
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 10,
@@ -3408,10 +3408,10 @@ const createES = (colors) => StyleSheet.create({
   },
   prBannerText: { fontSize: 9, fontWeight: weight.bold, color: colors.accent },
 
-  typeScroll: { maxHeight: 52 },
-  typeRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center', paddingVertical: 8 },
+  typeScroll: { maxHeight: 42 },
+  typeRow: { paddingHorizontal: 16, gap: 6, alignItems: 'center', paddingVertical: 6 },
   typeChip: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16,
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
   },
   typeChipActive: { borderColor: colors.accent, backgroundColor: colors.accent + '1a' },
@@ -3420,21 +3420,21 @@ const createES = (colors) => StyleSheet.create({
   typeChipTextActive: { color: colors.accent, fontWeight: weight.bold },
   typeChipTextDefault: { color: colors.accent + 'aa', fontWeight: weight.medium },
 
-  fieldRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: 10 },
+  fieldRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginTop: 6 },
   fieldCol: { flex: 1 },
-  fieldLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginBottom: 4 },
+  fieldLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, marginBottom: 3 },
   fieldInput: {
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 10, color: colors.text, fontSize: typography.sm,
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, color: colors.text, fontSize: typography.sm,
   },
 
-  exScroll: { flex: 1, paddingHorizontal: 16, marginTop: 12 },
+  exScroll: { flex: 1, paddingHorizontal: 16, marginTop: 8 },
   exCard: {
-    backgroundColor: colors.card, borderRadius: 14, marginBottom: 10,
+    backgroundColor: colors.card, borderRadius: 12, marginBottom: 6,
     overflow: 'hidden', borderWidth: 1, borderColor: colors.border,
   },
   exCardActive: { borderColor: colors.accent, borderWidth: 1.5 },
-  exCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  exCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 8 },
   exNumBadge: {
     width: 26, height: 26, borderRadius: 8,
     backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
@@ -3451,16 +3451,16 @@ const createES = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.danger + '55', alignItems: 'center', justifyContent: 'center',
   },
 
-  exExpanded: { borderTopWidth: 1, borderTopColor: colors.border, padding: 10 },
-  exNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  exExpanded: { borderTopWidth: 1, borderTopColor: colors.border, padding: 8 },
+  exNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   hashIcon: {
-    width: 32, height: 40, borderRadius: 8, backgroundColor: colors.surface,
+    width: 28, height: 32, borderRadius: 8, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
-  hashText: { fontSize: typography.base, color: colors.textDim, fontWeight: weight.bold },
+  hashText: { fontSize: typography.sm, color: colors.textDim, fontWeight: weight.bold },
   exNameInput: {
     flex: 1, backgroundColor: colors.surface, borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: 10, color: colors.text, fontSize: typography.sm,
+    paddingHorizontal: 10, paddingVertical: 7, color: colors.text, fontSize: typography.sm,
     borderWidth: 1, borderColor: colors.border,
   },
 
@@ -3476,27 +3476,27 @@ const createES = (colors) => StyleSheet.create({
 
   addSetBtn: {
     borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, borderRadius: 8,
-    paddingVertical: 8, alignItems: 'center', marginTop: 4,
+    paddingVertical: 6, alignItems: 'center', marginTop: 2,
   },
   addSetText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.medium },
 
   addExBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.accent,
-    borderRadius: 14, padding: 14, marginTop: 4, marginBottom: 8,
+    borderRadius: 12, padding: 10, marginTop: 2, marginBottom: 6,
   },
   addExText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent },
 
   bottomRow: {
-    flexDirection: 'row', gap: 10, padding: 16,
+    flexDirection: 'row', gap: 10, padding: 12,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   cancelBtn: {
-    flex: 1, padding: 14, borderRadius: 14,
+    flex: 1, padding: 12, borderRadius: 12,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
   cancelText: { fontSize: typography.sm, fontWeight: weight.semibold, color: colors.textMuted },
-  saveBtn: { flex: 2, padding: 14, borderRadius: 14, backgroundColor: colors.accent, alignItems: 'center' },
+  saveBtn: { flex: 2, padding: 12, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center' },
   saveBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg },
 
   restDayWrap: {
@@ -3526,8 +3526,8 @@ const createES = (colors) => StyleSheet.create({
   subHeader: { fontSize: 10, fontWeight: weight.bold, color: colors.purple, letterSpacing: 1, padding: 10, paddingBottom: 4 },
 
   swapBtn: {
-    width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.purple + '1a', marginLeft: 6,
+    width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.purple + '1a', marginLeft: 4,
   },
   swapBtnText: { fontSize: 14 },
 
@@ -3559,16 +3559,16 @@ const createES = (colors) => StyleSheet.create({
   oneRmText: { fontSize: 9, color: colors.purple, marginTop: -2, marginBottom: 2, marginLeft: 24, lineHeight: 12 },
   oneRmTextLocked: { fontSize: 9, color: colors.textDim, marginTop: -2, marginBottom: 2, marginLeft: 24, lineHeight: 12, textDecorationLine: 'underline' },
 
-  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  trendLabel: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 },
-  trendVal: { fontSize: 11, fontWeight: weight.semibold, color: colors.accent },
+  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  trendLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 },
+  trendVal: { fontSize: 10, fontWeight: weight.semibold, color: colors.accent },
   groupHint: {
     backgroundColor: colors.purple + '14', borderWidth: 1, borderColor: colors.purple + '55',
-    borderRadius: 8, padding: 8, marginBottom: 10,
+    borderRadius: 8, padding: 6, marginBottom: 6,
   },
-  groupHintText: { fontSize: 11, color: colors.purple, fontWeight: weight.semibold },
+  groupHintText: { fontSize: 10, color: colors.purple, fontWeight: weight.semibold },
 
-  addSetRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  addSetRow: { flexDirection: 'row', gap: 8, marginTop: 2 },
   restBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12,
     borderWidth: 1, borderColor: colors.blue + '55', borderRadius: 8, backgroundColor: colors.blue + '14',
