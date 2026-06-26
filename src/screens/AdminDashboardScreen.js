@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../context/ThemeContext';
@@ -81,11 +81,13 @@ export default function AdminDashboardScreen({ navigation }) {
     gcTime: 0,
   });
 
-  const { data: dbUsage, isLoading: dbUsageLoading } = useQuery({
+  const [showDbUsage, setShowDbUsage] = useState(false);
+  const { data: dbUsage, isLoading: dbUsageLoading, isFetching: dbUsageFetching, refetch: refetchDbUsage } = useQuery({
     queryKey: ['admin-db-usage'],
     queryFn: fetchDbUsage,
     staleTime: 0,
     gcTime: 0,
+    enabled: showDbUsage,
   });
 
 
@@ -178,10 +180,39 @@ export default function AdminDashboardScreen({ navigation }) {
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>DATABASE USAGE</Text>
-              {dbUsageLoading ? (
+              {!showDbUsage ? (
+                <TouchableOpacity
+                  style={styles.showUsageBtn}
+                  onPress={() => setShowDbUsage(true)}
+                >
+                  <Ionicons name="server-outline" size={16} color={colors.accent} />
+                  <Text style={styles.showUsageBtnText}>Show Usage</Text>
+                </TouchableOpacity>
+              ) : dbUsageLoading ? (
                 <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
               ) : dbUsage ? (
-                <DbUsageCard usage={dbUsage} styles={styles} colors={colors} />
+                <>
+                  <DbUsageCard usage={dbUsage} styles={styles} colors={colors} />
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                    <TouchableOpacity
+                      style={styles.showUsageBtn}
+                      onPress={() => refetchDbUsage()}
+                      disabled={dbUsageFetching}
+                    >
+                      {dbUsageFetching
+                        ? <ActivityIndicator size="small" color={colors.accent} />
+                        : <Ionicons name="refresh" size={16} color={colors.accent} />}
+                      <Text style={styles.showUsageBtnText}>Refresh</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.showUsageBtn}
+                      onPress={() => setShowDbUsage(false)}
+                    >
+                      <Ionicons name="eye-off-outline" size={16} color={colors.textDim} />
+                      <Text style={[styles.showUsageBtnText, { color: colors.textDim }]}>Hide</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
               ) : null}
             </View>
 
@@ -358,4 +389,6 @@ const createStyles = (colors) => StyleSheet.create({
   dbTableBarTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.dim, overflow: 'hidden' },
   dbTableBarFill: { height: 5, borderRadius: 3, backgroundColor: colors.accent },
   dbTableSize: { fontSize: 10, color: colors.textDim, minWidth: 50, textAlign: 'right' },
+  showUsageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: colors.bgCard, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: colors.border },
+  showUsageBtnText: { fontSize: typography.sm, fontWeight: weight.semibold, color: colors.accent },
 });
