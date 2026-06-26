@@ -696,7 +696,7 @@ function suggestProgressiveOverload(prev) {
     return { weight: prev.weight, reps: prev.reps, note: 'last RPE was high — hold steady' };
   }
   if ((prev.reps ?? 0) >= 10) {
-    return { weight: Math.round((prev.weight + 2.5) * 2) / 2, reps: Math.max(6, prev.reps - 2), note: 'increase weight' };
+    return { weight: Math.round((prev.weight + 5) / 5) * 5, reps: Math.max(6, prev.reps - 2), note: 'increase weight' };
   }
   return { weight: prev.weight, reps: (prev.reps ?? 0) + 1, note: 'add a rep' };
 }
@@ -704,7 +704,7 @@ function suggestProgressiveOverload(prev) {
 const WARMUP_PCTS = [0.4, 0.6, 0.8];
 function getWarmupSets(topWeightKg) {
   if (!topWeightKg) return [];
-  return WARMUP_PCTS.map(p => Math.round((topWeightKg * p) / 2.5) * 2.5);
+  return WARMUP_PCTS.map(p => Math.round((topWeightKg * p) / 5) * 5);
 }
 
 const SUBSTITUTE_MAP = {
@@ -871,8 +871,8 @@ function suggestAutoReg(prevSetInSession) {
   const rpe = parseFloat(prevSetInSession?.rpe);
   const w = parseFloat(prevSetInSession?.weight_kg);
   if (isNaN(rpe) || isNaN(w) || !w) return null;
-  if (rpe >= 9) return { weight: Math.round(w * 0.95 * 2) / 2, note: 'RPE was high last set — ease off' };
-  if (rpe <= 6) return { weight: Math.round(w * 1.05 * 2) / 2, note: 'RPE was low last set — push more' };
+  if (rpe >= 9) return { weight: Math.round(w * 0.95 / 5) * 5, note: 'RPE was high last set — ease off' };
+  if (rpe <= 6) return { weight: Math.round(w * 1.05 / 5) * 5, note: 'RPE was low last set — push more' };
   return null;
 }
 
@@ -1604,6 +1604,7 @@ function EditSessionModal({
                 colors={colors}
                 maxDate={localDateStr(new Date())}
                 placeholder="Pick date"
+                style={eS.datePickerBtn}
               />
             </View>
             <View style={eS.fieldCol}>
@@ -1748,7 +1749,7 @@ function EditSessionModal({
                         {!isCardio && acOpenIdx === exIdx && (() => {
                           const q = ex.name.trim().toLowerCase();
                           const matches = namePool.filter(n => !q || n.toLowerCase().includes(q)).slice(0, 8);
-                          if (!matches.length) return null;
+                          if (!matches.length || matches.some(n => n.toLowerCase() === q)) return null;
                           return (
                             <View style={eS.acDropdown}>
                               {matches.map(n => {
@@ -3427,6 +3428,7 @@ const createES = (colors) => StyleSheet.create({
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, color: colors.text, fontSize: typography.sm,
   },
+  datePickerBtn: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 },
 
   exScroll: { flex: 1, paddingHorizontal: 16, marginTop: 8 },
   exCard: {
@@ -3520,7 +3522,7 @@ const createES = (colors) => StyleSheet.create({
   },
   cardioHintText: { fontSize: typography.xs, color: colors.blue, flex: 1 },
 
-  acDropdown: { backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginTop: -8, marginBottom: 12, overflow: 'hidden' },
+  acDropdown: { backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginTop: 4, marginBottom: 8, overflow: 'hidden' },
   acItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
   acItemText: { fontFamily: fontFamily.bodyMedium, fontSize: typography.sm, color: colors.text },
   subHeader: { fontSize: 10, fontWeight: weight.bold, color: colors.purple, letterSpacing: 1, padding: 10, paddingBottom: 4 },
