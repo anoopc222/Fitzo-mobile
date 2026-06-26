@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,16 +12,31 @@ import { useNotificationPrefs } from '../context/NotificationContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
+import PaywallModal from '../components/ui/PaywallModal';
+
+function formatTime(hour, minute) {
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  const ampm = hour < 12 ? 'AM' : 'PM';
+  return `${h12}:${String(minute).padStart(2, '0')} ${ampm}`;
+}
 
 export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
-  const { isPro, isInTrial, manageSubscriptions, ready: subReady } = useSubscription() ?? {};
-  const { prefs: notifPrefs, setPref: setNotifPref } = useNotificationPrefs() ?? { prefs: {}, setPref: () => {} };
+  const { isPro, manageSubscriptions, ready: subReady } = useSubscription() ?? {};
+  const { prefs: notifPrefs, times: notifTimes, setPref: setNotifPref, setReminderTime } =
+    useNotificationPrefs() ?? { prefs: {}, times: {}, setPref: () => {}, setReminderTime: () => {} };
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [editingTimeKey, setEditingTimeKey] = useState(null);
 
   const handleToggleNotif = async (key, value) => {
     const ok = await setNotifPref(key, value);
     if (!ok) Alert.alert('Permission needed', 'Enable notifications for FitZo in your device settings to use reminders.');
+  };
+
+  const handleEditTime = (key) => {
+    if (!isPro) { setShowPaywall(true); return; }
+    setEditingTimeKey(key);
   };
 
   const handleManageSubscription = async () => {
@@ -94,29 +109,42 @@ export default function SettingsScreen({ navigation }) {
 
         {/* ── Notifications ──────────────────────────────────────── */}
         <SectionHeader title="Notifications" />
+        <Text style={styles.sectionHint}>
+          {isPro ? 'Tap the time to customize when a reminder fires.' : 'Pro unlocks custom reminder times.'}
+        </Text>
         <View style={styles.card}>
           <SwitchRow
-            icon="clipboard-outline" label="Daily log reminder (8 PM)"
+            icon="clipboard-outline" label="Daily log reminder"
+            time={notifTimes.dailyLogReminder} isPro={isPro}
+            onPressTime={() => handleEditTime('dailyLogReminder')}
             value={!!notifPrefs.dailyLogReminder}
             onValueChange={(v) => handleToggleNotif('dailyLogReminder', v)}
           />
           <SwitchRow
-            icon="barbell-outline" label="Workout reminder (6 PM)"
+            icon="barbell-outline" label="Workout reminder"
+            time={notifTimes.workoutReminder} isPro={isPro}
+            onPressTime={() => handleEditTime('workoutReminder')}
             value={!!notifPrefs.workoutReminder}
             onValueChange={(v) => handleToggleNotif('workoutReminder', v)}
           />
           <SwitchRow
             icon="scale-outline" label="Remind me if weight isn't logged"
+            time={notifTimes.weightReminder} isPro={isPro}
+            onPressTime={() => handleEditTime('weightReminder')}
             value={!!notifPrefs.weightReminder}
             onValueChange={(v) => handleToggleNotif('weightReminder', v)}
           />
           <SwitchRow
             icon="footsteps-outline" label="Remind me if steps aren't logged"
+            time={notifTimes.stepsReminder} isPro={isPro}
+            onPressTime={() => handleEditTime('stepsReminder')}
             value={!!notifPrefs.stepsReminder}
             onValueChange={(v) => handleToggleNotif('stepsReminder', v)}
           />
           <SwitchRow
             icon="moon-outline" label="Remind me if sleep isn't logged"
+            time={notifTimes.sleepReminder} isPro={isPro}
+            onPressTime={() => handleEditTime('sleepReminder')}
             value={!!notifPrefs.sleepReminder}
             onValueChange={(v) => handleToggleNotif('sleepReminder', v)}
             last
@@ -138,7 +166,69 @@ export default function SettingsScreen({ navigation }) {
 
         <Text style={styles.version}>FitZo v1.0.0</Text>
       </ScrollView>
+
+      <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
+
+      {editingTimeKey && (
+        <TimePickerModal
+          colors={colors}
+          initial={notifTimes[editingTimeKey]}
+          onClose={() => setEditingTimeKey(null)}
+          onSave={(hour, minute) => {
+            setReminderTime(editingTimeKey, hour, minute);
+            setEditingTimeKey(null);
+          }}
+        />
+      )}
     </SafeAreaView>
+  );
+}
+
+function TimePickerModal({ colors, initial, onClose, onSave }) {
+  const DateTimePicker = require('@react-native-community/datetimepicker').default;
+  const styles = createStyles(colors);
+  const initialDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(initial?.hour ?? 8, initial?.minute ?? 0, 0, 0);
+    return d;
+  }, [initial]);
+  const [pending, setPending] = useState(initialDate);
+
+  const handleChange = (event, selected) => {
+    if (event.type === 'dismissed') { onClose(); return; }
+    if (selected) {
+      if (Platform.OS === 'android') {
+        onSave(selected.getHours(), selected.getMinutes());
+      } else {
+        setPending(selected);
+      }
+    }
+  };
+
+  if (Platform.OS === 'android') {
+    return (
+      <DateTimePicker value={pending} mode="time" display="default" onChange={handleChange} />
+    );
+  }
+
+  return (
+    <View style={styles.pickerOverlay}>
+      <View style={styles.pickerSheet}>
+        <DateTimePicker value={pending} mode="time" display="spinner" onChange={handleChange}
+          textColor={colors.text} />
+        <View style={styles.pickerActions}>
+          <TouchableOpacity style={styles.pickerCancelBtn} onPress={onClose}>
+            <Text style={styles.pickerCancelText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.pickerSaveBtn}
+            onPress={() => onSave(pending.getHours(), pending.getMinutes())}
+          >
+            <Text style={styles.pickerSaveText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -165,13 +255,21 @@ function SettingRow({ icon, label, value, chevron, onPress, last, danger }) {
   );
 }
 
-function SwitchRow({ icon, label, value, onValueChange, last }) {
+function SwitchRow({ icon, label, value, onValueChange, last, time, isPro, onPressTime }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={[styles.settingRow, !last && styles.rowBorder]}>
       <Ionicons name={icon} size={18} color={colors.textMuted} />
       <Text style={styles.settingLabel}>{label}</Text>
+      {time && (
+        <TouchableOpacity style={styles.timeChip} onPress={onPressTime}>
+          <Text style={styles.timeChipText}>{formatTime(time.hour, time.minute)}</Text>
+          {isPro
+            ? <Ionicons name="pencil" size={11} color={colors.accent} />
+            : <Ionicons name="lock-closed" size={11} color={colors.textDim} />}
+        </TouchableOpacity>
+      )}
       <Switch
         value={value}
         onValueChange={onValueChange}
@@ -194,6 +292,26 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted,
     textTransform: 'uppercase', letterSpacing: 1, marginTop: 20, marginBottom: 8,
   },
+  sectionHint: { fontSize: typography.xs, color: colors.textDim, marginTop: -4, marginBottom: 8 },
+  timeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+    backgroundColor: colors.bgElevated, marginRight: 8,
+  },
+  timeChipText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.medium },
+  pickerOverlay: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, top: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
+  },
+  pickerSheet: { backgroundColor: colors.bgCard, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16 },
+  pickerActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  pickerCancelBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  pickerCancelText: { color: colors.textMuted, fontWeight: weight.medium },
+  pickerSaveBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: colors.accent },
+  pickerSaveText: { color: colors.bg, fontWeight: weight.bold },
   card: {
     backgroundColor: colors.bgCard, borderRadius: 16,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 4,

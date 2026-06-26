@@ -385,18 +385,19 @@ export default function SleepScreen() {
   const sessions = data?.sessions ?? [];
   const steps = data?.steps ?? [];
 
-  const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
+  const { prefs: notifPrefs, times: notifTimes } = useNotificationPrefs() ?? { prefs: {}, times: {} };
+  const reminderTime = notifTimes.sleepReminder ?? { hour: 8, minute: 0 };
   useEffect(() => {
     if (isLoading || !notifPrefs.sleepReminder) {
-      if (!notifPrefs.sleepReminder) syncConditionalReminder('sleepReminder', true, 8, 0, '', '');
+      if (!notifPrefs.sleepReminder) syncConditionalReminder('sleepReminder', true, reminderTime.hour, reminderTime.minute, '', '');
       return;
     }
     const todayStr = localDateStr(new Date());
     const ydayStr = localDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000));
     const loggedRecently = logs.some(l => l.logged_at === todayStr || l.logged_at === ydayStr);
-    syncConditionalReminder('sleepReminder', loggedRecently, 8, 0,
+    syncConditionalReminder('sleepReminder', loggedRecently, reminderTime.hour, reminderTime.minute,
       "Log last night's sleep", "You haven't logged your sleep yet.");
-  }, [isLoading, notifPrefs.sleepReminder, logs]);
+  }, [isLoading, notifPrefs.sleepReminder, logs, reminderTime.hour, reminderTime.minute]);
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
 

@@ -7,6 +7,7 @@ import {
 } from '../lib/notifications';
 
 const PREFS_KEY = 'notificationPrefs';
+const TIMES_KEY = 'notificationTimes';
 const DEFAULT_PREFS = {
   dailyLogReminder: true, workoutReminder: true,
   weightReminder: true, stepsReminder: true, sleepReminder: true,
@@ -15,11 +16,21 @@ const ALL_OFF_PREFS = {
   dailyLogReminder: false, workoutReminder: false,
   weightReminder: false, stepsReminder: false, sleepReminder: false,
 };
+// Real fire times each reminder uses — kept separate from the on/off prefs
+// above so Pro users can override them per-type without touching that state.
+const DEFAULT_TIMES = {
+  dailyLogReminder: { hour: 20, minute: 0 },
+  workoutReminder: { hour: 22, minute: 0 },
+  weightReminder: { hour: 8, minute: 0 },
+  stepsReminder: { hour: 22, minute: 0 },
+  sleepReminder: { hour: 8, minute: 0 },
+};
 
 const NotificationContext = createContext(null);
 
 export function NotificationProvider({ children }) {
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  const [times, setTimes] = useState(DEFAULT_TIMES);
   const [loaded, setLoaded] = useState(false);
 
   // First launch: reminders are on by default, but that only sticks if the
@@ -37,18 +48,22 @@ export function NotificationProvider({ children }) {
       }
       setLoaded(true);
     });
+    AsyncStorage.getItem(TIMES_KEY).then(raw => {
+      if (raw) setTimes({ ...DEFAULT_TIMES, ...JSON.parse(raw) });
+    });
   }, []);
 
   // Re-apply repeating reminders whose schedule doesn't depend on app data,
   // so they survive after a reinstall/permission re-grant without user action.
   useEffect(() => {
     if (!loaded) return;
+    const { hour, minute } = times.dailyLogReminder;
     if (prefs.dailyLogReminder) {
-      scheduleDailyReminder('dailyLog', 20, 0, 'Log today\'s progress', "Don't forget to log your food, weight, or workout today.");
+      scheduleDailyReminder('dailyLog', hour, minute, 'Log today\'s progress', "Don't forget to log your food, weight, or workout today.");
     } else {
       cancelNotificationsByTag('dailyLog');
     }
-  }, [loaded, prefs.dailyLogReminder]);
+  }, [loaded, prefs.dailyLogReminder, times.dailyLogReminder]);
 
   const setPref = useCallback(async (key, value) => {
     if (value) {
@@ -70,8 +85,16 @@ export function NotificationProvider({ children }) {
     return true;
   }, []);
 
+  const setReminderTime = useCallback((key, hour, minute) => {
+    setTimes(prev => {
+      const next = { ...prev, [key]: { hour, minute } };
+      AsyncStorage.setItem(TIMES_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return (
-    <NotificationContext.Provider value={{ prefs, setPref }}>
+    <NotificationContext.Provider value={{ prefs, times, setPref, setReminderTime }}>
       {children}
     </NotificationContext.Provider>
   );

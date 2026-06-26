@@ -543,17 +543,18 @@ export default function StepsScreen() {
   const logs = data?.logs ?? [];
   const defaultGoal = data?.profile?.step_goal ?? logs[0]?.goal ?? 12000;
 
-  const { prefs: notifPrefs } = useNotificationPrefs() ?? { prefs: {} };
+  const { prefs: notifPrefs, times: notifTimes } = useNotificationPrefs() ?? { prefs: {}, times: {} };
+  const reminderTime = notifTimes.stepsReminder ?? { hour: 22, minute: 0 };
   useEffect(() => {
     if (isLoading || !notifPrefs.stepsReminder) {
-      if (!notifPrefs.stepsReminder) syncConditionalReminder('stepsReminder', true, 22, 0, '', '');
+      if (!notifPrefs.stepsReminder) syncConditionalReminder('stepsReminder', true, reminderTime.hour, reminderTime.minute, '', '');
       return;
     }
     const todayStr = localDateStr(new Date());
     const loggedToday = logs.some(l => l.logged_at === todayStr);
-    syncConditionalReminder('stepsReminder', loggedToday, 22, 0,
+    syncConditionalReminder('stepsReminder', loggedToday, reminderTime.hour, reminderTime.minute,
       "Log today's steps", "You haven't logged your steps for today yet.");
-  }, [isLoading, notifPrefs.stepsReminder, logs]);
+  }, [isLoading, notifPrefs.stepsReminder, logs, reminderTime.hour, reminderTime.minute]);
 
   const logMut = useMutation({
     mutationFn: ({ date, steps, activityType, note: logNote }) =>
