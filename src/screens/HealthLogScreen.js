@@ -406,7 +406,7 @@ export default function HealthLogScreen({ navigation }) {
         {isLoading ? (
           <SkeletonScreen cards={4} linesPerCard={2} />
         ) : (
-        <ProGate label="Health log">
+        <>
         {search ? (
           // ── SEARCH RESULTS ──
           searchResults.length === 0 ? (
@@ -550,7 +550,8 @@ export default function HealthLogScreen({ navigation }) {
             </>
           )
         ) : activeTab === 'trends' ? (
-          !availKeys.length ? (
+          <ProGate label="Trends">
+          {!availKeys.length ? (
             <View style={styles.emptyWrap}>
               <Text style={{ fontSize: 44 }}>📈</Text>
               <Text style={styles.emptyTitle}>Not enough data yet</Text>
@@ -576,9 +577,11 @@ export default function HealthLogScreen({ navigation }) {
                 </View>
               )}
             </View>
-          )
+          )}
+          </ProGate>
         ) : activeTab === 'summary' ? (
-          !summaryData.keys.length ? (
+          <ProGate label="Summary">
+          {!summaryData.keys.length ? (
             <View style={styles.emptyWrap}>
               <Text style={{ fontSize: 44 }}>📋</Text>
               <Text style={styles.emptyTitle}>No data yet</Text>
@@ -630,7 +633,8 @@ export default function HealthLogScreen({ navigation }) {
                 })}
               </View>
             </>
-          )
+          )}
+          </ProGate>
         ) : (
           // ── REFERENCE ──
           Object.entries(HL_GROUPS).map(([gName, gData]) => (
@@ -649,7 +653,7 @@ export default function HealthLogScreen({ navigation }) {
             </View>
           ))
         )}
-        </ProGate>
+        </>
         )}
         <View style={{ height: 90 }} />
       </ScrollView>

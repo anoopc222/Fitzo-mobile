@@ -139,7 +139,7 @@ export default function ProgressScreen({ navigation }) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
-      <ProGate label="Progress tracking">
+      <>
         {isLoading && <SkeletonScreen cards={5} linesPerCard={3} />}
         {!isLoading && grouped.length === 0 && (
           <View style={styles.empty}>
@@ -152,7 +152,7 @@ export default function ProgressScreen({ navigation }) {
           <Text style={styles.noResults}>No exercises match "{search}"</Text>
         )}
 
-        {filtered.map((ex) => {
+        {filtered.map((ex, exIndex) => {
           const isExpanded = expandedEx === ex.name;
           const last3 = ex.sessions.slice(0, 3);
           const pr = ex.sessions.reduce((best, s) => {
@@ -161,8 +161,8 @@ export default function ProgressScreen({ navigation }) {
           }, { kg: 0, date: null });
           const trend = calcTrend(ex.sessions);
 
-          return (
-            <View key={ex.name} style={styles.exCard}>
+          const card = (
+            <View style={styles.exCard}>
               <TouchableOpacity style={styles.exHeader} onPress={() => toggleExpand(ex.name)}>
                 <View style={styles.exHeaderLeft}>
                   <Text style={styles.exName}>{ex.name}</Text>
@@ -236,8 +236,16 @@ export default function ProgressScreen({ navigation }) {
               )}
             </View>
           );
+
+          return exIndex === 0 ? (
+            <View key={ex.name}>{card}</View>
+          ) : (
+            <View key={ex.name}>
+              <ProGate label="Progress tracking">{card}</ProGate>
+            </View>
+          );
         })}
-      </ProGate>
+      </>
       </ScrollView>
     </SafeAreaView>
   );
