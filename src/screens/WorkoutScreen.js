@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
-  Modal, KeyboardAvoidingView, Platform, Dimensions,
+  Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -1347,6 +1347,20 @@ function EditSessionModal({
   const [subOpenIdx, setSubOpenIdx] = useState(null);
   const [restTimer, setRestTimer] = useState(null); // { exIdx, secondsLeft, total }
   const [programTemplate, setProgramTemplate] = useState(null);
+  const scrollRef = useRef(null);
+  const cardRefs = useRef({});
+  const scrollCardToTop = useCallback((exIdx) => {
+    setTimeout(() => {
+      const card = cardRefs.current[exIdx];
+      const scroller = scrollRef.current;
+      if (!card || !scroller) return;
+      const handle = findNodeHandle(scroller);
+      if (!handle) return;
+      card.measureLayout(handle, (x, y) => {
+        scroller.scrollTo({ y: Math.max(y - 8, 0), animated: true });
+      }, () => {});
+    }, 100);
+  }, []);
   const [programWeeks, setProgramWeeks] = useState(4);
 
   useEffect(() => {
@@ -1475,6 +1489,7 @@ function EditSessionModal({
     const newIdx = exercises.length;
     setExercises(prev => [...prev, ex]);
     setActiveExIdx(newIdx);
+    scrollCardToTop(newIdx);
   };
 
   const removeExercise = (idx) => {
@@ -1549,7 +1564,7 @@ function EditSessionModal({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <SafeAreaView style={eS.container}>
-          <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+          <ScrollView ref={scrollRef} style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
           {/* Header */}
           <View style={eS.header}>
             <View style={{ flex: 1 }}>
@@ -1642,9 +1657,13 @@ function EditSessionModal({
               {exercises.map((ex, exIdx) => {
                 const isActive = activeExIdx === exIdx;
                 return (
-                  <View key={ex._key} style={[eS.exCard, isActive && eS.exCardActive]}>
+                  <View key={ex._key} ref={r => { cardRefs.current[exIdx] = r; }} style={[eS.exCard, isActive && eS.exCardActive]}>
                     <TouchableOpacity style={eS.exCardHeader}
-                      onPress={() => setActiveExIdx(isActive ? null : exIdx)}>
+                      onPress={() => {
+                        const next = isActive ? null : exIdx;
+                        setActiveExIdx(next);
+                        if (next != null) scrollCardToTop(next);
+                      }}>
                       <View style={[eS.exNumBadge, isActive && eS.exNumBadgeActive]}>
                         <Text style={[eS.exNumText, isActive && eS.exNumTextActive]}>{exIdx + 1}</Text>
                       </View>
@@ -1687,7 +1706,7 @@ function EditSessionModal({
                               style={eS.exNameInput}
                               value={ex.name}
                               onChangeText={v => { updateExName(exIdx, v); setAcOpenIdx(exIdx); }}
-                              onFocus={() => setAcOpenIdx(exIdx)}
+                              onFocus={() => { setAcOpenIdx(exIdx); scrollCardToTop(exIdx); }}
                               onBlur={() => setTimeout(() => setAcOpenIdx(cur => (cur === exIdx ? null : cur)), 150)}
                               placeholder="Exercise name"
                               placeholderTextColor={colors.textDim}
@@ -1834,6 +1853,7 @@ function EditSessionModal({
                                       style={eS.setInput}
                                       value={s.duration_min}
                                       onChangeText={v => updateSet(exIdx, sIdx, 'duration_min', v)}
+                                      onFocus={() => scrollCardToTop(exIdx)}
                                       keyboardType="numeric"
                                       placeholder="min"
                                       placeholderTextColor={colors.textDim}
@@ -1856,6 +1876,7 @@ function EditSessionModal({
                                           style={eS.setInput}
                                           value={s[def.secondary.key]}
                                           onChangeText={v => updateSet(exIdx, sIdx, def.secondary.key, v)}
+                                          onFocus={() => scrollCardToTop(exIdx)}
                                           keyboardType="decimal-pad"
                                           placeholder={def.secondary.placeholder}
                                           placeholderTextColor={colors.textDim}
@@ -1869,6 +1890,7 @@ function EditSessionModal({
                                           style={eS.setInput}
                                           value={s[def.tertiary.key]}
                                           onChangeText={v => updateSet(exIdx, sIdx, def.tertiary.key, v)}
+                                          onFocus={() => scrollCardToTop(exIdx)}
                                           keyboardType="decimal-pad"
                                           placeholder={def.tertiary.placeholder}
                                           placeholderTextColor={colors.textDim}
@@ -1894,6 +1916,7 @@ function EditSessionModal({
                                     style={eS.setInput}
                                     value={s.weight_kg}
                                     onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
+                                    onFocus={() => scrollCardToTop(exIdx)}
                                     keyboardType="decimal-pad"
                                     placeholder={autoReg ? String(autoReg.weight) : 'kg'}
                                     placeholderTextColor={autoReg ? colors.accent : colors.textDim}
@@ -1903,11 +1926,13 @@ function EditSessionModal({
                                     style={eS.setInput}
                                     value={s.reps}
                                     onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
+                                    onFocus={() => scrollCardToTop(exIdx)}
                                     keyboardType="numeric"
                                     placeholder="reps"
                                     placeholderTextColor={colors.textDim}
                                   />
                                   <TextInput
+                                    onFocus={() => scrollCardToTop(exIdx)}
                                     style={[eS.setInput, { maxWidth: 50 }]}
                                     value={s.rpe}
                                     onChangeText={v => updateSet(exIdx, sIdx, 'rpe', v)}
