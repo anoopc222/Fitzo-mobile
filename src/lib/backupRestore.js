@@ -100,7 +100,6 @@ export async function exportBackup(userId) {
   const profile = {
     name: p.full_name ?? '', height: p.height_cm != null ? String(p.height_cm) : '',
     goalWt: p.weight_goal_kg != null ? String(p.weight_goal_kg) : '', goal: p.goal ?? '',
-    photo: p.avatar_base64 ?? '',
   };
 
   return {
@@ -244,7 +243,6 @@ export async function restoreBackup(userId, backup) {
     if (p.goal) fields.goal = p.goal;
     if (p.height) fields.height_cm = parseFloat(p.height);
     if (p.goalWt) fields.weight_goal_kg = parseFloat(p.goalWt);
-    if (p.photo) fields.avatar_base64 = p.photo;
     if (p.age && !p.dob) fields.date_of_birth = ageToDob(p.age);
     if (Object.keys(fields).length) {
       const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
