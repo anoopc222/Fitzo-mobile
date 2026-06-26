@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
-  Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle,
+  Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle, UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -1354,11 +1354,12 @@ function EditSessionModal({
       const card = cardRefs.current[exIdx];
       const scroller = scrollRef.current;
       if (!card || !scroller) return;
-      const handle = findNodeHandle(scroller);
-      if (!handle) return;
-      card.measureLayout(handle, (x, y) => {
+      const cardHandle = findNodeHandle(card);
+      const scrollerHandle = findNodeHandle(scroller);
+      if (!cardHandle || !scrollerHandle) return;
+      UIManager.measureLayout(cardHandle, scrollerHandle, () => {}, (x, y) => {
         scroller.scrollTo({ y: Math.max(y - 8, 0), animated: true });
-      }, () => {});
+      });
     }, 100);
   }, []);
   const [programWeeks, setProgramWeeks] = useState(4);
