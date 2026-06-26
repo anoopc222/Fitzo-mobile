@@ -29,7 +29,13 @@
     "plugins": [
       "expo-secure-store",
       "expo-font",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#d4ff00"
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-splash-screen",

@@ -8,6 +8,10 @@ import {
 
 const PREFS_KEY = 'notificationPrefs';
 const DEFAULT_PREFS = {
+  dailyLogReminder: true, workoutReminder: true,
+  weightReminder: true, stepsReminder: true, sleepReminder: true,
+};
+const ALL_OFF_PREFS = {
   dailyLogReminder: false, workoutReminder: false,
   weightReminder: false, stepsReminder: false, sleepReminder: false,
 };
@@ -18,9 +22,19 @@ export function NotificationProvider({ children }) {
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [loaded, setLoaded] = useState(false);
 
+  // First launch: reminders are on by default, but that only sticks if the
+  // user actually grants permission — otherwise stay off until they opt in
+  // from Settings. Once a choice is stored, always respect it as-is.
   useEffect(() => {
-    AsyncStorage.getItem(PREFS_KEY).then(raw => {
-      if (raw) setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
+    AsyncStorage.getItem(PREFS_KEY).then(async raw => {
+      if (raw) {
+        setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
+      } else {
+        const granted = await requestNotificationPermissions();
+        const initial = granted ? DEFAULT_PREFS : ALL_OFF_PREFS;
+        setPrefs(initial);
+        AsyncStorage.setItem(PREFS_KEY, JSON.stringify(initial));
+      }
       setLoaded(true);
     });
   }, []);
@@ -36,15 +50,6 @@ export function NotificationProvider({ children }) {
     }
   }, [loaded, prefs.dailyLogReminder]);
 
-  useEffect(() => {
-    if (!loaded) return;
-    if (prefs.workoutReminder) {
-      scheduleDailyReminder('workoutReminder', 18, 0, 'Time to train', "Keep your workout streak going — log today's session.");
-    } else {
-      cancelNotificationsByTag('workoutReminder');
-    }
-  }, [loaded, prefs.workoutReminder]);
-
   const setPref = useCallback(async (key, value) => {
     if (value) {
       const granted = await requestNotificationPermissions();
@@ -56,7 +61,10 @@ export function NotificationProvider({ children }) {
       return next;
     });
     if (!value) {
-      const tag = { weightReminder: 'weightReminder', stepsReminder: 'stepsReminder', sleepReminder: 'sleepReminder' }[key];
+      const tag = {
+        weightReminder: 'weightReminder', stepsReminder: 'stepsReminder',
+        sleepReminder: 'sleepReminder', workoutReminder: 'workoutReminder',
+      }[key];
       if (tag) cancelNotificationsByTag(tag);
     }
     return true;
