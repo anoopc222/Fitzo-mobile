@@ -1346,26 +1346,8 @@ export default function HomeScreen() {
               </View>
             )}
 
-            <ChallengesCard home={data} />
-
-            {/* ── Go Pro banner ─────────────────────────────────── */}
-            {subReady && !isPro && (
-              <TouchableOpacity
-                style={styles.proBanner}
-                activeOpacity={0.85}
-                onPress={() => navigation.navigate('Subscription')}
-              >
-                <Ionicons name="rocket" size={18} color={colors.accentText} />
-                <Text style={styles.proBannerText}>
-                  {isInTrial
-                    ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in trial — see Pro plans`
-                    : 'Unlock long-range trends, insights & more with Pro'}
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
-              </TouchableOpacity>
-            )}
-
             {/* ── Stat Overview (merged, line-separated) ─────────── */}
+            <Text style={styles.overviewTitle}>DAILY STATUS</Text>
             <View style={styles.overviewCard}>
               <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Weight')} activeOpacity={0.7}>
                 <View style={styles.overviewIconWrap}>
@@ -1448,6 +1430,25 @@ export default function HomeScreen() {
                 )}
               </TouchableOpacity>
             </View>
+
+            <ChallengesCard home={data} />
+
+            {/* ── Go Pro banner ─────────────────────────────────── */}
+            {subReady && !isPro && (
+              <TouchableOpacity
+                style={styles.proBanner}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('Subscription')}
+              >
+                <Ionicons name="rocket" size={18} color={colors.accentText} />
+                <Text style={styles.proBannerText}>
+                  {isInTrial
+                    ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in trial — see Pro plans`
+                    : 'Unlock long-range trends, insights & more with Pro'}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
+              </TouchableOpacity>
+            )}
 
             {/* ── Pro Insights Hub (consolidated) ─────────────────── */}
             <View style={styles.insightsHubCard}>
@@ -2212,6 +2213,10 @@ const createStyles = (colors) => StyleSheet.create({
   },
   recapTitle: { fontSize: typography.sm, fontFamily: fontFamily.bodyBold, color: colors.text },
   recapLine: { fontSize: typography.xs, color: colors.textMuted, lineHeight: 18 },
+  overviewTitle: {
+    fontSize: typography.xs, fontWeight: weight.bold, fontFamily: fontFamily.bodyBold,
+    color: colors.textMuted, letterSpacing: 0.6, marginHorizontal: 16, marginTop: 14, marginBottom: 8,
+  },
   overviewCard: {
     backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
