@@ -587,7 +587,23 @@ export default function StepsScreen() {
 
   const goalMut = useMutation({
     mutationFn: (goal) => updateStepGoal(user.id, parseInt(goal, 10)),
-    onSuccess: () => { qc.invalidateQueries(['steps', user.id]); setGoalInput(''); setShowGoalSheet(false); },
+    onMutate: async (goal) => {
+      await qc.cancelQueries(['steps', user.id]);
+      const previous = qc.getQueryData(['steps', user.id]);
+      const goalNum = parseInt(goal, 10);
+      qc.setQueryData(['steps', user.id], (old) => {
+        if (!old) return old;
+        return { ...old, profile: { ...old.profile, step_goal: goalNum } };
+      });
+      setGoalInput('');
+      setShowGoalSheet(false);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['steps', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => { qc.invalidateQueries(['steps', user.id]); },
   });
 
   const deleteMut = useMutation({
