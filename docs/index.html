@@ -74,7 +74,9 @@
 
   /* Hero */
   .hero {
-    text-align: center; padding: 100px 24px 60px;
+    text-align: center; padding: 60px 24px 40px;
+    min-height: calc(100vh - 77px);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
   }
   .badge {
     display: inline-flex; align-items: center; gap: 8px;
@@ -93,7 +95,7 @@
     font-size: clamp(16px, 2vw, 20px); color: var(--text-dim); max-width: 600px;
     margin: 0 auto 36px; line-height: 1.6;
   }
-  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
   .btn-lg { padding: 15px 30px; font-size: 15px; }
 
   .store-badges { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
@@ -111,8 +113,16 @@
 
   /* Phone mock */
   .phone-mock {
-    max-width: 320px; margin: 0 auto 0; position: relative;
+    max-width: 280px; margin: 0 auto 0; position: relative;
   }
+  @media (max-height: 760px) { .phone-mock { display: none; } }
+
+  .scroll-hint {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    margin-top: 30px; color: var(--text-dim); font-size: 13px; font-weight: 600;
+  }
+  .scroll-arrow { font-size: 16px; color: var(--accent); animation: bob 1.8s infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
   .phone-frame {
     border: 1px solid var(--border); border-radius: 36px;
     background: linear-gradient(160deg, #14141f, #0a0a12);
@@ -217,6 +227,17 @@
     <a href="#features" class="btn btn-ghost btn-lg">See what it tracks</a>
   </div>
 
+  <div class="store-badges" style="margin-bottom:34px;">
+    <a href="https://play.google.com/store/apps/details?id=com.fitness.fitzo" target="_blank" rel="noopener" class="store-badge">
+      <span class="sb-icon">▶️</span>
+      <span class="sb-text"><span class="sb-small">Get it on</span><br><span class="sb-big">Google Play</span></span>
+    </a>
+    <a href="javascript:void(0)" onclick="alert('iOS app coming soon!')" class="store-badge">
+      <span class="sb-icon">🍎</span>
+      <span class="sb-text"><span class="sb-small">Coming Soon to the</span><br><span class="sb-big">App Store</span></span>
+    </a>
+  </div>
+
   <div class="phone-mock">
     <div class="phone-frame">
       <div class="phone-screen">
@@ -246,6 +267,11 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="scroll-hint">
+    <span>Explore everything Fitzo tracks</span>
+    <div class="scroll-arrow">↓</div>
   </div>
 </header>
 
