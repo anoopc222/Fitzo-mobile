@@ -1019,14 +1019,14 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         {/* Stats row */}
         <View style={dS.statsRow}>
           {(isCardio ? [
-            { label: 'ACTIVITIES', icon: '🏃', value: exercises.length },
-            { label: 'MINUTES',    icon: '⏱',  value: totalMin > 0 ? totalMin : '—' },
-            { label: 'KCAL',       icon: '🔥', value: kcal > 0 ? kcal : '—' },
+            { label: t('workout.activities'), icon: '🏃', value: exercises.length },
+            { label: t('workout.minutes'),    icon: '⏱',  value: totalMin > 0 ? totalMin : '—' },
+            { label: t('workout.kcal'),       icon: '🔥', value: kcal > 0 ? kcal : '—' },
           ] : [
-            { label: 'EXR',    icon: '🏋️', value: exercises.length },
-            { label: 'SETS',   icon: '🔄', value: totalSets },
-            { label: 'KG VOL', icon: '⚡', value: vol > 0 ? vol.toLocaleString() : '—' },
-            { label: 'KCAL',   icon: '🔥', value: kcal > 0 ? kcal : '—' },
+            { label: t('workout.exr'),    icon: '🏋️', value: exercises.length },
+            { label: t('workout.sets'),   icon: '🔄', value: totalSets },
+            { label: t('workout.kgVol'), icon: '⚡', value: vol > 0 ? vol.toLocaleString() : '—' },
+            { label: t('workout.kcal'),   icon: '🔥', value: kcal > 0 ? kcal : '—' },
           ]).map(({ label, icon, value }, i, arr) => (
             <View key={label} style={[dS.statCell, i < arr.length - 1 && dS.statCellBorder]}>
               <Text style={{ fontSize: 18 }}>{icon}</Text>
@@ -1049,17 +1049,17 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         )}
 
         <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-          <ExportCardTemplate ref={sessionExport.ref} title={session.notes || 'Workout'} subtitle={fmtDate(session.date)} colors={colors} width={340}>
+          <ExportCardTemplate ref={sessionExport.ref} title={session.notes || t('workout.workout')} subtitle={fmtDate(session.date)} colors={colors} width={340}>
             <View style={dS.statsRow}>
               {(isCardio ? [
-                { label: 'ACTIVITIES', icon: '🏃', value: exercises.length },
-                { label: 'MINUTES',    icon: '⏱',  value: totalMin > 0 ? totalMin : '—' },
-                { label: 'KCAL',       icon: '🔥', value: kcal > 0 ? kcal : '—' },
+                { label: t('workout.activities'), icon: '🏃', value: exercises.length },
+                { label: t('workout.minutes'),    icon: '⏱',  value: totalMin > 0 ? totalMin : '—' },
+                { label: t('workout.kcal'),       icon: '🔥', value: kcal > 0 ? kcal : '—' },
               ] : [
-                { label: 'EXR',    icon: '🏋️', value: exercises.length },
-                { label: 'SETS',   icon: '🔄', value: totalSets },
-                { label: 'KG VOL', icon: '⚡', value: vol > 0 ? vol.toLocaleString() : '—' },
-                { label: 'KCAL',   icon: '🔥', value: kcal > 0 ? kcal : '—' },
+                { label: t('workout.exr'),    icon: '🏋️', value: exercises.length },
+                { label: t('workout.sets'),   icon: '🔄', value: totalSets },
+                { label: t('workout.kgVol'), icon: '⚡', value: vol > 0 ? vol.toLocaleString() : '—' },
+                { label: t('workout.kcal'),   icon: '🔥', value: kcal > 0 ? kcal : '—' },
               ]).map(({ label, icon, value }, i, arr) => (
                 <View key={label} style={[dS.statCell, i < arr.length - 1 && dS.statCellBorder]}>
                   <Text style={{ fontSize: 18 }}>{icon}</Text>
@@ -1083,9 +1083,9 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         {/* Exercises */}
         <View style={dS.exScroll}>
           <View style={dS.exSectionHeader}>
-            <Text style={dS.exLabel}>{isCardio ? 'ACTIVITIES' : 'EXERCISES'}</Text>
+            <Text style={dS.exLabel}>{isCardio ? t('workout.activities') : t('workout.exercises')}</Text>
             <TouchableOpacity onPress={toggleAll} style={dS.collapseToggleWrap}>
-              <Text style={dS.collapseToggleText}>{allExpanded ? 'COLLAPSE ALL' : 'EXPAND ALL'}</Text>
+              <Text style={dS.collapseToggleText}>{allExpanded ? t('workout.collapseAll') : t('workout.expandAll')}</Text>
               <View style={[dS.toggleSwitch, allExpanded && dS.toggleSwitchOn]}>
                 <View style={[dS.toggleKnob, allExpanded && dS.toggleKnobOn]} />
               </View>
@@ -1094,7 +1094,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
 
           {exercises.length === 0 && (
             <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-              <Text style={{ color: colors.textDim, fontSize: typography.sm }}>No exercises logged</Text>
+              <Text style={{ color: colors.textDim, fontSize: typography.sm }}>{t('workout.noExercisesLogged')}</Text>
             </View>
           )}
 
@@ -1171,9 +1171,9 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                 {isExpanded && sortedSets.length > 0 && (
                   <>
                     <View style={dS.setTableHdr}>
-                      <Text style={[dS.setTH, { width: 32 }]}>SET</Text>
+                      <Text style={[dS.setTH, { width: 32 }]}>{t('workout.set')}</Text>
                       <Text style={[dS.setTH, { width: 20 }]}></Text>
-                      <Text style={[dS.setTH, { flex: 1 }]}>WEIGHT × REPS</Text>
+                      <Text style={[dS.setTH, { flex: 1 }]}>{t('workout.weightXReps')}</Text>
                       <Text style={[dS.setTH, { width: 56 }]}></Text>
                     </View>
                     {sortedSets.map((s, idx) => {
@@ -1201,7 +1201,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                   </>
                 )}
                 {isExpanded && sortedSets.length === 0 && (
-                  <Text style={{ fontSize: typography.xs, color: colors.textDim, padding: 8 }}>No sets recorded</Text>
+                  <Text style={{ fontSize: typography.xs, color: colors.textDim, padding: 8 }}>{t('workout.noSetsRecorded')}</Text>
                 )}
               </TouchableOpacity>
             );
@@ -1211,15 +1211,15 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
           <View style={dS.actionRow}>
             <TouchableOpacity style={dS.editBtn} onPress={onEdit}>
               <Text style={{ fontSize: 14 }}>✏️</Text>
-              <Text style={dS.editBtnText}>Edit</Text>
+              <Text style={dS.editBtnText}>{t('common.edit')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={dS.repeatBtn} onPress={onRepeat}>
               <Ionicons name="refresh" size={16} color={colors.bg} />
-              <Text style={dS.repeatBtnText}>Repeat</Text>
+              <Text style={dS.repeatBtnText}>{t('workout.repeat')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={dS.deleteBtn} onPress={onDelete}>
               <Text style={{ fontSize: 14 }}>🗑️</Text>
-              <Text style={dS.deleteBtnText}>Delete</Text>
+              <Text style={dS.deleteBtnText}>{t('common.delete')}</Text>
             </TouchableOpacity>
           </View>
           <View style={{ height: 12 }} />

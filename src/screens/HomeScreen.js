@@ -516,7 +516,7 @@ async function fetchHome(userId) {
     todayExCount, todaySetCount, todayWorkoutName,
     lastWorkoutDate, lastWorkoutNotes, daysSinceWorkout,
     daysSinceWeight, daysSinceSleep,
-    motivText, streak, stepsWeekSeries,
+    motiv, streak, stepsWeekSeries,
     thisWeek: { sessions: thisWeekSessions, steps: thisWeekStepsAvg, kcal: thisWeekKcal, kcalDays: thisWeekKcalDays, goalDays: thisWeekGoalDays, weightDelta: weekWeightDelta },
     lastWeek: { sessions: lastWeekSessions, steps: lastWeekStepsAvg, kcal: lastWeekKcal, goalDays: lastWeekGoalDays, weightDelta: lastWeekWeightDelta },
     thisMonth: {
@@ -573,6 +573,7 @@ async function fetchDayData(userId, dateStr) {
 }
 
 function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const ddS = useMemo(() => createDdS(colors), [colors]);
   const sType = session ? classifySession(session.notes) : null;
@@ -590,12 +591,12 @@ function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
   };
 
   const typeInfo = !session
-    ? { icon: '📭', label: 'No Log', color: colors.textMuted, bg: colors.bgCard }
+    ? { icon: '📭', label: t('home.noLog'), color: colors.textMuted, bg: colors.bgCard }
     : sType === 'rest'
-    ? { icon: '😴', label: 'Rest Day',        color: '#f59e0b', bg: '#1a0e00' }
+    ? { icon: '😴', label: t('home.restDay'),        color: '#f59e0b', bg: '#1a0e00' }
     : sType === 'cardio'
-    ? { icon: '🏃', label: session.notes ?? 'Cardio',  color: '#60a5fa', bg: '#060d1e' }
-    : { icon: '💪', label: session.notes ?? 'Workout', color: C_GREEN,   bg: '#001a0e' };
+    ? { icon: '🏃', label: session.notes ?? t('home.cardio'),  color: '#60a5fa', bg: '#060d1e' }
+    : { icon: '💪', label: session.notes ?? t('home.workout'), color: C_GREEN,   bg: '#001a0e' };
 
   const exercises = (session?.workout_exercises ?? [])
     .slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
@@ -620,15 +621,15 @@ function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
 
           {/* Daily stat tiles */}
           <View style={ddS.dayStatsRow}>
-            <DayStat icon="⚖️" value={dd?.weight != null ? String(dd.weight) : '—'} label="WEIGHT" color={C_WEIGHT} />
-            <DayStat icon="👟" value={dd?.steps  != null ? fmtK(dd.steps)    : '—'} label="STEPS"  color={C_STEPS}  />
-            <DayStat icon="🌙" value={dd?.sleep  != null ? `${dd.sleep}h`    : '—'} label="SLEEP"  color={C_SLEEP}  />
-            <DayStat icon="🔥" value={dd?.kcal   != null ? String(dd.kcal)   : '—'} label="KCAL"   color={C_KCAL}   />
+            <DayStat icon="⚖️" value={dd?.weight != null ? String(dd.weight) : '—'} label={t('home.weightLabel')} color={C_WEIGHT} />
+            <DayStat icon="👟" value={dd?.steps  != null ? fmtK(dd.steps)    : '—'} label={t('home.stepsLabel')}  color={C_STEPS}  />
+            <DayStat icon="🌙" value={dd?.sleep  != null ? `${dd.sleep}h`    : '—'} label={t('home.sleepLabel')}  color={C_SLEEP}  />
+            <DayStat icon="🔥" value={dd?.kcal   != null ? String(dd.kcal)   : '—'} label={t('home.kcalLabel')}   color={C_KCAL}   />
           </View>
 
           {/* Workout section */}
           <View style={ddS.sectionLabel}>
-            <Text style={ddS.sectionLabelText}>✦ WORKOUT</Text>
+            <Text style={ddS.sectionLabelText}>✦ {t('home.workoutSectionLabel')}</Text>
           </View>
 
           {isLoading ? (
@@ -641,11 +642,11 @@ function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
               {sType === 'rest' ? (
                 <View style={ddS.recoveryBox}>
                   <Text style={{ fontSize: 40 }}>😴</Text>
-                  <Text style={ddS.recoveryText}>Recovery Day</Text>
+                  <Text style={ddS.recoveryText}>{t('home.recoveryDay')}</Text>
                 </View>
               ) : exercises.length === 0 ? (
                 <View style={ddS.recoveryBox}>
-                  <Text style={ddS.noLogText}>No exercises logged</Text>
+                  <Text style={ddS.noLogText}>{t('home.noExercisesLogged')}</Text>
                 </View>
               ) : (
                 exercises.map(ex => {
@@ -661,7 +662,7 @@ function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
                           <View key={s.id} style={[ddS.setChip, isCardioEx && ddS.setChipCardio]}>
                             <Text style={[ddS.setChipText, isCardioEx && ddS.setChipTextCardio]}>
                               {isCardioEx
-                                ? [s.weight_kg != null && `⏱ ${s.weight_kg} km`, s.reps != null && `🔥 ${s.reps} min`].filter(Boolean).join(' · ') || 'logged'
+                                ? [s.weight_kg != null && `⏱ ${s.weight_kg} km`, s.reps != null && `🔥 ${s.reps} min`].filter(Boolean).join(' · ') || t('home.logged')
                                 : `S${s.set_number}: ${s.weight_kg != null ? `${s.weight_kg}kg` : '?'} × ${s.reps ?? '?'}`
                               }
                             </Text>
@@ -695,6 +696,7 @@ async function fetchMonthSessions(userId, year, month) {
 }
 
 function StreakCalendarModal({ visible, userId, onClose, hasAccess = true, weeklyGoal = 4 }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const scS = useMemo(() => createScS(colors), [colors]);
   const today    = new Date();
@@ -742,7 +744,7 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true, weekl
   const thisMonth   = gymCount;
   const prevGymCount = prevSessions.filter(s => classifySession(s.notes) === 'gym').length;
   const vsLastMonth  = thisMonth - prevGymCount;
-  const vsLastMonthLabel = `${vsLastMonth > 0 ? '↑' : vsLastMonth < 0 ? '↓' : '·'} ${Math.abs(vsLastMonth)} vs ${CAL_MONTHS_SHORT[prevMonth-1]}`;
+  const vsLastMonthLabel = `${vsLastMonth > 0 ? '↑' : vsLastMonth < 0 ? '↓' : '·'} ${t('home.vsMonth', { count: Math.abs(vsLastMonth), month: CAL_MONTHS_SHORT[prevMonth-1] })}`;
 
   const weeklyActive = useMemo(() => {
     const wm = {};
@@ -784,18 +786,18 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true, weekl
   const isoForDay = (day) => `${calYear}-${String(calMonth).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
 
   const TOP_STATS = [
-    { val: gymCount,    lbl: 'GYM',    icon: 'barbell',          color: C_GREEN   },
-    { val: cardioCount, lbl: 'CARDIO', icon: 'bicycle',          color: '#60a5fa' },
-    { val: restCount,   lbl: 'REST',   icon: 'bed',              color: '#f59e0b' },
+    { val: gymCount,    lbl: t('home.gym'),    icon: 'barbell',          color: C_GREEN   },
+    { val: cardioCount, lbl: t('home.cardioLabel'), icon: 'bicycle',          color: '#60a5fa' },
+    { val: restCount,   lbl: t('home.rest'),   icon: 'bed',              color: '#f59e0b' },
   ];
 
   const STATS = [
-    { val: bestWk,      lbl: 'BEST WK',      icon: 'trending-up',      color: colors.accent },
-    { val: lowWk,       lbl: 'LOW WK',       icon: 'trending-down',    color: C_KCAL    },
-    { val: wkStreak,    lbl: 'WK STREAK',    icon: 'flame',            color: colors.textMuted },
-    { val: thisMonth,   lbl: 'THIS MONTH',   icon: 'calendar',         color: colors.text, sub: vsLastMonthLabel },
-    { val: `${consistency}%`, lbl: 'CONSISTENCY', icon: 'checkmark-circle', color: consistency >= 50 ? C_GREEN : C_KCAL, sub: `${metGoalWeeks}/${weeklyActive.length} wks · ${weeklyGoal}/wk` },
-    { val: noLog,       lbl: 'NO LOG',       icon: 'close-circle',     color: colors.textDim },
+    { val: bestWk,      lbl: t('home.bestWk'),      icon: 'trending-up',      color: colors.accent },
+    { val: lowWk,       lbl: t('home.lowWk'),       icon: 'trending-down',    color: C_KCAL    },
+    { val: wkStreak,    lbl: t('home.wkStreak'),    icon: 'flame',            color: colors.textMuted },
+    { val: thisMonth,   lbl: t('home.thisMonthLabel'),   icon: 'calendar',         color: colors.text, sub: vsLastMonthLabel },
+    { val: `${consistency}%`, lbl: t('home.consistency'), icon: 'checkmark-circle', color: consistency >= 50 ? C_GREEN : C_KCAL, sub: t('home.wksGoalSub', { met: metGoalWeeks, total: weeklyActive.length, weeklyGoal }) },
+    { val: noLog,       lbl: t('home.noLogLabel'),       icon: 'close-circle',     color: colors.textDim },
   ];
 
   return (
@@ -806,8 +808,8 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true, weekl
         {/* Header */}
         <View style={scS.header}>
           <View style={{ flex: 1 }}>
-            <Text style={scS.title}>🔥 Streak Calendar</Text>
-            <Text style={scS.subtitle}>{gymCount} gym · {cardioCount} cardio · {restCount} rest this month</Text>
+            <Text style={scS.title}>🔥 {t('home.streakCalendar')}</Text>
+            <Text style={scS.subtitle}>{t('home.streakCalendarSubtitle', { gymCount, cardioCount, restCount })}</Text>
           </View>
           <TouchableOpacity onPress={onClose} style={scS.closeBtn}>
             <Ionicons name="close" size={20} color={colors.textMuted} />
@@ -968,7 +970,6 @@ function StreakCalendarModal({ visible, userId, onClose, hasAccess = true, weekl
   );
 }
 
-const WEEK_TABS = ['THIS WEEK', 'LAST WEEK', 'THIS MONTH', 'CUT SCORE'];
 
 // ─── Steps trend chart (this week vs last week, with goal line) ────────────
 function StepsTrendChart({ current, previous, goal, colors, width }) {
@@ -1004,6 +1005,7 @@ function StepsTrendChart({ current, previous, goal, colors, width }) {
 
 // ─── Actionable nudge card (e.g. "No weigh-in for 4 days" + Log) ───────────
 function NudgeCard({ icon, color, title, sub, styles, onPress, logLabel, logBadge }) {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity style={styles.nudgeCard} onPress={onPress} activeOpacity={0.8}>
       <View style={[styles.nudgeIconWrap, { backgroundColor: color + '1f' }]}>
@@ -1021,7 +1023,7 @@ function NudgeCard({ icon, color, title, sub, styles, onPress, logLabel, logBadg
       ) : (
         <View style={styles.nudgeLogBtn}>
           <Ionicons name="add" size={13} color="#0c0c0f" />
-          <Text style={styles.nudgeLogBtnText}>Log</Text>
+          <Text style={styles.nudgeLogBtnText}>{t('home.log')}</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -1030,6 +1032,7 @@ function NudgeCard({ icon, color, title, sub, styles, onPress, logLabel, logBadg
 
 // ─── component ──────────────────────────────────────────────────────────────
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -1200,32 +1203,32 @@ export default function HomeScreen() {
     insights.push({
       icon: 'footsteps-outline', color: C_STEPS,
       text: stepsTrendPct >= 0
-        ? `Steps up ${stepsTrendPct}% vs last week — nice momentum.`
-        : `Steps down ${Math.abs(stepsTrendPct)}% vs last week — a short walk would close the gap.`,
+        ? t('home.insightStepsUp', { percent: stepsTrendPct })
+        : t('home.insightStepsDown', { percent: Math.abs(stepsTrendPct) }),
     });
   }
   if (weightDelta != null) {
     insights.push({
       icon: 'scale-outline', color: C_WEIGHT,
       text: weightDelta <= 0
-        ? `Weight trending down ${Math.abs(weightDelta)}kg this week — on pace.`
-        : `Weight up ${weightDelta}kg this week — keep an eye on it.`,
+        ? t('home.insightWeightDown', { value: Math.abs(weightDelta) })
+        : t('home.insightWeightUp', { value: weightDelta }),
     });
   }
   if (data?.streak >= 2) {
     insights.push({
       icon: 'flame-outline', color: C_GREEN,
-      text: `${data.streak}-day logging streak — keep it going!`,
+      text: t('home.insightLoggingStreak', { count: data.streak }),
     });
   }
   if (sessionsLeft > 0) {
     insights.push({
       icon: 'barbell-outline', color: colors.accent,
-      text: `${sessionsLeft} more session${sessionsLeft !== 1 ? 's' : ''} to hit your weekly goal of ${weeklyGoal}.`,
+      text: t('home.insightSessionsLeft', { count: sessionsLeft, weeklyGoal }),
     });
   }
   if (insights.length === 0) {
-    insights.push({ icon: 'sparkles-outline', color: colors.accent, text: 'Log today\'s stats to see personalized insights here.' });
+    insights.push({ icon: 'sparkles-outline', color: colors.accent, text: t('home.insightLogStatsPrompt') });
   }
 
   const insightScrollRef = useRef(null);
@@ -1310,7 +1313,7 @@ export default function HomeScreen() {
                 <View style={styles.motivLine}>
                   <TouchableOpacity style={styles.motivRow} onPress={() => setShowStreak(true)} activeOpacity={0.7}>
                     <Ionicons name="walk" size={12} color={colors.accent} />
-                    <Text style={styles.motivText}>{data?.motivText}</Text>
+                    <Text style={styles.motivText}>{data?.motiv ? t(data.motiv.key, data.motiv.params) : ''}</Text>
                   </TouchableOpacity>
                   <StreakFreezeControl userId={user.id} home={data} />
                 </View>
@@ -1328,8 +1331,8 @@ export default function HomeScreen() {
                 <Ionicons name="rocket" size={18} color={colors.accentText} />
                 <Text style={styles.proBannerText}>
                   {isInTrial
-                    ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in trial — see Pro plans`
-                    : 'Unlock long-range trends, insights & more with Pro'}
+                    ? t('home.trialDaysLeft', { count: trialDaysLeft })
+                    : t('home.goPro')}
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
               </TouchableOpacity>
@@ -1856,17 +1859,17 @@ export default function HomeScreen() {
             {/* ── Weekly Tabs ────────────────────────────────────── */}
             <View style={styles.tabsCard}>
               <View style={styles.tabsRow}>
-                {WEEK_TABS.map((t, i) => {
+                {[t('home.thisWeekTab'), t('home.lastWeekTab'), t('home.thisMonthTab'), t('home.cutScoreTab')].map((tabLabel, i) => {
                   const isProTab = i === 2 || i === 3;
                   const tabLocked = isProTab && !hasAccess;
                   return (
                     <TouchableOpacity
-                      key={t}
+                      key={tabLabel}
                       style={styles.tabBtn}
                       onPress={() => (tabLocked ? setShowProTeaserPaywall(true) : setActiveTab(i))}
                     >
                       <View style={styles.tabLabelRow}>
-                        <Text style={[styles.tabLabel, activeTab === i && styles.tabLabelActive]}>{t}</Text>
+                        <Text style={[styles.tabLabel, activeTab === i && styles.tabLabelActive]}>{tabLabel}</Text>
                         {tabLocked && <Ionicons name="lock-closed" size={9} color={colors.textDim} style={{ marginLeft: 3 }} />}
                       </View>
                       {activeTab === i && <View style={styles.tabUnderline} />}
