@@ -4,7 +4,6 @@ import {
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
@@ -709,24 +708,20 @@ export default function SleepScreen() {
                   <Text style={styles.cardTitle}>💡 INSIGHTS</Text>
                   {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
                 </View>
-                <View style={{ position: 'relative' }}>
-                  {insights.map((ins, i) => (
+                {hasAccess ? (
+                  insights.map((ins, i) => (
                     <View key={i} style={styles.insightRow}>
                       <Text style={styles.insightIcon}>{ins.icon}</Text>
                       <Text style={styles.insightText}>
                         {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
                       </Text>
                     </View>
-                  ))}
-                  {!hasAccess && (
-                    <BlurView intensity={18} tint="dark" style={styles.proLockOverlay}>
-                      <TouchableOpacity style={styles.proLockCta} onPress={() => setShowRangePaywall(true)} activeOpacity={0.85}>
-                        <Ionicons name="lock-closed" size={14} color={colors.bg} />
-                        <Text style={styles.proLockCtaText}>Unlock with Pro</Text>
-                      </TouchableOpacity>
-                    </BlurView>
-                  )}
-                </View>
+                  ))
+                ) : (
+                  <TouchableOpacity onPress={() => setShowRangePaywall(true)}>
+                    <Text style={styles.emptyText}>🔒 Unlock personalized sleep insights with Pro.</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 
@@ -981,9 +976,6 @@ const createStyles = (colors) => StyleSheet.create({
   goalPillText: { fontSize: 10, fontWeight: weight.bold, color: colors.purple, fontFamily: fontFamily.mono },
 
   emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
-  proLockOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: 10, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  proLockCta: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, backgroundColor: colors.accent },
-  proLockCtaText: { fontSize: typography.sm, fontFamily: fontFamily.bodyBold, color: colors.bg },
 
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   hmLegendLabel: { fontSize: 9, color: colors.textDim },

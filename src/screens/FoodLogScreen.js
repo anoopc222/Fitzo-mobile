@@ -17,6 +17,8 @@ import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
+import MonthYearPicker from '../components/ui/MonthYearPicker';
+import { useExportCard } from '../hooks/useExportCard';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -26,6 +28,119 @@ const MACRO_TARGETS = { calories: 2000, protein: 150, carbs: 250, fats: 65 };
 const SOURCE_LABELS = { USDA: 'USDA', CoFID: 'UK CoFID', OFF: 'Open Food Facts', CUSTOM: 'Custom' };
 
 const EMPTY_FORM = { food_name: '', calories: '', protein: '', carbs: '', fats: '' };
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+
+function localDateStr(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+async function fetchFoodMonth(userId, year, month) {
+  const from = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  const { data, error } = await supabase
+    .from('food_logs')
+    .select('calories, logged_at')
+    .eq('user_id', userId)
+    .gte('logged_at', `${from}T00:00:00`)
+    .lte('logged_at', `${to}T23:59:59`);
+  if (error) throw error;
+  const byDate = {};
+  (data ?? []).forEach(l => {
+    const ds = l.logged_at.slice(0, 10);
+    byDate[ds] = (byDate[ds] ?? 0) + (l.calories ?? 0);
+  });
+  return byDate;
+}
+
+// ─── Calorie Heatmap — mirrors WeightScreen's quartile-relative heatmap ──────
+function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true, onLockedPress, cardWidth }) {
+  const SCREEN_W = cardWidth ?? require('react-native').Dimensions.get('window').width;
+  const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
+  const firstDay = new Date(year, month, 1).getDay();
+  let startDow = firstDay - 1; if (startDow < 0) startDow = 6;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayStr = localDateStr(new Date());
+  const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
+
+  const vals = Object.values(caloriesByDate).filter(v => v > 0);
+  const minC = vals.length ? Math.min(...vals) : 0;
+  const maxC = vals.length ? Math.max(...vals) : 0;
+  const rangeC = maxC - minC || 0.001;
+
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push({ key: `e${i}`, empty: true });
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const c = caloriesByDate[ds];
+    let lvl = 0;
+    if (c) {
+      const rel = (c - minC) / rangeC;
+      if (rel < 0.25) lvl = 1; else if (rel < 0.5) lvl = 2; else if (rel < 0.75) lvl = 3; else lvl = 4;
+    }
+    const locked = !hasAccess && ds < cutoffStr;
+    cells.push({ key: ds, day: d, c, lvl, isToday: ds === todayStr, locked });
+  }
+
+  const LVL_COLOR = {
+    0: colors.dim ?? colors.surface,
+    1: 'rgba(52,211,153,0.25)',
+    2: 'rgba(52,211,153,0.5)',
+    3: 'rgba(251,191,36,0.55)',
+    4: 'rgba(248,113,113,0.7)',
+  };
+
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+        {DOW_LABELS.map(d => (
+          <View key={d} style={{ width: cellSize, marginHorizontal: 2, alignItems: 'center' }}>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted, fontFamily: fontFamily.mono }}>{d}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: (cellSize + 4) * 7 }}>
+        {cells.map(cell => {
+          if (cell.empty) return <View key={cell.key} style={{ width: cellSize, height: cellSize, margin: 2 }} />;
+          if (cell.locked) {
+            return (
+              <TouchableOpacity
+                key={cell.key}
+                onPress={onLockedPress}
+                style={[
+                  { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dim ?? colors.surface },
+                  { width: cellSize, height: cellSize },
+                ]}
+              >
+                <Ionicons name="lock-closed" size={11} color={colors.textDim} />
+                <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim, marginTop: 1 }}>{cell.day}</Text>
+              </TouchableOpacity>
+            );
+          }
+          return (
+            <View
+              key={cell.key}
+              style={[
+                { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+                { width: cellSize, height: cellSize, backgroundColor: LVL_COLOR[cell.lvl] },
+                cell.isToday && { borderWidth: 2, borderColor: '#f59e0b' },
+              ]}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '700', fontFamily: fontFamily.mono, color: cell.lvl === 0 ? colors.textDim : colors.text }}>{cell.day}</Text>
+              <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, marginTop: 1, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: cell.lvl === 0 ? 0.5 : 1 }}>
+                {cell.c ? Math.round(cell.c) : '—'}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
 
 async function fetchFoodLog(userId, date) {
   const [logs, profile] = await Promise.all([
@@ -105,9 +220,17 @@ export default function FoodLogScreen() {
     Breakfast: '#fb923c', Lunch: '#22d3ee', Dinner: colors.purple, Snack: colors.success,
   }), [colors]);
   const qc = useQueryClient();
-  const { isPro } = useSubscription();
+  const { isPro, hasAccess } = useSubscription();
   const [showTargetsPaywall, setShowTargetsPaywall] = useState(false);
+  const [showHeatmapPaywall, setShowHeatmapPaywall] = useState(false);
   const summaryExport = useGatedExport();
+  const heatmapExport = useExportCard();
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
+  const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showSheet, setShowSheet] = useState(false);
   const [sheetStep, setSheetStep] = useState('search'); // 'search' | 'detail' | 'manual'
@@ -139,6 +262,13 @@ export default function FoodLogScreen() {
     queryFn: () => fetchFoodLog(user.id, today),
     enabled: !!user?.id,
   });
+
+  const { data: monthData } = useQuery({
+    queryKey: ['foodMonth', user?.id, year, month],
+    queryFn: () => fetchFoodMonth(user.id, year, month),
+    enabled: !!user?.id,
+  });
+  const caloriesByDate = monthData ?? {};
 
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const onRefresh = async () => {
@@ -423,6 +553,57 @@ export default function FoodLogScreen() {
               </ExportCardTemplate>
             </View>
 
+            {/* ── Monthly Calorie Heatmap ── */}
+            <View style={styles.card}>
+              <View style={styles.topRow}>
+                <View style={styles.monthNav}>
+                  <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
+                    <Text style={styles.monthChevron}>‹</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowMonthPicker(true)}>
+                    <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={nextMonth} style={styles.monthBtn}>
+                    <Text style={styles.monthChevron}>›</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>MONTHLY CALORIE HEATMAP</Text>
+                <TouchableOpacity
+                  onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowHeatmapPaywall(true))}
+                  disabled={heatmapExport.exporting}
+                  style={styles.avgViewToggleBtn}
+                >
+                  {heatmapExport.exporting ? (
+                    <ActivityIndicator size="small" color={colors.textMuted} />
+                  ) : (
+                    <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.hmLegend, styles.hmLegendRow]}>
+                <Text style={styles.hmLegendLabel}>Low</Text>
+                {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
+                  <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+                ))}
+                <Text style={styles.hmLegendLabel}>High</Text>
+              </View>
+              <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={hasAccess} onLockedPress={() => setShowHeatmapPaywall(true)} />
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate
+                ref={heatmapExport.ref}
+                title="Monthly Calorie Heatmap"
+                subtitle={`${MONTH_NAMES[month]} ${year}`}
+                colors={colors}
+                width={340}
+              >
+                <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={true} cardWidth={258} />
+              </ExportCardTemplate>
+            </View>
+
             {/* Log food button */}
             <TouchableOpacity style={styles.addBtn} onPress={() => openSheet('Breakfast')}>
               <Ionicons name="search" size={18} color={colors.bg} />
@@ -633,6 +814,15 @@ export default function FoodLogScreen() {
 
       <PaywallModal visible={summaryExport.showPaywall} onClose={() => summaryExport.setShowPaywall(false)} />
       <PaywallModal visible={showTargetsPaywall} onClose={() => setShowTargetsPaywall(false)} />
+      <PaywallModal visible={showHeatmapPaywall} onClose={() => setShowHeatmapPaywall(false)} />
+
+      <MonthYearPicker
+        visible={showMonthPicker}
+        month={month}
+        year={year}
+        onSelect={(m, y) => { setMonth(m); setYear(y); }}
+        onClose={() => setShowMonthPicker(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -770,4 +960,18 @@ const createStyles = (colors) => StyleSheet.create({
   macroInput: { backgroundColor: colors.bgElevated, borderRadius: 10, padding: 10, color: colors.text, fontSize: typography.sm, borderWidth: 1, borderColor: colors.border, textAlign: 'center' },
   saveBtn: { backgroundColor: colors.accent, borderRadius: 14, padding: 14, alignItems: 'center' },
   saveBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.base },
+
+  card: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 14 },
+  cardTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  cardTitle: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5, fontFamily: fontFamily.mono, marginBottom: 8 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8 },
+  monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  monthBtn: { padding: 8 },
+  monthChevron: { fontSize: 22, color: colors.text, fontWeight: '300' },
+  monthLabel: { fontSize: typography.base, fontFamily: fontFamily.displayItalic, color: colors.text, fontStyle: 'italic' },
+  avgViewToggleBtn: { padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated },
+  hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  hmLegendLabel: { fontSize: 9, color: colors.textDim },
+  hmLegendSwatch: { width: 10, height: 10, borderRadius: 2 },
+  hmLegendRow: { justifyContent: 'flex-end', marginBottom: 10 },
 });

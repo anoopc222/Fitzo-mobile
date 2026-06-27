@@ -1527,28 +1527,14 @@ export default function HomeScreen() {
                           </View>
                         )}
                       </View>
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubSub} numberOfLines={2}>
-                          {data?.goalForecast
-                            ? `Projected ${data.goalForecast.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${Math.abs(data.goalForecast.weeklyPaceKg)}kg/wk pace`
-                            : 'Personalized projection from your weight trend'}
-                        </Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={9} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.goalForecast
+                          ? `Projected ${data.goalForecast.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${Math.abs(data.goalForecast.weeklyPaceKg)}kg/wk pace`
+                          : 'Unlock your personalized projection 🔒'}
+                      </Text>
                     </View>
-                    {data?.goalForecast && (
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubVal}>~{data.goalForecast.daysToGoal}d to goal</Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={8} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                    {hasAccess && data?.goalForecast && (
+                      <Text style={styles.insightsHubVal}>~{data.goalForecast.daysToGoal}d to goal</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1574,28 +1560,14 @@ export default function HomeScreen() {
                           </View>
                         )}
                       </View>
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubSub} numberOfLines={2}>
-                          {data?.prWatch
-                            ? `${data.prWatch.exercise} · best ${data.prWatch.prKg}kg`
-                            : "See which lift you're closest to beating"}
-                        </Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={9} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.prWatch
+                          ? `${data.prWatch.exercise} · best ${data.prWatch.prKg}kg`
+                          : "See which lift you're closest to beating 🔒"}
+                      </Text>
                     </View>
-                    {data?.prWatch && (
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubVal}>{data.prWatch.gapKg}kg from PR</Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={8} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                    {hasAccess && data?.prWatch && (
+                      <Text style={styles.insightsHubVal}>{data.prWatch.gapKg}kg from PR</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1621,30 +1593,16 @@ export default function HomeScreen() {
                           </View>
                         )}
                       </View>
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubSub} numberOfLines={2}>
-                          {data?.recoveryScore != null
-                            ? (data.recoveryScore >= 80 ? 'Primed to push hard today 🚀'
-                              : data.recoveryScore >= 50 ? 'Moderate load — train smart'
-                              : 'Low recovery — consider an easier day')
-                            : 'Daily readiness from your sleep'}
-                        </Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={9} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.recoveryScore != null
+                          ? (data.recoveryScore >= 80 ? 'Primed to push hard today 🚀'
+                            : data.recoveryScore >= 50 ? 'Moderate load — train smart'
+                            : 'Low recovery — consider an easier day')
+                          : 'Daily readiness from your sleep 🔒'}
+                      </Text>
                     </View>
-                    {data?.recoveryScore != null && (
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubVal}>{data.recoveryScore}% recovered</Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={8} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                    {hasAccess && data?.recoveryScore != null && (
+                      <Text style={styles.insightsHubVal}>{data.recoveryScore}% recovered</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1670,30 +1628,16 @@ export default function HomeScreen() {
                           </View>
                         )}
                       </View>
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubSub} numberOfLines={2}>
-                          {data?.longestStreak > 0
-                            ? (data.streak >= data.longestStreak
-                              ? "Personal best — keep it alive! 🔥"
-                              : `${data.longestStreak - data.streak} more day${data.longestStreak - data.streak === 1 ? '' : 's'} to tie record`)
-                            : 'Track your best-ever streak'}
-                        </Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={9} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.longestStreak > 0
+                          ? (data.streak >= data.longestStreak
+                            ? "Personal best — keep it alive! 🔥"
+                            : `${data.longestStreak - data.streak} more day${data.longestStreak - data.streak === 1 ? '' : 's'} to tie record`)
+                          : 'Track your best-ever streak 🔒'}
+                      </Text>
                     </View>
-                    {data?.longestStreak > 0 && (
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubVal}>{data.streak} / {data.longestStreak}d</Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={8} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                    {hasAccess && data?.longestStreak > 0 && (
+                      <Text style={styles.insightsHubVal}>{data.streak} / {data.longestStreak}d</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1719,30 +1663,16 @@ export default function HomeScreen() {
                           </View>
                         )}
                       </View>
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubSub} numberOfLines={2}>
-                          {data?.calorieInsight
-                            ? `Based on actual intake + weight trend${data.calorieInsight.diffVsTarget != null
-                                ? ` — ${Math.abs(data.calorieInsight.diffVsTarget)} kcal ${data.calorieInsight.diffVsTarget > 0 ? 'higher' : 'lower'} than target`
-                                : ''}`
-                            : 'Your real maintenance calories, not a generic estimate'}
-                        </Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={9} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                      <Text style={styles.insightsHubSub} numberOfLines={2}>
+                        {hasAccess && data?.calorieInsight
+                          ? `Based on actual intake + weight trend${data.calorieInsight.diffVsTarget != null
+                              ? ` — ${Math.abs(data.calorieInsight.diffVsTarget)} kcal ${data.calorieInsight.diffVsTarget > 0 ? 'higher' : 'lower'} than target`
+                              : ''}`
+                          : 'Your real maintenance calories 🔒'}
+                      </Text>
                     </View>
-                    {data?.calorieInsight && (
-                      <View style={{ position: 'relative' }}>
-                        <Text style={styles.insightsHubVal}>~{data.calorieInsight.trueMaintenance} kcal</Text>
-                        {!hasAccess && (
-                          <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                            <Ionicons name="lock-closed" size={8} color={colors.textDim} />
-                          </BlurView>
-                        )}
-                      </View>
+                    {hasAccess && data?.calorieInsight && (
+                      <Text style={styles.insightsHubVal}>~{data.calorieInsight.trueMaintenance} kcal</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1767,28 +1697,14 @@ export default function HomeScreen() {
                         </View>
                       )}
                     </View>
-                    <View style={{ position: 'relative' }}>
-                      <Text style={styles.insightsHubSub} numberOfLines={2}>
-                        {data?.sleepDebt
-                          ? `Over last ${data.sleepDebt.nights} nights · ~${data.sleepDebt.nightsToRecover} night${data.sleepDebt.nightsToRecover === 1 ? '' : 's'} to recover`
-                          : 'Your cumulative sleep debt'}
-                      </Text>
-                      {!hasAccess && (
-                        <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                          <Ionicons name="lock-closed" size={9} color={colors.textDim} />
-                        </BlurView>
-                      )}
-                    </View>
+                    <Text style={styles.insightsHubSub} numberOfLines={2}>
+                      {hasAccess && data?.sleepDebt
+                        ? `Over last ${data.sleepDebt.nights} nights · ~${data.sleepDebt.nightsToRecover} night${data.sleepDebt.nightsToRecover === 1 ? '' : 's'} to recover`
+                        : 'Your cumulative sleep debt 🔒'}
+                    </Text>
                   </View>
-                  {data?.sleepDebt && (
-                    <View style={{ position: 'relative' }}>
-                      <Text style={styles.insightsHubVal}>{data.sleepDebt.totalDebtHrs}h owed</Text>
-                      {!hasAccess && (
-                        <BlurView intensity={18} tint="dark" style={styles.insightsBlurOverlay}>
-                          <Ionicons name="lock-closed" size={8} color={colors.textDim} />
-                        </BlurView>
-                      )}
-                    </View>
+                  {hasAccess && data?.sleepDebt && (
+                    <Text style={styles.insightsHubVal}>{data.sleepDebt.totalDebtHrs}h owed</Text>
                   )}
                 </TouchableOpacity>
               )}
@@ -1941,7 +1857,7 @@ export default function HomeScreen() {
                     <TouchableOpacity
                       key={t}
                       style={styles.tabBtn}
-                      onPress={() => setActiveTab(i)}
+                      onPress={() => (tabLocked ? setShowProTeaserPaywall(true) : setActiveTab(i))}
                     >
                       <View style={styles.tabLabelRow}>
                         <Text style={[styles.tabLabel, activeTab === i && styles.tabLabelActive]}>{t}</Text>
@@ -1953,7 +1869,6 @@ export default function HomeScreen() {
                 })}
               </View>
 
-              <View style={{ position: 'relative' }}>
               {activeTab === 3 ? (
                 <View>
                   <View style={styles.weekHdr}>
@@ -2058,15 +1973,6 @@ export default function HomeScreen() {
                   )}
                 </>
               )}
-              {((activeTab === 2 || activeTab === 3) && !hasAccess) && (
-                <BlurView intensity={28} tint="dark" style={styles.tabLockOverlay}>
-                  <TouchableOpacity style={styles.tabLockCta} onPress={() => setShowProTeaserPaywall(true)} activeOpacity={0.85}>
-                    <Ionicons name="lock-closed" size={16} color={colors.bg} />
-                    <Text style={styles.tabLockCtaText}>Unlock with Pro</Text>
-                  </TouchableOpacity>
-                </BlurView>
-              )}
-              </View>
             </View>
           </>
         )}
@@ -2320,10 +2226,6 @@ const createStyles = (colors) => StyleSheet.create({
   tabsCard: { marginHorizontal: 16, marginBottom: 10, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   tabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative' },
-  tabLockOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  tabLockCta: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, backgroundColor: colors.accent },
-  tabLockCtaText: { fontSize: typography.sm, fontFamily: fontFamily.bodyBold, color: colors.bg },
-  insightsBlurOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: 6, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   tabLabelRow: { flexDirection: 'row', alignItems: 'center' },
   tabLabel: { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.5 },
   tabLabelActive: { color: colors.accent },
