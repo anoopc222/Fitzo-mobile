@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -403,6 +404,7 @@ function smoothPath(pts) {
 
 // ─── Volume Trend Chart (Daily + 7-entry Avg) — mirrors StepsTrendChart ───
 function VolumeTrendChart({ data, colors, width }) {
+  const { t } = useTranslation();
   const H = 170;
   const P = { t: 18, r: 8, b: 22, l: 8 };
   const pw = width - P.l - P.r;
@@ -410,7 +412,7 @@ function VolumeTrendChart({ data, colors, width }) {
   if (data.length < 2) {
     return (
       <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Not enough data yet</Text>
+        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>{t('workout.notEnoughDataYet')}</Text>
       </View>
     );
   }
@@ -904,6 +906,7 @@ function blankEx() { return { _key: tid(), name: '', sets: [blankSet()] }; }
 
 // ─── Session Detail Modal ─────────────────────────────────────────────────────
 function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onEdit, onRepeat, onDelete }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const dS = useMemo(() => createDS(colors), [colors]);
   const [expandedIds, setExpandedIds] = useState(new Set());
@@ -956,7 +959,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             <Text style={{ fontSize: 24 }}>{ws.icon}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={dS.headerName}>{session.notes || 'Workout'}</Text>
+            <Text style={dS.headerName}>{session.notes || t('workout.workout')}</Text>
             <Text style={dS.headerDate}>{fmtDate(session.date)}</Text>
           </View>
           {!isRestDay && (
@@ -982,31 +985,31 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             <View style={dS.restInfoRow}>
               <View style={dS.restInfoCell}>
                 <Text style={{ fontSize: 18 }}>😴</Text>
-                <Text style={dS.restInfoValue}>Rest</Text>
-                <Text style={dS.statLabel}>DAY TYPE</Text>
+                <Text style={dS.restInfoValue}>{t('workout.rest')}</Text>
+                <Text style={dS.statLabel}>{t('workout.dayType')}</Text>
               </View>
               <View style={dS.restInfoDivider} />
               <View style={dS.restInfoCell}>
                 <Text style={{ fontSize: 18 }}>💚</Text>
-                <Text style={dS.restInfoValue}>Recovery</Text>
-                <Text style={dS.statLabel}>MODE</Text>
+                <Text style={dS.restInfoValue}>{t('workout.recovery')}</Text>
+                <Text style={dS.statLabel}>{t('workout.mode')}</Text>
               </View>
             </View>
 
             <View style={dS.restCallout}>
               <Text style={{ fontSize: 40 }}>😴</Text>
-              <Text style={dS.restCalloutTitle}>Recovery Day</Text>
-              <Text style={dS.restCalloutSub}>Muscles grow during rest.{'\n'}Good call.</Text>
+              <Text style={dS.restCalloutTitle}>{t('workout.recoveryDay')}</Text>
+              <Text style={dS.restCalloutSub}>{t('workout.musclesGrowDuringRest')}</Text>
             </View>
 
             <View style={dS.actionRow}>
               <TouchableOpacity style={dS.editBtn} onPress={onEdit}>
                 <Text style={{ fontSize: 14 }}>✏️</Text>
-                <Text style={dS.editBtnText}>Edit</Text>
+                <Text style={dS.editBtnText}>{t('common.edit')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={dS.deleteBtn} onPress={onDelete}>
                 <Text style={{ fontSize: 14 }}>🗑️</Text>
-                <Text style={dS.deleteBtnText}>Delete</Text>
+                <Text style={dS.deleteBtnText}>{t('common.delete')}</Text>
               </TouchableOpacity>
             </View>
             <View style={{ height: 12 }} />
