@@ -1,0 +1,54 @@
+{
+  "tabs": {
+    "home": "Accueil",
+    "workout": "Entraînement",
+    "steps": "Pas",
+    "weight": "Poids",
+    "sleep": "Sommeil",
+    "more": "Plus"
+  },
+  "home": {
+    "greetingMorning": "Bonjour",
+    "greetingAfternoon": "Bon après-midi",
+    "greetingEvening": "Bonsoir",
+    "thisWeek": "Cette semaine",
+    "achievements": "Réussites",
+    "goPro": "Débloquez les tendances, analyses et plus avec Pro"
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "loading": "Chargement…",
+    "error": "Erreur",
+    "logWeight": "Enregistrer le poids",
+    "logSteps": "Enregistrer les pas",
+    "logSleep": "Enregistrer le sommeil"
+  },
+  "settings": {
+    "language": "Langue",
+    "languageSystem": "Système par défaut"
+  },
+  "auth": {
+    "tagline": "Suivez. Progressez. Dominez.",
+    "createAccountTagline": "Créez votre compte",
+    "emailPlaceholder": "E-mail",
+    "passwordPlaceholder": "Mot de passe",
+    "fullNamePlaceholder": "Nom complet",
+    "signIn": "Se connecter",
+    "createAccount": "Créer un compte",
+    "noAccount": "Vous n'avez pas de compte ? ",
+    "signUp": "S'inscrire",
+    "haveAccount": "Vous avez déjà un compte ? ",
+    "error": "Erreur",
+    "emailPasswordRequired": "Entrez votre e-mail et mot de passe",
+    "loginFailed": "Échec de la connexion",
+    "allFieldsRequired": "Tous les champs sont obligatoires",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
+    "success": "Succès",
+    "checkEmailConfirm": "Consultez votre e-mail pour confirmer votre compte.",
+    "signUpFailed": "Échec de l'inscription"
+  }
+}

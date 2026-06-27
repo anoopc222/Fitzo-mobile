@@ -3,11 +3,13 @@ import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import en from './locales/en.json';
 import es from './locales/es.json';
+import fr from './locales/fr.json';
+import hi from './locales/hi.json';
 
 export const STORAGE_KEY = 'fitzo:language';
 
 // Languages with full translation resources — strings render natively.
-export const SUPPORTED_LANGUAGES = ['en', 'es'];
+export const SUPPORTED_LANGUAGES = ['en', 'es', 'fr', 'hi'];
 
 // Full selectable list shown in Settings. Any code not in SUPPORTED_LANGUAGES
 // still works (i18next's fallbackLng below fills in English for untranslated
@@ -45,7 +47,7 @@ const ALL_LANGUAGE_CODES = ALL_LANGUAGES.map(l => l.code);
 const DEFAULT_LANGUAGE = 'en';
 
 i18next.use(initReactI18next).init({
-  resources: { en: { translation: en }, es: { translation: es } },
+  resources: { en: { translation: en }, es: { translation: es }, fr: { translation: fr }, hi: { translation: hi } },
   lng: DEFAULT_LANGUAGE,
   fallbackLng: 'en',
   interpolation: { escapeValue: false },

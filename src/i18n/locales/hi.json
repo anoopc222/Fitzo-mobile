@@ -1,0 +1,54 @@
+{
+  "tabs": {
+    "home": "होम",
+    "workout": "वर्कआउट",
+    "steps": "कदम",
+    "weight": "वज़न",
+    "sleep": "नींद",
+    "more": "अधिक"
+  },
+  "home": {
+    "greetingMorning": "सुप्रभात",
+    "greetingAfternoon": "नमस्कार",
+    "greetingEvening": "शुभ संध्या",
+    "thisWeek": "इस सप्ताह",
+    "achievements": "उपलब्धियां",
+    "goPro": "Pro के साथ लंबी अवधि के रुझान, जानकारी और अधिक अनलॉक करें"
+  },
+  "common": {
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "close": "बंद करें",
+    "loading": "लोड हो रहा है…",
+    "error": "त्रुटि",
+    "logWeight": "वज़न दर्ज करें",
+    "logSteps": "कदम दर्ज करें",
+    "logSleep": "नींद दर्ज करें"
+  },
+  "settings": {
+    "language": "भाषा",
+    "languageSystem": "सिस्टम डिफ़ॉल्ट"
+  },
+  "auth": {
+    "tagline": "ट्रैक करें। आगे बढ़ें। हावी रहें।",
+    "createAccountTagline": "अपना खाता बनाएं",
+    "emailPlaceholder": "ईमेल",
+    "passwordPlaceholder": "पासवर्ड",
+    "fullNamePlaceholder": "पूरा नाम",
+    "signIn": "साइन इन करें",
+    "createAccount": "खाता बनाएं",
+    "noAccount": "खाता नहीं है? ",
+    "signUp": "साइन अप करें",
+    "haveAccount": "क्या आपके पास खाता है? ",
+    "error": "त्रुटि",
+    "emailPasswordRequired": "ईमेल और पासवर्ड दर्ज करें",
+    "loginFailed": "लॉगिन विफल",
+    "allFieldsRequired": "सभी फ़ील्ड आवश्यक हैं",
+    "passwordTooShort": "पासवर्ड कम से कम 6 अक्षरों का होना चाहिए",
+    "success": "सफलता",
+    "checkEmailConfirm": "अपना खाता पुष्टि करने के लिए अपना ईमेल देखें।",
+    "signUpFailed": "साइन अप विफल"
+  }
+}

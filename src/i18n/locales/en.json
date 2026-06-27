@@ -30,5 +30,25 @@
   "settings": {
     "language": "Language",
     "languageSystem": "System default"
+  },
+  "auth": {
+    "tagline": "Track. Progress. Dominate.",
+    "createAccountTagline": "Create your account",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "fullNamePlaceholder": "Full Name",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "noAccount": "Don't have an account? ",
+    "signUp": "Sign Up",
+    "haveAccount": "Already have an account? ",
+    "error": "Error",
+    "emailPasswordRequired": "Enter email and password",
+    "loginFailed": "Login failed",
+    "allFieldsRequired": "All fields are required",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "success": "Success",
+    "checkEmailConfirm": "Check your email to confirm your account.",
+    "signUpFailed": "Sign up failed"
   }
 }

@@ -30,5 +30,25 @@
   "settings": {
     "language": "Idioma",
     "languageSystem": "Predeterminado del sistema"
+  },
+  "auth": {
+    "tagline": "Sigue. Progresa. Domina.",
+    "createAccountTagline": "Crea tu cuenta",
+    "emailPlaceholder": "Correo electrónico",
+    "passwordPlaceholder": "Contraseña",
+    "fullNamePlaceholder": "Nombre completo",
+    "signIn": "Iniciar sesión",
+    "createAccount": "Crear cuenta",
+    "noAccount": "¿No tienes una cuenta? ",
+    "signUp": "Regístrate",
+    "haveAccount": "¿Ya tienes una cuenta? ",
+    "error": "Error",
+    "emailPasswordRequired": "Ingresa correo y contraseña",
+    "loginFailed": "Error al iniciar sesión",
+    "allFieldsRequired": "Todos los campos son obligatorios",
+    "passwordTooShort": "La contraseña debe tener al menos 6 caracteres",
+    "success": "Éxito",
+    "checkEmailConfirm": "Revisa tu correo para confirmar tu cuenta.",
+    "signUpFailed": "Error al registrarse"
   }
 }
