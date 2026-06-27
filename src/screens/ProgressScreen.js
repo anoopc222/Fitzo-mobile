@@ -8,9 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
-import ProGate from '../components/ui/ProGate';
+import PaywallModal from '../components/ui/PaywallModal';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
 
@@ -87,9 +88,11 @@ function TrendIcon({ trend }) {
 export default function ProgressScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { hasAccess } = useSubscription();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [search, setSearch] = useState('');
   const [expandedEx, setExpandedEx] = useState(null);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const { data: rawData = [], isLoading, refetch } = useQuery({
     queryKey: ['progress', user?.id],
@@ -161,27 +164,36 @@ export default function ProgressScreen({ navigation }) {
           }, { kg: 0, date: null });
           const trend = calcTrend(ex.sessions);
 
-          const card = (
-            <View style={styles.exCard}>
-              <TouchableOpacity style={styles.exHeader} onPress={() => toggleExpand(ex.name)}>
+          const onHeaderPress = () => hasAccess ? toggleExpand(ex.name) : setShowPaywall(true);
+
+          return (
+            <View key={ex.name} style={styles.exCard}>
+              <TouchableOpacity style={styles.exHeader} onPress={onHeaderPress} activeOpacity={0.8}>
                 <View style={styles.exHeaderLeft}>
                   <Text style={styles.exName}>{ex.name}</Text>
                   <View style={styles.exMeta}>
                     <Text style={styles.exSessions}>{ex.sessions.length} sessions</Text>
-                    <TrendIcon trend={trend} />
+                    {hasAccess && <TrendIcon trend={trend} />}
                   </View>
                 </View>
                 <View style={styles.exHeaderRight}>
-                  {pr.kg > 0 && (
+                  {!hasAccess ? (
+                    <View style={styles.proBadge}>
+                      <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  ) : pr.kg > 0 ? (
                     <View style={styles.prBadge}>
                       <Ionicons name="trophy" size={11} color={colors.warning} />
                       <Text style={styles.prText}>PR {pr.kg}kg</Text>
                     </View>
+                  ) : null}
+                  {hasAccess && (
+                    <Ionicons
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={16} color={colors.textMuted}
+                    />
                   )}
-                  <Ionicons
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={16} color={colors.textMuted}
-                  />
                 </View>
               </TouchableOpacity>
 
@@ -191,22 +203,27 @@ export default function ProgressScreen({ navigation }) {
                   {last3.map((s, i) => (
                     <View key={i} style={styles.sessionPreviewRow}>
                       <Text style={styles.previewDate}>
-                        {new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {hasAccess ? new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '●●●'}
                       </Text>
                       <Text style={styles.previewBest}>
-                        {s.bestSet?.weight_kg ?? '--'} kg × {s.bestSet?.reps ?? '--'}
+                        {hasAccess ? `${s.bestSet?.weight_kg ?? '--'} kg × ${s.bestSet?.reps ?? '--'}` : '●● kg × ●●'}
                       </Text>
-                      <Text style={styles.previewVol}>{s.volume.toLocaleString()} kg vol</Text>
-                      {i === 0 && <View style={[styles.statusDot, { backgroundColor: colors.success }]} />}
-                      {i === 1 && <View style={[styles.statusDot, { backgroundColor: colors.warning }]} />}
-                      {i === 2 && <View style={[styles.statusDot, { backgroundColor: colors.textDim }]} />}
+                      <Text style={styles.previewVol}>{hasAccess ? `${s.volume.toLocaleString()} kg vol` : '●●● kg vol'}</Text>
+                      {hasAccess && i === 0 && <View style={[styles.statusDot, { backgroundColor: colors.success }]} />}
+                      {hasAccess && i === 1 && <View style={[styles.statusDot, { backgroundColor: colors.warning }]} />}
+                      {hasAccess && i === 2 && <View style={[styles.statusDot, { backgroundColor: colors.textDim }]} />}
                     </View>
                   ))}
+                  {!hasAccess && (
+                    <Text style={styles.lockedHint} onPress={() => setShowPaywall(true)}>
+                      🔒 Unlock PR badges, trend insights, and full session history
+                    </Text>
+                  )}
                 </View>
               )}
 
               {/* Expanded full history */}
-              {isExpanded && (
+              {hasAccess && isExpanded && (
                 <View style={styles.fullHistory}>
                   {pr.kg > 0 && (
                     <View style={styles.prRow}>
@@ -236,15 +253,8 @@ export default function ProgressScreen({ navigation }) {
               )}
             </View>
           );
-
-          return exIndex === 0 ? (
-            <View key={ex.name}>{card}</View>
-          ) : (
-            <View key={ex.name}>
-              <ProGate label="Progress tracking">{card}</ProGate>
-            </View>
-          );
         })}
+        <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
       </>
       </ScrollView>
     </SafeAreaView>
@@ -290,6 +300,13 @@ const createStyles = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.warning + '44',
   },
   prText: { fontSize: 10, color: colors.warning, fontWeight: weight.bold },
+  proBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: colors.bgElevated, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  proBadgeText: { fontSize: 9, fontWeight: weight.black, color: colors.textMuted, letterSpacing: 0.5 },
+  lockedHint: { fontSize: 11, color: colors.textMuted, marginTop: 6, lineHeight: 16 },
 
   sessionsPreview: { paddingHorizontal: 14, paddingBottom: 12 },
   sessionPreviewRow: {
