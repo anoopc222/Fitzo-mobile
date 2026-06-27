@@ -1575,10 +1575,10 @@ function EditSessionModal({
           <View style={eS.header}>
             <View style={{ flex: 1 }}>
               <Text style={eS.headerTop}>
-                <Text style={eS.headerLOG}>LOG </Text>
-                <Text style={eS.headerSub}>{isNew ? 'New Session' : 'Edit Session'}</Text>
+                <Text style={eS.headerLOG}>{t('workout.logPrefix')} </Text>
+                <Text style={eS.headerSub}>{isNew ? t('workout.newSession') : t('workout.editSession')}</Text>
               </Text>
-              <Text style={eS.trackLabel}>TRACK YOUR WORKOUT</Text>
+              <Text style={eS.trackLabel}>{t('workout.trackYourWorkout')}</Text>
             </View>
             <TouchableOpacity onPress={onCancel} style={eS.closeBtn}>
               <Ionicons name="close" size={20} color={colors.textMuted} />
@@ -1610,7 +1610,7 @@ function EditSessionModal({
               </View>
               <TouchableOpacity style={eS.copyLastBtn} onPress={() => copyLastSession(name)}>
                 <Ionicons name="copy-outline" size={13} color={colors.purple} />
-                <Text style={eS.copyLastBtnText}>Copy last session</Text>
+                <Text style={eS.copyLastBtnText}>{t('workout.copyLastSession')}</Text>
               </TouchableOpacity>
             </View>
           )}

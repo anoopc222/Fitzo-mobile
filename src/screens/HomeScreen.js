@@ -1465,7 +1465,7 @@ export default function HomeScreen() {
               <View style={styles.recapCard}>
                 <Text style={styles.recapTitle}>{t('home.thisWeeksRecap')}</Text>
                 <Text style={styles.recapLine}>
-                  🔥 {data?.streak ?? 0}-day streak · 🏋️ {thisWeekSessions}/{weeklyGoal} workouts · 👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
+                  🔥 {t('home.dayStreak', { count: data?.streak ?? 0 })} · 🏋️ {t('home.workoutsCount', { count: thisWeekSessions, weeklyGoal })} · 👟 {t('home.stepGoalDays', { count: data?.thisWeek?.goalDays ?? 0 })}
                 </Text>
               </View>
               <TouchableOpacity
@@ -1482,19 +1482,19 @@ export default function HomeScreen() {
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-              <ExportCardTemplate ref={recapExport.ref} title="Weekly Recap" colors={colors} width={340}>
+              <ExportCardTemplate ref={recapExport.ref} title={t('home.weeklyRecapTitle')} colors={colors} width={340}>
                 <View style={{ gap: 10 }}>
                   <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    🔥 {data?.streak ?? 0}-day streak
+                    🔥 {t('home.dayStreak', { count: data?.streak ?? 0 })}
                   </Text>
                   <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    🏋️ {thisWeekSessions}/{weeklyGoal} workouts this week
+                    🏋️ {t('home.workoutsThisWeek', { count: thisWeekSessions, weeklyGoal })}
                   </Text>
                   <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
+                    👟 {t('home.stepGoalDays', { count: data?.thisWeek?.goalDays ?? 0 })}
                   </Text>
                   <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    🏆 Level {computeLevel(computeXP(data)).level}
+                    🏆 {t('home.levelExport', { level: computeLevel(computeXP(data)).level })}
                   </Text>
                 </View>
               </ExportCardTemplate>
