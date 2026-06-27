@@ -1374,21 +1374,21 @@ export default function HomeScreen() {
             )}
 
             {/* ── Stat Overview (merged, line-separated) ─────────── */}
-            <Text style={styles.overviewTitle}>DAILY STATUS</Text>
+            <Text style={styles.overviewTitle}>{t('home.dailyStatus')}</Text>
             <View style={styles.overviewCard}>
               <TouchableOpacity style={styles.overviewRow} onPress={() => nav('Weight')} activeOpacity={0.7}>
                 <View style={styles.overviewIconWrap}>
                   <Ionicons name="scale-outline" size={15} color={C_WEIGHT} />
                 </View>
                 <View style={styles.overviewBody}>
-                  <Text style={[styles.overviewLabel, { color: C_WEIGHT }]}>WEIGHT</Text>
-                  <Text style={styles.overviewSub}>kg · body weight</Text>
+                  <Text style={[styles.overviewLabel, { color: C_WEIGHT }]}>{t('home.weightLabel')}</Text>
+                  <Text style={styles.overviewSub}>{t('home.kgBodyWeight')}</Text>
                 </View>
                 <View style={styles.overviewRight}>
                   <Text style={styles.overviewVal}>{data?.latestWeight?.weight ?? '—'}</Text>
                   {data?.weightDeltaVsYday !== null && data?.weightDeltaVsYday !== undefined && (
                     <Text style={[styles.overviewDelta, { color: data.weightDeltaVsYday <= 0 ? C_GREEN : '#f87171' }]}>
-                      {data.weightDeltaVsYday > 0 ? '+' : ''}{data.weightDeltaVsYday}kg vs yday
+                      {t('home.deltaVsYesterday', { sign: data.weightDeltaVsYday > 0 ? '+' : '', value: data.weightDeltaVsYday })}
                     </Text>
                   )}
                 </View>
@@ -1404,14 +1404,14 @@ export default function HomeScreen() {
                   <Ionicons name="footsteps-outline" size={15} color={C_STEPS} />
                 </View>
                 <View style={styles.overviewBody}>
-                  <Text style={[styles.overviewLabel, { color: C_STEPS }]}>STEPS</Text>
+                  <Text style={[styles.overviewLabel, { color: C_STEPS }]}>{t('home.stepsLabel')}</Text>
                   <Text style={styles.overviewSub}>
-                    {data?.stepsIsYesterday ? 'steps yesterday' : 'data not added yet'}
+                    {data?.stepsIsYesterday ? t('home.stepsYesterday') : t('home.dataNotAddedYet')}
                   </Text>
                 </View>
                 <View style={styles.overviewRight}>
                   <Text style={styles.overviewVal}>{data?.stepsIsYesterday ? data.latestSteps.steps.toLocaleString() : '—'}</Text>
-                  {data?.stepsIsYesterday && data?.stepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met!</Text>}
+                  {data?.stepsIsYesterday && data?.stepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ {t('home.goalMetExclaim')}</Text>}
                 </View>
                 {data?.stepsIsYesterday && (data?.stepsArr?.length ?? 0) >= 2 && (
                   <Sparkline data={data.stepsArr} color={C_STEPS} width={48} height={26} />
@@ -1425,15 +1425,15 @@ export default function HomeScreen() {
                   <Ionicons name="flame-outline" size={15} color={C_KCAL} />
                 </View>
                 <View style={styles.overviewBody}>
-                  <Text style={[styles.overviewLabel, { color: C_KCAL }]}>TODAY KCAL</Text>
+                  <Text style={[styles.overviewLabel, { color: C_KCAL }]}>{t('home.todayKcalLabel')}</Text>
                   <Text style={styles.overviewSub}>
-                    {(data?.todayKcal ?? 0) === 0 ? 'not logged · tap to log food' : 'kcal today'}
+                    {(data?.todayKcal ?? 0) === 0 ? t('home.notLoggedTapToLogFood') : t('home.kcalToday')}
                   </Text>
                 </View>
                 <View style={styles.overviewRight}>
                   <Text style={styles.overviewVal}>{(data?.todayKcal ?? 0) === 0 ? '—' : data.todayKcal}</Text>
                   {(data?.todayProtein ?? 0) > 0 && (
-                    <Text style={[styles.overviewDelta, { color: colors.success }]}>{Math.round(data.todayProtein)}g protein</Text>
+                    <Text style={[styles.overviewDelta, { color: colors.success }]}>{t('home.proteinGrams', { value: Math.round(data.todayProtein) })}</Text>
                   )}
                 </View>
               </TouchableOpacity>
@@ -1445,12 +1445,12 @@ export default function HomeScreen() {
                   <Ionicons name="moon-outline" size={15} color={C_SLEEP} />
                 </View>
                 <View style={styles.overviewBody}>
-                  <Text style={[styles.overviewLabel, { color: C_SLEEP }]}>SLEEP</Text>
-                  <Text style={styles.overviewSub}>{data?.sleepIsToday ? 'logged today' : 'data not added yet'}</Text>
+                  <Text style={[styles.overviewLabel, { color: C_SLEEP }]}>{t('home.sleepLabel')}</Text>
+                  <Text style={styles.overviewSub}>{data?.sleepIsToday ? t('home.loggedToday') : t('home.dataNotAddedYet')}</Text>
                 </View>
                 <View style={styles.overviewRight}>
                   <Text style={styles.overviewVal}>{data?.sleepIsToday ? `${data.latestSleep.hours}h` : '—'}</Text>
-                  {data?.sleepIsToday && data?.sleepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ Goal met</Text>}
+                  {data?.sleepIsToday && data?.sleepGoalMet && <Text style={[styles.overviewDelta, { color: C_GREEN }]}>✓ {t('home.goalMet')}</Text>}
                 </View>
                 {data?.sleepIsToday && (data?.sleepArr?.length ?? 0) >= 2 && (
                   <Sparkline data={data.sleepArr} color={C_SLEEP} width={48} height={26} />
@@ -1463,7 +1463,7 @@ export default function HomeScreen() {
             {/* ── Weekly Recap (share-able summary) ───────────────── */}
             <View style={{ position: 'relative' }}>
               <View style={styles.recapCard}>
-                <Text style={styles.recapTitle}>This week's recap</Text>
+                <Text style={styles.recapTitle}>{t('home.thisWeeksRecap')}</Text>
                 <Text style={styles.recapLine}>
                   🔥 {data?.streak ?? 0}-day streak · 🏋️ {thisWeekSessions}/{weeklyGoal} workouts · 👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
                 </Text>

@@ -1241,6 +1241,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
 
 // ─── Exercise History Modal ───────────────────────────────────────────────────
 function ExerciseHistoryModal({ exerciseName, allSessions, visible, onClose }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const ehS = useMemo(() => createEhS(colors), [colors]);
 
@@ -1283,7 +1284,7 @@ function ExerciseHistoryModal({ exerciseName, allSessions, visible, onClose }) {
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
           {entries.length === 0 && (
             <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-              <Text style={{ color: colors.textDim, fontSize: typography.sm }}>No history yet</Text>
+              <Text style={{ color: colors.textDim, fontSize: typography.sm }}>{t('workout.noHistoryYet')}</Text>
             </View>
           )}
           {entries.map((row, i) => (
@@ -1300,10 +1301,10 @@ function ExerciseHistoryModal({ exerciseName, allSessions, visible, onClose }) {
               </View>
               {row.delta && (
                 row.delta.same ? (
-                  <Text style={ehS.deltaMuted}>— same as prev</Text>
+                  <Text style={ehS.deltaMuted}>{t('workout.sameAsPrev')}</Text>
                 ) : (
                   <Text style={[ehS.deltaText, { color: row.delta.diff > 0 ? colors.good : colors.danger }]}>
-                    {row.delta.diff > 0 ? '▲' : '▼'} {row.delta.diff > 0 ? '+' : ''}{row.delta.diff}kg vs prev
+                    {row.delta.diff > 0 ? '▲' : '▼'} {t('workout.deltaVsPrev', { value: `${row.delta.diff > 0 ? '+' : ''}${row.delta.diff}` })}
                   </Text>
                 )
               )}
@@ -1340,6 +1341,7 @@ function EditSessionModal({
   hasAccess, templates, onSaveTemplate, onOpenToolsPaywall,
   onRepeatTemplate, isRepeatingTemplate,
 }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const eS = useMemo(() => createES(colors), [colors]);
   const [date, setDate] = useState('');
@@ -1449,7 +1451,7 @@ function EditSessionModal({
       .sort((a, b) => b.date.localeCompare(a.date));
     const match = candidates[0];
     if (!match) {
-      Alert.alert('No previous session', `No past "${sessionTypeName || targetType}" session found to copy.`);
+      Alert.alert(t('workout.noPreviousSession'), t('workout.noPastSessionFoundToCopy', { value: sessionTypeName || targetType }));
       return;
     }
     const exs = (match.workout_exercises ?? [])
@@ -1548,7 +1550,7 @@ function EditSessionModal({
     }));
 
   const handleSave = () => {
-    if (!date.trim()) { Alert.alert('Date required', 'Please pick a date.'); return; }
+    if (!date.trim()) { Alert.alert(t('workout.dateRequired'), t('workout.pleasePickADate')); return; }
     const isRest = name.toLowerCase() === 'rest day';
     setSessionTimerRunning(false);
     const manualMin = parseFloat(manualDuration);
@@ -1556,7 +1558,7 @@ function EditSessionModal({
       ? manualMin
       : (isNew && sessionElapsedSec > 0 ? Math.round(sessionElapsedSec / 60) : undefined);
     onSave({
-      date: date.trim(), name: name.trim() || 'Workout', exercises: isRest ? [] : exercises,
+      date: date.trim(), name: name.trim() || t('workout.workout'), exercises: isRest ? [] : exercises,
       ...(duration_min != null ? { duration_min } : {}),
     });
   };
