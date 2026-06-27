@@ -23,6 +23,7 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
 import Svg, { Polyline, Line } from 'react-native-svg';
 import Sparkline from '../components/Sparkline';
+import AchievementsRow from '../components/AchievementsRow';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import { SkeletonBlock, SkeletonCard } from '../components/Skeleton';
 import PaywallModal from '../components/ui/PaywallModal';
@@ -1302,6 +1303,8 @@ export default function HomeScreen() {
                 </View>
               </View>
             </View>
+
+            <AchievementsRow home={data} />
 
             {/* ── Go Pro banner ─────────────────────────────────── */}
             {subReady && !isPro && (
