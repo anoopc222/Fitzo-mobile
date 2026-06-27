@@ -582,12 +582,6 @@ export default function FoodLogScreen() {
               </ExportCardTemplate>
             </View>
 
-            {/* Log food button */}
-            <TouchableOpacity style={styles.addBtn} onPress={() => openSheet('Breakfast')}>
-              <Ionicons name="search" size={18} color={colors.bg} />
-              <Text style={styles.addBtnText}>Log Food</Text>
-            </TouchableOpacity>
-
             {/* Meals by type */}
             {MEAL_TYPES.map(meal => {
               const items = byMeal[meal] ?? [];
@@ -635,6 +629,11 @@ export default function FoodLogScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* FAB */}
+      <TouchableOpacity style={styles.fab} onPress={() => openSheet('Breakfast')}>
+        <Ionicons name="search" size={26} color={colors.bg} />
+      </TouchableOpacity>
 
       {/* Log Food Sheet: search -> detail (serving) or manual entry */}
       <BottomSheet visible={showSheet} onClose={closeSheet} style={styles.sheet}>
@@ -897,7 +896,7 @@ const createStyles = (colors) => StyleSheet.create({
   dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   dateArrow: { padding: 10 },
   dateLabel: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text },
-  content: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 12 },
+  content: { paddingHorizontal: 16, paddingBottom: 100, paddingTop: 12 },
 
   summaryCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
   targetsPillRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
@@ -930,8 +929,13 @@ const createStyles = (colors) => StyleSheet.create({
   macroBarFill: { height: '100%', borderRadius: 3 },
   macroBarPct: { fontSize: 8, color: colors.textDim, textAlign: 'right' },
 
-  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.accent, borderRadius: 14, padding: 14, marginBottom: 14 },
-  addBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.base },
+  fab: {
+    position: 'absolute', bottom: 24, right: 24,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45, shadowRadius: 10, elevation: 10,
+  },
 
   mealCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 10 },
   mealHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
