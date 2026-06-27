@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import BottomSheet from '../components/ui/BottomSheet';
 import ScreenHeader from '../components/ScreenHeader';
 
@@ -47,12 +48,12 @@ const C_GREEN  = '#34d399';
 // Styles will be defined later using static colors
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-function getGreeting() {
+function getGreetingKey() {
   const h = new Date().getHours();
-  if (h < 12) return 'GOOD MORNING';
-  if (h < 17) return 'GOOD AFTERNOON';
-  if (h < 21) return 'GOOD EVENING';
-  return 'GOOD NIGHT';
+  if (h < 12) return 'home.greetingMorning';
+  if (h < 17) return 'home.greetingAfternoon';
+  if (h < 21) return 'home.greetingEvening';
+  return 'home.greetingNight';
 }
 
 // Local calendar date as YYYY-MM-DD — never use Date#toISOString() for this,
@@ -479,12 +480,12 @@ async function fetchHome(userId) {
   const freezeState = await syncFreezeAwards(userId, streak);
   const todayStepsLogged = stepsHist.data?.some(s => s.logged_at?.startsWith(today)) || frozenSet.has(today);
 
-  // Motivational line under name
-  let motivText = 'Keep pushing! ⚡';
-  if (hasTodayWorkout) motivText = `${todayWorkoutName} — great work! 💪`;
-  else if (streak >= 7)  motivText = `${streak}-day streak! 🔥`;
-  else if (stepGoalMet)  motivText = 'Step goal crushed! 👟';
-  else if (weekWeightDelta !== null && weekWeightDelta < -0.2) motivText = 'Weight dropping! 📉';
+  // Motivational line under name — key + params, translated at render time
+  let motiv = { key: 'home.motivKeepPushing' };
+  if (hasTodayWorkout) motiv = { key: 'home.motivWorkoutDone', params: { workoutName: todayWorkoutName } };
+  else if (streak >= 7)  motiv = { key: 'home.motivStreak', params: { count: streak } };
+  else if (stepGoalMet)  motiv = { key: 'home.motivStepGoalCrushed' };
+  else if (weekWeightDelta !== null && weekWeightDelta < -0.2) motiv = { key: 'home.motivWeightDropping' };
 
   const sessionsLeft = Math.max(0, weeklyGoal - thisWeekSessions);
 
@@ -1304,7 +1305,7 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.profileInfo}>
-                <Text style={styles.greeting}>{getGreeting()} ⚡</Text>
+                <Text style={styles.greeting}>{t(getGreetingKey())} ⚡</Text>
                 <Text style={styles.profileName}>{displayName}</Text>
                 <View style={styles.motivLine}>
                   <TouchableOpacity style={styles.motivRow} onPress={() => setShowStreak(true)} activeOpacity={0.7}>
