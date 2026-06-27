@@ -4,6 +4,7 @@ import {
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
@@ -443,25 +444,16 @@ function AvgWeightRow({ row, unit, colors }) {
   );
 }
 
-// ─── Avg Weight: locked row teaser (free users, weeks beyond the first 4) ──
-function AvgWeightLockedRow({ periodLabel, colors, onPress }) {
+// ─── Avg Weight: blurred row teaser (free users, weeks beyond the first 4) ──
+// Shows the real row underneath a blur so users see exactly what they're missing.
+function AvgWeightLockedRow({ row, unit, colors, onPress }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-      <View style={{ flex: 0.85 }}>
-        <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, color: colors.textMuted }}>{periodLabel}</Text>
-      </View>
-      <View style={{ flex: 0.95 }}>
-        <Text style={{ fontSize: 13, fontFamily: fontFamily.monoBold, color: colors.textDim }}>••.•kg</Text>
-      </View>
-      <View style={{ flex: 0.85 }}>
-        <View style={{ alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)' }}>
-          <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim }}>•••</Text>
-        </View>
-      </View>
-      <View style={{ flex: 1.3, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ position: 'relative' }}>
+      <AvgWeightRow row={row} unit={unit} colors={colors} />
+      <BlurView intensity={14} tint="dark" style={{ ...StyleSheet.absoluteFillObject, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10 }}>
         <Ionicons name="lock-closed" size={11} color={colors.textDim} />
-        <Text style={{ fontSize: 10, fontFamily: fontFamily.mono, color: colors.textDim }}>PRO</Text>
-      </View>
+        <Text style={{ fontSize: 10, fontFamily: fontFamily.mono, color: colors.textDim, marginLeft: 4 }}>PRO</Text>
+      </BlurView>
     </TouchableOpacity>
   );
 }
@@ -511,7 +503,7 @@ function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded, hasAc
       </View>
       {(hasAccess ? rows : rows.slice(0, 4)).map(row => <AvgWeightRow key={row.key} row={row} unit={unit} colors={colors} />)}
       {!hasAccess && rows.slice(4).map(row => (
-        <AvgWeightLockedRow key={row.key} periodLabel={row.periodLabel} colors={colors} onPress={onLockedPress} />
+        <AvgWeightLockedRow key={row.key} row={row} unit={unit} colors={colors} onPress={onLockedPress} />
       ))}
     </View>
   );
