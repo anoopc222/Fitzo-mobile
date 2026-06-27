@@ -169,8 +169,15 @@ async function searchFoods(query) {
   return data ?? [];
 }
 
-async function addFood(userId, food) {
-  const { error } = await supabase.from('food_logs').insert({ user_id: userId, ...food, logged_at: new Date().toISOString() });
+function loggedAtFor(dateStr) {
+  const now = new Date();
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+  return d.toISOString();
+}
+
+async function addFood(userId, food, dateStr) {
+  const { error } = await supabase.from('food_logs').insert({ user_id: userId, ...food, logged_at: loggedAtFor(dateStr) });
   if (error) throw error;
 }
 
@@ -295,13 +302,13 @@ export default function FoodLogScreen() {
   });
 
   const addMut = useMutation({
-    mutationFn: (food) => addFood(user.id, food),
+    mutationFn: (food) => addFood(user.id, food, today),
     onMutate: async (food) => {
       await qc.cancelQueries(['food', user.id, today]);
       const previous = qc.getQueryData(['food', user.id, today]);
       qc.setQueryData(['food', user.id, today], (old) => {
         if (!old) return old;
-        const optimisticLog = { id: `optimistic-${Date.now()}`, ...food, serving_size: food.serving_size ?? null, logged_at: new Date().toISOString() };
+        const optimisticLog = { id: `optimistic-${Date.now()}`, ...food, serving_size: food.serving_size ?? null, logged_at: loggedAtFor(today) };
         return { ...old, logs: [...old.logs, optimisticLog] };
       });
       closeSheet();
