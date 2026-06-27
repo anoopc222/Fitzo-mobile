@@ -128,6 +128,7 @@
 
   /* Sections */
   section { padding: 90px 0; position: relative; }
+  section.wrap { padding: 90px 24px; }
   .section-head { text-align: center; max-width: 600px; margin: 0 auto 56px; }
   .eyebrow { color: var(--accent); font-weight: 800; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px; }
   .section-title { font-size: clamp(28px, 4vw, 42px); font-weight: 900; letter-spacing: -1px; line-height: 1.15; }
@@ -180,9 +181,10 @@
   .cta-band h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 900; letter-spacing: -1px; margin-bottom: 16px; }
   .cta-band p { color: var(--text-dim); margin-bottom: 30px; font-size: 16px; }
 
-  footer {
+  footer.wrap {
     border-top: 1px solid var(--border); padding: 40px 24px;
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+    margin-top: 30px;
   }
   .footer-links { display: flex; gap: 24px; font-size: 14px; color: var(--text-dim); }
   .footer-links a:hover { color: var(--accent); }
