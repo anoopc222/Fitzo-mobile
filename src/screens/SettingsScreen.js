@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Platform,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Platform, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +48,16 @@ export default function SettingsScreen({ navigation }) {
   const handleEditTime = (key) => {
     if (!isPro) { setShowPaywall(true); return; }
     setEditingTimeKey(key);
+  };
+
+  const handleInviteFriends = async () => {
+    try {
+      await Share.share({
+        message: "I've been tracking my workouts, sleep, and nutrition with FitZo — thought you'd like it too. https://fitzo.app",
+      });
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    }
   };
 
   const handleManageSubscription = async () => {
@@ -124,6 +134,13 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow icon="globe-outline" label={t('settings.language')}
             value={LANGUAGE_NAMES[i18n.language]} chevron last
             onPress={handleCycleLanguage} />
+        </View>
+
+        {/* ── Invite Friends ─────────────────────────────────────── */}
+        <SectionHeader title="Invite Friends" />
+        <View style={styles.card}>
+          <SettingRow icon="people-outline" label="Share FitZo with a friend" chevron last
+            onPress={handleInviteFriends} />
         </View>
 
         {/* ── Notifications ──────────────────────────────────────── */}
