@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Platform, Share,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Platform, Share, Modal, Pressable, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,9 +14,9 @@ import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useTranslation } from 'react-i18next';
-import { setAppLanguage, SUPPORTED_LANGUAGES } from '../i18n';
+import { setAppLanguage, ALL_LANGUAGES } from '../i18n';
 
-const LANGUAGE_NAMES = { en: 'English', es: 'Español' };
+const LANGUAGE_NAMES = ALL_LANGUAGES.reduce((acc, l) => ({ ...acc, [l.code]: l.name }), {});
 
 function formatTime(hour, minute) {
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
@@ -32,12 +32,12 @@ export default function SettingsScreen({ navigation }) {
     useNotificationPrefs() ?? { prefs: {}, times: {}, setPref: () => {}, setReminderTime: () => {} };
   const [showPaywall, setShowPaywall] = useState(false);
   const [editingTimeKey, setEditingTimeKey] = useState(null);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const { t, i18n } = useTranslation();
 
-  const handleCycleLanguage = () => {
-    const idx = SUPPORTED_LANGUAGES.indexOf(i18n.language);
-    const next = SUPPORTED_LANGUAGES[(idx + 1) % SUPPORTED_LANGUAGES.length];
-    setAppLanguage(next);
+  const handleSelectLanguage = (code) => {
+    setAppLanguage(code);
+    setShowLanguagePicker(false);
   };
 
   const handleToggleNotif = async (key, value) => {
@@ -132,8 +132,8 @@ export default function SettingsScreen({ navigation }) {
         <SectionHeader title={t('settings.language')} />
         <View style={styles.card}>
           <SettingRow icon="globe-outline" label={t('settings.language')}
-            value={LANGUAGE_NAMES[i18n.language]} chevron last
-            onPress={handleCycleLanguage} />
+            value={LANGUAGE_NAMES[i18n.language] ?? i18n.language} chevron last
+            onPress={() => setShowLanguagePicker(true)} />
         </View>
 
         {/* ── Invite Friends ─────────────────────────────────────── */}
@@ -205,6 +205,14 @@ export default function SettingsScreen({ navigation }) {
 
       <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
 
+      <LanguagePickerModal
+        visible={showLanguagePicker}
+        colors={colors}
+        current={i18n.language}
+        onSelect={handleSelectLanguage}
+        onClose={() => setShowLanguagePicker(false)}
+      />
+
       {editingTimeKey && (
         <TimePickerModal
           colors={colors}
@@ -265,6 +273,40 @@ function TimePickerModal({ colors, initial, onClose, onSave }) {
         </View>
       </View>
     </View>
+  );
+}
+
+function LanguagePickerModal({ visible, colors, current, onSelect, onClose }) {
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.langOverlay} onPress={onClose}>
+        <Pressable style={styles.langSheet} onPress={() => {}}>
+          <View style={styles.langHeader}>
+            <Text style={styles.langTitle}>Select Language</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={ALL_LANGUAGES}
+            keyExtractor={(item) => item.code}
+            style={styles.langList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.langRow}
+                onPress={() => onSelect(item.code)}
+              >
+                <Text style={styles.langRowText}>{item.name}</Text>
+                {current === item.code && (
+                  <Ionicons name="checkmark-circle" size={18} color={colors.accent} />
+                )}
+              </TouchableOpacity>
+            )}
+          />
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -361,4 +403,24 @@ const createStyles = (colors) => StyleSheet.create({
   dangerLabel: { fontSize: typography.base, color: colors.danger, fontWeight: weight.medium },
 
   version: { textAlign: 'center', fontSize: typography.xs, color: colors.textDim, marginTop: 24 },
+
+  langOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  langSheet: {
+    width: '100%', maxWidth: 360, maxHeight: '70%', borderRadius: 20,
+    backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+  },
+  langHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  langTitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
+  langList: { paddingHorizontal: 4 },
+  langRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  langRowText: { fontSize: typography.base, color: colors.text },
 });
