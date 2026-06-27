@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -209,10 +210,12 @@ function SleepTrendChart({ data, goal, colors, width }) {
   const pw = width - P.l - P.r;
   const ph = H - P.t - P.b;
 
+  const { t } = useTranslation();
+
   if (data.length < 2) {
     return (
       <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Not enough data yet</Text>
+        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>{t('sleep.notEnoughDataYet')}</Text>
       </View>
     );
   }
@@ -290,6 +293,7 @@ function WeekStatCell({ value, label, color, colors }) {
 
 // ─── History row — ports renderSleep()'s log list ───────────────────────────
 function SleepLogRow({ log, goal, colors, onDelete, isLast, locked, onLockedPress }) {
+  const { t } = useTranslation();
   if (locked) {
     const ld = new Date(log.logged_at + 'T12:00:00');
     const lockedLabel = `${ld.getDate()} ${MONTH_NAMES[ld.getMonth()]} (${DAY_NAMES[ld.getDay()].slice(0, 1)}${DAY_NAMES[ld.getDay()].slice(1).toLowerCase()})`;
@@ -301,7 +305,7 @@ function SleepLogRow({ log, goal, colors, onDelete, isLast, locked, onLockedPres
         <View style={{ width: 3, height: 30, borderRadius: 2, backgroundColor: colors.textDim }} />
         <Text style={{ width: 78, fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{lockedLabel}</Text>
         <Ionicons name="lock-closed" size={13} color={colors.textDim} />
-        <Text style={{ flex: 1, fontSize: 11, color: colors.textDim, fontFamily: fontFamily.mono }}>Unlock with Pro</Text>
+        <Text style={{ flex: 1, fontSize: 11, color: colors.textDim, fontFamily: fontFamily.mono }}>{t('sleep.unlockWithPro')}</Text>
       </TouchableOpacity>
     );
   }
@@ -311,15 +315,15 @@ function SleepLogRow({ log, goal, colors, onDelete, isLast, locked, onLockedPres
 
   let statusLabel, statusBg, statusTxt, barColor;
   if (log.hours >= goal + 1) {
-    statusLabel = `✓ GOAL HIT`; statusBg = 'rgba(52,211,153,0.10)'; statusTxt = '#34d399'; barColor = '#34d399';
+    statusLabel = t('sleep.goalHit'); statusBg = 'rgba(52,211,153,0.10)'; statusTxt = '#34d399'; barColor = '#34d399';
   } else if (hitGoal) {
-    statusLabel = '✓ GOAL HIT'; statusBg = 'rgba(52,211,153,0.10)'; statusTxt = '#34d399'; barColor = '#34d399';
+    statusLabel = t('sleep.goalHit'); statusBg = 'rgba(52,211,153,0.10)'; statusTxt = '#34d399'; barColor = '#34d399';
   } else if (log.hours >= goal - 0.5) {
-    statusLabel = '≈ ALMOST'; statusBg = 'rgba(251,191,36,0.10)'; statusTxt = '#fbbf24'; barColor = '#fbbf24';
+    statusLabel = t('sleep.almost'); statusBg = 'rgba(251,191,36,0.10)'; statusTxt = '#fbbf24'; barColor = '#fbbf24';
   } else if (log.hours >= goal - 1.5) {
-    statusLabel = `↓ ${Math.abs(diff)}H SHORT`; statusBg = 'rgba(251,191,36,0.10)'; statusTxt = '#fbbf24'; barColor = '#fbbf24';
+    statusLabel = t('sleep.hoursShortWarn', { value: Math.abs(diff) }); statusBg = 'rgba(251,191,36,0.10)'; statusTxt = '#fbbf24'; barColor = '#fbbf24';
   } else {
-    statusLabel = `✗ ${Math.abs(diff)}H SHORT`; statusBg = 'rgba(248,113,113,0.10)'; statusTxt = '#f87171'; barColor = '#f87171';
+    statusLabel = t('sleep.hoursShortDanger', { value: Math.abs(diff) }); statusBg = 'rgba(248,113,113,0.10)'; statusTxt = '#f87171'; barColor = '#f87171';
   }
 
   const d = new Date(log.logged_at + 'T12:00:00');
@@ -345,6 +349,7 @@ function SleepLogRow({ log, goal, colors, onDelete, isLast, locked, onLockedPres
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function SleepScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -396,7 +401,7 @@ export default function SleepScreen() {
     const ydayStr = localDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000));
     const loggedRecently = logs.some(l => l.logged_at === todayStr || l.logged_at === ydayStr);
     syncConditionalReminder('sleepReminder', loggedRecently, reminderTime.hour, reminderTime.minute,
-      "Log last night's sleep", "You haven't logged your sleep yet.");
+      t('sleep.reminderTitle'), t('sleep.reminderBody'));
   }, [isLoading, notifPrefs.sleepReminder, logs, reminderTime.hour, reminderTime.minute]);
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
@@ -417,7 +422,7 @@ export default function SleepScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['sleep', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('sleep.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['sleep', user.id]);
@@ -441,7 +446,7 @@ export default function SleepScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['sleep', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('sleep.errorTitle'), e.message);
     },
     onSettled: () => { qc.invalidateQueries(['sleep', user.id]); },
   });
@@ -459,7 +464,7 @@ export default function SleepScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['sleep', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('sleep.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['sleep', user.id]);
@@ -493,13 +498,18 @@ export default function SleepScreen() {
   }, [sortedDesc, goal]);
 
   // Consistency — std dev of hours over last 14 entries (proxy: bedtime data not tracked)
-  const consistency = useMemo(() => {
+  const consistencyRaw = useMemo(() => {
     const recent = sortedDesc.slice(0, 14).map(e => e.hours);
-    if (recent.length < 3) return '—';
+    if (recent.length < 3) return null;
     const mean = recent.reduce((s, v) => s + v, 0) / recent.length;
     const sd = Math.sqrt(recent.reduce((s, v) => s + (v - mean) ** 2, 0) / recent.length);
     return sd < 0.5 ? 'Great' : sd < 1 ? 'Good' : sd < 1.5 ? 'Fair' : 'Poor';
   }, [sortedDesc]);
+  const consistency = consistencyRaw === null ? '—'
+    : consistencyRaw === 'Great' ? t('sleep.consistencyGreat')
+    : consistencyRaw === 'Good' ? t('sleep.consistencyGood')
+    : consistencyRaw === 'Fair' ? t('sleep.consistencyFair')
+    : t('sleep.consistencyPoor');
 
   // Recovery score
   const recoveryScore = useMemo(() => {
@@ -520,11 +530,11 @@ export default function SleepScreen() {
     return Math.min(100, Math.round((avg7 / goal) * 85));
   }, [sortedDesc, goal, avg7, sessions]);
 
-  const verdict = recoveryScore >= 80 ? 'Excellent — go hard today 💪'
-    : recoveryScore >= 65 ? 'Good — train as planned'
-    : recoveryScore >= 45 ? 'Moderate — consider lighter session'
-    : recoveryScore > 0 ? 'Low — rest or active recovery only'
-    : 'Log last night\'s sleep for your score';
+  const verdict = recoveryScore >= 80 ? t('sleep.verdictExcellent')
+    : recoveryScore >= 65 ? t('sleep.verdictGood')
+    : recoveryScore >= 45 ? t('sleep.verdictModerate')
+    : recoveryScore > 0 ? t('sleep.verdictLow')
+    : t('sleep.verdictNoData');
 
   const recoveryColor = recoveryScore >= 75 ? '#34d399' : recoveryScore >= 50 ? '#f59e0b' : '#f87171';
 
@@ -544,7 +554,7 @@ export default function SleepScreen() {
       const goodSleepSteps = goodArr.reduce((s, x) => s + x.steps, 0) / Math.max(1, goodArr.length);
       const poorSleepSteps = poorArr.reduce((s, x) => s + x.steps, 0) / Math.max(1, poorArr.length);
       if (poorSleepSteps > 0 && goodSleepSteps > poorSleepSteps * 1.1) {
-        out.push({ icon: '👟', text: 'You walk ', bold: `${Math.round(goodSleepSteps - poorSleepSteps).toLocaleString()} more steps`, rest: ` on days after a good night's sleep.` });
+        out.push({ icon: '👟', text: t('sleep.insightWalkPrefix'), bold: t('sleep.insightWalkBold', { value: Math.round(goodSleepSteps - poorSleepSteps).toLocaleString() }), rest: t('sleep.insightWalkSuffix') });
       }
     }
 
@@ -561,15 +571,15 @@ export default function SleepScreen() {
       const goodVol = goodArr.reduce((s, x) => s + x.vol, 0) / Math.max(1, goodArr.length);
       const poorVol = poorArr.reduce((s, x) => s + x.vol, 0) / Math.max(1, poorArr.length);
       if (poorVol > 0 && goodVol > poorVol * 1.05) {
-        out.push({ icon: '🏋️', text: 'Your workout volume is ', bold: `${Math.round((goodVol / poorVol - 1) * 100)}% higher`, rest: ' after nights you hit your sleep goal.' });
+        out.push({ icon: '🏋️', text: t('sleep.insightVolumePrefix'), bold: t('sleep.insightVolumeBold', { value: Math.round((goodVol / poorVol - 1) * 100) }), rest: t('sleep.insightVolumeSuffix') });
       }
     }
 
-    if (weekDebt >= 5) out.push({ icon: '⚠️', text: `You have a `, bold: `${weekDebt}h sleep debt`, rest: ` this week. Aim to add 30–60 min earlier bedtime for a few nights.` });
-    if (consistency === 'Poor') out.push({ icon: '🕐', text: 'Your sleep duration varies a lot. ', bold: 'Irregular sleep schedules', rest: ' reduce sleep quality even when total hours are the same.' });
-    if (avg7 >= goal) out.push({ icon: '✅', text: `You're averaging `, bold: `${avg7}h`, rest: ` — above your ${goal}h goal. Keep it up!` });
+    if (weekDebt >= 5) out.push({ icon: '⚠️', text: t('sleep.insightDebtPrefix'), bold: t('sleep.insightDebtBold', { value: weekDebt }), rest: t('sleep.insightDebtSuffix') });
+    if (consistencyRaw === 'Poor') out.push({ icon: '🕐', text: t('sleep.insightIrregularPrefix'), bold: t('sleep.insightIrregularBold'), rest: t('sleep.insightIrregularSuffix') });
+    if (avg7 >= goal) out.push({ icon: '✅', text: t('sleep.insightAveragingPrefix'), bold: `${avg7}h`, rest: t('sleep.insightAveragingSuffix', { goal }) });
     return out;
-  }, [weekDebt, consistency, avg7, goal, sortedDesc, steps, sessions]);
+  }, [weekDebt, consistencyRaw, avg7, goal, sortedDesc, steps, sessions, t]);
 
   // Trend chart data
   const chartData = useMemo(() => {
@@ -607,7 +617,7 @@ export default function SleepScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
-      <ScreenHeader title="SLEEP" colors={colors} />
+      <ScreenHeader title={t('sleep.headerTitle')} colors={colors} />
 
       {/* Month nav */}
       <View style={styles.topRow}>
@@ -622,7 +632,7 @@ export default function SleepScreen() {
             <Text style={styles.monthChevron}>›</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.screenLabel}>SLEEP</Text>
+        <Text style={styles.screenLabel}>{t('sleep.headerTitle')}</Text>
       </View>
 
       <ScrollView
@@ -656,7 +666,7 @@ export default function SleepScreen() {
               <View style={styles.recoveryRow}>
                 <CircularGauge
                   percent={recoveryScore} size={92} strokeWidth={9} color={recoveryColor}
-                  value={recoveryScore || '—'} label="RECOVERY"
+                  value={recoveryScore || '—'} label={t('sleep.recoveryLabel')}
                   valueStyle={{ color: colors.text }} labelStyle={{ color: colors.textMuted }}
                 />
                 <Text style={styles.recoveryVerdict}>{verdict}</Text>
@@ -666,36 +676,36 @@ export default function SleepScreen() {
 
               {/* ── Stat tiles ── */}
               <View style={styles.statTileRow}>
-                <StatTile value={`${avg7}h`} label="7D AVG HRS" colors={colors} />
+                <StatTile value={`${avg7}h`} label={t('sleep.statAvgHrs')} colors={colors} />
                 <View style={styles.statTileDivider} />
-                <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
+                <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label={t('sleep.statSleepDebt')} color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
                 <View style={styles.statTileDivider} />
-                <StatTile value={`${streak}d`} label="GOAL STREAK" color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} colors={colors} />
+                <StatTile value={`${streak}d`} label={t('sleep.statGoalStreak')} color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} colors={colors} />
                 <View style={styles.statTileDivider} />
-                <StatTile value={consistency} label="CONSISTENCY" colors={colors} />
+                <StatTile value={consistency} label={t('sleep.statConsistency')} colors={colors} />
               </View>
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-              <ExportCardTemplate ref={recoveryExport.ref} title="Sleep Recovery" colors={colors} width={340}>
+              <ExportCardTemplate ref={recoveryExport.ref} title={t('sleep.exportRecoveryTitle')} colors={colors} width={340}>
                 <View style={{ alignItems: 'center' }}>
                   <View style={styles.recoveryRow}>
                     <CircularGauge
                       percent={recoveryScore} size={92} strokeWidth={9} color={recoveryColor}
-                      value={recoveryScore || '—'} label="RECOVERY"
+                      value={recoveryScore || '—'} label={t('sleep.recoveryLabel')}
                       valueStyle={{ color: colors.text }} labelStyle={{ color: colors.textMuted }}
                     />
                     <Text style={styles.recoveryVerdict}>{verdict}</Text>
                   </View>
                   <View style={[styles.recoveryDividerLine, { width: '100%' }]} />
                   <View style={styles.statTileRow}>
-                    <StatTile value={`${avg7}h`} label="7D AVG HRS" colors={colors} />
+                    <StatTile value={`${avg7}h`} label={t('sleep.statAvgHrs')} colors={colors} />
                     <View style={styles.statTileDivider} />
-                    <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label="SLEEP DEBT" color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
+                    <StatTile value={weekDebt > 0 ? `-${weekDebt}h` : '0h'} label={t('sleep.statSleepDebt')} color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
                     <View style={styles.statTileDivider} />
-                    <StatTile value={`${streak}d`} label="GOAL STREAK" color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} colors={colors} />
+                    <StatTile value={`${streak}d`} label={t('sleep.statGoalStreak')} color={streak >= 5 ? colors.good : streak >= 3 ? colors.accent : colors.text} colors={colors} />
                     <View style={styles.statTileDivider} />
-                    <StatTile value={consistency} label="CONSISTENCY" colors={colors} />
+                    <StatTile value={consistency} label={t('sleep.statConsistency')} colors={colors} />
                   </View>
                 </View>
               </ExportCardTemplate>
@@ -705,8 +715,8 @@ export default function SleepScreen() {
             {insights.length > 0 && (
               <View style={styles.card}>
                 <View style={styles.cardTitleRow}>
-                  <Text style={styles.cardTitle}>ANALYSIS & INSIGHTS</Text>
-                  <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>
+                  <Text style={styles.cardTitle}>{t('sleep.analysisInsightsTitle')}</Text>
+                  <View style={styles.proBadge}><Text style={styles.proBadgeText}>{t('sleep.proBadge')}</Text></View>
                 </View>
                 {hasAccess ? (
                   insights.map((ins, i) => (
@@ -725,7 +735,7 @@ export default function SleepScreen() {
                         <View style={[styles.skeletonBar, { width: `${[92, 68, 80, 75][i % 4]}%` }]} />
                       </View>
                     ))}
-                    <Text style={styles.emptyText}>🔒 Unlock personalized sleep insights with Pro.</Text>
+                    <Text style={styles.emptyText}>{t('sleep.unlockInsightsCta')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -734,7 +744,7 @@ export default function SleepScreen() {
             {/* ── Monthly Heatmap ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+                <Text style={styles.cardTitle}>{t('sleep.monthlyHeatmapTitle')}</Text>
                 <TouchableOpacity
                   onPress={() => (hasAccess ? heatmapExport.exportCard() : recoveryExport.setShowPaywall(true))}
                   disabled={heatmapExport.exporting}
@@ -747,17 +757,17 @@ export default function SleepScreen() {
                 </TouchableOpacity>
               </View>
               <View style={[styles.hmLegend, styles.hmLegendRow]}>
-                <Text style={styles.hmLegendLabel}>Poor</Text>
+                <Text style={styles.hmLegendLabel}>{t('sleep.heatmapLegendPoor')}</Text>
                 {['rgba(248,113,113,0.6)', 'rgba(251,191,36,0.55)', 'rgba(52,211,153,0.5)', 'rgba(129,140,248,0.7)'].map((c, i) => (
                   <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
                 ))}
-                <Text style={styles.hmLegendLabel}>Great</Text>
+                <Text style={styles.hmLegendLabel}>{t('sleep.heatmapLegendGreat')}</Text>
               </View>
               <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} hasAccess={hasAccess} onLockedPress={() => recoveryExport.setShowPaywall(true)} />
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-              <ExportCardTemplate ref={heatmapExport.ref} title="Monthly Heatmap" subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
+              <ExportCardTemplate ref={heatmapExport.ref} title={t('sleep.monthlyHeatmapTitle')} subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
                 <SleepHeatmap year={year} month={month} logsByDate={logsByDate} goal={goal} colors={colors} hasAccess={true} cardWidth={258} />
               </ExportCardTemplate>
             </View>
@@ -765,7 +775,7 @@ export default function SleepScreen() {
             {/* ── Sleep Trend ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>SLEEP - TREND</Text>
+                <Text style={styles.cardTitle}>{t('sleep.trendTitle')}</Text>
                 <View style={styles.segmentRow}>
                   {[30, 60, 90, 0].map(d => (
                     <TouchableOpacity
@@ -776,27 +786,27 @@ export default function SleepScreen() {
                       }}
                       style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}
                     >
-                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}{d !== 30 && !hasAccess ? ' 🔒' : ''}</Text>
+                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? t('sleep.rangeAll') : t('sleep.rangeDays', { value: d })}{d !== 30 && !hasAccess ? ' 🔒' : ''}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
               <View style={styles.legendRow}>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>Daily</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>7D Avg</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? 'All' : `${trendRangeDays}D`} Avg</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>Goal</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>{t('sleep.legendDaily')}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>{t('sleep.legend7dAvg')}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? t('sleep.legendRangeAvgAll') : t('sleep.legendRangeAvgDays', { value: trendRangeDays })}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>{t('sleep.legendGoal')}</Text></View>
               </View>
               <SleepTrendChart data={chartData} goal={goal} colors={colors} width={chartWidth} />
               {trendStats && (
                 <View style={styles.trendStatsRow}>
-                  <WeekStatCell value={`${trendStats.avgNight}h`} label="AVG/NIGHT" color={colors.purple} colors={colors} />
+                  <WeekStatCell value={`${trendStats.avgNight}h`} label={t('sleep.statAvgPerNight')} color={colors.purple} colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={`${trendStats.goalNightsHit}/${trendStats.totalNights}`} label="GOAL NIGHTS" color={colors.good} colors={colors} />
+                  <WeekStatCell value={`${trendStats.goalNightsHit}/${trendStats.totalNights}`} label={t('sleep.statGoalNights')} color={colors.good} colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={`${trendStats.bestNight}h`} label="BEST NIGHT" color="#22d3ee" colors={colors} />
+                  <WeekStatCell value={`${trendStats.bestNight}h`} label={t('sleep.statBestNight')} color="#22d3ee" colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={trendStats.debtHours > 0 ? `${trendStats.debtHours}h` : '0h'} label="SLEEP DEBT" color={trendStats.debtHours > 0 ? colors.danger : colors.good} colors={colors} />
+                  <WeekStatCell value={trendStats.debtHours > 0 ? `${trendStats.debtHours}h` : '0h'} label={t('sleep.statSleepDebt')} color={trendStats.debtHours > 0 ? colors.danger : colors.good} colors={colors} />
                 </View>
               )}
             </View>
@@ -804,9 +814,9 @@ export default function SleepScreen() {
             {/* ── Sleep Log ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>SLEEP LOG</Text>
+                <Text style={styles.cardTitle}>{t('sleep.sleepLogTitle')}</Text>
               </View>
-              {monthLogs.length === 0 && <Text style={styles.emptyText}>No sleep entries for this month.</Text>}
+              {monthLogs.length === 0 && <Text style={styles.emptyText}>{t('sleep.noEntriesThisMonth')}</Text>}
               {groupByWeek(monthLogs, l => l.logged_at).map(week => (
                 <View key={week.key} style={styles.weekGroupBox}>
                   {week.items.map((log, i) => (
@@ -818,9 +828,9 @@ export default function SleepScreen() {
                       isLast={i === week.items.length - 1}
                       locked={!hasAccess && log.logged_at < logCutoffStr}
                       onLockedPress={() => setShowRangePaywall(true)}
-                      onDelete={() => Alert.alert('Delete entry', 'Remove this entry?', [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                      onDelete={() => Alert.alert(t('sleep.deleteEntryTitle'), t('sleep.deleteEntryMessage'), [
+                        { text: t('sleep.cancel'), style: 'cancel' },
+                        { text: t('sleep.delete'), style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
                       ])}
                     />
                   ))}
@@ -848,7 +858,7 @@ export default function SleepScreen() {
       {/* Log Sleep bottom sheet */}
       <BottomSheet visible={showLogSheet} onClose={() => setShowLogSheet(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>🌙 LOG SLEEP</Text>
+          <Text style={styles.sheetTitle}>{t('sleep.logSleepSheetTitle')}</Text>
           <TouchableOpacity onPress={() => setShowLogSheet(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
@@ -856,7 +866,7 @@ export default function SleepScreen() {
 
         <View style={styles.sheetFieldRow}>
           <View style={styles.sheetFieldCol}>
-            <Text style={styles.sheetFieldLabel}>DATE</Text>
+            <Text style={styles.sheetFieldLabel}>{t('sleep.dateLabel')}</Text>
             <DatePickerField
               value={logDate}
               onChange={setLogDate}
@@ -865,7 +875,7 @@ export default function SleepScreen() {
             />
           </View>
           <View style={styles.sheetFieldCol}>
-            <Text style={styles.sheetFieldLabel}>HOURS SLEPT</Text>
+            <Text style={styles.sheetFieldLabel}>{t('sleep.hoursSleptLabel')}</Text>
             <TextInput
               style={styles.sheetInput}
               value={hoursInput}
@@ -881,26 +891,26 @@ export default function SleepScreen() {
           style={styles.saveBtn}
           onPress={() => {
             const hours = parseFloat(hoursInput);
-            if (!Number.isFinite(hours)) return Alert.alert('Required', 'Enter a valid number of hours');
+            if (!Number.isFinite(hours)) return Alert.alert(t('sleep.requiredTitle'), t('sleep.enterValidHours'));
             logMut.mutate({ date: logDate, hours });
           }}
           disabled={logMut.isPending}
         >
-          {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Sleep</Text>}
+          {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('sleep.saveSleepBtn')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
 
       {/* Sleep Goal bottom sheet */}
       <BottomSheet visible={showGoalSheet} onClose={() => setShowGoalSheet(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>🌙 SET SLEEP GOAL</Text>
+          <Text style={styles.sheetTitle}>{t('sleep.setSleepGoalSheetTitle')}</Text>
           <TouchableOpacity onPress={() => setShowGoalSheet(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.goalBigVal}>{(parseFloat(goalInput) || goal)}h</Text>
-        <Text style={styles.goalBigSub}>sleep / night</Text>
+        <Text style={styles.goalBigSub}>{t('sleep.sleepPerNight')}</Text>
 
         <TextInput
           style={styles.sheetInput}
@@ -911,7 +921,7 @@ export default function SleepScreen() {
           keyboardType="numeric"
         />
 
-        <Text style={styles.sheetFieldLabel}>QUICK PRESETS</Text>
+        <Text style={styles.sheetFieldLabel}>{t('sleep.quickPresetsLabel')}</Text>
         <View style={styles.quickAddRow}>
           {[6, 7, 7.5, 8, 9].map(h => (
             <TouchableOpacity
@@ -929,7 +939,7 @@ export default function SleepScreen() {
           onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
           disabled={goalMut.isPending}
         >
-          {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Goal</Text>}
+          {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('sleep.saveGoalBtn')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
 

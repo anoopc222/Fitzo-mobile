@@ -42,7 +42,7 @@ export default function SettingsScreen({ navigation }) {
 
   const handleToggleNotif = async (key, value) => {
     const ok = await setNotifPref(key, value);
-    if (!ok) Alert.alert('Permission needed', 'Enable notifications for FitZo in your device settings to use reminders.');
+    if (!ok) Alert.alert(t('settings.permissionNeededTitle'), t('settings.permissionNeededMessage'));
   };
 
   const handleEditTime = (key) => {
@@ -53,10 +53,10 @@ export default function SettingsScreen({ navigation }) {
   const handleInviteFriends = async () => {
     try {
       await Share.share({
-        message: "I've been tracking my workouts, sleep, and nutrition with FitZo — thought you'd like it too. https://www.myfitzo.com",
+        message: t('settings.inviteMessage'),
       });
     } catch (e) {
-      Alert.alert('Error', e.message);
+      Alert.alert(t('settings.errorTitle'), e.message);
     }
   };
 
@@ -64,16 +64,16 @@ export default function SettingsScreen({ navigation }) {
     try {
       await manageSubscriptions();
     } catch (e) {
-      Alert.alert('Error', "Couldn't open subscription management. Please manage your subscription directly from the App Store / Play Store.");
+      Alert.alert(t('settings.errorTitle'), t('settings.manageSubscriptionError'));
     }
   };
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handlePasswordReset = () => {
-    Alert.alert('Reset Password', `A password reset link will be sent to ${user?.email}`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('settings.resetPasswordTitle'), t('settings.resetPasswordMessage', { email: user?.email }), [
+      { text: t('settings.cancel'), style: 'cancel' },
       {
-        text: 'Send',
+        text: t('settings.send'),
         onPress: () => supabase.auth.resetPasswordForEmail(user?.email, {
           redirectTo: Linking.createURL('auth/callback'),
         }),
@@ -83,18 +83,18 @@ export default function SettingsScreen({ navigation }) {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
-      'This permanently deletes your account and ALL data. This cannot be undone.',
+      t('settings.deleteAccountTitle'),
+      t('settings.deleteAccountMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('settings.cancel'), style: 'cancel' },
         {
-          text: 'Delete Forever', style: 'destructive',
+          text: t('settings.deleteForever'), style: 'destructive',
           onPress: async () => {
             try {
               await supabase.rpc('delete_user');
               await signOut();
             } catch (e) {
-              Alert.alert('Error', e.message);
+              Alert.alert(t('settings.errorTitle'), e.message);
             }
           },
         },
@@ -104,27 +104,27 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenHeader title="SETTINGS" colors={colors} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('settings.screenTitle')} colors={colors} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* ── Account ─────────────────────────────────────────────── */}
-        <SectionHeader title="Account" />
+        <SectionHeader title={t('settings.account')} />
         <View style={styles.card}>
-          <SettingRow icon="mail-outline" label="Email" value={user?.email} />
-          <SettingRow icon="key-outline" label="Change Password" chevron onPress={handlePasswordReset} />
-          <SettingRow icon="person-outline" label="Edit Profile" chevron last
+          <SettingRow icon="mail-outline" label={t('settings.email')} value={user?.email} />
+          <SettingRow icon="key-outline" label={t('settings.changePassword')} chevron onPress={handlePasswordReset} />
+          <SettingRow icon="person-outline" label={t('settings.editProfile')} chevron last
             onPress={() => navigation.navigate('Profile')} />
         </View>
 
         {/* ── Subscription ───────────────────────────────────────── */}
-        <SectionHeader title="Subscription" />
+        <SectionHeader title={t('settings.subscription')} />
         <View style={styles.card}>
-          <SettingRow icon="card-outline" label="Status" value={isPro ? 'Pro' : isInTrial ? 'Free Trial' : 'Free'} />
+          <SettingRow icon="card-outline" label={t('settings.status')} value={isPro ? t('settings.pro') : isInTrial ? t('settings.freeTrial') : t('settings.free')} />
           {subReady && !isPro && (
-            <SettingRow icon="rocket-outline" label="Upgrade to Pro" chevron
+            <SettingRow icon="rocket-outline" label={t('settings.upgradeToPro')} chevron
               onPress={() => navigation.navigate('Subscription')} />
           )}
-          <SettingRow icon="settings-outline" label="Manage / Cancel Subscription" chevron last
+          <SettingRow icon="settings-outline" label={t('settings.manageCancelSubscription')} chevron last
             onPress={handleManageSubscription} />
         </View>
 
@@ -137,48 +137,48 @@ export default function SettingsScreen({ navigation }) {
         </View>
 
         {/* ── Invite Friends ─────────────────────────────────────── */}
-        <SectionHeader title="Invite Friends" />
+        <SectionHeader title={t('settings.inviteFriends')} />
         <View style={styles.card}>
-          <SettingRow icon="people-outline" label="Share FitZo with a friend" chevron last
+          <SettingRow icon="people-outline" label={t('settings.shareWithFriend')} chevron last
             onPress={handleInviteFriends} />
         </View>
 
         {/* ── Notifications ──────────────────────────────────────── */}
-        <SectionHeader title="Notifications" />
+        <SectionHeader title={t('settings.notifications')} />
         <Text style={styles.sectionHint}>
-          {isPro ? 'Tap the time to customize when a reminder fires.' : 'Pro unlocks custom reminder times.'}
+          {isPro ? t('settings.notificationsHintPro') : t('settings.notificationsHintFree')}
         </Text>
         <View style={styles.card}>
           <SwitchRow
-            icon="clipboard-outline" label="Daily log reminder"
+            icon="clipboard-outline" label={t('settings.dailyLogReminder')}
             time={notifTimes.dailyLogReminder} isPro={isPro}
             onPressTime={() => handleEditTime('dailyLogReminder')}
             value={!!notifPrefs.dailyLogReminder}
             onValueChange={(v) => handleToggleNotif('dailyLogReminder', v)}
           />
           <SwitchRow
-            icon="barbell-outline" label="Workout reminder"
+            icon="barbell-outline" label={t('settings.workoutReminder')}
             time={notifTimes.workoutReminder} isPro={isPro}
             onPressTime={() => handleEditTime('workoutReminder')}
             value={!!notifPrefs.workoutReminder}
             onValueChange={(v) => handleToggleNotif('workoutReminder', v)}
           />
           <SwitchRow
-            icon="scale-outline" label="Remind me if weight isn't logged"
+            icon="scale-outline" label={t('settings.weightReminderLabel')}
             time={notifTimes.weightReminder} isPro={isPro}
             onPressTime={() => handleEditTime('weightReminder')}
             value={!!notifPrefs.weightReminder}
             onValueChange={(v) => handleToggleNotif('weightReminder', v)}
           />
           <SwitchRow
-            icon="footsteps-outline" label="Remind me if steps aren't logged"
+            icon="footsteps-outline" label={t('settings.stepsReminderLabel')}
             time={notifTimes.stepsReminder} isPro={isPro}
             onPressTime={() => handleEditTime('stepsReminder')}
             value={!!notifPrefs.stepsReminder}
             onValueChange={(v) => handleToggleNotif('stepsReminder', v)}
           />
           <SwitchRow
-            icon="moon-outline" label="Remind me if sleep isn't logged"
+            icon="moon-outline" label={t('settings.sleepReminderLabel')}
             time={notifTimes.sleepReminder} isPro={isPro}
             onPressTime={() => handleEditTime('sleepReminder')}
             value={!!notifPrefs.sleepReminder}
@@ -188,19 +188,19 @@ export default function SettingsScreen({ navigation }) {
         </View>
 
         {/* ── Danger Zone ─────────────────────────────────────────── */}
-        <SectionHeader title="Danger Zone" />
+        <SectionHeader title={t('settings.dangerZone')} />
         <View style={[styles.card, { borderColor: colors.danger + '44' }]}>
           <TouchableOpacity style={[styles.dangerRow, styles.rowBorder]} onPress={signOut}>
             <Ionicons name="log-out-outline" size={18} color={colors.danger} />
-            <Text style={styles.dangerLabel}>Sign Out</Text>
+            <Text style={styles.dangerLabel}>{t('settings.signOut')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.dangerRow} onPress={handleDeleteAccount}>
             <Ionicons name="trash-outline" size={18} color={colors.danger} />
-            <Text style={styles.dangerLabel}>Delete Account & All Data</Text>
+            <Text style={styles.dangerLabel}>{t('settings.deleteAccountAllData')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>FitZo v1.0.0</Text>
+        <Text style={styles.version}>{t('settings.appVersion', { version: '1.0.0' })}</Text>
       </ScrollView>
 
       <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
@@ -229,6 +229,7 @@ export default function SettingsScreen({ navigation }) {
 }
 
 function TimePickerModal({ colors, initial, onClose, onSave }) {
+  const { t } = useTranslation();
   const DateTimePicker = require('@react-native-community/datetimepicker').default;
   const styles = createStyles(colors);
   const initialDate = useMemo(() => {
@@ -262,13 +263,13 @@ function TimePickerModal({ colors, initial, onClose, onSave }) {
           textColor={colors.text} />
         <View style={styles.pickerActions}>
           <TouchableOpacity style={styles.pickerCancelBtn} onPress={onClose}>
-            <Text style={styles.pickerCancelText}>Cancel</Text>
+            <Text style={styles.pickerCancelText}>{t('settings.cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.pickerSaveBtn}
             onPress={() => onSave(pending.getHours(), pending.getMinutes())}
           >
-            <Text style={styles.pickerSaveText}>Save</Text>
+            <Text style={styles.pickerSaveText}>{t('settings.save')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -277,13 +278,14 @@ function TimePickerModal({ colors, initial, onClose, onSave }) {
 }
 
 function LanguagePickerModal({ visible, colors, current, onSelect, onClose }) {
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.langOverlay} onPress={onClose}>
         <Pressable style={styles.langSheet} onPress={() => {}}>
           <View style={styles.langHeader}>
-            <Text style={styles.langTitle}>Select Language</Text>
+            <Text style={styles.langTitle}>{t('settings.selectLanguage')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={22} color={colors.text} />
             </TouchableOpacity>

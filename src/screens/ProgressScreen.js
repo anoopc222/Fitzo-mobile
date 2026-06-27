@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -69,12 +70,13 @@ function calcTrend(sessions) {
 
 function TrendIcon({ trend }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   if (!trend) return null;
   const map = {
-    up: { icon: 'trending-up', color: colors.success, label: 'Improving' },
-    down: { icon: 'trending-down', color: colors.danger, label: 'Declining' },
-    flat: { icon: 'remove', color: colors.textMuted, label: 'Plateau' },
+    up: { icon: 'trending-up', color: colors.success, label: t('progress.trendImproving') },
+    down: { icon: 'trending-down', color: colors.danger, label: t('progress.trendDeclining') },
+    flat: { icon: 'remove', color: colors.textMuted, label: t('progress.trendPlateau') },
   };
   const { icon, color, label } = map[trend];
   return (
@@ -89,6 +91,7 @@ export default function ProgressScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { hasAccess } = useSubscription();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [search, setSearch] = useState('');
   const [expandedEx, setExpandedEx] = useState(null);
@@ -119,14 +122,14 @@ export default function ProgressScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenHeader title="PROGRESS" colors={colors} onBack={() => navigation.goBack()} />
-      <Text style={styles.subtitle}>{grouped.length} exercises tracked</Text>
+      <ScreenHeader title={t('progress.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />
+      <Text style={styles.subtitle}>{t('progress.exercisesTracked', { count: grouped.length })}</Text>
 
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={16} color={colors.textDim} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search exercises…"
+          placeholder={t('progress.searchPlaceholder')}
           placeholderTextColor={colors.textDim}
           value={search}
           onChangeText={setSearch}
@@ -147,12 +150,12 @@ export default function ProgressScreen({ navigation }) {
         {!isLoading && grouped.length === 0 && (
           <View style={styles.empty}>
             <Ionicons name="barbell-outline" size={48} color={colors.textDim} />
-            <Text style={styles.emptyTitle}>No exercises logged yet</Text>
-            <Text style={styles.emptySub}>Log workouts to track your progress</Text>
+            <Text style={styles.emptyTitle}>{t('progress.emptyTitle')}</Text>
+            <Text style={styles.emptySub}>{t('progress.emptySub')}</Text>
           </View>
         )}
         {!isLoading && filtered.length === 0 && search.length > 0 && (
-          <Text style={styles.noResults}>No exercises match "{search}"</Text>
+          <Text style={styles.noResults}>{t('progress.noResults', { search })}</Text>
         )}
 
         {filtered.map((ex, exIndex) => {
@@ -173,7 +176,7 @@ export default function ProgressScreen({ navigation }) {
                 <View style={styles.exHeaderLeft}>
                   <Text style={styles.exName}>{ex.name}</Text>
                   <View style={styles.exMeta}>
-                    <Text style={styles.exSessions}>{ex.sessions.length} sessions</Text>
+                    <Text style={styles.exSessions}>{t('progress.sessionsCount', { count: ex.sessions.length })}</Text>
                     {unlocked && <TrendIcon trend={trend} />}
                   </View>
                 </View>
@@ -181,12 +184,12 @@ export default function ProgressScreen({ navigation }) {
                   {!unlocked ? (
                     <View style={styles.proBadge}>
                       <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
-                      <Text style={styles.proBadgeText}>PRO</Text>
+                      <Text style={styles.proBadgeText}>{t('progress.proBadge')}</Text>
                     </View>
                   ) : pr.kg > 0 ? (
                     <View style={styles.prBadge}>
                       <Ionicons name="trophy" size={11} color={colors.warning} />
-                      <Text style={styles.prText}>PR {pr.kg}kg</Text>
+                      <Text style={styles.prText}>{t('progress.prBadge', { kg: pr.kg })}</Text>
                     </View>
                   ) : null}
                   {unlocked && (
@@ -217,7 +220,7 @@ export default function ProgressScreen({ navigation }) {
                   ))}
                   {!unlocked && (
                     <Text style={styles.lockedHint} onPress={() => setShowPaywall(true)}>
-                      🔒 Unlock PR badges, trend insights, and full session history
+                      {t('progress.lockedHint')}
                     </Text>
                   )}
                 </View>
@@ -229,11 +232,11 @@ export default function ProgressScreen({ navigation }) {
                   {pr.kg > 0 && (
                     <View style={styles.prRow}>
                       <Ionicons name="trophy" size={14} color={colors.warning} />
-                      <Text style={styles.prRowText}>Personal Best: {pr.kg} kg</Text>
+                      <Text style={styles.prRowText}>{t('progress.personalBest', { kg: pr.kg })}</Text>
                       {pr.date && <Text style={styles.prDate}>{new Date(pr.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>}
                     </View>
                   )}
-                  <Text style={styles.histSectionLabel}>LAST {Math.min(ex.sessions.length, 10)} SESSIONS</Text>
+                  <Text style={styles.histSectionLabel}>{t('progress.lastSessions', { count: Math.min(ex.sessions.length, 10) })}</Text>
                   {ex.sessions.slice(0, 10).map((s, i) => (
                     <View key={i} style={styles.histSessionRow}>
                       <Text style={styles.histDate}>
@@ -245,7 +248,7 @@ export default function ProgressScreen({ navigation }) {
                             {st.weight_kg}×{st.reps}{st.rpe ? `@${st.rpe}` : ''}
                           </Text>
                         ))}
-                        {s.sets.length > 5 && <Text style={styles.histMoreSets}>+{s.sets.length - 5} more</Text>}
+                        {s.sets.length > 5 && <Text style={styles.histMoreSets}>{t('progress.moreSets', { count: s.sets.length - 5 })}</Text>}
                       </View>
                       <Text style={styles.histVol}>{s.volume.toLocaleString()}</Text>
                     </View>

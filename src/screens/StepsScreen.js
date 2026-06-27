@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
@@ -44,11 +45,11 @@ const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
 const ACT_TYPES = [
-  { key: 'walk', label: 'Walk', icon: '🚶' },
-  { key: 'run', label: 'Run', icon: '🏃' },
-  { key: 'hike', label: 'Hike', icon: '🥾' },
-  { key: 'treadmill', label: 'Treadmill', icon: '⚡' },
-  { key: 'cycle', label: 'Cycle', icon: '🚴' },
+  { key: 'walk', labelKey: 'steps.activityWalk', label: 'Walk', icon: '🚶' },
+  { key: 'run', labelKey: 'steps.activityRun', label: 'Run', icon: '🏃' },
+  { key: 'hike', labelKey: 'steps.activityHike', label: 'Hike', icon: '🥾' },
+  { key: 'treadmill', labelKey: 'steps.activityTreadmill', label: 'Treadmill', icon: '⚡' },
+  { key: 'cycle', labelKey: 'steps.activityCycle', label: 'Cycle', icon: '🚴' },
 ];
 const ACT_ICON = { walk: '🚶', run: '🏃', hike: '🥾', treadmill: '⚡', cycle: '🚴' };
 
@@ -257,14 +258,14 @@ function correlateSleepSteps(stepLogs, sleepLogs) {
 }
 
 const MILESTONES = [
-  { km: 42.2, name: 'a marathon' },
-  { km: 100, name: 'a century ride' },
-  { km: 565, name: 'NYC to Boston' },
-  { km: 1270, name: 'London to Rome' },
-  { km: 3944, name: 'NYC to LA' },
-  { km: 9000, name: 'NYC to Tokyo' },
-  { km: 20000, name: 'half the globe' },
-  { km: 40075, name: 'around the world' },
+  { km: 42.2, nameKey: 'steps.milestoneMarathon', name: 'a marathon' },
+  { km: 100, nameKey: 'steps.milestoneCenturyRide', name: 'a century ride' },
+  { km: 565, nameKey: 'steps.milestoneNycBoston', name: 'NYC to Boston' },
+  { km: 1270, nameKey: 'steps.milestoneLondonRome', name: 'London to Rome' },
+  { km: 3944, nameKey: 'steps.milestoneNycLa', name: 'NYC to LA' },
+  { km: 9000, nameKey: 'steps.milestoneNycTokyo', name: 'NYC to Tokyo' },
+  { km: 20000, nameKey: 'steps.milestoneHalfGlobe', name: 'half the globe' },
+  { km: 40075, nameKey: 'steps.milestoneAroundWorld', name: 'around the world' },
 ];
 function milestoneDistance(totalKm) {
   let best = null;
@@ -307,6 +308,7 @@ function smoothPath(pts) {
 
 // ─── Range Trend Chart (Daily + 7D Avg + Goal) — mirrors WeightTrendChart ──
 function StepsTrendChart({ data, goal, colors, width }) {
+  const { t } = useTranslation();
   const H = 170;
   const P = { t: 18, r: 8, b: 22, l: 8 };
   const pw = width - P.l - P.r;
@@ -314,7 +316,7 @@ function StepsTrendChart({ data, goal, colors, width }) {
   if (data.length < 2) {
     return (
       <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Not enough data yet</Text>
+        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>{t('steps.notEnoughDataYet')}</Text>
       </View>
     );
   }
@@ -505,6 +507,7 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true,
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function StepsScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -554,7 +557,7 @@ export default function StepsScreen() {
     const todayStr = localDateStr(new Date());
     const loggedToday = logs.some(l => l.logged_at === todayStr);
     syncConditionalReminder('stepsReminder', loggedToday, reminderTime.hour, reminderTime.minute,
-      "Log today's steps", "You haven't logged your steps for today yet.");
+      t('steps.notifLogStepsTitle'), t('steps.notifLogStepsBody'));
   }, [isLoading, notifPrefs.stepsReminder, logs, reminderTime.hour, reminderTime.minute]);
 
   const logMut = useMutation({
@@ -578,7 +581,7 @@ export default function StepsScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['steps', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('steps.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['steps', user.id]);
@@ -602,7 +605,7 @@ export default function StepsScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['steps', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('steps.errorTitle'), e.message);
     },
     onSettled: () => { qc.invalidateQueries(['steps', user.id]); },
   });
@@ -620,7 +623,7 @@ export default function StepsScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['steps', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('steps.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['steps', user.id]);
@@ -799,7 +802,7 @@ export default function StepsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
-      <ScreenHeader title="STEPS" colors={colors} />
+      <ScreenHeader title={t('steps.screenTitle')} colors={colors} />
 
       {/* Month nav + unit toggle */}
       <View style={styles.topRow}>
@@ -837,10 +840,10 @@ export default function StepsScreen() {
                 <View style={{ flex: 1 }}>
                   <View style={styles.heroLabelRow}>
                     <Text style={styles.heroEmojiInline}>🚀</Text>
-                    <Text style={styles.heroLabel}>AVG STEPS/DAY · {MONTH_NAMES[month].toUpperCase()} {year}</Text>
+                    <Text style={styles.heroLabel}>{t('steps.avgStepsPerDayLabel', { month: MONTH_NAMES[month].toUpperCase(), year })}</Text>
                   </View>
                   <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
-                  <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
+                  <Text style={styles.heroSub}>{actStats ? t('steps.daysLoggedCount', { count: actStats.daysLogged }) : t('steps.noDataThisMonth')}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 8 }}>
                   <TouchableOpacity
@@ -863,21 +866,21 @@ export default function StepsScreen() {
 
               <View style={styles.tileCard}>
                 <View style={styles.tileRow}>
-                  <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} colors={colors} />
+                  <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label={t('steps.goalDaysLabel')} color={colors.warn} colors={colors} />
                   <View style={styles.tileColDivider} />
-                  <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} colors={colors} />
+                  <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label={t('steps.totalStepsLabel')} color={colors.text} colors={colors} />
                   <View style={styles.tileColDivider} />
-                  <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={`${distUnit.toUpperCase()} WALKED`} color={colors.good} colors={colors} />
+                  <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={t('steps.unitWalkedLabel', { unit: distUnit.toUpperCase() })} color={colors.good} colors={colors} />
                 </View>
                 <View style={styles.tileRowDivider} />
                 <View style={styles.tileRow}>
-                  <Tile value={actStats ? actStats.totalCal.toLocaleString() : '—'} label="KCAL BURNED" color={colors.pink} colors={colors} />
+                  <Tile value={actStats ? actStats.totalCal.toLocaleString() : '—'} label={t('steps.kcalBurnedLabel')} color={colors.pink} colors={colors} />
                   <View style={styles.tileColDivider} />
-                  <Tile value={actStats ? `${actStats.totalFatG.toFixed(1)}g` : '—'} label="🔥 FAT BURNED" color={colors.warn} colors={colors} />
+                  <Tile value={actStats ? `${actStats.totalFatG.toFixed(1)}g` : '—'} label={t('steps.fatBurnedLabel')} color={colors.warn} colors={colors} />
                   <View style={styles.tileColDivider} />
                   <Tile
                     value={actStats ? (actStats.totalMins >= 60 ? `${Math.floor(actStats.totalMins / 60)}h ${actStats.totalMins % 60}m` : `${actStats.totalMins}m`) : '—'}
-                    label="⏱ DURATION" color={colors.text} colors={colors}
+                    label={t('steps.durationLabel')} color={colors.text} colors={colors}
                   />
                 </View>
               </View>
@@ -885,12 +888,12 @@ export default function StepsScreen() {
               <View style={styles.pbInlineRow}>
                 <Text style={styles.pbInlineTrophy}>🏆</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.pbInlineLabel}>PERSONAL BEST DAY</Text>
-                  <Text style={styles.pbInlineVal}>{personalBest ? `${personalBest.steps.toLocaleString()} steps` : '—'}{personalBest ? ` · ${fmtDateShort(personalBest.logged_at)}` : ''}</Text>
+                  <Text style={styles.pbInlineLabel}>{t('steps.personalBestDayLabel')}</Text>
+                  <Text style={styles.pbInlineVal}>{personalBest ? t('steps.stepsCount', { count: personalBest.steps.toLocaleString() }) : '—'}{personalBest ? ` · ${fmtDateShort(personalBest.logged_at)}` : ''}</Text>
                 </View>
                 {lifetimeSteps > 0 && (
                   <View style={styles.pbChip}>
-                    <Text style={styles.pbChipText}>{fmtK(lifetimeSteps)} steps total</Text>
+                    <Text style={styles.pbChipText}>{t('steps.stepsTotal', { count: fmtK(lifetimeSteps) })}</Text>
                   </View>
                 )}
               </View>
@@ -899,8 +902,8 @@ export default function StepsScreen() {
                 <View style={styles.streakNudgeLine}>
                   <Text style={styles.streakPillEmoji}>🔥</Text>
                   <Text style={styles.streakPillText} numberOfLines={1}>
-                    {streaks.current > 0 ? `${streaks.current}-day streak` : 'No active streak'}
-                    {streaks.longest > streaks.current ? `  ·  best ${streaks.longest} days` : ''}
+                    {streaks.current > 0 ? t('steps.dayStreak', { count: streaks.current }) : t('steps.noActiveStreak')}
+                    {streaks.longest > streaks.current ? t('steps.bestDaysSuffix', { count: streaks.longest }) : ''}
                   </Text>
                 </View>
                 {todaySteps < defaultGoal && (
@@ -908,8 +911,8 @@ export default function StepsScreen() {
                     <Ionicons name="walk-outline" size={13} color="#f59e0b" />
                     <Text style={styles.nudgeTextCompact} numberOfLines={1}>
                       {todaySteps > 0
-                        ? `Walk ${stepsNeededToday.toLocaleString()} more steps today to hit your goal`
-                        : `Log today's steps — ${defaultGoal.toLocaleString()} to hit your goal`}
+                        ? t('steps.walkMoreStepsToday', { count: stepsNeededToday.toLocaleString() })
+                        : t('steps.logTodayStepsToHitGoal', { goal: defaultGoal.toLocaleString() })}
                     </Text>
                   </View>
                 )}
@@ -917,17 +920,17 @@ export default function StepsScreen() {
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-              <ExportCardTemplate ref={heroExport.ref} title="Steps" subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
+              <ExportCardTemplate ref={heroExport.ref} title={t('steps.exportTitle')} subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
                 <View>
                   <Text style={styles.heroNum}>{actStats ? actStats.avgSteps.toLocaleString() : '—'}</Text>
-                  <Text style={styles.heroSub}>{actStats ? `${actStats.daysLogged} days logged` : 'No data logged for this month yet'}</Text>
+                  <Text style={styles.heroSub}>{actStats ? t('steps.daysLoggedCount', { count: actStats.daysLogged }) : t('steps.noDataThisMonth')}</Text>
                   <View style={[styles.tileCard, { marginTop: 14 }]}>
                     <View style={styles.tileRow}>
-                      <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label="GOAL DAYS" color={colors.warn} colors={colors} />
+                      <Tile value={actStats ? `${actStats.goalDaysCount}/${actStats.daysLogged} (${actStats.hitRate}%)` : '—'} label={t('steps.goalDaysLabel')} color={colors.warn} colors={colors} />
                       <View style={styles.tileColDivider} />
-                      <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label="TOTAL STEPS" color={colors.text} colors={colors} />
+                      <Tile value={actStats ? actStats.totalSteps.toLocaleString() : '—'} label={t('steps.totalStepsLabel')} color={colors.text} colors={colors} />
                       <View style={styles.tileColDivider} />
-                      <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={`${distUnit.toUpperCase()} WALKED`} color={colors.good} colors={colors} />
+                      <Tile value={actStats ? `${toDispKm(actStats.totalKm, distUnit).toFixed(1)}${distUnit}` : '—'} label={t('steps.unitWalkedLabel', { unit: distUnit.toUpperCase() })} color={colors.good} colors={colors} />
                     </View>
                   </View>
                 </View>
@@ -937,38 +940,38 @@ export default function StepsScreen() {
             {/* ── Analysis & Insights (Pro) ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>ANALYSIS & INSIGHTS</Text>
-                <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>
+                <Text style={styles.cardTitle}>{t('steps.analysisInsightsTitle')}</Text>
+                <View style={styles.proBadge}><Text style={styles.proBadgeText}>{t('steps.proBadge')}</Text></View>
               </View>
               <View style={styles.weekStatsRow}>
-                <WeekStatCell value={hasAccess ? String(streaks.longest) : '●●'} label="BEST STREAK" color="#f59e0b" colors={colors} />
+                <WeekStatCell value={hasAccess ? String(streaks.longest) : '●●'} label={t('steps.bestStreakLabel')} color="#f59e0b" colors={colors} />
                 <View style={styles.weekStatDivider} />
-                <WeekStatCell value={hasAccess ? (consistency8wk != null ? `${consistency8wk}%` : '—') : '●●%'} label="8WK CONSISTENCY" color={colors.good} colors={colors} />
+                <WeekStatCell value={hasAccess ? (consistency8wk != null ? `${consistency8wk}%` : '—') : '●●%'} label={t('steps.consistency8wkLabel')} color={colors.good} colors={colors} />
                 <View style={styles.weekStatDivider} />
-                <WeekStatCell value={hasAccess ? (busiestDow ? busiestDow.label : '—') : '●●'} label="BUSIEST DAY" color="#22d3ee" colors={colors} />
+                <WeekStatCell value={hasAccess ? (busiestDow ? busiestDow.label : '—') : '●●'} label={t('steps.busiestDayLabel')} color="#22d3ee" colors={colors} />
               </View>
               {hasAccess ? (
                 <View style={{ marginTop: 12, gap: 8 }}>
                   {goalSuggestion && (
                     <View style={styles.tipRow}>
                       <Text style={styles.tipEmoji}>📈</Text>
-                      <Text style={styles.tipText}>You're averaging {goalSuggestion.avg.toLocaleString()} steps/day and hitting your goal {goalSuggestion.hitRate}% of the time — consider raising your goal to {goalSuggestion.suggested.toLocaleString()}.</Text>
+                      <Text style={styles.tipText}>{t('steps.tipRaiseGoal', { avg: goalSuggestion.avg.toLocaleString(), hitRate: goalSuggestion.hitRate, suggested: goalSuggestion.suggested.toLocaleString() })}</Text>
                     </View>
                   )}
                   {sleepCorrelation && sleepCorrelation.diff > 200 && (
                     <View style={styles.tipRow}>
                       <Text style={styles.tipEmoji}>😴</Text>
-                      <Text style={styles.tipText}>After nights with under 6h sleep, you average {sleepCorrelation.diff.toLocaleString()} fewer steps ({sleepCorrelation.avgLow.toLocaleString()} vs {sleepCorrelation.avgNormal.toLocaleString()}).</Text>
+                      <Text style={styles.tipText}>{t('steps.tipSleepCorrelation', { diff: sleepCorrelation.diff.toLocaleString(), avgLow: sleepCorrelation.avgLow.toLocaleString(), avgNormal: sleepCorrelation.avgNormal.toLocaleString() })}</Text>
                     </View>
                   )}
                   {milestone.best && (
                     <View style={styles.tipRow}>
                       <Text style={styles.tipEmoji}>🌍</Text>
-                      <Text style={styles.tipText}>You've walked the distance of {milestone.best.name} ({Math.round(milestone.totalKm).toLocaleString()} km lifetime).</Text>
+                      <Text style={styles.tipText}>{t('steps.tipMilestone', { name: t(milestone.best.nameKey), km: Math.round(milestone.totalKm).toLocaleString() })}</Text>
                     </View>
                   )}
                   {!goalSuggestion && !sleepCorrelation && !milestone.best && (
-                    <Text style={styles.emptyText}>Log a few more days to unlock personalized insights.</Text>
+                    <Text style={styles.emptyText}>{t('steps.logMoreDaysForInsights')}</Text>
                   )}
                 </View>
               ) : (
@@ -981,7 +984,7 @@ export default function StepsScreen() {
                       </View>
                     ))}
                   </View>
-                  <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>🔒 Unlock streak history, sleep correlation & adaptive goal tips with Pro.</Text>
+                  <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>{t('steps.unlockInsightsPro')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -991,32 +994,32 @@ export default function StepsScreen() {
               <>
                 <View style={styles.weekCompareCardMerged}>
                   <View style={styles.weekCompareCell}>
-                    <Text style={styles.weekCompareTitle}>THIS WEEK</Text>
+                    <Text style={styles.weekCompareTitle}>{t('steps.thisWeekLabel')}</Text>
                     <Text style={[styles.weekCompareVal, { color: colors.accent }]}>{thisWeekAvg ? thisWeekAvg.toLocaleString() : '—'}</Text>
                     <View style={styles.weekCompareBarTrack}>
                       <View style={[styles.weekCompareBarFill, { width: `${thisWeekAvg ? Math.min(100, (thisWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.accent }]} />
                     </View>
-                    <Text style={styles.weekCompareSub}>avg/day · {thisWeekLogs.length}d</Text>
+                    <Text style={styles.weekCompareSub}>{t('steps.avgPerDayDaysSuffix', { count: thisWeekLogs.length })}</Text>
                   </View>
                   <View style={styles.weekCompareDivider} />
                   <View style={styles.weekCompareCell}>
-                    <Text style={styles.weekCompareTitle}>LAST WEEK</Text>
+                    <Text style={styles.weekCompareTitle}>{t('steps.lastWeekLabel')}</Text>
                     <Text style={[styles.weekCompareVal, { color: colors.textMuted }]}>{lastWeekAvg ? lastWeekAvg.toLocaleString() : '—'}</Text>
                     <View style={styles.weekCompareBarTrack}>
                       <View style={[styles.weekCompareBarFill, { width: `${lastWeekAvg ? Math.min(100, (lastWeekAvg / maxWeek) * 100) : 0}%`, backgroundColor: colors.textMuted }]} />
                     </View>
-                    <Text style={styles.weekCompareSub}>avg/day · {lastWeekLogs.length}d</Text>
+                    <Text style={styles.weekCompareSub}>{t('steps.avgPerDayDaysSuffix', { count: lastWeekLogs.length })}</Text>
                   </View>
                 </View>
 
                 <View style={styles.card}>
                   <View style={styles.cardTitleRow}>
-                    <Text style={styles.cardTitle}>THIS WEEK — DAILY STEPS</Text>
+                    <Text style={styles.cardTitle}>{t('steps.thisWeekDailyStepsTitle')}</Text>
                     <View style={styles.hmLegend}>
                       <View style={[styles.hmLegendSwatch, { backgroundColor: '#34d399' }]} />
-                      <Text style={styles.hmLegendLabel}>Goal</Text>
+                      <Text style={styles.hmLegendLabel}>{t('steps.legendGoal')}</Text>
                       <View style={[styles.hmLegendSwatch, { backgroundColor: '#f59e0b', marginLeft: 8 }]} />
-                      <Text style={styles.hmLegendLabel}>Below</Text>
+                      <Text style={styles.hmLegendLabel}>{t('steps.legendBelow')}</Text>
                     </View>
                   </View>
                   <WeeklyBarChart days={weekDays} goal={defaultGoal} colors={colors} width={chartWidth} />
@@ -1029,13 +1032,13 @@ export default function StepsScreen() {
                     ))}
                   </View>
                   <View style={styles.weekStatsRow}>
-                    <WeekStatCell value={`${weekGoalDays}/7`} label="GOAL DAYS" color={colors.good} colors={colors} />
+                    <WeekStatCell value={`${weekGoalDays}/7`} label={t('steps.goalDaysLabel')} color={colors.good} colors={colors} />
                     <View style={styles.weekStatDivider} />
-                    <WeekStatCell value={weekAvg ? weekAvg.toLocaleString() : '—'} label="AVG/DAY" color={colors.accent} colors={colors} />
+                    <WeekStatCell value={weekAvg ? weekAvg.toLocaleString() : '—'} label={t('steps.avgPerDayLabel')} color={colors.accent} colors={colors} />
                     <View style={styles.weekStatDivider} />
-                    <WeekStatCell value={weekBest ? weekBest.toLocaleString() : '—'} label="BEST DAY" color="#22d3ee" colors={colors} />
+                    <WeekStatCell value={weekBest ? weekBest.toLocaleString() : '—'} label={t('steps.bestDayLabel')} color="#22d3ee" colors={colors} />
                     <View style={styles.weekStatDivider} />
-                    <WeekStatCell value={weekTotal ? weekTotal.toLocaleString() : '—'} label="TOTAL" color={colors.text} colors={colors} />
+                    <WeekStatCell value={weekTotal ? weekTotal.toLocaleString() : '—'} label={t('steps.totalLabel')} color={colors.text} colors={colors} />
                   </View>
                 </View>
               </>
@@ -1044,7 +1047,7 @@ export default function StepsScreen() {
             {/* ── Monthly Heatmap ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+                <Text style={styles.cardTitle}>{t('steps.monthlyHeatmapTitle')}</Text>
                 <TouchableOpacity
                   onPress={() => (hasAccess ? heatmapExport.exportCard() : heroExport.setShowPaywall(true))}
                   disabled={heatmapExport.exporting}
@@ -1057,17 +1060,17 @@ export default function StepsScreen() {
                 </TouchableOpacity>
               </View>
               <View style={[styles.hmLegend, styles.hmLegendRow]}>
-                <Text style={styles.hmLegendLabel}>Less</Text>
+                <Text style={styles.hmLegendLabel}>{t('steps.legendLess')}</Text>
                 {['rgba(56,189,248,0.22)', 'rgba(34,211,238,0.42)', 'rgba(20,184,166,0.65)', 'rgba(52,211,153,0.88)'].map((c, i) => (
                   <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
                 ))}
-                <Text style={styles.hmLegendLabel}>More</Text>
+                <Text style={styles.hmLegendLabel}>{t('steps.legendMore')}</Text>
               </View>
               <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={hasAccess} onLockedPress={() => heroExport.setShowPaywall(true)} />
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-              <ExportCardTemplate ref={heatmapExport.ref} title="Monthly Heatmap" subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
+              <ExportCardTemplate ref={heatmapExport.ref} title={t('steps.monthlyHeatmapTitle')} subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
                 <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={true} cardWidth={258} />
               </ExportCardTemplate>
             </View>
@@ -1075,7 +1078,7 @@ export default function StepsScreen() {
             {/* ── Steps Trend ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>STEPS - TREND</Text>
+                <Text style={styles.cardTitle}>{t('steps.stepsTrendTitle')}</Text>
                 <View style={styles.segmentRow}>
                   {[30, 60, 90, 0].map(d => (
                     <TouchableOpacity
@@ -1086,27 +1089,27 @@ export default function StepsScreen() {
                       }}
                       style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}
                     >
-                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}{d !== 30 && !hasAccess ? ' 🔒' : ''}</Text>
+                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? t('steps.rangeAll') : t('steps.rangeDays', { count: d })}{d !== 30 && !hasAccess ? ' 🔒' : ''}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
               <View style={styles.legendRow}>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>Daily</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>7D Avg</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? 'All' : `${trendRangeDays}D`} Avg</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>Goal</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>{t('steps.legendDaily')}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>{t('steps.legend7dAvg')}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? t('steps.legendAllAvg') : t('steps.legendRangeAvg', { count: trendRangeDays })}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>{t('steps.legendGoal')}</Text></View>
               </View>
               <StepsTrendChart data={trendData} goal={defaultGoal} colors={colors} width={chartWidth} />
               {trendStats && (
                 <View style={styles.weekStatsRow}>
-                  <WeekStatCell value={trendStats.avgPerDay.toLocaleString()} label="AVG/DAY" color={colors.accent} colors={colors} />
+                  <WeekStatCell value={trendStats.avgPerDay.toLocaleString()} label={t('steps.avgPerDayLabel')} color={colors.accent} colors={colors} />
                   <View style={styles.weekStatDivider} />
-                  <WeekStatCell value={`${trendStats.goalDaysHit}/${trendStats.totalDays}`} label="GOAL DAYS" color={colors.good} colors={colors} />
+                  <WeekStatCell value={`${trendStats.goalDaysHit}/${trendStats.totalDays}`} label={t('steps.goalDaysLabel')} color={colors.good} colors={colors} />
                   <View style={styles.weekStatDivider} />
-                  <WeekStatCell value={trendStats.bestDay.toLocaleString()} label="BEST DAY" color="#22d3ee" colors={colors} />
+                  <WeekStatCell value={trendStats.bestDay.toLocaleString()} label={t('steps.bestDayLabel')} color="#22d3ee" colors={colors} />
                   <View style={styles.weekStatDivider} />
-                  <WeekStatCell value={trendStats.totalSteps.toLocaleString()} label="TOTAL" color={colors.text} colors={colors} />
+                  <WeekStatCell value={trendStats.totalSteps.toLocaleString()} label={t('steps.totalLabel')} color={colors.text} colors={colors} />
                 </View>
               )}
             </View>
@@ -1114,7 +1117,7 @@ export default function StepsScreen() {
             {/* ── Day-of-Week Average (Pro) ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>AVG STEPS BY DAY OF WEEK</Text>
+                <Text style={styles.cardTitle}>{t('steps.avgStepsByDayOfWeekTitle')}</Text>
                 {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
               </View>
               {hasAccess ? (
@@ -1150,7 +1153,7 @@ export default function StepsScreen() {
                       </View>
                     ))}
                   </View>
-                  <Text style={[styles.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock weekday patterns with Pro.</Text>
+                  <Text style={[styles.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>{t('steps.unlockWeekdayPatternsPro')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1159,7 +1162,7 @@ export default function StepsScreen() {
             {actBreakdown.length > 0 && (
               <View style={styles.card}>
                 <View style={styles.cardTitleRow}>
-                  <Text style={styles.cardTitle}>ACTIVITY BREAKDOWN</Text>
+                  <Text style={styles.cardTitle}>{t('steps.activityBreakdownTitle')}</Text>
                   {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
                 </View>
                 {hasAccess ? (
@@ -1167,8 +1170,8 @@ export default function StepsScreen() {
                     {actBreakdown.map(a => (
                       <View key={a.key}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <Text style={styles.actBreakdownLabel}>{a.icon} {a.label} · {a.count}x</Text>
-                          <Text style={styles.actBreakdownVal}>{a.steps.toLocaleString()} steps · {a.km.toFixed(1)}km · {a.cal}cal</Text>
+                          <Text style={styles.actBreakdownLabel}>{a.icon} {t(a.labelKey)} · {t('steps.countSuffix', { count: a.count })}</Text>
+                          <Text style={styles.actBreakdownVal}>{t('steps.activityStatsLine', { steps: a.steps.toLocaleString(), km: a.km.toFixed(1), cal: a.cal })}</Text>
                         </View>
                         <View style={styles.weekCompareBarTrack}>
                           <View style={[styles.weekCompareBarFill, { width: `${a.pct}%`, backgroundColor: colors.accent }]} />
@@ -1183,7 +1186,7 @@ export default function StepsScreen() {
                         <View key={a.key}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                             <Text style={styles.actBreakdownLabel}>{a.icon} ●●●● · ●x</Text>
-                            <Text style={styles.actBreakdownVal}>●● steps · ●.●km · ●●cal</Text>
+                            <Text style={styles.actBreakdownVal}>{t('steps.activityStatsMasked')}</Text>
                           </View>
                           <View style={styles.weekCompareBarTrack}>
                             <View style={[styles.weekCompareBarFill, { width: `${[70, 45, 60, 30][i % 4]}%`, backgroundColor: colors.dim }]} />
@@ -1191,7 +1194,7 @@ export default function StepsScreen() {
                         </View>
                       ))}
                     </View>
-                    <Text style={[styles.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock activity-type breakdown with Pro.</Text>
+                    <Text style={[styles.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>{t('steps.unlockActivityBreakdownPro')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1199,8 +1202,8 @@ export default function StepsScreen() {
 
             {/* ── Daily Log ── */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>DAILY LOG</Text>
-              {allMonthSorted.length === 0 && <Text style={styles.emptyText}>No step entries for this month.</Text>}
+              <Text style={styles.cardTitle}>{t('steps.dailyLogTitle')}</Text>
+              {allMonthSorted.length === 0 && <Text style={styles.emptyText}>{t('steps.noStepEntriesThisMonth')}</Text>}
               {groupByWeek(allMonthSorted, l => l.logged_at).map(week => (
                 <View key={week.key} style={styles.weekGroupBox}>
                   {week.items.map((log, i) => (
@@ -1213,9 +1216,9 @@ export default function StepsScreen() {
                           {fmtK(log.steps)}
                         </Text>
                         <TouchableOpacity
-                          onPress={() => Alert.alert('Delete entry', `Remove ${fmtDateShort(log.logged_at)}?`, [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                          onPress={() => Alert.alert(t('steps.deleteEntryTitle'), t('steps.removeEntryConfirm', { date: fmtDateShort(log.logged_at) }), [
+                            { text: t('steps.cancel'), style: 'cancel' },
+                            { text: t('steps.delete'), style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
                           ])}
                           style={styles.logDelBtn}
                         >
@@ -1249,7 +1252,7 @@ export default function StepsScreen() {
       {/* Log Steps bottom sheet */}
       <BottomSheet visible={showLogSheet} onClose={() => setShowLogSheet(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>LOG STEPS</Text>
+          <Text style={styles.sheetTitle}>{t('steps.logStepsTitle')}</Text>
           <TouchableOpacity onPress={() => setShowLogSheet(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
@@ -1258,13 +1261,13 @@ export default function StepsScreen() {
         {yesterdayLog && (
           <TouchableOpacity style={styles.repeatYesterdayBtn} onPress={repeatYesterday}>
             <Ionicons name="repeat" size={13} color={colors.accent} />
-            <Text style={styles.repeatYesterdayText}>Repeat yesterday ({fmtK(yesterdayLog.steps)} steps)</Text>
+            <Text style={styles.repeatYesterdayText}>{t('steps.repeatYesterday', { count: fmtK(yesterdayLog.steps) })}</Text>
           </TouchableOpacity>
         )}
 
         <View style={styles.sheetFieldRow}>
           <View style={styles.sheetFieldCol}>
-            <Text style={styles.sheetFieldLabel}>DATE</Text>
+            <Text style={styles.sheetFieldLabel}>{t('steps.dateFieldLabel')}</Text>
             <DatePickerField
               value={logDate}
               onChange={setLogDate}
@@ -1273,7 +1276,7 @@ export default function StepsScreen() {
             />
           </View>
           <View style={styles.sheetFieldCol}>
-            <Text style={styles.sheetFieldLabel}>STEPS</Text>
+            <Text style={styles.sheetFieldLabel}>{t('steps.stepsFieldLabel')}</Text>
             <TextInput
               style={styles.sheetInput}
               value={stepsInput}
@@ -1285,7 +1288,7 @@ export default function StepsScreen() {
           </View>
         </View>
 
-        <Text style={styles.sheetFieldLabel}>QUICK ADD</Text>
+        <Text style={styles.sheetFieldLabel}>{t('steps.quickAddLabel')}</Text>
         <View style={styles.quickAddRow}>
           {[2000, 5000, 8000, 10000, 12000].map(n => (
             <TouchableOpacity
@@ -1293,24 +1296,24 @@ export default function StepsScreen() {
               style={styles.quickAddChip}
               onPress={() => setStepsInput(String((parseInt(stepsInput, 10) || 0) + n))}
             >
-              <Text style={styles.quickAddChipText}>+{n / 1000}k</Text>
+              <Text style={styles.quickAddChipText}>{t('steps.quickAddChip', { count: n / 1000 })}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.sheetFieldLabel}>ACTIVITY TYPE</Text>
+        <Text style={styles.sheetFieldLabel}>{t('steps.activityTypeLabel')}</Text>
         <View style={styles.actTypeRow}>
-          {ACT_TYPES.map(t => (
-            <Chip key={t.key} label={`${t.icon} ${t.label}`} selected={actType === t.key} onPress={() => setActType(t.key)} style={{ marginRight: 8, marginBottom: 8 }} />
+          {ACT_TYPES.map(at => (
+            <Chip key={at.key} label={`${at.icon} ${t(at.labelKey)}`} selected={actType === at.key} onPress={() => setActType(at.key)} style={{ marginRight: 8, marginBottom: 8 }} />
           ))}
         </View>
 
-        <Text style={styles.sheetFieldLabel}>NOTE (OPTIONAL)</Text>
+        <Text style={styles.sheetFieldLabel}>{t('steps.noteOptionalLabel')}</Text>
         <TextInput
           style={styles.sheetNoteInput}
           value={note}
           onChangeText={setNote}
-          placeholder="e.g. Morning walk in the park..."
+          placeholder={t('steps.notePlaceholder')}
           placeholderTextColor={colors.textDim}
           multiline
         />
@@ -1320,21 +1323,21 @@ export default function StepsScreen() {
           onPress={() => { if (stepsInput) logMut.mutate({ date: logDate, steps: parseInt(stepsInput, 10), activityType: actType, note }); }}
           disabled={logMut.isPending}
         >
-          {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Steps</Text>}
+          {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('steps.saveStepsButton')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
 
       {/* Step Goal bottom sheet */}
       <BottomSheet visible={showGoalSheet} onClose={() => setShowGoalSheet(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>SET DAILY GOAL</Text>
+          <Text style={styles.sheetTitle}>{t('steps.setDailyGoalTitle')}</Text>
           <TouchableOpacity onPress={() => setShowGoalSheet(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.goalBigVal}>{(parseInt(goalInput, 10) || defaultGoal).toLocaleString()}</Text>
-        <Text style={styles.goalBigSub}>steps / day</Text>
+        <Text style={styles.goalBigSub}>{t('steps.stepsPerDay')}</Text>
 
         <TextInput
           style={styles.sheetInput}
@@ -1345,7 +1348,7 @@ export default function StepsScreen() {
           keyboardType="numeric"
         />
 
-        <Text style={styles.sheetFieldLabel}>QUICK PRESETS</Text>
+        <Text style={styles.sheetFieldLabel}>{t('steps.quickPresetsLabel')}</Text>
         <View style={styles.quickAddRow}>
           {[5000, 8000, 10000, 12000, 15000].map(n => (
             <TouchableOpacity
@@ -1363,7 +1366,7 @@ export default function StepsScreen() {
           onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
           disabled={goalMut.isPending}
         >
-          {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Goal</Text>}
+          {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('steps.saveGoalButton')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
 

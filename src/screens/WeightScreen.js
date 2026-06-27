@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -213,6 +214,7 @@ function smoothPath(pts) {
 
 // ─── 30-Day Trend Chart — ports fzRenderWeightTrendChart ────────────────────
 function WeightTrendChart({ data, unit, goalKg, colors, width }) {
+  const { t } = useTranslation();
   const H = 170;
   const P = { t: 18, r: 8, b: 22, l: 8 };
   const pw = width - P.l - P.r;
@@ -221,7 +223,7 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
   if (data.length < 2) {
     return (
       <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Not enough data yet</Text>
+        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>{t('weight.notEnoughData')}</Text>
       </View>
     );
   }
@@ -402,15 +404,16 @@ function AvgWeightChart({ allDisp, dateLabels, unit, colors, width }) {
 }
 
 // ─── Avg Weight: trend pill + row ───────────────────────────────────────────
-function trendPillFor(row, colors) {
-  if (row.isFirst) return { bg: 'rgba(148,163,184,0.12)', color: colors.textMuted, label: '− START' };
-  if (Math.abs(row.delta) < 0.05) return { bg: 'rgba(148,163,184,0.12)', color: colors.textMuted, label: '→ 0.0' };
-  if (row.delta < 0) return { bg: 'rgba(52,211,153,0.15)', color: colors.good, label: `▼ ${Math.abs(row.delta).toFixed(1)}` };
-  return { bg: 'rgba(248,113,113,0.15)', color: colors.danger, label: `▲ ${Math.abs(row.delta).toFixed(1)}` };
+function trendPillFor(row, colors, t) {
+  if (row.isFirst) return { bg: 'rgba(148,163,184,0.12)', color: colors.textMuted, label: t('weight.trendStart') };
+  if (Math.abs(row.delta) < 0.05) return { bg: 'rgba(148,163,184,0.12)', color: colors.textMuted, label: t('weight.trendFlat') };
+  if (row.delta < 0) return { bg: 'rgba(52,211,153,0.15)', color: colors.good, label: t('weight.trendDown', { value: Math.abs(row.delta).toFixed(1) }) };
+  return { bg: 'rgba(248,113,113,0.15)', color: colors.danger, label: t('weight.trendUp', { value: Math.abs(row.delta).toFixed(1) }) };
 }
 
 function AvgWeightRow({ row, unit, colors }) {
-  const pill = trendPillFor(row, colors);
+  const { t } = useTranslation();
+  const pill = trendPillFor(row, colors, t);
   const barColor = row.isFirst || Math.abs(row.delta) < 0.05
     ? colors.textMuted
     : row.delta < 0 ? colors.good : colors.danger;
@@ -421,7 +424,7 @@ function AvgWeightRow({ row, unit, colors }) {
     ]}>
       <View style={{ flex: 0.85 }}>
         <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, color: colors.textMuted }}>
-          {row.periodLabel}{row.isLast ? <Text style={{ color: colors.accent, fontWeight: '700' }}> NOW</Text> : null}
+          {row.periodLabel}{row.isLast ? <Text style={{ color: colors.accent, fontWeight: '700' }}> {t('weight.nowLabel')}</Text> : null}
         </Text>
       </View>
       <View style={{ flex: 0.95 }}>
@@ -446,22 +449,23 @@ function AvgWeightRow({ row, unit, colors }) {
 
 // ─── Avg Weight: locked row teaser (free users, weeks beyond the first 4) ──
 function AvgWeightLockedRow({ periodLabel, colors, onPress }) {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
       <View style={{ flex: 0.85 }}>
         <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, color: colors.textMuted }}>{periodLabel}</Text>
       </View>
       <View style={{ flex: 0.95 }}>
-        <Text style={{ fontSize: 13, fontFamily: fontFamily.monoBold, color: colors.textDim }}>••.•kg</Text>
+        <Text style={{ fontSize: 13, fontFamily: fontFamily.monoBold, color: colors.textDim }}>{t('weight.lockedValuePlaceholder')}</Text>
       </View>
       <View style={{ flex: 0.85 }}>
         <View style={{ alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(148,163,184,0.12)' }}>
-          <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim }}>•••</Text>
+          <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.textDim }}>{t('weight.lockedTrendPlaceholder')}</Text>
         </View>
       </View>
       <View style={{ flex: 1.3, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
         <Ionicons name="lock-closed" size={11} color={colors.textDim} />
-        <Text style={{ fontSize: 10, fontFamily: fontFamily.mono, color: colors.textDim }}>PRO</Text>
+        <Text style={{ fontSize: 10, fontFamily: fontFamily.mono, color: colors.textDim }}>{t('weight.proLabel')}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -469,21 +473,22 @@ function AvgWeightLockedRow({ periodLabel, colors, onPress }) {
 
 // ─── Avg Weight: full section (collapsed summary or expanded chart+table) ──
 function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded, hasAccess, onLockedPress }) {
+  const { t } = useTranslation();
   const { allDisp, rows } = useMemo(() => computeAvgWeightRows(logs, viewMode, unit), [logs, viewMode, unit]);
 
   if (rows.length === 0) {
-    return <Text style={{ color: colors.textDim, fontSize: typography.sm, textAlign: 'center', paddingVertical: 20 }}>Not enough data yet</Text>;
+    return <Text style={{ color: colors.textDim, fontSize: typography.sm, textAlign: 'center', paddingVertical: 20 }}>{t('weight.notEnoughData')}</Text>;
   }
 
   const lastRow = rows[rows.length - 1];
 
   if (!expanded) {
-    const pill = trendPillFor(lastRow, colors);
+    const pill = trendPillFor(lastRow, colors, t);
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 11, fontFamily: fontFamily.mono, color: colors.textMuted }}>
-            {lastRow.periodLabel} <Text style={{ color: colors.accent, fontWeight: '700' }}>NOW</Text>
+            {lastRow.periodLabel} <Text style={{ color: colors.accent, fontWeight: '700' }}>{t('weight.nowLabel')}</Text>
           </Text>
         </View>
         <Text style={{ fontSize: 15, fontFamily: fontFamily.monoBold, color: colors.text, marginRight: 10 }}>
@@ -504,11 +509,11 @@ function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded, hasAc
       <AvgWeightChart allDisp={allDisp} dateLabels={rows.map(r => r.dateLabel)} unit={unit} colors={colors} width={width} />
       <View style={{ flexDirection: 'row', paddingTop: 14, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <Text style={{ flex: 0.85, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim }}>
-          {viewMode === 'month' ? 'MONTH' : 'WK'}
+          {viewMode === 'month' ? t('weight.colMonth') : t('weight.colWeek')}
         </Text>
-        <Text style={{ flex: 0.95, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim }}>AVG WEIGHT</Text>
-        <Text style={{ flex: 0.85, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim }}>TREND</Text>
-        <Text style={{ flex: 1.3, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim, textAlign: 'right' }}>TOTAL LOST</Text>
+        <Text style={{ flex: 0.95, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim }}>{t('weight.colAvgWeight')}</Text>
+        <Text style={{ flex: 0.85, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim }}>{t('weight.colTrend')}</Text>
+        <Text style={{ flex: 1.3, fontSize: 9, fontWeight: '700', letterSpacing: 0.5, fontFamily: fontFamily.mono, color: colors.textDim, textAlign: 'right' }}>{t('weight.colTotalLost')}</Text>
       </View>
       {(hasAccess ? rows : rows.slice(0, 4)).map(row => <AvgWeightRow key={row.key} row={row} unit={unit} colors={colors} />)}
       {!hasAccess && rows.slice(4).map(row => (
@@ -534,6 +539,7 @@ function WeightHistoryBar({ value, goalVal, barMax, colors }) {
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function WeightScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -587,7 +593,7 @@ export default function WeightScreen() {
     const ydayStr = localDateStr(yday);
     const loggedYesterday = logs.some(l => l.logged_at === ydayStr);
     syncConditionalReminder('weightReminder', loggedYesterday, reminderTime.hour, reminderTime.minute,
-      "Don't forget your weigh-in", "You haven't logged yesterday's weight yet.");
+      t('weight.reminderTitle'), t('weight.reminderBody'));
   }, [isLoading, notifPrefs.weightReminder, logs, reminderTime.hour, reminderTime.minute]);
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
@@ -609,7 +615,7 @@ export default function WeightScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['weight', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('weight.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['weight', user.id]);
@@ -633,7 +639,7 @@ export default function WeightScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['weight', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('weight.errorTitle'), e.message);
     },
     onSettled: () => { qc.invalidateQueries(['weight', user.id]); },
   });
@@ -651,7 +657,7 @@ export default function WeightScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['weight', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('weight.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['weight', user.id]);
@@ -697,16 +703,18 @@ export default function WeightScreen() {
     const days = Math.max(1, (new Date(sortedDesc[0].logged_at) - new Date(sortedAsc[0].logged_at)) / 86400000);
     const ratePerDay = (startKg - curKg) / days;
     let etaText = null;
-    if (Math.abs(toGo) < 0.05) etaText = '🎉 Goal reached!';
+    if (Math.abs(toGo) < 0.05) etaText = t('weight.goalReached');
     else if (ratePerDay > 0 && toGo > 0) {
       const etaDays = Math.round(toGo / ratePerDay);
       const etaDate = new Date(); etaDate.setDate(etaDate.getDate() + etaDays);
-      etaText = `🗓 Est. ${MONTH_NAMES[etaDate.getMonth()]} ${etaDate.getDate()}`;
+      etaText = t('weight.etaEstimate', { month: MONTH_NAMES[etaDate.getMonth()], day: etaDate.getDate() });
     }
     const rateWk = Math.abs(ratePerDay * 7);
-    const rateText = `${ratePerDay > 0 ? 'Losing' : 'Gaining'} ~${toDisp(rateWk, unit).toFixed(1)}${unit}/wk`;
+    const rateText = ratePerDay > 0
+      ? t('weight.ratePerWeekLosing', { value: toDisp(rateWk, unit).toFixed(1), unit })
+      : t('weight.ratePerWeekGaining', { value: toDisp(rateWk, unit).toFixed(1), unit });
     return { pct, curKg, startKg, toGo, etaText, rateText };
-  }, [goalKg, sortedAsc, sortedDesc, unit]);
+  }, [goalKg, sortedAsc, sortedDesc, unit, t]);
 
   const allTimeMaxKg = useMemo(() => (logs.length ? Math.max(...logs.map(w => w.weight)) : 1), [logs]);
 
@@ -854,61 +862,61 @@ export default function WeightScreen() {
     const out = [];
     const c = weightConsistency;
     if (c.consistencyPct > c.prevConsistencyPct) {
-      out.push({ icon: '📈', text: 'Logging consistency is up ', bold: `${c.consistencyPct - c.prevConsistencyPct}%`, rest: ' vs the previous 8 weeks.' });
+      out.push({ icon: '📈', text: t('weight.insightConsistencyUpText'), bold: `${c.consistencyPct - c.prevConsistencyPct}%`, rest: t('weight.insightConsistencyUpRest') });
     } else if (c.consistencyPct < c.prevConsistencyPct) {
-      out.push({ icon: '📉', text: 'Logging consistency dipped ', bold: `${c.prevConsistencyPct - c.consistencyPct}%`, rest: ' vs the previous 8 weeks.' });
+      out.push({ icon: '📉', text: t('weight.insightConsistencyDownText'), bold: `${c.prevConsistencyPct - c.consistencyPct}%`, rest: t('weight.insightConsistencyDownRest') });
     }
     if (c.currentStreak >= c.longestStreak && c.currentStreak > 0) {
-      out.push({ icon: '🔥', text: 'You\'re on your ', bold: 'best-ever streak', rest: ` at ${c.currentStreak} day${c.currentStreak === 1 ? '' : 's'} — keep logging!` });
+      out.push({ icon: '🔥', text: t('weight.insightBestStreakText'), bold: t('weight.insightBestStreakBold'), rest: t('weight.insightBestStreakRest', { count: c.currentStreak }) });
     } else if (c.longestStreak > c.currentStreak && c.currentStreak > 0) {
-      out.push({ icon: '🎯', text: `${c.longestStreak - c.currentStreak} more day${c.longestStreak - c.currentStreak === 1 ? '' : 's'} `, bold: 'ties your record', rest: ` of ${c.longestStreak} days.` });
+      out.push({ icon: '🎯', text: t('weight.insightTiesRecordText', { count: c.longestStreak - c.currentStreak }), bold: t('weight.insightTiesRecordBold'), rest: t('weight.insightTiesRecordRest', { count: c.longestStreak }) });
     }
     if (c.last14Range != null) {
       if (c.last14Range < 0.6) {
-        out.push({ icon: '⏸️', text: 'You\'ve been ', bold: 'plateauing', rest: ` — weight stayed within ${toDisp(c.last14Range, unit).toFixed(1)}${unit} over the last 14 days.` });
+        out.push({ icon: '⏸️', text: t('weight.insightPlateauingText'), bold: t('weight.insightPlateauingBold'), rest: t('weight.insightPlateauingRest', { value: toDisp(c.last14Range, unit).toFixed(1), unit }) });
       }
     }
     if (c.bestDow != null && Math.abs(c.bestDowDelta) > 0.15) {
       out.push({
         icon: '📅',
-        text: `${DOW_FULL[c.bestDow]}s tend to run `,
+        text: t('weight.insightBestDowText', { day: DOW_FULL[c.bestDow] }),
         bold: `${c.bestDowDelta >= 0 ? '+' : ''}${toDisp(c.bestDowDelta, unit).toFixed(1)}${unit}`,
-        rest: ' vs your overall average.',
+        rest: t('weight.insightBestDowRest'),
       });
     }
     if (c.volatility != null) {
       if (c.volatility >= 0.8) {
-        out.push({ icon: '〜', text: 'Your weight swings ', bold: `±${toDisp(c.volatility, unit).toFixed(1)}${unit}`, rest: ' between logs on average — try logging at the same time each day for steadier readings.' });
+        out.push({ icon: '〜', text: t('weight.insightVolatilityText'), bold: `±${toDisp(c.volatility, unit).toFixed(1)}${unit}`, rest: t('weight.insightVolatilityRest') });
       }
     }
     if (c.weekendDelta != null && Math.abs(c.weekendDelta) > 0.2) {
       out.push({
         icon: '🍔',
-        text: 'Weekends run ',
+        text: t('weight.insightWeekendText'),
         bold: `${c.weekendDelta >= 0 ? '+' : ''}${toDisp(c.weekendDelta, unit).toFixed(1)}${unit}`,
-        rest: ' vs weekdays — worth a look at weekend habits.',
+        rest: t('weight.insightWeekendRest'),
       });
     }
     if (c.momentumDelta != null && Math.abs(c.momentumDelta) > 0.3) {
       if (c.momentumDelta < 0) {
-        out.push({ icon: '🚀', text: 'Momentum is building', bold: '', rest: ` — you lost ${toDisp(Math.abs(c.momentumDelta), unit).toFixed(1)}${unit} more in the last 14 days than the 14 before that.` });
+        out.push({ icon: '🚀', text: t('weight.insightMomentumBuildingText'), bold: '', rest: t('weight.insightMomentumBuildingRest', { value: toDisp(Math.abs(c.momentumDelta), unit).toFixed(1), unit }) });
       } else {
-        out.push({ icon: '🐢', text: 'Progress has slowed', bold: '', rest: ` — ${toDisp(c.momentumDelta, unit).toFixed(1)}${unit} less change than the previous 14 days.` });
+        out.push({ icon: '🐢', text: t('weight.insightProgressSlowedText'), bold: '', rest: t('weight.insightProgressSlowedRest', { value: toDisp(c.momentumDelta, unit).toFixed(1), unit }) });
       }
     }
     if (c.biggestJump && Math.abs(c.biggestJump.delta) >= 1) {
       out.push({
         icon: '⚡',
-        text: `Biggest single-log swing in the last 30 days: `,
+        text: t('weight.insightBiggestJumpText'),
         bold: `${c.biggestJump.delta >= 0 ? '+' : ''}${toDisp(c.biggestJump.delta, unit).toFixed(1)}${unit}`,
-        rest: ` on ${new Date(c.biggestJump.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`,
+        rest: t('weight.insightBiggestJumpRest', { date: new Date(c.biggestJump.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }),
       });
     }
     if (c.daysSinceLastLog != null && c.daysSinceLastLog >= 3) {
-      out.push({ icon: '⚠️', text: 'It\'s been ', bold: `${c.daysSinceLastLog} days`, rest: ' since your last weigh-in — log today to keep your trend accurate.' });
+      out.push({ icon: '⚠️', text: t('weight.insightDaysSinceLastLogText'), bold: t('weight.insightDaysSinceLastLogBold', { count: c.daysSinceLastLog }), rest: t('weight.insightDaysSinceLastLogRest') });
     }
     return out;
-  }, [weightConsistency, unit]);
+  }, [weightConsistency, unit, t]);
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
@@ -926,7 +934,7 @@ export default function WeightScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
-      <ScreenHeader title="WEIGHT" colors={colors} />
+      <ScreenHeader title={t('weight.screenTitle')} colors={colors} />
 
       {/* Month nav + unit toggle */}
       <View style={styles.topRow}>
@@ -973,9 +981,9 @@ export default function WeightScreen() {
               <View style={styles.heroTopRow}>
                 <View>
                   <Text style={styles.heroNum}>{latest ? toDisp(latest.weight, unit).toFixed(1) : '—'}</Text>
-                  <Text style={styles.heroLabel}>{unit.toUpperCase()} · LATEST ENTRY</Text>
+                  <Text style={styles.heroLabel}>{t('weight.latestEntryLabel', { unit: unit.toUpperCase() })}</Text>
                   <Text style={[styles.heroSub, vsPrev != null && { color: vsPrev <= 0 ? colors.good : colors.danger }]}>
-                    {vsPrev != null ? `${vsPrev <= 0 ? '▼' : '▲'} ${Math.abs(toDisp(vsPrev, unit)).toFixed(1)} vs prev` : '— vs prev'}
+                    {vsPrev != null ? t('weight.vsPrevWithValue', { arrow: vsPrev <= 0 ? '▼' : '▲', value: Math.abs(toDisp(vsPrev, unit)).toFixed(1) }) : t('weight.vsPrevEmpty')}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -992,17 +1000,17 @@ export default function WeightScreen() {
                   percent={goalProgress ? goalProgress.pct : 0}
                   size={56} strokeWidth={6} color={colors.accent}
                   value={goalProgress ? `${Math.abs(toDisp(goalProgress.toGo, unit)).toFixed(1)}${unit}` : '—'}
-                  label="TO GO"
+                  label={t('weight.toGoLabel')}
                   valueStyle={{ color: colors.text }}
                   labelStyle={{ color: colors.textMuted }}
                 />
                 <View style={{ flex: 1, marginLeft: 16 }}>
                   <View style={styles.statTileRowInline}>
-                    <StatCell value={goalProgress ? `${toDisp(goalProgress.curKg, unit).toFixed(1)}${unit}` : '—'} label="NOW" colors={colors} />
+                    <StatCell value={goalProgress ? `${toDisp(goalProgress.curKg, unit).toFixed(1)}${unit}` : '—'} label={t('weight.nowLabel')} colors={colors} />
                     <View style={styles.statDividerInline} />
-                    <StatCell value={goalKg ? `${toDisp(goalKg, unit).toFixed(1)}${unit}` : '—'} label="TARGET" colors={colors} />
+                    <StatCell value={goalKg ? `${toDisp(goalKg, unit).toFixed(1)}${unit}` : '—'} label={t('weight.targetLabel')} colors={colors} />
                     <View style={styles.statDividerInline} />
-                    <StatCell value={goalProgress ? `${Math.abs(toDisp(goalProgress.toGo, unit)).toFixed(1)}${unit}` : '—'} label="TO GO" colors={colors} />
+                    <StatCell value={goalProgress ? `${Math.abs(toDisp(goalProgress.toGo, unit)).toFixed(1)}${unit}` : '—'} label={t('weight.toGoLabel')} colors={colors} />
                   </View>
                   {(goalProgress?.etaText || goalProgress?.rateText) && (
                     <Text style={styles.goalEta}>
@@ -1018,29 +1026,29 @@ export default function WeightScreen() {
                 <View style={styles.dividerLine} />
               </View>
               <View style={styles.statTileRowInline}>
-                <StatCell value={mMax != null ? toDisp(mMax, unit).toFixed(1) : '—'} label="PEAK" colors={colors} />
+                <StatCell value={mMax != null ? toDisp(mMax, unit).toFixed(1) : '—'} label={t('weight.peakLabel')} colors={colors} />
                 <View style={styles.statDividerInline} />
-                <StatCell value={mMin != null ? toDisp(mMin, unit).toFixed(1) : '—'} label="LOW" color={colors.good} colors={colors} />
+                <StatCell value={mMin != null ? toDisp(mMin, unit).toFixed(1) : '—'} label={t('weight.lowLabel')} color={colors.good} colors={colors} />
                 <View style={styles.statDividerInline} />
-                <StatCell value={mAvg != null ? toDisp(mAvg, unit).toFixed(1) : '—'} label="AVG" colors={colors} />
+                <StatCell value={mAvg != null ? toDisp(mAvg, unit).toFixed(1) : '—'} label={t('weight.avgLabel')} colors={colors} />
               </View>
 
               <View style={styles.sectionDivider}>
                 <View style={styles.dividerLine} />
-                <Text style={styles.dividerLabel}>ALL-TIME</Text>
+                <Text style={styles.dividerLabel}>{t('weight.allTimeLabel')}</Text>
                 <View style={styles.dividerLine} />
               </View>
               <View style={styles.statTileRowInline}>
-                <StatCell value={allTimeStats ? toDisp(allTimeStats.first.weight, unit).toFixed(1) : '—'} label="START" colors={colors} />
+                <StatCell value={allTimeStats ? toDisp(allTimeStats.first.weight, unit).toFixed(1) : '—'} label={t('weight.startLabel')} colors={colors} />
                 <View style={styles.statDividerInline} />
                 <StatCell
                   value={allTimeStats ? `${allTimeStats.lost >= 0 ? '−' : '+'}${Math.abs(toDisp(allTimeStats.lost, unit)).toFixed(1)}` : '—'}
-                  label="CHANGE" color={allTimeStats && allTimeStats.lost >= 0 ? colors.good : colors.danger} colors={colors}
+                  label={t('weight.changeLabel')} color={allTimeStats && allTimeStats.lost >= 0 ? colors.good : colors.danger} colors={colors}
                 />
                 <View style={styles.statDividerInline} />
                 <StatCell
                   value={allTimeStats ? `${toDisp(allTimeStats.rateKgWk, unit).toFixed(2)}` : '—'}
-                  label={`${unit.toUpperCase()}/WK`} color={allTimeStats && allTimeStats.rateKgWk <= 0 ? colors.good : colors.danger} colors={colors}
+                  label={t('weight.unitPerWeekLabel', { unit: unit.toUpperCase() })} color={allTimeStats && allTimeStats.rateKgWk <= 0 ? colors.good : colors.danger} colors={colors}
                 />
               </View>
             </View>
@@ -1048,8 +1056,8 @@ export default function WeightScreen() {
             {/* ── Analysis & Insights — Pro ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>ANALYSIS & INSIGHTS</Text>
-                <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>
+                <Text style={styles.cardTitle}>{t('weight.analysisInsightsTitle')}</Text>
+                <View style={styles.proBadge}><Text style={styles.proBadgeText}>{t('weight.proLabel')}</Text></View>
               </View>
 
               {hasAccess ? (
@@ -1057,17 +1065,17 @@ export default function WeightScreen() {
                   <View style={styles.tileRow}>
                     <View style={styles.tile}>
                       <Text style={styles.tileVal}>{weightConsistency.longestStreak}</Text>
-                      <Text style={styles.tileLbl}>BEST STREAK</Text>
+                      <Text style={styles.tileLbl}>{t('weight.bestStreakLabel')}</Text>
                     </View>
                     <View style={styles.tileColDivider} />
                     <View style={styles.tile}>
                       <Text style={styles.tileVal}>{weightConsistency.consistencyPct}%</Text>
-                      <Text style={styles.tileLbl}>8-WK CONSISTENCY</Text>
+                      <Text style={styles.tileLbl}>{t('weight.eightWkConsistencyLabel')}</Text>
                     </View>
                     <View style={styles.tileColDivider} />
                     <View style={styles.tile}>
                       <Text style={styles.tileVal}>{weightConsistency.volatility != null ? `±${toDisp(weightConsistency.volatility, unit).toFixed(1)}` : '—'}</Text>
-                      <Text style={styles.tileLbl}>VOLATILITY ({unit.toUpperCase()})</Text>
+                      <Text style={styles.tileLbl}>{t('weight.volatilityWithUnitLabel', { unit: unit.toUpperCase() })}</Text>
                     </View>
                   </View>
                   {weightInsights.length > 0 && (
@@ -1088,17 +1096,17 @@ export default function WeightScreen() {
                   <View style={styles.tileRow}>
                     <View style={styles.tile}>
                       <Text style={styles.tileVal}>●●</Text>
-                      <Text style={styles.tileLbl}>BEST STREAK</Text>
+                      <Text style={styles.tileLbl}>{t('weight.bestStreakLabel')}</Text>
                     </View>
                     <View style={styles.tileColDivider} />
                     <View style={styles.tile}>
                       <Text style={styles.tileVal}>●●%</Text>
-                      <Text style={styles.tileLbl}>8-WK CONSISTENCY</Text>
+                      <Text style={styles.tileLbl}>{t('weight.eightWkConsistencyLabel')}</Text>
                     </View>
                     <View style={styles.tileColDivider} />
                     <View style={styles.tile}>
                       <Text style={styles.tileVal}>±●.●</Text>
-                      <Text style={styles.tileLbl}>VOLATILITY</Text>
+                      <Text style={styles.tileLbl}>{t('weight.volatilityLabel')}</Text>
                     </View>
                   </View>
                   <View style={styles.insightsList}>
@@ -1110,7 +1118,7 @@ export default function WeightScreen() {
                     ))}
                   </View>
                   <Text style={styles.lockedHint}>
-                    🔒 Unlock your streak record, consistency score, and personalized weight insights
+                    {t('weight.lockedInsightsHint')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -1119,7 +1127,7 @@ export default function WeightScreen() {
             {/* ── Monthly Heatmap ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>MONTHLY HEATMAP</Text>
+                <Text style={styles.cardTitle}>{t('weight.monthlyHeatmapTitle')}</Text>
                 <TouchableOpacity
                   onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowPaywall(true))}
                   disabled={heatmapExport.exporting}
@@ -1133,11 +1141,11 @@ export default function WeightScreen() {
                 </TouchableOpacity>
               </View>
               <View style={[styles.hmLegend, styles.hmLegendRow]}>
-                <Text style={styles.hmLegendLabel}>Low</Text>
+                <Text style={styles.hmLegendLabel}>{t('weight.lowLegendLabel')}</Text>
                 {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
                   <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
                 ))}
-                <Text style={styles.hmLegendLabel}>High</Text>
+                <Text style={styles.hmLegendLabel}>{t('weight.highLegendLabel')}</Text>
               </View>
               <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={hasAccess} onLockedPress={() => setShowPaywall(true)} />
             </View>
@@ -1145,7 +1153,7 @@ export default function WeightScreen() {
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
               <ExportCardTemplate
                 ref={heatmapExport.ref}
-                title="Monthly Heatmap"
+                title={t('weight.monthlyHeatmapExportTitle')}
                 subtitle={`${MONTH_NAMES[month]} ${year}`}
                 colors={colors}
                 width={340}
@@ -1157,7 +1165,7 @@ export default function WeightScreen() {
             {/* ── 30-Day Trend ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>WEIGHT - TREND</Text>
+                <Text style={styles.cardTitle}>{t('weight.weightTrendTitle')}</Text>
                 <View style={styles.segmentRow}>
                   {[30, 60, 90, 0].map(d => (
                     <TouchableOpacity
@@ -1168,16 +1176,16 @@ export default function WeightScreen() {
                       }}
                       style={[styles.segmentBtn, trendRangeDays === d && styles.segmentBtnActive]}
                     >
-                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? 'ALL' : `${d}D`}{d !== 30 && !hasAccess ? ' 🔒' : ''}</Text>
+                      <Text style={[styles.segmentText, trendRangeDays === d && styles.segmentTextActive]}>{d === 0 ? t('weight.allRangeLabel') : t('weight.daysRangeLabel', { days: d })}{d !== 30 && !hasAccess ? ' 🔒' : ''}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
               <View style={styles.legendRow}>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>Daily</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>7D Avg</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? 'All' : `${trendRangeDays}D`} Avg</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>Goal</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#67e8f9' }]} /><Text style={styles.legendLabel}>{t('weight.dailyLegendLabel')}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#f59e0b' }]} /><Text style={styles.legendLabel}>{t('weight.legend7dAvg')}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#c4b5fd' }]} /><Text style={styles.legendLabel}>{trendRangeDays === 0 ? t('weight.legendRangeAvgAll') : t('weight.legendRangeAvgDays', { value: trendRangeDays })}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: '#34d399' }]} /><Text style={styles.legendLabel}>{t('weight.legendGoal')}</Text></View>
               </View>
               <WeightTrendChart data={trendData} unit={unit} goalKg={goalKg} colors={colors} width={chartWidth} />
               {trendStats && (
@@ -1196,7 +1204,7 @@ export default function WeightScreen() {
             {/* ── Avg Weight (weekly/monthly) ── */}
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>AVG WEIGHT</Text>
+                <Text style={styles.cardTitle}>{t('weight.avgWeightTitle')}</Text>
                 <TouchableOpacity
                   onPress={() => (hasAccess ? avgWeightExport.exportCard() : setShowPaywall(true))}
                   disabled={avgWeightExport.exporting}
@@ -1248,8 +1256,8 @@ export default function WeightScreen() {
 
             {/* ── History ── */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>HISTORY</Text>
-              {mWeights.length === 0 && <Text style={styles.emptyText}>No weight entries for this month.</Text>}
+              <Text style={styles.cardTitle}>{t('weight.historyTitle')}</Text>
+              {mWeights.length === 0 && <Text style={styles.emptyText}>{t('weight.noEntriesThisMonth')}</Text>}
               {groupByWeek(
                 mWeights.map((log, idx) => {
                   const nextLog = mWeights[idx + 1];
@@ -1270,9 +1278,9 @@ export default function WeightScreen() {
                           </Text>
                         )}
                         <TouchableOpacity
-                          onPress={() => Alert.alert('Delete entry', `Remove ${fmtDateShort(log.logged_at)}?`, [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                          onPress={() => Alert.alert(t('weight.deleteAlertTitle'), t('weight.deleteAlertMessage', { date: fmtDateShort(log.logged_at) }), [
+                            { text: t('weight.cancel'), style: 'cancel' },
+                            { text: t('weight.delete'), style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
                           ])}
                           style={styles.logDelBtn}
                         >
@@ -1306,13 +1314,13 @@ export default function WeightScreen() {
       {/* Log Weight bottom sheet */}
       <BottomSheet visible={showLogSheet} onClose={() => setShowLogSheet(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>LOG WEIGHT</Text>
+          <Text style={styles.sheetTitle}>{t('weight.logWeightSheetTitle')}</Text>
           <TouchableOpacity onPress={() => setShowLogSheet(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sheetFieldLabel}>DATE</Text>
+        <Text style={styles.sheetFieldLabel}>{t('weight.dateLabel')}</Text>
         <DatePickerField
           value={logDate}
           onChange={setLogDate}
@@ -1322,8 +1330,8 @@ export default function WeightScreen() {
 
         <View style={{ height: 16 }} />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <Text style={styles.sheetFieldLabel}>WEIGHT ({unit.toUpperCase()})</Text>
-          {latest && <Text style={styles.lastHint}>↑ LAST: {toDisp(latest.weight, unit).toFixed(1)}{unit}</Text>}
+          <Text style={styles.sheetFieldLabel}>{t('weight.weightUnitFieldLabel', { unit: unit.toUpperCase() })}</Text>
+          {latest && <Text style={styles.lastHint}>{t('weight.lastHint', { value: toDisp(latest.weight, unit).toFixed(1), unit })}</Text>}
         </View>
         <TextInput
           style={styles.sheetInput}
@@ -1335,12 +1343,12 @@ export default function WeightScreen() {
         />
 
         <View style={{ height: 16 }} />
-        <Text style={styles.sheetFieldLabel}>NOTE (OPTIONAL)</Text>
+        <Text style={styles.sheetFieldLabel}>{t('weight.noteOptionalLabel')}</Text>
         <TextInput
           style={styles.sheetNoteInput}
           value={note}
           onChangeText={setNote}
-          placeholder="e.g. After workout, fasted..."
+          placeholder={t('weight.notePlaceholder')}
           placeholderTextColor={colors.textDim}
           multiline
         />
@@ -1355,34 +1363,34 @@ export default function WeightScreen() {
           }}
           disabled={logMut.isPending}
         >
-          {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Weight</Text>}
+          {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('weight.saveWeightButton')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
 
       {/* Weight Goal bottom sheet */}
       <BottomSheet visible={showGoalSheet} onClose={() => setShowGoalSheet(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>SET WEIGHT GOAL</Text>
+          <Text style={styles.sheetTitle}>{t('weight.setWeightGoalSheetTitle')}</Text>
           <TouchableOpacity onPress={() => setShowGoalSheet(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.goalBigVal}>{(parseFloat(goalInput) || (goalKg ? toDisp(goalKg, unit) : '—'))}{unit}</Text>
-        <Text style={styles.goalBigSub}>target weight</Text>
+        <Text style={styles.goalBigSub}>{t('weight.targetWeightLabel')}</Text>
 
         <TextInput
           style={styles.sheetInput}
           value={goalInput}
           onChangeText={setGoalInput}
-          placeholder={goalKg ? toDisp(goalKg, unit).toFixed(1) : `Goal (${unit})`}
+          placeholder={goalKg ? toDisp(goalKg, unit).toFixed(1) : t('weight.goalPlaceholder', { unit })}
           placeholderTextColor={colors.textDim}
           keyboardType="numeric"
         />
 
         {latest && (
           <>
-            <Text style={styles.sheetFieldLabel}>QUICK PRESETS</Text>
+            <Text style={styles.sheetFieldLabel}>{t('weight.quickPresetsLabel')}</Text>
             <View style={styles.quickAddRow}>
               {[-10, -5, -2, 2, 5, 10].map(delta => {
                 const presetVal = +(toDisp(latest.weight, unit) + delta).toFixed(1);
@@ -1407,7 +1415,7 @@ export default function WeightScreen() {
           onPress={() => { if (goalInput) goalMut.mutate(goalInput); }}
           disabled={goalMut.isPending}
         >
-          {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Goal</Text>}
+          {goalMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('weight.saveGoalButton')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
 

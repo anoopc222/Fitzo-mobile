@@ -2,6 +2,7 @@ import React, { useMemo, useEffect } from 'react';
 import { View, Text, Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -13,41 +14,41 @@ import { fetchMeasurements, fetchBodyStats } from '../screens/MeasurementsScreen
 import { fetchProfile } from '../screens/ProfileScreen';
 import { fetchDietPlans } from '../screens/DietScreen';
 
-const getSections = (colors, isAdmin, isPro, subReady) => [
+const getSections = (t, colors, isAdmin, isPro, subReady) => [
   {
-    title: 'LOG',
+    title: t('more.sectionLog'),
     items: [
-      { label: 'Food Log', icon: 'clipboard', target: ['Log'], color: colors.accent },
+      { label: t('more.foodLog'), icon: 'clipboard', target: ['Log'], color: colors.accent },
     ],
   },
   {
-    title: 'BODY & HEALTH',
+    title: t('more.sectionBodyHealth'),
     items: [
-      { label: 'Diet Plan',     icon: 'restaurant',  target: ['Home', 'Diet'],         color: colors.warning },
-      { label: 'Progress',      icon: 'trending-up', target: ['Home', 'Progress'],     color: colors.success },
-      { label: 'Measurements',  icon: 'body',        target: ['Home', 'Measurements'], color: colors.accent },
+      { label: t('more.dietPlan'),     icon: 'restaurant',  target: ['Home', 'Diet'],         color: colors.warning },
+      { label: t('more.progress'),     icon: 'trending-up', target: ['Home', 'Progress'],     color: colors.success },
+      { label: t('more.measurements'), icon: 'body',        target: ['Home', 'Measurements'], color: colors.accent },
     ],
   },
   {
-    title: 'TOOLS',
+    title: t('more.sectionTools'),
     items: [
-      { label: 'Calculators',   icon: 'calculator',  target: ['Home', 'Calculators'],  color: colors.warning },
+      { label: t('more.calculators'),  icon: 'calculator',  target: ['Home', 'Calculators'],  color: colors.warning },
     ],
   },
   {
-    title: 'ACCOUNT',
+    title: t('more.sectionAccount'),
     items: [
       ...(subReady && !isPro ? [
-        { label: 'Go Pro', icon: 'rocket', target: ['Home', 'Subscription'], color: colors.accent },
+        { label: t('more.goPro'), icon: 'rocket', target: ['Home', 'Subscription'], color: colors.accent },
       ] : []),
-      { label: 'Profile',       icon: 'person',      target: ['Home', 'Profile'],      color: colors.blue },
-      { label: 'Settings',      icon: 'settings',    target: ['Home', 'Settings'],      color: colors.textMuted },
+      { label: t('more.profile'),  icon: 'person',      target: ['Home', 'Profile'],      color: colors.blue },
+      { label: t('more.settings'), icon: 'settings',    target: ['Home', 'Settings'],      color: colors.textMuted },
     ],
   },
   ...(isAdmin ? [{
-    title: 'ADMIN',
+    title: t('more.sectionAdmin'),
     items: [
-      { label: 'Admin Dashboard', icon: 'shield-checkmark', target: ['Home', 'AdminDashboard'], color: colors.purple },
+      { label: t('more.adminDashboard'), icon: 'shield-checkmark', target: ['Home', 'AdminDashboard'], color: colors.purple },
     ],
   }] : []),
 ];
@@ -55,10 +56,11 @@ const getSections = (colors, isAdmin, isPro, subReady) => [
 export default function MoreSheetModal() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { isAdmin, isPro, ready: subReady } = useSubscription();
   const { visible, close } = useMoreMenu();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const SECTIONS = useMemo(() => getSections(colors, isAdmin, isPro, subReady), [colors, isAdmin, isPro, subReady]);
+  const SECTIONS = useMemo(() => getSections(t, colors, isAdmin, isPro, subReady), [t, colors, isAdmin, isPro, subReady]);
   const qc = useQueryClient();
 
   // Prefetch the screens reachable from this sheet as soon as it opens, so
@@ -89,7 +91,7 @@ export default function MoreSheetModal() {
           <View style={styles.grabber} />
         </View>
         <View style={styles.header}>
-          <Text style={styles.title}>More</Text>
+          <Text style={styles.title}>{t('more.title')}</Text>
           <TouchableOpacity onPress={close} style={styles.closeBtn}>
             <Ionicons name="close" size={22} color={colors.text} />
           </TouchableOpacity>

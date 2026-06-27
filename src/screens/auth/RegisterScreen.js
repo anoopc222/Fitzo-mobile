@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { typography, weight } from '../../theme/typography';
@@ -10,6 +11,7 @@ import { typography, weight } from '../../theme/typography';
 export default function RegisterScreen({ navigation }) {
   const { signUp } = useAuth();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -17,14 +19,14 @@ export default function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!name || !email || !password) return Alert.alert('Error', 'All fields are required');
-    if (password.length < 6) return Alert.alert('Error', 'Password must be at least 6 characters');
+    if (!name || !email || !password) return Alert.alert(t('auth.error'), t('auth.allFieldsRequired'));
+    if (password.length < 6) return Alert.alert(t('auth.error'), t('auth.passwordTooShort'));
     setLoading(true);
     try {
       await signUp(email.trim(), password, name.trim());
-      Alert.alert('Success', 'Check your email to confirm your account.');
+      Alert.alert(t('auth.success'), t('auth.checkEmailConfirm'));
     } catch (e) {
-      Alert.alert('Sign up failed', e.message);
+      Alert.alert(t('auth.signUpFailed'), e.message);
     } finally {
       setLoading(false);
     }
@@ -36,19 +38,19 @@ export default function RegisterScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Text style={styles.logo}>FitZo</Text>
-      <Text style={styles.tagline}>Create your account</Text>
+      <Text style={styles.tagline}>{t('auth.createAccountTagline')}</Text>
 
       <View style={styles.form}>
         <TextInput
           style={styles.input}
-          placeholder="Full Name"
+          placeholder={t('auth.fullNamePlaceholder')}
           placeholderTextColor={colors.textDim}
           value={name}
           onChangeText={setName}
         />
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={t('auth.emailPlaceholder')}
           placeholderTextColor={colors.textDim}
           value={email}
           onChangeText={setEmail}
@@ -57,7 +59,7 @@ export default function RegisterScreen({ navigation }) {
         />
         <TextInput
           style={styles.input}
-          placeholder="Password"
+          placeholder={t('auth.passwordPlaceholder')}
           placeholderTextColor={colors.textDim}
           value={password}
           onChangeText={setPassword}
@@ -68,12 +70,12 @@ export default function RegisterScreen({ navigation }) {
           {loading ? (
             <ActivityIndicator color={colors.bg} />
           ) : (
-            <Text style={styles.btnText}>Create Account</Text>
+            <Text style={styles.btnText}>{t('auth.createAccount')}</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.link}>Already have an account? <Text style={styles.linkAccent}>Sign In</Text></Text>
+          <Text style={styles.link}>{t('auth.haveAccount')}<Text style={styles.linkAccent}>{t('auth.signUp')}</Text></Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

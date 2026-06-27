@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
@@ -57,7 +58,7 @@ async function fetchUsers() {
       sub,
       isInTrial,
       isPro,
-      statusLabel: p.is_admin ? 'Admin' : isPro ? 'Pro' : isInTrial ? 'Trial' : 'Free',
+      statusLabel: p.is_admin ? 'admin.statusAdmin' : isPro ? 'admin.statusPro' : isInTrial ? 'admin.statusTrial' : 'admin.statusFree',
     };
   });
 }
@@ -68,6 +69,7 @@ function csvEscape(val) {
 }
 
 export default function AdminDashboardScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isSuperAdmin } = useSubscription();
@@ -115,10 +117,14 @@ export default function AdminDashboardScreen({ navigation }) {
     if (!users?.length) return;
     setExporting(true);
     try {
-      const header = ['Name', 'Email', 'Status', 'Is Admin', 'Is Super Admin', 'Plan', 'Store', 'Period End', 'Signed Up'];
+      const header = [
+        t('admin.csvName'), t('admin.csvEmail'), t('admin.csvStatus'),
+        t('admin.csvIsAdmin'), t('admin.csvIsSuperAdmin'), t('admin.csvPlan'),
+        t('admin.csvStore'), t('admin.csvPeriodEnd'), t('admin.csvSignedUp'),
+      ];
       const rows = users.map(u => [
-        u.full_name ?? '', u.email ?? '', u.statusLabel,
-        u.is_admin ? 'Yes' : 'No', u.is_super_admin ? 'Yes' : 'No',
+        u.full_name ?? '', u.email ?? '', t(u.statusLabel),
+        u.is_admin ? t('admin.csvYes') : t('admin.csvNo'), u.is_super_admin ? t('admin.csvYes') : t('admin.csvNo'),
         u.sub?.plan_id ?? '', u.sub?.store ?? '', u.sub?.period_end ?? '',
         u.created_at ?? '',
       ]);
@@ -126,12 +132,12 @@ export default function AdminDashboardScreen({ navigation }) {
       const path = `${FileSystem.cacheDirectory}fitzo-users-${Date.now()}.csv`;
       await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Export Users' });
+        await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: t('admin.exportDialogTitle') });
       } else {
-        Alert.alert('Exported', `Saved to ${path}`);
+        Alert.alert(t('admin.exportedTitle'), t('admin.exportedMessage', { path }));
       }
     } catch (e) {
-      Alert.alert('Export failed', e.message);
+      Alert.alert(t('admin.exportFailedTitle'), e.message);
     } finally {
       setExporting(false);
     }
@@ -140,7 +146,7 @@ export default function AdminDashboardScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenHeader
-        title="ADMIN"
+        title={t('admin.headerTitle')}
         colors={colors}
         onBack={() => navigation.goBack()}
         right={(
@@ -161,20 +167,20 @@ export default function AdminDashboardScreen({ navigation }) {
         ) : (
           <>
             <View style={styles.dbUsageTile}>
-              <Text style={styles.sectionTitle}>DATABASE USAGE</Text>
+              <Text style={styles.sectionTitle}>{t('admin.databaseUsage')}</Text>
               {!showDbUsage ? (
                 <TouchableOpacity
                   style={styles.showUsageBtn}
                   onPress={() => setShowDbUsage(true)}
                 >
                   <Ionicons name="server-outline" size={16} color={colors.accent} />
-                  <Text style={styles.showUsageBtnText}>Show Usage</Text>
+                  <Text style={styles.showUsageBtnText}>{t('admin.showUsage')}</Text>
                 </TouchableOpacity>
               ) : dbUsageLoading ? (
                 <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
               ) : dbUsage ? (
                 <>
-                  <DbUsageCard usage={dbUsage} styles={styles} colors={colors} />
+                  <DbUsageCard usage={dbUsage} styles={styles} colors={colors} t={t} />
                   <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                     <TouchableOpacity
                       style={styles.showUsageBtn}
@@ -184,14 +190,14 @@ export default function AdminDashboardScreen({ navigation }) {
                       {dbUsageFetching
                         ? <ActivityIndicator size="small" color={colors.accent} />
                         : <Ionicons name="refresh" size={16} color={colors.accent} />}
-                      <Text style={styles.showUsageBtnText}>Refresh</Text>
+                      <Text style={styles.showUsageBtnText}>{t('admin.refresh')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.showUsageBtn}
                       onPress={() => setShowDbUsage(false)}
                     >
                       <Ionicons name="eye-off-outline" size={16} color={colors.textDim} />
-                      <Text style={[styles.showUsageBtnText, { color: colors.textDim }]}>Hide</Text>
+                      <Text style={[styles.showUsageBtnText, { color: colors.textDim }]}>{t('admin.hide')}</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -199,17 +205,17 @@ export default function AdminDashboardScreen({ navigation }) {
             </View>
 
             <View style={styles.statsGrid}>
-              <StatCard label="Total Users" value={summary.total} icon="people" color={colors.accent} styles={styles} />
-              <StatCard label="Pro Users" value={summary.pro} icon="star" color={colors.success} styles={styles} />
-              <StatCard label="In Trial" value={summary.trial} icon="time" color={colors.warning} styles={styles} />
-              <StatCard label="Admins" value={summary.admins} icon="shield-checkmark" color={colors.purple} styles={styles} />
+              <StatCard label={t('admin.totalUsers')} value={summary.total} icon="people" color={colors.accent} styles={styles} />
+              <StatCard label={t('admin.proUsers')} value={summary.pro} icon="star" color={colors.success} styles={styles} />
+              <StatCard label={t('admin.inTrial')} value={summary.trial} icon="time" color={colors.warning} styles={styles} />
+              <StatCard label={t('admin.admins')} value={summary.admins} icon="shield-checkmark" color={colors.purple} styles={styles} />
             </View>
 
             <View style={styles.searchBar}>
               <Ionicons name="search" size={16} color={colors.textDim} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search by name or email"
+                placeholder={t('admin.searchPlaceholder')}
                 placeholderTextColor={colors.textDim}
                 value={search}
                 onChangeText={setSearch}
@@ -217,12 +223,12 @@ export default function AdminDashboardScreen({ navigation }) {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>USERS ({filtered.length})</Text>
+              <Text style={styles.sectionTitle}>{t('admin.usersCount', { count: filtered.length })}</Text>
               {filtered.map(u => (
-                <UserRow key={u.id} user={u} styles={styles} colors={colors} isSuperAdmin={isSuperAdmin} onChanged={refetch} />
+                <UserRow key={u.id} user={u} styles={styles} colors={colors} isSuperAdmin={isSuperAdmin} onChanged={refetch} t={t} />
               ))}
               {filtered.length === 0 && (
-                <Text style={styles.emptyText}>No users match your search.</Text>
+                <Text style={styles.emptyText}>{t('admin.noUsersMatch')}</Text>
               )}
             </View>
           </>
@@ -244,30 +250,30 @@ function StatCard({ label, value, icon, color, styles }) {
   );
 }
 
-function DbUsageCard({ usage, styles, colors }) {
+function DbUsageCard({ usage, styles, colors, t }) {
   const pct = Math.min(100, (usage.totalBytes / DB_LIMIT_BYTES) * 100);
   const barColor = pct >= 90 ? colors.danger : pct >= 70 ? colors.warning : colors.success;
-  const maxTableBytes = Math.max(1, ...usage.tables.map(t => t.bytes));
+  const maxTableBytes = Math.max(1, ...usage.tables.map(tbl => tbl.bytes));
 
   return (
     <View style={styles.dbCard}>
       <View style={styles.dbHeaderRow}>
         <Text style={styles.dbTotalText}>{formatBytes(usage.totalBytes)}</Text>
-        <Text style={styles.dbLimitText}> / {formatBytes(DB_LIMIT_BYTES)} free tier</Text>
+        <Text style={styles.dbLimitText}> {t('admin.freeTierOf', { limit: formatBytes(DB_LIMIT_BYTES) })}</Text>
       </View>
       <View style={styles.dbBarTrack}>
         <View style={[styles.dbBarFill, { width: `${pct}%`, backgroundColor: barColor }]} />
       </View>
-      <Text style={[styles.dbPctText, { color: barColor }]}>{pct.toFixed(1)}% used</Text>
+      <Text style={[styles.dbPctText, { color: barColor }]}>{t('admin.percentUsed', { pct: pct.toFixed(1) })}</Text>
 
       <View style={{ marginTop: 12, gap: 8 }}>
-        {usage.tables.map(t => (
-          <View key={t.name} style={styles.dbTableRow}>
-            <Text style={styles.dbTableName} numberOfLines={1}>{t.name}</Text>
+        {usage.tables.map(tbl => (
+          <View key={tbl.name} style={styles.dbTableRow}>
+            <Text style={styles.dbTableName} numberOfLines={1}>{tbl.name}</Text>
             <View style={styles.dbTableBarTrack}>
-              <View style={[styles.dbTableBarFill, { width: `${(t.bytes / maxTableBytes) * 100}%` }]} />
+              <View style={[styles.dbTableBarFill, { width: `${(tbl.bytes / maxTableBytes) * 100}%` }]} />
             </View>
-            <Text style={styles.dbTableSize}>{formatBytes(t.bytes)}</Text>
+            <Text style={styles.dbTableSize}>{formatBytes(tbl.bytes)}</Text>
           </View>
         ))}
       </View>
@@ -276,25 +282,27 @@ function DbUsageCard({ usage, styles, colors }) {
 }
 
 function statusColor(label, colors) {
-  if (label === 'Admin') return colors.purple;
-  if (label === 'Pro') return colors.success;
-  if (label === 'Trial') return colors.warning;
+  if (label === 'admin.statusAdmin') return colors.purple;
+  if (label === 'admin.statusPro') return colors.success;
+  if (label === 'admin.statusTrial') return colors.warning;
   return colors.textDim;
 }
 
-function UserRow({ user, styles, colors, isSuperAdmin, onChanged }) {
+function UserRow({ user, styles, colors, isSuperAdmin, onChanged, t }) {
   const { setUserAdmin } = useSubscription();
   const [busy, setBusy] = useState(false);
 
   const toggleAdmin = () => {
     const makeAdmin = !user.is_admin;
     Alert.alert(
-      makeAdmin ? 'Grant Admin' : 'Revoke Admin',
-      `${makeAdmin ? 'Grant' : 'Revoke'} admin access for ${user.email}?`,
+      makeAdmin ? t('admin.grantAdminTitle') : t('admin.revokeAdminTitle'),
+      makeAdmin
+        ? t('admin.grantAdminMessage', { email: user.email })
+        : t('admin.revokeAdminMessage', { email: user.email }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('admin.cancel'), style: 'cancel' },
         {
-          text: makeAdmin ? 'Grant' : 'Revoke',
+          text: makeAdmin ? t('admin.grant') : t('admin.revoke'),
           style: makeAdmin ? 'default' : 'destructive',
           onPress: async () => {
             setBusy(true);
@@ -302,7 +310,7 @@ function UserRow({ user, styles, colors, isSuperAdmin, onChanged }) {
               await setUserAdmin(user.email, makeAdmin);
               onChanged?.();
             } catch (e) {
-              Alert.alert('Error', e.message);
+              Alert.alert(t('admin.errorTitle'), e.message);
             } finally {
               setBusy(false);
             }
@@ -318,15 +326,15 @@ function UserRow({ user, styles, colors, isSuperAdmin, onChanged }) {
         <Text style={styles.userAvatarText}>{(user.full_name?.[0] ?? user.email?.[0] ?? '?').toUpperCase()}</Text>
       </View>
       <View style={styles.userInfo}>
-        <Text style={styles.userName}>{user.full_name || 'Unnamed'}</Text>
+        <Text style={styles.userName}>{user.full_name || t('admin.unnamed')}</Text>
         <Text style={styles.userEmail}>{user.email}</Text>
         {user.sub?.plan_id && (
-          <Text style={styles.userPlan}>{user.sub.plan_id} · {user.sub.store ?? 'unknown store'}</Text>
+          <Text style={styles.userPlan}>{user.sub.plan_id} · {user.sub.store ?? t('admin.unknownStore')}</Text>
         )}
       </View>
       <View style={styles.userRight}>
         <View style={[styles.statusBadge, { backgroundColor: statusColor(user.statusLabel, colors) + '20' }]}>
-          <Text style={[styles.statusBadgeText, { color: statusColor(user.statusLabel, colors) }]}>{user.statusLabel}</Text>
+          <Text style={[styles.statusBadgeText, { color: statusColor(user.statusLabel, colors) }]}>{t(user.statusLabel)}</Text>
         </View>
         {isSuperAdmin && !user.is_super_admin && (
           <TouchableOpacity style={styles.adminToggle} onPress={toggleAdmin} disabled={busy}>

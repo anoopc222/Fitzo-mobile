@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -47,6 +48,7 @@ async function deleteDietWeek(userId, weekNumber) {
 }
 
 export default function DietScreen({ navigation }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -116,7 +118,7 @@ export default function DietScreen({ navigation }) {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['dietPlans', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('diet.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['dietPlans', user.id]);
@@ -136,7 +138,7 @@ export default function DietScreen({ navigation }) {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['dietPlans', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('diet.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['dietPlans', user.id]);
@@ -157,7 +159,7 @@ export default function DietScreen({ navigation }) {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['dietPlans', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('diet.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['dietPlans', user.id]);
@@ -231,24 +233,24 @@ export default function DietScreen({ navigation }) {
 
   const confirmDelete = () => {
     if (!editorWeek) { setShowEditor(false); return; }
-    if (plans.length <= 1) { Alert.alert('Cannot delete', 'Cannot delete the only week'); return; }
-    Alert.alert('Delete Week', `Delete Week ${editorWeek}? This cannot be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(editorWeek) },
+    if (plans.length <= 1) { Alert.alert(t('diet.cannotDeleteTitle'), t('diet.cannotDeleteMessage')); return; }
+    Alert.alert(t('diet.deleteWeekTitle'), t('diet.deleteWeekMessage', { week: editorWeek }), [
+      { text: t('diet.cancel'), style: 'cancel' },
+      { text: t('diet.delete'), style: 'destructive', onPress: () => deleteMut.mutate(editorWeek) },
     ]);
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="DIET PLAN" colors={colors} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('diet.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
         <Text style={styles.titleRow}>
-          <Text style={styles.titleWhite}>DIET </Text>
-          <Text style={styles.titleAccent}>PLAN</Text>
+          <Text style={styles.titleWhite}>{t('diet.titleWhite')} </Text>
+          <Text style={styles.titleAccent}>{t('diet.titleAccent')}</Text>
         </Text>
 
         {isLoading ? (
@@ -256,7 +258,7 @@ export default function DietScreen({ navigation }) {
         ) : !plans.length ? (
           <View style={{ alignItems: 'center', paddingVertical: 60 }}>
             <Text style={{ fontSize: 36 }}>🥗</Text>
-            <Text style={styles.emptyText}>No weeks yet. Tap + New Week.</Text>
+            <Text style={styles.emptyText}>{t('diet.emptyText')}</Text>
           </View>
         ) : (
           <>
@@ -268,38 +270,38 @@ export default function DietScreen({ navigation }) {
                   style={[styles.weekPill, activeWeek === w.week_number && styles.weekPillActive]}
                 >
                   <Text style={[styles.weekPillText, activeWeek === w.week_number && styles.weekPillTextActive]}>
-                    Week {w.week_number}
+                    {t('diet.weekPill', { week: w.week_number })}
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
             <TouchableOpacity style={styles.editWeekBtn} onPress={() => openEditor(activeWeek)}>
-              <Text style={styles.editWeekBtnText}>✏️ Edit Week {activeWeek}</Text>
+              <Text style={styles.editWeekBtnText}>{t('diet.editWeekBtn', { week: activeWeek })}</Text>
             </TouchableOpacity>
 
             {plan && (
               <>
                 <View style={styles.calBar}>
-                  <Text style={styles.calLbl}>Daily Target</Text>
-                  <Text style={styles.calVal}>{plan.calories} kcal</Text>
+                  <Text style={styles.calLbl}>{t('diet.dailyTarget')}</Text>
+                  <Text style={styles.calVal}>{t('diet.kcalValue', { value: plan.calories })}</Text>
                 </View>
 
                 <View style={styles.macroRow}>
                   <View style={styles.macroTile}>
                     <Text style={styles.macroIcon}>🍞</Text>
-                    <Text style={[styles.macroG, { color: '#fbbf24' }]}>{plan.carbs}g</Text>
-                    <Text style={styles.macroNm}>CARBS</Text>
+                    <Text style={[styles.macroG, { color: '#fbbf24' }]}>{t('diet.gramsValue', { value: plan.carbs })}</Text>
+                    <Text style={styles.macroNm}>{t('diet.carbsLabel')}</Text>
                   </View>
                   <View style={styles.macroTile}>
                     <Text style={styles.macroIcon}>🍗</Text>
-                    <Text style={[styles.macroG, { color: '#f472b6' }]}>{plan.protein}g</Text>
-                    <Text style={styles.macroNm}>PROTEIN</Text>
+                    <Text style={[styles.macroG, { color: '#f472b6' }]}>{t('diet.gramsValue', { value: plan.protein })}</Text>
+                    <Text style={styles.macroNm}>{t('diet.proteinLabel')}</Text>
                   </View>
                   <View style={styles.macroTile}>
                     <Text style={styles.macroIcon}>🧀</Text>
-                    <Text style={[styles.macroG, { color: '#38bdf8' }]}>{plan.fats}g</Text>
-                    <Text style={styles.macroNm}>FATS</Text>
+                    <Text style={[styles.macroG, { color: '#38bdf8' }]}>{t('diet.gramsValue', { value: plan.fats })}</Text>
+                    <Text style={styles.macroNm}>{t('diet.fatsLabel')}</Text>
                   </View>
                 </View>
 
@@ -307,22 +309,22 @@ export default function DietScreen({ navigation }) {
                   <View style={styles.infoTile}>
                     <Text style={styles.infoIcon}>🥒</Text>
                     <Text style={styles.infoVal}>{plan.veggies}</Text>
-                    <Text style={styles.infoLbl}>VEGGIES</Text>
+                    <Text style={styles.infoLbl}>{t('diet.veggiesLabel')}</Text>
                   </View>
                   <View style={styles.infoTile}>
                     <Text style={styles.infoIcon}>💧</Text>
                     <Text style={styles.infoVal}>{plan.water}</Text>
-                    <Text style={styles.infoLbl}>WATER</Text>
+                    <Text style={styles.infoLbl}>{t('diet.waterLabel')}</Text>
                   </View>
                   <View style={styles.infoTile}>
                     <Text style={styles.infoIcon}>🚶</Text>
                     <Text style={styles.infoVal}>{plan.steps_goal}</Text>
-                    <Text style={styles.infoLbl}>STEPS GOAL</Text>
+                    <Text style={styles.infoLbl}>{t('diet.stepsGoalLabel')}</Text>
                   </View>
                 </View>
 
                 <View style={styles.cardioTile}>
-                  <Text style={styles.cardioHead}>🏃 CARDIO PLAN</Text>
+                  <Text style={styles.cardioHead}>{t('diet.cardioPlanHead')}</Text>
                   {(plan.cardio ?? []).map((c, i) => (
                     <View key={i} style={styles.cardioLine}>
                       <View style={styles.cardioDot} />
@@ -335,19 +337,19 @@ export default function DietScreen({ navigation }) {
                 </View>
 
                 <View style={styles.dietLogTile}>
-                  <Text style={styles.weekNotesLabel}>WEEK NOTES</Text>
-                  <Text style={styles.formLabel}>CALORIES BURNED</Text>
+                  <Text style={styles.weekNotesLabel}>{t('diet.weekNotesLabel')}</Text>
+                  <Text style={styles.formLabel}>{t('diet.caloriesBurnedLabel')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. 840 kcal"
+                    placeholder={t('diet.calsBurnedPlaceholder')}
                     placeholderTextColor={colors.textDim}
                     value={calsBurned}
                     onChangeText={setCalsBurned}
                   />
-                  <Text style={[styles.formLabel, { marginTop: 12 }]}>OVERVIEW</Text>
+                  <Text style={[styles.formLabel, { marginTop: 12 }]}>{t('diet.overviewLabel')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="How did the week go?"
+                    placeholder={t('diet.overviewPlaceholder')}
                     placeholderTextColor={colors.textDim}
                     value={overview}
                     onChangeText={setOverview}
@@ -357,7 +359,7 @@ export default function DietScreen({ navigation }) {
                     onPress={() => notesMut.mutate({ weekNumber: activeWeek, fields: { cals_burned: calsBurned.trim(), overview: overview.trim() } })}
                     disabled={notesMut.isPending}
                   >
-                    {notesMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveNotesBtnText}>Save Notes</Text>}
+                    {notesMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveNotesBtnText}>{t('diet.saveNotesBtn')}</Text>}
                   </TouchableOpacity>
                 </View>
               </>
@@ -373,7 +375,7 @@ export default function DietScreen({ navigation }) {
 
       <BottomSheet visible={showEditor} onClose={() => setShowEditor(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>{editorWeek ? `Edit Week ${editorWeek}` : `New Week ${plans.length ? Math.max(...plans.map(p => p.week_number)) + 1 : 1}`}</Text>
+          <Text style={styles.sheetTitle}>{editorWeek ? t('diet.editWeekTitle', { week: editorWeek }) : t('diet.newWeekTitle', { week: plans.length ? Math.max(...plans.map(p => p.week_number)) + 1 : 1 })}</Text>
           <TouchableOpacity onPress={() => setShowEditor(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
@@ -383,48 +385,48 @@ export default function DietScreen({ navigation }) {
           <View style={styles.sheetFieldRow}>
             <View style={styles.sheetFieldCol}>
               <View style={styles.calLabelRow}>
-                <Text style={styles.sheetFieldLabel}>CALORIES</Text>
-                <View style={styles.autoChip}><Text style={styles.autoChipText}>AUTO</Text></View>
+                <Text style={styles.sheetFieldLabel}>{t('diet.caloriesFieldLabel')}</Text>
+                <View style={styles.autoChip}><Text style={styles.autoChipText}>{t('diet.autoChip')}</Text></View>
               </View>
               <View style={[styles.sheetInput, styles.disabledInput]}>
-                <Text style={{ color: colors.textDim }}>{calories || 'auto'}</Text>
+                <Text style={{ color: colors.textDim }}>{calories || t('diet.autoPlaceholder')}</Text>
               </View>
             </View>
             <View style={styles.sheetFieldCol}>
-              <Text style={styles.sheetFieldLabel}>PROTEIN (G)</Text>
+              <Text style={styles.sheetFieldLabel}>{t('diet.proteinFieldLabel')}</Text>
               <TextInput style={styles.sheetInput} value={protein} onChangeText={setProtein} keyboardType="numeric" placeholderTextColor={colors.textDim} />
             </View>
           </View>
 
           <View style={styles.sheetFieldRow}>
             <View style={styles.sheetFieldCol}>
-              <Text style={styles.sheetFieldLabel}>CARBS (G)</Text>
+              <Text style={styles.sheetFieldLabel}>{t('diet.carbsFieldLabel')}</Text>
               <TextInput style={styles.sheetInput} value={carbs} onChangeText={setCarbs} keyboardType="numeric" placeholderTextColor={colors.textDim} />
             </View>
             <View style={styles.sheetFieldCol}>
-              <Text style={styles.sheetFieldLabel}>FATS (G)</Text>
+              <Text style={styles.sheetFieldLabel}>{t('diet.fatsFieldLabel')}</Text>
               <TextInput style={styles.sheetInput} value={fats} onChangeText={setFats} keyboardType="numeric" placeholderTextColor={colors.textDim} />
             </View>
           </View>
 
           <View style={styles.sheetFieldRow}>
             <View style={styles.sheetFieldCol}>
-              <Text style={styles.sheetFieldLabel}>WATER</Text>
+              <Text style={styles.sheetFieldLabel}>{t('diet.waterFieldLabel')}</Text>
               <TextInput style={styles.sheetInput} value={water} onChangeText={setWater} placeholderTextColor={colors.textDim} />
             </View>
             <View style={styles.sheetFieldCol}>
-              <Text style={styles.sheetFieldLabel}>STEPS GOAL</Text>
+              <Text style={styles.sheetFieldLabel}>{t('diet.stepsGoalFieldLabel')}</Text>
               <TextInput style={styles.sheetInput} value={stepsGoal} onChangeText={setStepsGoal} placeholderTextColor={colors.textDim} />
             </View>
           </View>
 
           <View style={styles.sheetFieldColFull}>
-            <Text style={styles.sheetFieldLabel}>VEGGIES</Text>
+            <Text style={styles.sheetFieldLabel}>{t('diet.veggiesFieldLabel')}</Text>
             <TextInput style={styles.sheetInput} value={veggies} onChangeText={setVeggies} placeholderTextColor={colors.textDim} />
           </View>
 
           <View style={styles.sheetFieldColFull}>
-            <Text style={styles.sheetFieldLabel}>CARDIO PLAN (ONE PER LINE)</Text>
+            <Text style={styles.sheetFieldLabel}>{t('diet.cardioPlanFieldLabel')}</Text>
             <TextInput
               style={[styles.sheetInput, styles.multiline]}
               value={cardioText}
@@ -435,7 +437,7 @@ export default function DietScreen({ navigation }) {
           </View>
 
           <View style={styles.sheetFieldColFull}>
-            <Text style={styles.sheetFieldLabel}>SESSIONS NOTE</Text>
+            <Text style={styles.sheetFieldLabel}>{t('diet.sessionsNoteFieldLabel')}</Text>
             <TextInput
               style={[styles.sheetInput, styles.multiline]}
               value={sessionsNote}
@@ -447,16 +449,16 @@ export default function DietScreen({ navigation }) {
 
           <View style={styles.sheetActionRow}>
             <TouchableOpacity style={styles.copyBtn} onPress={copyLastWeek} disabled={!plans.length}>
-              <Text style={styles.copyBtnText}>📋 Copy Last Week</Text>
+              <Text style={styles.copyBtnText}>{t('diet.copyLastWeekBtn')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.saveBtn} onPress={saveWeek} disabled={weekMut.isPending}>
-              {weekMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Week</Text>}
+              {weekMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('diet.saveWeekBtn')}</Text>}
             </TouchableOpacity>
           </View>
 
           {!!editorWeek && (
             <TouchableOpacity style={styles.deleteBtn} onPress={confirmDelete}>
-              <Text style={styles.deleteBtnText}>🗑️ Delete This Week</Text>
+              <Text style={styles.deleteBtnText}>{t('diet.deleteThisWeekBtn')}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
