@@ -1084,7 +1084,7 @@ export default function HomeScreen() {
     onError: (e, vars, context) => {
       if (context?.previousHome) qc.setQueryData(['home', user.id], context.previousHome);
       if (context?.previousWeight) qc.setQueryData(['weight', user.id], context.previousWeight);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('home.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['home', user.id]);
@@ -1189,10 +1189,10 @@ export default function HomeScreen() {
   const wtTrendPct  = weightDelta == null ? 0 : Math.max(0, Math.min(100, Math.round(50 - weightDelta * 50)));
 
   const cutScore = Math.round(stepsPct * 0.3 + caloriesPct * 0.2 + sessionsPct * 0.35 + wtTrendPct * 0.15);
-  const cutStatus = cutScore >= 80 ? 'Crushing it!' : cutScore >= 50 ? 'On track' : 'Needs attention';
+  const cutStatus = cutScore >= 80 ? t('home.cutStatusCrushing') : cutScore >= 50 ? t('home.cutStatusOnTrack') : t('home.cutStatusNeedsAttention');
   const cutSubtitle = (stepsPct < 50 || caloriesPct < 50)
-    ? 'Steps or calories off target this week.'
-    : 'Based on this week\'s consistency.';
+    ? t('home.cutSubtitleOffTarget')
+    : t('home.cutSubtitleConsistency');
 
   // ── Insight cards (auto-rotating carousel) ───────────────────────────────
   const stepsTrendPct = (data?.lastWeek?.steps ?? 0) > 0
@@ -1509,10 +1509,10 @@ export default function HomeScreen() {
                 style={styles.insightsHubHeader}
               >
                 <Ionicons name="sparkles" size={14} color="#0a0a0a" />
-                <Text style={styles.insightsHubHeaderText}>PRO INSIGHTS</Text>
+                <Text style={styles.insightsHubHeaderText}>{t('home.proInsights')}</Text>
                 {!hasAccess && (
                   <View style={styles.insightsHubUnlockPill}>
-                    <Text style={styles.insightsHubUnlockText}>Unlock all 6 🔒</Text>
+                    <Text style={styles.insightsHubUnlockText}>{t('home.unlockAll6')} 🔒</Text>
                   </View>
                 )}
               </LinearGradient>
@@ -1529,21 +1529,21 @@ export default function HomeScreen() {
                     <Ionicons name="rocket-outline" size={16} color={colors.accent} />
                     <View style={styles.insightsHubBody}>
                       <View style={styles.insightsHubTitleRow}>
-                        <Text style={[styles.insightsHubTitle, { color: colors.accent }]}>Goal forecast</Text>
+                        <Text style={[styles.insightsHubTitle, { color: colors.accent }]}>{t('home.goalForecast')}</Text>
                         {!hasAccess && (
                           <View style={styles.miniProBadge}>
-                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                            <Text style={styles.miniProBadgeText}>{t('home.proBadge')}</Text>
                           </View>
                         )}
                       </View>
                       <Text style={styles.insightsHubSub} numberOfLines={2}>
                         {hasAccess && data?.goalForecast
-                          ? `Projected ${data.goalForecast.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${Math.abs(data.goalForecast.weeklyPaceKg)}kg/wk pace`
-                          : 'Unlock your personalized projection 🔒'}
+                          ? t('home.goalForecastProjected', { date: data.goalForecast.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), pace: Math.abs(data.goalForecast.weeklyPaceKg) })
+                          : t('home.unlockProjection') + ' 🔒'}
                       </Text>
                     </View>
                     {hasAccess && data?.goalForecast && (
-                      <Text style={styles.insightsHubVal}>~{data.goalForecast.daysToGoal}d to goal</Text>
+                      <Text style={styles.insightsHubVal}>{t('home.daysToGoal', { count: data.goalForecast.daysToGoal })}</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1562,21 +1562,21 @@ export default function HomeScreen() {
                     <Ionicons name="barbell-outline" size={16} color={C_GREEN} />
                     <View style={styles.insightsHubBody}>
                       <View style={styles.insightsHubTitleRow}>
-                        <Text style={[styles.insightsHubTitle, { color: C_GREEN }]}>PR watch</Text>
+                        <Text style={[styles.insightsHubTitle, { color: C_GREEN }]}>{t('home.prWatch')}</Text>
                         {!hasAccess && (
                           <View style={[styles.miniProBadge, { backgroundColor: C_GREEN }]}>
-                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                            <Text style={styles.miniProBadgeText}>{t('home.proBadge')}</Text>
                           </View>
                         )}
                       </View>
                       <Text style={styles.insightsHubSub} numberOfLines={2}>
                         {hasAccess && data?.prWatch
-                          ? `${data.prWatch.exercise} · best ${data.prWatch.prKg}kg`
-                          : "See which lift you're closest to beating 🔒"}
+                          ? t('home.prWatchSub', { exercise: data.prWatch.exercise, best: data.prWatch.prKg })
+                          : t('home.prWatchLocked') + ' 🔒'}
                       </Text>
                     </View>
                     {hasAccess && data?.prWatch && (
-                      <Text style={styles.insightsHubVal}>{data.prWatch.gapKg}kg from PR</Text>
+                      <Text style={styles.insightsHubVal}>{t('home.kgFromPr', { value: data.prWatch.gapKg })}</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1595,23 +1595,23 @@ export default function HomeScreen() {
                     <Ionicons name="pulse-outline" size={16} color={C_SLEEP} />
                     <View style={styles.insightsHubBody}>
                       <View style={styles.insightsHubTitleRow}>
-                        <Text style={[styles.insightsHubTitle, { color: C_SLEEP }]}>Recovery score</Text>
+                        <Text style={[styles.insightsHubTitle, { color: C_SLEEP }]}>{t('home.recoveryScore')}</Text>
                         {!hasAccess && (
                           <View style={[styles.miniProBadge, { backgroundColor: C_SLEEP }]}>
-                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                            <Text style={styles.miniProBadgeText}>{t('home.proBadge')}</Text>
                           </View>
                         )}
                       </View>
                       <Text style={styles.insightsHubSub} numberOfLines={2}>
                         {hasAccess && data?.recoveryScore != null
-                          ? (data.recoveryScore >= 80 ? 'Primed to push hard today 🚀'
-                            : data.recoveryScore >= 50 ? 'Moderate load — train smart'
-                            : 'Low recovery — consider an easier day')
-                          : 'Daily readiness from your sleep 🔒'}
+                          ? (data.recoveryScore >= 80 ? t('home.recoveryHigh')
+                            : data.recoveryScore >= 50 ? t('home.recoveryModerate')
+                            : t('home.recoveryLow'))
+                          : t('home.recoveryLocked') + ' 🔒'}
                       </Text>
                     </View>
                     {hasAccess && data?.recoveryScore != null && (
-                      <Text style={styles.insightsHubVal}>{data.recoveryScore}% recovered</Text>
+                      <Text style={styles.insightsHubVal}>{t('home.percentRecovered', { value: data.recoveryScore })}</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1630,23 +1630,23 @@ export default function HomeScreen() {
                     <Ionicons name="flame-outline" size={16} color={C_STEPS} />
                     <View style={styles.insightsHubBody}>
                       <View style={styles.insightsHubTitleRow}>
-                        <Text style={[styles.insightsHubTitle, { color: C_STEPS }]}>Streak record</Text>
+                        <Text style={[styles.insightsHubTitle, { color: C_STEPS }]}>{t('home.streakRecord')}</Text>
                         {!hasAccess && (
                           <View style={[styles.miniProBadge, { backgroundColor: C_STEPS }]}>
-                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                            <Text style={styles.miniProBadgeText}>{t('home.proBadge')}</Text>
                           </View>
                         )}
                       </View>
                       <Text style={styles.insightsHubSub} numberOfLines={2}>
                         {hasAccess && data?.longestStreak > 0
                           ? (data.streak >= data.longestStreak
-                            ? "🔥 You're on your best streak ever!"
-                            : `Your best ever was ${data.longestStreak} day${data.longestStreak === 1 ? '' : 's'} in a row. You're now on a ${data.streak}-day streak.`)
-                          : 'Track your best-ever streak 🔒'}
+                            ? t('home.bestStreakEver')
+                            : t('home.bestStreakCompare', { best: data.longestStreak, current: data.streak }))
+                          : t('home.streakRecordLocked') + ' 🔒'}
                       </Text>
                     </View>
                     {hasAccess && data?.longestStreak > 0 && (
-                      <Text style={styles.insightsHubVal}>Best: {data.longestStreak}d</Text>
+                      <Text style={styles.insightsHubVal}>{t('home.bestDays', { value: data.longestStreak })}</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1665,23 +1665,23 @@ export default function HomeScreen() {
                     <Ionicons name="flask-outline" size={16} color={C_KCAL} />
                     <View style={styles.insightsHubBody}>
                       <View style={styles.insightsHubTitleRow}>
-                        <Text style={[styles.insightsHubTitle, { color: C_KCAL }]}>True maintenance</Text>
+                        <Text style={[styles.insightsHubTitle, { color: C_KCAL }]}>{t('home.trueMaintenance')}</Text>
                         {!hasAccess && (
                           <View style={[styles.miniProBadge, { backgroundColor: C_KCAL }]}>
-                            <Text style={styles.miniProBadgeText}>PRO</Text>
+                            <Text style={styles.miniProBadgeText}>{t('home.proBadge')}</Text>
                           </View>
                         )}
                       </View>
                       <Text style={styles.insightsHubSub} numberOfLines={2}>
                         {hasAccess && data?.calorieInsight
-                          ? `Based on actual intake + weight trend${data.calorieInsight.diffVsTarget != null
-                              ? ` — ${Math.abs(data.calorieInsight.diffVsTarget)} kcal ${data.calorieInsight.diffVsTarget > 0 ? 'higher' : 'lower'} than target`
-                              : ''}`
-                          : 'Your real maintenance calories 🔒'}
+                          ? t('home.trueMaintenanceSub') + (data.calorieInsight.diffVsTarget != null
+                              ? ' — ' + t(data.calorieInsight.diffVsTarget > 0 ? 'home.kcalHigherThanTarget' : 'home.kcalLowerThanTarget', { value: Math.abs(data.calorieInsight.diffVsTarget) })
+                              : '')
+                          : t('home.trueMaintenanceLocked') + ' 🔒'}
                       </Text>
                     </View>
                     {hasAccess && data?.calorieInsight && (
-                      <Text style={styles.insightsHubVal}>~{data.calorieInsight.trueMaintenance} kcal</Text>
+                      <Text style={styles.insightsHubVal}>{t('home.approxKcal', { value: data.calorieInsight.trueMaintenance })}</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
@@ -1699,21 +1699,21 @@ export default function HomeScreen() {
                   <Ionicons name="moon-outline" size={16} color={C_SLEEP} />
                   <View style={styles.insightsHubBody}>
                     <View style={styles.insightsHubTitleRow}>
-                      <Text style={[styles.insightsHubTitle, { color: C_SLEEP }]}>Sleep debt</Text>
+                      <Text style={[styles.insightsHubTitle, { color: C_SLEEP }]}>{t('home.sleepDebt')}</Text>
                       {!hasAccess && (
                         <View style={[styles.miniProBadge, { backgroundColor: C_SLEEP }]}>
-                          <Text style={styles.miniProBadgeText}>PRO</Text>
+                          <Text style={styles.miniProBadgeText}>{t('home.proBadge')}</Text>
                         </View>
                       )}
                     </View>
                     <Text style={styles.insightsHubSub} numberOfLines={2}>
                       {hasAccess && data?.sleepDebt
-                        ? `Over last ${data.sleepDebt.nights} nights · ~${data.sleepDebt.nightsToRecover} night${data.sleepDebt.nightsToRecover === 1 ? '' : 's'} to recover`
-                        : 'Your cumulative sleep debt 🔒'}
+                        ? t('home.sleepDebtSub', { nights: data.sleepDebt.nights, recoverNights: data.sleepDebt.nightsToRecover })
+                        : t('home.sleepDebtLocked') + ' 🔒'}
                     </Text>
                   </View>
                   {hasAccess && data?.sleepDebt && (
-                    <Text style={styles.insightsHubVal}>{data.sleepDebt.totalDebtHrs}h owed</Text>
+                    <Text style={styles.insightsHubVal}>{t('home.hoursOwed', { value: data.sleepDebt.totalDebtHrs })}</Text>
                   )}
                 </TouchableOpacity>
               )}
@@ -1724,10 +1724,10 @@ export default function HomeScreen() {
               <NudgeCard
                 icon="scale-outline"
                 color={C_WEIGHT}
-                title={data?.latestWeight ? `No weigh-in for ${data.daysSinceWeight} days` : 'No weigh-ins yet'}
+                title={data?.latestWeight ? t('home.noWeighInForDays', { count: data.daysSinceWeight }) : t('home.noWeighInsYet')}
                 sub={data?.latestWeight
-                  ? `Last: ${data.latestWeight.weight}KG · ${data.daysSinceWeight} days ago`
-                  : 'Tap to log your first weight'}
+                  ? t('home.lastWeightAgo', { weight: data.latestWeight.weight, count: data.daysSinceWeight })
+                  : t('home.tapToLogFirstWeight')}
                 styles={styles}
                 onPress={() => setShowWeightLog(true)}
               />
@@ -1736,10 +1736,13 @@ export default function HomeScreen() {
               <NudgeCard
                 icon="trophy-outline"
                 color={colors.warning}
-                title={data?.lastWorkoutDate ? 'Rest day — no session today' : 'No session today'}
+                title={data?.lastWorkoutDate ? t('home.restDayNoSession') : t('home.noSessionToday')}
                 sub={data?.lastWorkoutDate
-                  ? `Last: ${classifySession(data.lastWorkoutNotes) === 'rest' ? 'Rest Day' : 'Session'} on ${new Date(data.lastWorkoutDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`
-                  : 'Tap to start your first session'}
+                  ? t('home.lastSessionOn', {
+                      sessionType: classifySession(data.lastWorkoutNotes) === 'rest' ? t('home.restDay') : t('home.session'),
+                      date: new Date(data.lastWorkoutDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+                    })
+                  : t('home.tapToStartFirstSession')}
                 styles={styles}
                 onPress={() => navigation.navigate('Workout')}
               />
@@ -1748,10 +1751,10 @@ export default function HomeScreen() {
               <NudgeCard
                 icon="footsteps-outline"
                 color={C_STEPS}
-                title={data?.latestSteps ? `No steps logged for ${data.daysSinceSteps} day${data.daysSinceSteps === 1 ? '' : 's'}` : 'No steps logged yet'}
+                title={data?.latestSteps ? t('home.noStepsLoggedForDays', { count: data.daysSinceSteps }) : t('home.noStepsLoggedYet')}
                 sub={data?.latestSteps
-                  ? `Last: ${data.latestSteps.steps.toLocaleString()} · ${data.daysSinceSteps} day${data.daysSinceSteps === 1 ? '' : 's'} ago`
-                  : 'Tap to log your first steps'}
+                  ? t('home.lastStepsAgo', { steps: data.latestSteps.steps.toLocaleString(), count: data.daysSinceSteps })
+                  : t('home.tapToLogFirstSteps')}
                 styles={styles}
                 onPress={() => setShowStepsLog(true)}
               />
@@ -1760,10 +1763,10 @@ export default function HomeScreen() {
               <NudgeCard
                 icon="moon-outline"
                 color={C_SLEEP}
-                title={data?.latestSleep ? `No sleep logged for ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'}` : 'No sleep logged yet'}
+                title={data?.latestSleep ? t('home.noSleepLoggedForDays', { count: data.daysSinceSleep }) : t('home.noSleepLoggedYet')}
                 sub={data?.latestSleep
-                  ? `Last: ${data.latestSleep.hours}h · ${data.daysSinceSleep} day${data.daysSinceSleep === 1 ? '' : 's'} ago`
-                  : 'Tap to log your first sleep'}
+                  ? t('home.lastSleepAgo', { hours: data.latestSleep.hours, count: data.daysSinceSleep })
+                  : t('home.tapToLogFirstSleep')}
                 styles={styles}
                 onPress={() => setShowSleepLog(true)}
               />
@@ -1772,28 +1775,28 @@ export default function HomeScreen() {
               <NudgeCard
                 icon="trophy"
                 color={C_GREEN}
-                title={`Almost there! — ${sessionsLeft} more gym session${sessionsLeft === 1 ? '' : 's'} this week`}
-                sub={`${thisWeekSessions}/${weeklyGoal} gym sessions · this week`}
+                title={t('home.almostThereSessions', { count: sessionsLeft })}
+                sub={t('home.gymSessionsThisWeek', { count: thisWeekSessions, weeklyGoal })}
                 styles={styles}
                 onPress={() => navigation.navigate('Workout')}
-                logLabel="THIS WEEK"
+                logLabel={t('home.thisWeekTab')}
                 logBadge={String(thisWeekSessions)}
               />
             )}
 
             {/* ── 7-Day Steps Trend (vs last week, with goal line) ─ */}
-            <Text style={styles.sectionLabel}>7-DAY TREND</Text>
+            <Text style={styles.sectionLabel}>{t('home.sevenDayTrend')}</Text>
             <View style={styles.chartCard}>
               <View style={styles.chartHdr}>
-                <Text style={styles.chartTitle}>Steps vs last week</Text>
+                <Text style={styles.chartTitle}>{t('home.stepsVsLastWeek')}</Text>
                 <View style={styles.chartLegend}>
                   <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: colors.text }]} />
-                    <Text style={styles.legendText}>This wk</Text>
+                    <Text style={styles.legendText}>{t('home.thisWk')}</Text>
                   </View>
                   <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: colors.textDim }]} />
-                    <Text style={styles.legendText}>Last wk</Text>
+                    <Text style={styles.legendText}>{t('home.lastWk')}</Text>
                   </View>
                 </View>
               </View>
@@ -1818,24 +1821,24 @@ export default function HomeScreen() {
                   <View style={styles.chartStatsRow}>
                     <View style={styles.chartStatTile}>
                       <Text style={styles.chartStatVal}>{curTotal.toLocaleString()}</Text>
-                      <Text style={styles.chartStatLabel}>TOTAL THIS WK</Text>
+                      <Text style={styles.chartStatLabel}>{t('home.totalThisWk')}</Text>
                     </View>
                     <View style={styles.chartStatDivider} />
                     <View style={styles.chartStatTile}>
                       <Text style={styles.chartStatVal}>{avg.toLocaleString()}</Text>
-                      <Text style={styles.chartStatLabel}>DAILY AVG</Text>
+                      <Text style={styles.chartStatLabel}>{t('home.dailyAvg')}</Text>
                     </View>
                     <View style={styles.chartStatDivider} />
                     <View style={styles.chartStatTile}>
                       <Text style={styles.chartStatVal}>{bestDay.toLocaleString()}</Text>
-                      <Text style={styles.chartStatLabel}>BEST DAY</Text>
+                      <Text style={styles.chartStatLabel}>{t('home.bestDay')}</Text>
                     </View>
                     <View style={styles.chartStatDivider} />
                     <View style={styles.chartStatTile}>
                       <Text style={[styles.chartStatVal, { color: pctDelta == null ? colors.text : pctDelta >= 0 ? C_GREEN : '#f87171' }]}>
                         {pctDelta == null ? '—' : `${pctDelta > 0 ? '+' : ''}${pctDelta}%`}
                       </Text>
-                      <Text style={styles.chartStatLabel}>VS LAST WK</Text>
+                      <Text style={styles.chartStatLabel}>{t('home.vsLastWk')}</Text>
                     </View>
                   </View>
                 );
@@ -1847,11 +1850,11 @@ export default function HomeScreen() {
               <View style={styles.banner}>
                 <Text style={styles.bannerEmoji}>✅</Text>
                 <View style={styles.bannerBody}>
-                  <Text style={styles.bannerTitle}>{data.todayWorkoutName} done today!</Text>
-                  <Text style={styles.bannerSub}>{data.todayExCount} exercises · {data.todaySetCount} sets logged</Text>
+                  <Text style={styles.bannerTitle}>{t('home.workoutDoneToday', { workoutName: data.todayWorkoutName })}</Text>
+                  <Text style={styles.bannerSub}>{t('home.exercisesSetsLogged', { exercises: data.todayExCount, sets: data.todaySetCount })}</Text>
                 </View>
                 <TouchableOpacity style={styles.viewBtn} onPress={() => navigation.navigate('Workout')}>
-                  <Text style={styles.viewBtnText}>View</Text>
+                  <Text style={styles.viewBtnText}>{t('home.view')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1883,7 +1886,7 @@ export default function HomeScreen() {
                   <View style={styles.weekHdr}>
                     <View style={styles.weekHdrLeft}>
                       <Ionicons name="speedometer-outline" size={13} color={colors.accent} />
-                      <Text style={styles.weekHdrLabel}>WEEKLY CUT SCORE</Text>
+                      <Text style={styles.weekHdrLabel}>{t('home.weeklyCutScore')}</Text>
                     </View>
                   </View>
                   <View style={styles.cutRow}>
@@ -1898,10 +1901,10 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.cutBreakdown}>
                     {[
-                      { label: 'Steps', value: stepsPct },
-                      { label: 'Calories', value: caloriesPct },
-                      { label: 'Sessions', value: sessionsPct },
-                      { label: 'Wt trend', value: wtTrendPct },
+                      { label: t('home.cutBreakdownSteps'), value: stepsPct },
+                      { label: t('home.cutBreakdownCalories'), value: caloriesPct },
+                      { label: t('home.cutBreakdownSessions'), value: sessionsPct },
+                      { label: t('home.cutBreakdownWtTrend'), value: wtTrendPct },
                     ].map(row => (
                       <View key={row.label} style={styles.cutBreakdownRow}>
                         <Text style={styles.cutBreakdownLabel}>{row.label}</Text>
@@ -1919,7 +1922,7 @@ export default function HomeScreen() {
                     <View style={styles.weekHdrLeft}>
                       <Ionicons name="calendar-outline" size={13} color={colors.accent} />
                       <Text style={styles.weekHdrLabel}>
-                        {activeTab === 0 ? 'THIS WEEK' : activeTab === 1 ? 'LAST WEEK' : 'MONTHLY'}
+                        {activeTab === 0 ? t('home.thisWeekTab') : activeTab === 1 ? t('home.lastWeekTab') : t('home.monthlyLabel')}
                       </Text>
                     </View>
                     {activeTab === 0 && <Text style={styles.weekHdrDate}>{fmtWeekLabel()}</Text>}
@@ -1930,22 +1933,22 @@ export default function HomeScreen() {
                   {activeTab === 2 ? (
                     <>
                       <View style={styles.statsRow}>
-                        <StatTile value={String(tabStats[2]?.gymCount ?? 0)} label="GYM" color={C_GREEN} />
-                        <StatTile value={String(tabStats[2]?.cardioCount ?? 0)} label="CARDIO" color="#60a5fa" />
-                        <StatTile value={tabStats[2]?.kcal ? fmtK(tabStats[2].kcal) : '—'} label="KCAL" color={C_KCAL} />
-                        <StatTile value={tabStats[2]?.avgWeight != null ? tabStats[2].avgWeight.toFixed(1) : '—'} label="AVG WT" color={C_WEIGHT} last />
+                        <StatTile value={String(tabStats[2]?.gymCount ?? 0)} label={t('home.gym')} color={C_GREEN} />
+                        <StatTile value={String(tabStats[2]?.cardioCount ?? 0)} label={t('home.cardioLabel')} color="#60a5fa" />
+                        <StatTile value={tabStats[2]?.kcal ? fmtK(tabStats[2].kcal) : '—'} label={t('home.kcalLabel')} color={C_KCAL} />
+                        <StatTile value={tabStats[2]?.avgWeight != null ? tabStats[2].avgWeight.toFixed(1) : '—'} label={t('home.avgWt')} color={C_WEIGHT} last />
                       </View>
                       <View style={styles.statsRow}>
-                        <StatTile value={fmtK(tabStats[2]?.avgSteps)} label="AVG STEPS" color={C_STEPS} />
-                        <StatTile value={String(tabStats[2]?.restCount ?? 0)} label="REST DAYS" color="#f59e0b" last />
+                        <StatTile value={fmtK(tabStats[2]?.avgSteps)} label={t('home.avgSteps')} color={C_STEPS} />
+                        <StatTile value={String(tabStats[2]?.restCount ?? 0)} label={t('home.restDays')} color="#f59e0b" last />
                       </View>
                     </>
                   ) : (
                   <View style={styles.statsRow}>
                     <StatTile
                       value={String(tabStats[activeTab]?.sessions ?? 0)}
-                      label="SESSIONS"
-                      sub={activeTab === 0 && data ? deltaStr(data.thisWeek.sessions - data.lastWeek.sessions) + ' vs last wk' : null}
+                      label={t('home.sessionsLabel')}
+                      sub={activeTab === 0 && data ? t('home.vsLastWkDelta', { delta: deltaStr(data.thisWeek.sessions - data.lastWeek.sessions) }) : null}
                       subColor={activeTab === 0 && data
                         ? ((data.thisWeek.sessions - data.lastWeek.sessions) > 0
                           ? C_GREEN
@@ -1957,22 +1960,22 @@ export default function HomeScreen() {
                     />
                     <StatTile
                       value={fmtK(tabStats[activeTab]?.steps)}
-                      label="STEPS"
-                      sub={`${tabStats[activeTab]?.goalDays ?? 0}/${periodDays[activeTab]} goal days`}
+                      label={t('home.stepsLabel')}
+                      sub={t('home.goalDaysOf', { count: tabStats[activeTab]?.goalDays ?? 0, total: periodDays[activeTab] })}
                       color={C_STEPS}
                     />
                     <StatTile
                       value={tabStats[activeTab]?.kcal ? fmtK(tabStats[activeTab].kcal) : '—'}
-                      label="KCAL"
-                      sub={!tabStats[activeTab]?.kcal ? 'not logged' : null}
+                      label={t('home.kcalLabel')}
+                      sub={!tabStats[activeTab]?.kcal ? t('home.notLogged') : null}
                       color={C_KCAL}
                     />
                     <StatTile
                       value={tabStats[activeTab]?.weightDelta !== null && tabStats[activeTab]?.weightDelta !== undefined
                         ? `${tabStats[activeTab].weightDelta > 0 ? '+' : ''}${tabStats[activeTab].weightDelta}kg`
                         : '—'}
-                      label="WT Δ"
-                      sub={activeTab === 0 ? 'wk change' : activeTab === 1 ? 'wk change' : 'mo change'}
+                      label={t('home.wtDelta')}
+                      sub={activeTab === 0 ? t('home.wkChange') : activeTab === 1 ? t('home.wkChange') : t('home.moChange')}
                       color={tabStats[activeTab]?.weightDelta == null
                         ? C_WEIGHT
                         : tabStats[activeTab].weightDelta > 0 ? '#f87171' : C_GREEN}
@@ -2002,14 +2005,14 @@ export default function HomeScreen() {
       {/* Quick log: Weight */}
       <BottomSheet visible={showWeightLog} onClose={() => setShowWeightLog(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>LOG WEIGHT</Text>
+          <Text style={styles.sheetTitle}>{t('home.logWeightTitle')}</Text>
           <TouchableOpacity onPress={() => setShowWeightLog(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <Text style={styles.sheetFieldLabel}>WEIGHT (KG)</Text>
-          {data?.latestWeight && <Text style={styles.lastHint}>↑ LAST: {data.latestWeight.weight}KG</Text>}
+          <Text style={styles.sheetFieldLabel}>{t('home.weightKgLabel')}</Text>
+          {data?.latestWeight && <Text style={styles.lastHint}>{t('home.lastHintKg', { value: data.latestWeight.weight })}</Text>}
         </View>
         <TextInput
           style={styles.sheetInput}
@@ -2025,19 +2028,19 @@ export default function HomeScreen() {
           onPress={() => weightQuickInput && weightQuickMut.mutate(parseFloat(weightQuickInput))}
           disabled={weightQuickMut.isPending}
         >
-          {weightQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Weight</Text>}
+          {weightQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('home.saveWeight')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
 
       {/* Quick log: Sleep */}
       <BottomSheet visible={showSleepLog} onClose={() => setShowSleepLog(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>LOG SLEEP</Text>
+          <Text style={styles.sheetTitle}>{t('home.logSleepTitle')}</Text>
           <TouchableOpacity onPress={() => setShowSleepLog(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
-        <Text style={styles.sheetFieldLabel}>HOURS SLEPT</Text>
+        <Text style={styles.sheetFieldLabel}>{t('home.hoursSleptLabel')}</Text>
         <TextInput
           style={styles.sheetInput}
           value={sleepQuickInput}
@@ -2055,21 +2058,21 @@ export default function HomeScreen() {
           }}
           disabled={sleepQuickMut.isPending}
         >
-          {sleepQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Sleep</Text>}
+          {sleepQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('home.saveSleep')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
 
       {/* Quick log: Steps */}
       <BottomSheet visible={showStepsLog} onClose={() => setShowStepsLog(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>LOG STEPS</Text>
+          <Text style={styles.sheetTitle}>{t('home.logStepsTitle')}</Text>
           <TouchableOpacity onPress={() => setShowStepsLog(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <Text style={styles.sheetFieldLabel}>STEPS</Text>
-          {data?.latestSteps && <Text style={styles.lastHint}>↑ LAST: {data.latestSteps.steps.toLocaleString()}</Text>}
+          <Text style={styles.sheetFieldLabel}>{t('home.stepsFieldLabel')}</Text>
+          {data?.latestSteps && <Text style={styles.lastHint}>{t('home.lastHintSteps', { value: data.latestSteps.steps.toLocaleString() })}</Text>}
         </View>
         <TextInput
           style={styles.sheetInput}
@@ -2088,7 +2091,7 @@ export default function HomeScreen() {
           }}
           disabled={stepsQuickMut.isPending}
         >
-          {stepsQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Steps</Text>}
+          {stepsQuickMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('home.saveSteps')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
     </SafeAreaView>

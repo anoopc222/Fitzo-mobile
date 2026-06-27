@@ -255,16 +255,17 @@ function calcCardioKcal(type, dur, speed, incline, rpm) {
 }
 
 // Per-type field mapping onto the sets table's dedicated cardio columns
-function getCardioFieldDefs(type) {
+function getCardioFieldDefs(type, t) {
+  const tr = t ?? ((k, opts) => opts?.defaultValue ?? k);
   if (type === 'Incline Walk')
-    return { secondary: { key: 'speed_kmh', label: 'SPEED (KM/H)', placeholder: '3.5' },
-              tertiary:  { key: 'incline_pct', label: 'INCLINE (%)', placeholder: '12' } };
+    return { secondary: { key: 'speed_kmh', label: tr('workout.speedKmhLabel'), placeholder: '3.5' },
+              tertiary:  { key: 'incline_pct', label: tr('workout.inclinePctLabel'), placeholder: '12' } };
   if (type === 'Air Bike')
-    return { secondary: { key: 'distance_km', label: 'DISTANCE (KM)', placeholder: 'optional' },
-              tertiary:  { key: 'avg_rpm', label: 'AVG RPM', placeholder: 'optional' } };
+    return { secondary: { key: 'distance_km', label: tr('workout.distanceKmLabel'), placeholder: tr('workout.optionalPlaceholder') },
+              tertiary:  { key: 'avg_rpm', label: tr('workout.avgRpmLabel'), placeholder: tr('workout.optionalPlaceholder') } };
   if (type === 'Treadmill Run')
-    return { secondary: { key: 'distance_km', label: 'DISTANCE (KM)', placeholder: '5' },
-              tertiary:  { key: 'speed_kmh', label: 'SPEED (KM/H)', placeholder: '10' } };
+    return { secondary: { key: 'distance_km', label: tr('workout.distanceKmLabel'), placeholder: '5' },
+              tertiary:  { key: 'speed_kmh', label: tr('workout.speedKmhLabel'), placeholder: '10' } };
   return { secondary: null, tertiary: null };
 }
 
@@ -1143,7 +1144,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                       <Text style={dS.exName}>{(ex.exercise_name ?? '').toUpperCase()}</Text>
                       {isPB && (
                         <View style={dS.pbBadge}>
-                          <Text style={dS.pbBadgeText}>🏆 PB</Text>
+                          <Text style={dS.pbBadgeText}>🏆 {t('workout.pbAbbrev')}</Text>
                         </View>
                       )}
                       <TouchableOpacity
@@ -1191,7 +1192,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                           <View style={{ width: 58, alignItems: 'flex-end' }}>
                             {isBest && (
                               <View style={dS.bestBadge}>
-                                <Text style={dS.bestBadgeText}>★ best</Text>
+                                <Text style={dS.bestBadgeText}>★ {t('workout.best')}</Text>
                               </View>
                             )}
                           </View>
@@ -1618,20 +1619,20 @@ function EditSessionModal({
           {/* Date + Type */}
           <View style={eS.fieldRow}>
             <View style={eS.fieldCol}>
-              <Text style={eS.fieldLabel}>DATE</Text>
+              <Text style={eS.fieldLabel}>{t('workout.date')}</Text>
               <DatePickerField
                 value={date}
                 onChange={setDate}
                 colors={colors}
                 maxDate={localDateStr(new Date())}
-                placeholder="Pick date"
+                placeholder={t('workout.pickDate')}
                 style={eS.datePickerBtn}
               />
             </View>
             <View style={eS.fieldCol}>
-              <Text style={eS.fieldLabel}>TYPE</Text>
+              <Text style={eS.fieldLabel}>{t('workout.type')}</Text>
               <TextInput style={eS.fieldInput} value={name} onChangeText={setName}
-                placeholder="e.g. Chest & Back" placeholderTextColor={colors.textDim} />
+                placeholder={t('workout.egChestAndBack')} placeholderTextColor={colors.textDim} />
             </View>
           </View>
 
@@ -1640,10 +1641,10 @@ function EditSessionModal({
             /* ── Rest Day UI ── */
             <View style={eS.restDayWrap}>
               <Text style={eS.restDayEmoji}>😴</Text>
-              <Text style={eS.restDayTitle}>Rest & Recovery</Text>
-              <Text style={eS.restDaySub}>No exercises needed on rest days.{'\n'}Recovery is part of progress!</Text>
+              <Text style={eS.restDayTitle}>{t('workout.restAndRecovery')}</Text>
+              <Text style={eS.restDaySub}>{t('workout.noExercisesNeededOnRestDays')}</Text>
               <View style={eS.restDayBadges}>
-                {['💤 Sleep', '🧘 Stretch', '🥗 Nutrition'].map(b => (
+                {[t('workout.sleepBadge'), t('workout.stretchBadge'), t('workout.nutritionBadge')].map(b => (
                   <View key={b} style={eS.restBadge}>
                     <Text style={eS.restBadgeText}>{b}</Text>
                   </View>
@@ -1656,7 +1657,7 @@ function EditSessionModal({
               {isCardio && (
                 <View style={eS.cardioHint}>
                   <Ionicons name="fitness-outline" size={14} color={colors.blue} />
-                  <Text style={eS.cardioHintText}>Add activities — Distance (km) × Duration (min)</Text>
+                  <Text style={eS.cardioHintText}>{t('workout.addActivitiesHint')}</Text>
                 </View>
               )}
 
@@ -1674,10 +1675,12 @@ function EditSessionModal({
                         <Text style={[eS.exNumText, isActive && eS.exNumTextActive]}>{exIdx + 1}</Text>
                       </View>
                       <Text style={[eS.exCardName, isActive && eS.exCardNameActive]} numberOfLines={1}>
-                        {ex.name.trim() || (isCardio ? 'New Activity' : 'New Exercise')}
+                        {ex.name.trim() || (isCardio ? t('workout.newActivity') : t('workout.newExercise'))}
                       </Text>
                       <Text style={eS.exSetsCount}>
-                        {isCardio ? `${(ex.sets ?? []).length} entr${(ex.sets ?? []).length === 1 ? 'y' : 'ies'}` : `${(ex.sets ?? []).length} sets`}
+                        {isCardio
+                          ? t('workout.entryCount', { count: (ex.sets ?? []).length })
+                          : t('workout.setsCount', { count: (ex.sets ?? []).length })}
                       </Text>
                       <TouchableOpacity onPress={() => removeExercise(exIdx)} style={eS.exDeleteBtn}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -1714,7 +1717,7 @@ function EditSessionModal({
                               onChangeText={v => { updateExName(exIdx, v); setAcOpenIdx(exIdx); }}
                               onFocus={() => { setAcOpenIdx(exIdx); scrollCardToTop(exIdx); }}
                               onBlur={() => setTimeout(() => setAcOpenIdx(cur => (cur === exIdx ? null : cur)), 150)}
-                              placeholder="Exercise name"
+                              placeholder={t('workout.exerciseName')}
                               placeholderTextColor={colors.textDim}
                               autoFocus
                             />
@@ -1740,13 +1743,13 @@ function EditSessionModal({
                           if (trend.length < 2) return null;
                           return hasAccess ? (
                             <View style={eS.trendRow}>
-                              <Text style={eS.trendLabel}>STRENGTH TREND</Text>
+                              <Text style={eS.trendLabel}>{t('workout.strengthTrend')}</Text>
                               <Sparkline data={trend} color={colors.accent} width={70} height={24} />
                               <Text style={eS.trendVal}>{trend[trend.length - 1]}kg</Text>
                             </View>
                           ) : (
                             <TouchableOpacity onPress={() => onOpenToolsPaywall?.()} style={eS.trendRow}>
-                              <Text style={eS.trendLabel}>🔒 PRO: strength trend</Text>
+                              <Text style={eS.trendLabel}>{t('workout.proStrengthTrend')}</Text>
                             </TouchableOpacity>
                           );
                         })()}
@@ -1754,14 +1757,14 @@ function EditSessionModal({
                         {ex.group_id && (
                           <View style={eS.groupHint}>
                             <Text style={eS.groupHintText}>
-                              🔗 Grouped — rest timer waits until the last exercise in this group
+                              {t('workout.groupedRestTimerHint')}
                             </Text>
                           </View>
                         )}
 
                         {!isCardio && hasAccess && subOpenIdx === exIdx && (
                           <View style={eS.acDropdown}>
-                            <Text style={eS.subHeader}>SWAP EXERCISE — PRO</Text>
+                            <Text style={eS.subHeader}>{t('workout.swapExercisePro')}</Text>
                             {getSubstitutes(ex.name).map(n => (
                               <TouchableOpacity key={n} style={eS.acItem} onPress={() => applySwap(exIdx, n)}>
                                 <Text style={{ fontSize: 14 }}>🔄</Text>
@@ -1802,23 +1805,23 @@ function EditSessionModal({
                           return (
                             <View style={eS.prevPerfBox}>
                               <Text style={eS.prevPerfText}>
-                                📈 Last: <Text style={eS.prevPerfBold}>{prev.weight}kg × {prev.reps}</Text>
+                                {t('workout.lastPrefix')} <Text style={eS.prevPerfBold}>{prev.weight}kg × {prev.reps}</Text>
                                 {prev.rpe ? ` @ RPE ${prev.rpe}` : ''}
                               </Text>
                               {hasAccess ? (
                                 suggestion && (
                                   <Text style={eS.suggestText}>
-                                    🎯 Suggested: <Text style={eS.prevPerfBold}>{suggestion.weight}kg × {suggestion.reps}</Text> ({suggestion.note})
+                                    {t('workout.suggestedPrefix')} <Text style={eS.prevPerfBold}>{suggestion.weight}kg × {suggestion.reps}</Text> ({suggestion.note})
                                   </Text>
                                 )
                               ) : (
                                 <TouchableOpacity onPress={() => onOpenToolsPaywall?.()}>
-                                  <Text style={eS.suggestTextLocked}>🔒 Pro: see your suggested next target</Text>
+                                  <Text style={eS.suggestTextLocked}>{t('workout.proSeeSuggestedNextTarget')}</Text>
                                 </TouchableOpacity>
                               )}
                               {(ex.sets ?? []).length === 1 && !ex.sets[0].weight_kg && (
                                 <View style={eS.warmupRow}>
-                                  <Text style={eS.warmupLabel}>WARM-UP:</Text>
+                                  <Text style={eS.warmupLabel}>{t('workout.warmUpLabel')}</Text>
                                   {warmups.map((w, wi) => (
                                     <TouchableOpacity key={wi} style={eS.warmupChip} onPress={() => insertWarmupSet(exIdx, w)}>
                                       <Text style={eS.warmupChipText}>{w}kg</Text>
@@ -1833,17 +1836,17 @@ function EditSessionModal({
                         {!isCardio && restTimer && restTimer.exIdx === exIdx && (
                           <View style={eS.restBanner}>
                             <Text style={eS.restBannerText}>
-                              ⏱ Rest: {Math.floor(restTimer.secondsLeft / 60)}:{String(restTimer.secondsLeft % 60).padStart(2, '0')}
+                              {t('workout.restTimer', { value: `${Math.floor(restTimer.secondsLeft / 60)}:${String(restTimer.secondsLeft % 60).padStart(2, '0')}` })}
                             </Text>
                             <TouchableOpacity onPress={cancelRestTimer}>
-                              <Text style={eS.restBannerCancel}>Skip</Text>
+                              <Text style={eS.restBannerCancel}>{t('workout.skip')}</Text>
                             </TouchableOpacity>
                           </View>
                         )}
 
                         {isCardio ? (
                           (ex.sets ?? []).map((s, sIdx) => {
-                            const def = getCardioFieldDefs(ex.name);
+                            const def = getCardioFieldDefs(ex.name, t);
                             const autoKcal = calcCardioEntryKcal(ex.name, {
                               duration_min: parseFloat(s.duration_min) || 0,
                               speed_kmh: parseFloat(s.speed_kmh) || 0,
@@ -1854,19 +1857,19 @@ function EditSessionModal({
                               <View key={s._key} style={eS.cardioFieldCard}>
                                 <View style={eS.cardioFieldRow}>
                                   <View style={eS.cardioFieldCol}>
-                                    <Text style={eS.cardioFieldLabel}>DURATION (MIN)</Text>
+                                    <Text style={eS.cardioFieldLabel}>{t('workout.durationMinLabel')}</Text>
                                     <TextInput
                                       style={eS.setInput}
                                       value={s.duration_min}
                                       onChangeText={v => updateSet(exIdx, sIdx, 'duration_min', v)}
                                       onFocus={() => scrollCardToTop(exIdx)}
                                       keyboardType="numeric"
-                                      placeholder="min"
+                                      placeholder={t('workout.minPlaceholder')}
                                       placeholderTextColor={colors.textDim}
                                     />
                                   </View>
                                   <View style={eS.cardioFieldCol}>
-                                    <Text style={eS.cardioFieldLabel}>CALORIES (AUTO)</Text>
+                                    <Text style={eS.cardioFieldLabel}>{t('workout.caloriesAutoLabel')}</Text>
                                     <Text style={eS.cardioAutoValue}>{autoKcal > 0 ? `${autoKcal} kcal` : '—'}</Text>
                                   </View>
                                   <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
@@ -1924,7 +1927,7 @@ function EditSessionModal({
                                     onChangeText={v => updateSet(exIdx, sIdx, 'weight_kg', v)}
                                     onFocus={() => scrollCardToTop(exIdx)}
                                     keyboardType="decimal-pad"
-                                    placeholder={autoReg ? String(autoReg.weight) : 'kg'}
+                                    placeholder={autoReg ? String(autoReg.weight) : t('workout.kgPlaceholder')}
                                     placeholderTextColor={autoReg ? colors.accent : colors.textDim}
                                   />
                                   <Text style={eS.setX}>×</Text>
@@ -1934,7 +1937,7 @@ function EditSessionModal({
                                     onChangeText={v => updateSet(exIdx, sIdx, 'reps', v)}
                                     onFocus={() => scrollCardToTop(exIdx)}
                                     keyboardType="numeric"
-                                    placeholder="reps"
+                                    placeholder={t('workout.repsPlaceholder')}
                                     placeholderTextColor={colors.textDim}
                                   />
                                   <TextInput
@@ -1943,7 +1946,7 @@ function EditSessionModal({
                                     value={s.rpe}
                                     onChangeText={v => updateSet(exIdx, sIdx, 'rpe', v)}
                                     keyboardType="decimal-pad"
-                                    placeholder="RPE"
+                                    placeholder={t('workout.rpePlaceholder')}
                                     placeholderTextColor={colors.textDim}
                                   />
                                   <TouchableOpacity onPress={() => removeSet(exIdx, sIdx)} style={eS.setDeleteBtn}>
@@ -1951,23 +1954,23 @@ function EditSessionModal({
                                   </TouchableOpacity>
                                 </View>
                                 {plates.length > 0 && (
-                                  <Text style={eS.plateText}>🏋️ Plates/side: {plates.join(' + ')}kg</Text>
+                                  <Text style={eS.plateText}>🏋️ {t('workout.platesPerSide', { value: plates.join(' + ') })}</Text>
                                 )}
                                 {autoReg && (
-                                  <Text style={eS.autoRegText}>⚙️ Auto-reg suggests {autoReg.weight}kg — {autoReg.note}</Text>
+                                  <Text style={eS.autoRegText}>⚙️ {t('workout.autoRegSuggests', { weight: autoReg.weight, note: autoReg.note })}</Text>
                                 )}
                                 {oneRM && (
-                                  <Text style={eS.oneRmText}>💪 Est. 1RM: {oneRM}kg</Text>
+                                  <Text style={eS.oneRmText}>💪 {t('workout.est1RM', { value: oneRM })}</Text>
                                 )}
                                 {!hasAccess && s.weight_kg && s.reps && (
                                   <TouchableOpacity onPress={() => onOpenToolsPaywall?.()}>
-                                    <Text style={eS.oneRmTextLocked}>🔒 PRO: see estimated 1RM</Text>
+                                    <Text style={eS.oneRmTextLocked}>🔒 {t('workout.proSeeEstimated1RM')}</Text>
                                   </TouchableOpacity>
                                 )}
                                 {pr && (
                                   <View style={eS.prBanner}>
                                     <Text style={eS.prBannerText}>
-                                      🎉 New PR! {pr.type === 'weight' ? 'Heaviest weight yet' : 'Best volume yet'}
+                                      🎉 {t('workout.newPr', { value: pr.type === 'weight' ? t('workout.heaviestWeightYet') : t('workout.bestVolumeYet') })}
                                     </Text>
                                   </View>
                                 )}
@@ -1978,7 +1981,7 @@ function EditSessionModal({
 
                         <View style={eS.addSetRow}>
                           <TouchableOpacity style={[eS.addSetBtn, { flex: 1 }]} onPress={() => addSet(exIdx)}>
-                            <Text style={eS.addSetText}>{isCardio ? '+ Add Entry' : '+ Add Set'}</Text>
+                            <Text style={eS.addSetText}>{isCardio ? `+ ${t('workout.addEntry')}` : `+ ${t('workout.addSet')}`}</Text>
                           </TouchableOpacity>
                           {!isCardio && (() => {
                             // In a superset, the rest timer only fires once the last exercise in the group is reached
@@ -1987,7 +1990,7 @@ function EditSessionModal({
                             return (
                               <TouchableOpacity style={eS.restBtn} onPress={() => startRestTimer(exIdx, 90)}>
                                 <Ionicons name="timer-outline" size={14} color={colors.blue} />
-                                <Text style={eS.restBtnText}>90s Rest</Text>
+                                <Text style={eS.restBtnText}>{t('workout.restSeconds', { seconds: 90 })}</Text>
                               </TouchableOpacity>
                             );
                           })()}
@@ -2000,7 +2003,7 @@ function EditSessionModal({
 
               {isNew && exercises.length === 0 && !isCardio && (
                 <View style={eS.templateRow}>
-                  <Text style={eS.templateRowLabel}>📋 LOAD TEMPLATE {!hasAccess && '— PRO'}</Text>
+                  <Text style={eS.templateRowLabel}>📋 {t('workout.loadTemplate')} {!hasAccess && `— ${t('workout.pro')}`}</Text>
                   {hasAccess ? (
                     templates.length > 0 ? (
                       <>
@@ -2016,20 +2019,20 @@ function EditSessionModal({
                             </TouchableOpacity>
                           ))}
                         </ScrollView>
-                        <Text style={eS.programHintText}>Long-press a template to build a multi-week program</Text>
+                        <Text style={eS.programHintText}>{t('workout.longPressTemplateHint')}</Text>
                       </>
                     ) : (
-                      <Text style={eS.templateEmptyText}>Save a session below to build your first template.</Text>
+                      <Text style={eS.templateEmptyText}>{t('workout.saveSessionToBuildTemplate')}</Text>
                     )
                   ) : (
                     <TouchableOpacity style={eS.templateChip} onPress={onOpenToolsPaywall}>
-                      <Text style={eS.templateChipText}>🔒 Unlock saved templates</Text>
+                      <Text style={eS.templateChipText}>🔒 {t('workout.unlockSavedTemplates')}</Text>
                     </TouchableOpacity>
                   )}
 
                   {hasAccess && programTemplate && (
                     <View style={eS.programBox}>
-                      <Text style={eS.programBoxTitle}>📅 Repeat "{programTemplate.name}" weekly</Text>
+                      <Text style={eS.programBoxTitle}>📅 {t('workout.repeatTemplateWeekly', { name: programTemplate.name })}</Text>
                       <View style={eS.programWeekRow}>
                         {[2, 4, 6, 8, 12].map(w => (
                           <TouchableOpacity
@@ -2051,11 +2054,11 @@ function EditSessionModal({
                           }}
                         >
                           <Text style={eS.programCreateBtnText}>
-                            {isRepeatingTemplate ? 'Creating…' : `Create ${programWeeks} sessions`}
+                            {isRepeatingTemplate ? t('workout.creatingEllipsis') : t('workout.createSessionsCount', { count: programWeeks })}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={eS.programCancelBtn} onPress={() => setProgramTemplate(null)}>
-                          <Text style={eS.programCancelBtnText}>Cancel</Text>
+                          <Text style={eS.programCancelBtnText}>{t('common.cancel')}</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -2065,7 +2068,7 @@ function EditSessionModal({
 
               <TouchableOpacity style={eS.addExBtn} onPress={addExercise}>
                 <Ionicons name="add" size={18} color={colors.accent} />
-                <Text style={eS.addExText}>{isCardio ? 'Add Activity' : 'Add Exercise'}</Text>
+                <Text style={eS.addExText}>{isCardio ? t('workout.addActivity') : t('workout.addExercise')}</Text>
               </TouchableOpacity>
 
               {!isCardio && exercises.length > 0 && (
@@ -2075,7 +2078,7 @@ function EditSessionModal({
                 >
                   <Ionicons name="bookmark-outline" size={14} color={hasAccess ? colors.purple : colors.textDim} />
                   <Text style={eS.saveTemplateBtnText}>
-                    {hasAccess ? 'Save as Template' : '🔒 Save as Template (Pro)'}
+                    {hasAccess ? t('workout.saveAsTemplate') : `🔒 ${t('workout.saveAsTemplatePro')}`}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -2085,7 +2088,7 @@ function EditSessionModal({
 
           {isNew && !isRestDay && (
             <View style={eS.durationOverrideRow}>
-              <Text style={eS.durationOverrideLabel}>DURATION (MIN)</Text>
+              <Text style={eS.durationOverrideLabel}>{t('workout.durationMin')}</Text>
               <TextInput
                 style={eS.durationOverrideInput}
                 value={manualDuration}
@@ -2101,12 +2104,12 @@ function EditSessionModal({
           {/* Bottom buttons */}
           <View style={eS.bottomRow}>
             <TouchableOpacity style={eS.cancelBtn} onPress={onCancel}>
-              <Text style={eS.cancelText}>Cancel</Text>
+              <Text style={eS.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={eS.saveBtn} onPress={handleSave} disabled={isSaving}>
               {isSaving
                 ? <ActivityIndicator color={colors.bg} />
-                : <Text style={eS.saveBtnText}>{isNew ? 'Save Session' : 'Update Session'}</Text>
+                : <Text style={eS.saveBtnText}>{isNew ? t('workout.saveSession') : t('workout.updateSession')}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -2118,6 +2121,7 @@ function EditSessionModal({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function WorkoutScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
   const { hasAccess, isPro } = useSubscription();
@@ -2182,7 +2186,7 @@ export default function WorkoutScreen() {
     const todayStr = localDateStr(new Date());
     const loggedToday = sessions.some(sess => sess.date === todayStr);
     syncConditionalReminder('workoutReminder', loggedToday, workoutReminderTime.hour, workoutReminderTime.minute,
-      "Log today's workout", "You haven't logged a workout session today.");
+      t('workout.logTodaysWorkout'), t('workout.haventLoggedWorkoutToday'));
   }, [isLoading, notifPrefs.workoutReminder, sessions, workoutReminderTime.hour, workoutReminderTime.minute]);
 
   const { data: weeklyGoal = DEFAULT_WEEKLY_GOAL } = useQuery({
@@ -2198,7 +2202,7 @@ export default function WorkoutScreen() {
     // so the cached shape can't be reliably reconstructed client-side
     // without risking incorrect derived data (PRs, volume, trend badges).
     onSuccess: () => { qc.invalidateQueries(['sessions', user.id]); setShowEdit(false); },
-    onError: (e) => Alert.alert('Error saving', e.message),
+    onError: (e) => Alert.alert(t('workout.errorSaving'), e.message),
   });
 
   const deleteMut = useMutation({
@@ -2214,7 +2218,7 @@ export default function WorkoutScreen() {
     },
     onError: (e, sessionId, context) => {
       if (context?.previous) qc.setQueryData(['sessions', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('common.error'), e.message);
     },
     onSettled: () => { qc.invalidateQueries(['sessions', user.id]); },
   });
@@ -2230,7 +2234,7 @@ export default function WorkoutScreen() {
     },
     onError: (e, goal, context) => {
       if (context?.previous !== undefined) qc.setQueryData(['workoutGoal', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('common.error'), e.message);
     },
     onSettled: () => { qc.invalidateQueries(['workoutGoal', user.id]); },
   });
@@ -2243,17 +2247,17 @@ export default function WorkoutScreen() {
 
   const saveTemplateMut = useMutation({
     mutationFn: ({ name, exercises }) => saveTemplate(user.id, name, exercises),
-    onSuccess: () => { qc.invalidateQueries(['workoutTemplates', user.id]); Alert.alert('Saved', 'Template saved.'); },
-    onError: (e) => Alert.alert('Error', e.message),
+    onSuccess: () => { qc.invalidateQueries(['workoutTemplates', user.id]); Alert.alert(t('workout.saved'), t('workout.templateSaved')); },
+    onError: (e) => Alert.alert(t('common.error'), e.message),
   });
 
   const repeatTemplateMut = useMutation({
     mutationFn: ({ template, weeks, startDate }) => repeatTemplateForWeeks(user.id, template, weeks, startDate),
     onSuccess: (_, { weeks }) => {
       qc.invalidateQueries(['sessions', user.id]);
-      Alert.alert('Program scheduled', `Created ${weeks} future session${weeks === 1 ? '' : 's'} from this template.`);
+      Alert.alert(t('workout.programScheduled'), t('workout.createdFutureSessionsFromTemplate', { count: weeks }));
     },
-    onError: (e) => Alert.alert('Error', e.message),
+    onError: (e) => Alert.alert(t('common.error'), e.message),
   });
 
   const pbMap       = useMemo(() => computePBMap(sessions), [sessions]);
@@ -2468,32 +2472,32 @@ export default function WorkoutScreen() {
     const out = [];
     const c = consistency;
     if (c.consistencyPct > c.prevConsistencyPct) {
-      out.push({ icon: '📈', text: 'Consistency is up ', bold: `${c.consistencyPct - c.prevConsistencyPct}%`, rest: ' vs the previous 8 weeks — keep the momentum going.' });
+      out.push({ icon: '📈', text: t('workout.consistencyIsUp'), bold: `${c.consistencyPct - c.prevConsistencyPct}%`, rest: ' ' + t('workout.vsPrevious8WeeksMomentum') });
     } else if (c.consistencyPct < c.prevConsistencyPct) {
-      out.push({ icon: '📉', text: 'Consistency dipped ', bold: `${c.prevConsistencyPct - c.consistencyPct}%`, rest: ' vs the previous 8 weeks.' });
+      out.push({ icon: '📉', text: t('workout.consistencyDipped'), bold: `${c.prevConsistencyPct - c.consistencyPct}%`, rest: ' ' + t('workout.vsPrevious8Weeks') });
     }
     if (c.currentStreak >= c.longestStreak && c.currentStreak > 0) {
-      out.push({ icon: '🔥', text: 'You\'re on your ', bold: 'best-ever streak', rest: ` at ${c.currentStreak} day${c.currentStreak === 1 ? '' : 's'} — don\'t break it now!` });
+      out.push({ icon: '🔥', text: t('workout.youAreOnYour'), bold: t('workout.bestEverStreak'), rest: ' ' + t('workout.atDaysDontBreakIt', { count: c.currentStreak }) });
     } else if (c.longestStreak > c.currentStreak && c.currentStreak > 0) {
-      out.push({ icon: '🎯', text: `${c.longestStreak - c.currentStreak} more day${c.longestStreak - c.currentStreak === 1 ? '' : 's'} `, bold: 'ties your record', rest: ` of ${c.longestStreak} days.` });
+      out.push({ icon: '🎯', text: t('workout.moreDaysPrefix', { count: c.longestStreak - c.currentStreak }) + ' ', bold: t('workout.tiesYourRecord'), rest: ' ' + t('workout.ofDaysSuffix', { count: c.longestStreak }) });
     }
     if (c.daysSinceLast != null && c.daysSinceLast >= 3) {
-      out.push({ icon: '⚠️', text: 'It\'s been ', bold: `${c.daysSinceLast} days`, rest: ' since your last workout — time to get back in.' });
+      out.push({ icon: '⚠️', text: t('workout.itsBeen'), bold: t('workout.daysCount', { count: c.daysSinceLast }), rest: ' ' + t('workout.sinceLastWorkoutGetBackIn') });
     }
     if (c.busiestDow) {
-      out.push({ icon: '📅', text: 'You train most often on ', bold: c.busiestDow, rest: ` — averaging ${c.avgPerWeek.toFixed(1)} sessions/week overall.` });
+      out.push({ icon: '📅', text: t('workout.youTrainMostOftenOn'), bold: c.busiestDow, rest: ' ' + t('workout.averagingSessionsPerWeek', { value: c.avgPerWeek.toFixed(1) }) });
     }
     // Forecast: can the weekly goal still be hit with the days remaining this week?
     const doneThisWeek = weekDays.filter(d => d.type && d.type !== 'rest' && !d.isFuture).length;
     const daysLeftThisWeek = weekDays.filter(d => d.isFuture).length + (weekDays.find(d => d.isToday && !d.type) ? 1 : 0);
     const remaining = weeklyGoal - doneThisWeek;
     if (remaining > 0 && remaining <= daysLeftThisWeek) {
-      out.push({ icon: '✅', text: 'On pace — ', bold: `${remaining} more session${remaining === 1 ? '' : 's'}`, rest: ` this week hits your goal of ${weeklyGoal}.` });
+      out.push({ icon: '✅', text: t('workout.onPaceDash'), bold: t('workout.moreSessionsCount', { count: remaining }), rest: ' ' + t('workout.thisWeekHitsGoal', { value: weeklyGoal }) });
     } else if (remaining > daysLeftThisWeek) {
-      out.push({ icon: '🚨', text: 'Goal at risk — only ', bold: `${daysLeftThisWeek} day${daysLeftThisWeek === 1 ? '' : 's'} left`, rest: ` to log ${remaining} more session${remaining === 1 ? '' : 's'} for your ${weeklyGoal}/week goal.` });
+      out.push({ icon: '🚨', text: t('workout.goalAtRiskOnly'), bold: t('workout.daysLeftCount', { count: daysLeftThisWeek }), rest: ' ' + t('workout.toLogMoreSessionsForGoal', { remaining, value: weeklyGoal }) });
     }
     return out;
-  }, [consistency, weekDays, weeklyGoal]);
+  }, [consistency, weekDays, weeklyGoal, t]);
 
   const RANGE_DAYS = { '30D': 30, '60D': 60, '90D': 90, 'ALL': Infinity };
   const trendData = useMemo(() => {
@@ -2603,16 +2607,16 @@ export default function WorkoutScreen() {
   };
 
   const confirmDelete = (sessionId) => {
-    Alert.alert('Delete Workout', 'Remove this session and all data?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(sessionId) },
+    Alert.alert(t('workout.deleteWorkout'), t('workout.removeSessionAndAllData'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => deleteMut.mutate(sessionId) },
     ]);
   };
 
   return (
     <SafeAreaView style={s.safe}>
       {/* Header */}
-      <ScreenHeader title="WORKOUT" colors={colors} right={<Text style={s.sessionCount}>{sessions.length} SESSIONS</Text>} />
+      <ScreenHeader title={t('workout.workoutTitleUpper')} colors={colors} right={<Text style={s.sessionCount}>{t('workout.sessionsCountUpper', { count: sessions.length })}</Text>} />
 
       {/* Month nav */}
       <View style={s.monthNav}>
@@ -2650,9 +2654,9 @@ export default function WorkoutScreen() {
                 <View style={{ flex: 1 }}>
                   <View style={s.heroTopRow}>
                     <Text style={s.heroNum}>{heroStats.sessionCount}</Text>
-                    <Text style={s.heroLabel}>workout sessions</Text>
+                    <Text style={s.heroLabel}>{t('workout.workoutSessionsLower')}</Text>
                   </View>
-                  <Text style={s.heroSub}>this month · {heroStats.totalVol.toLocaleString()} kg total volume</Text>
+                  <Text style={s.heroSub}>{t('workout.thisMonthTotalVolume', { value: heroStats.totalVol.toLocaleString() })}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 6 }}>
                   <TouchableOpacity
@@ -2672,39 +2676,39 @@ export default function WorkoutScreen() {
               <View style={s.tileRow}>
                 <View style={s.tile}>
                   <Text style={s.tileVal}>🔥 {consistency.currentStreak}</Text>
-                  <Text style={s.tileLbl}>DAY STREAK</Text>
+                  <Text style={s.tileLbl}>{t('workout.dayStreakUpper')}</Text>
                 </View>
                 <View style={s.tileColDivider} />
                 <View style={s.tile}>
                   <Text style={s.tileVal}>{heroStats.totalSets}</Text>
-                  <Text style={s.tileLbl}>TOTAL SETS</Text>
+                  <Text style={s.tileLbl}>{t('workout.totalSetsUpper')}</Text>
                 </View>
                 <View style={s.tileColDivider} />
                 <View style={s.tile}>
                   <Text style={s.tileVal}>{heroStats.avgRpe ?? '—'}</Text>
-                  <Text style={s.tileLbl}>AVG RPE</Text>
+                  <Text style={s.tileLbl}>{t('workout.avgRpeUpper')}</Text>
                 </View>
               </View>
               <View style={[s.tileRow, s.tileRow2]}>
                 <View style={s.tile}>
                   <Text style={s.tileVal}>{heroStats.avgVolPerSession.toLocaleString()}</Text>
-                  <Text style={s.tileLbl}>AVG VOL/SESSION</Text>
+                  <Text style={s.tileLbl}>{t('workout.avgVolPerSessionUpper')}</Text>
                 </View>
                 <View style={s.tileColDivider} />
                 <View style={s.tile}>
                   <Text style={s.tileVal}>{heroStats.heaviestLift > 0 ? `${heroStats.heaviestLift}kg` : '—'}</Text>
-                  <Text style={s.tileLbl}>HEAVIEST LIFT</Text>
+                  <Text style={s.tileLbl}>{t('workout.heaviestLiftUpper')}</Text>
                 </View>
                 <View style={s.tileColDivider} />
                 <View style={s.tile}>
                   <Text style={s.tileVal}>{heroStats.muscleGroupsHit}</Text>
-                  <Text style={s.tileLbl}>MUSCLE GROUPS</Text>
+                  <Text style={s.tileLbl}>{t('workout.muscleGroupsUpper')}</Text>
                 </View>
               </View>
               {heroStats.pbCount > 0 && (
                 <View style={s.pbInlineRow}>
                   <Text style={{ fontSize: 14 }}>🏆</Text>
-                  <Text style={s.pbInlineLabel}>{heroStats.pbCount} personal best{heroStats.pbCount > 1 ? 's' : ''} this month</Text>
+                  <Text style={s.pbInlineLabel}>{t('workout.personalBestsThisMonth', { count: heroStats.pbCount })}</Text>
                 </View>
               )}
             </View>
@@ -2712,24 +2716,24 @@ export default function WorkoutScreen() {
             {/* Analysis & Insights — Pro */}
             <View style={s.card}>
               <View style={s.cardTitleRow}>
-                <Text style={s.cardTitle}>ANALYSIS & INSIGHTS</Text>
-                <View style={s.proBadge}><Text style={s.proBadgeText}>PRO</Text></View>
+                <Text style={s.cardTitle}>{t('workout.analysisInsightsUpper')}</Text>
+                <View style={s.proBadge}><Text style={s.proBadgeText}>{t('workout.proUpper')}</Text></View>
               </View>
 
               <View style={s.tileRow}>
                 <View style={s.tile}>
                   <Text style={s.tileVal}>{hasAccess ? consistency.longestStreak : '●●'}</Text>
-                  <Text style={s.tileLbl}>BEST STREAK</Text>
+                  <Text style={s.tileLbl}>{t('workout.bestStreakUpper')}</Text>
                 </View>
                 <View style={s.tileColDivider} />
                 <View style={s.tile}>
                   <Text style={s.tileVal}>{hasAccess ? `${consistency.consistencyPct}%` : '●●%'}</Text>
-                  <Text style={s.tileLbl}>8-WK CONSISTENCY</Text>
+                  <Text style={s.tileLbl}>{t('workout.consistency8WkUpper')}</Text>
                 </View>
                 <View style={s.tileColDivider} />
                 <View style={s.tile}>
                   <Text style={s.tileVal}>{hasAccess ? consistency.avgPerWeek.toFixed(1) : '●.●'}</Text>
-                  <Text style={s.tileLbl}>AVG / WEEK</Text>
+                  <Text style={s.tileLbl}>{t('workout.avgPerWeekUpper')}</Text>
                 </View>
               </View>
 
@@ -2757,7 +2761,7 @@ export default function WorkoutScreen() {
                     ))}
                   </View>
                   <Text style={s.lockedHint}>
-                    🔒 Unlock your streak record, consistency score, and personalized training insights
+                    🔒 {t('workout.unlockStreakConsistencyInsights')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -2767,17 +2771,17 @@ export default function WorkoutScreen() {
             {isViewingCurrentMonth && (
               <View style={s.weekCompareCardMerged}>
                 <View style={s.weekCompareCell}>
-                  <Text style={s.weekCompareTitle}>THIS WEEK</Text>
-                  <Text style={s.weekCompareVal}>{weekCompare.thisGymCount} / {weeklyGoal} sessions</Text>
-                  <Text style={[s.weekCompareSub, { color: colors.textMuted }]}>{weekCompare.thisCardioCount} cardio</Text>
-                  <Text style={[s.weekCompareSub, { color: colors.textMuted }]}>{weekCompare.thisVol.toLocaleString()} kg volume</Text>
+                  <Text style={s.weekCompareTitle}>{t('workout.thisWeekUpper')}</Text>
+                  <Text style={s.weekCompareVal}>{t('workout.xOfYSessions', { x: weekCompare.thisGymCount, y: weeklyGoal })}</Text>
+                  <Text style={[s.weekCompareSub, { color: colors.textMuted }]}>{t('workout.countCardio', { count: weekCompare.thisCardioCount })}</Text>
+                  <Text style={[s.weekCompareSub, { color: colors.textMuted }]}>{t('workout.kgVolumeValue', { value: weekCompare.thisVol.toLocaleString() })}</Text>
                 </View>
                 <View style={s.weekCompareDivider} />
                 <View style={s.weekCompareCell}>
-                  <Text style={s.weekCompareTitle}>LAST WEEK</Text>
-                  <Text style={[s.weekCompareVal, { color: colors.textMuted }]}>{weekCompare.lastGymCount} sessions</Text>
-                  <Text style={[s.weekCompareSub, { color: colors.textDim }]}>{weekCompare.lastCardioCount} cardio</Text>
-                  <Text style={[s.weekCompareSub, { color: colors.textDim }]}>{weekCompare.lastVol.toLocaleString()} kg volume</Text>
+                  <Text style={s.weekCompareTitle}>{t('workout.lastWeekUpper')}</Text>
+                  <Text style={[s.weekCompareVal, { color: colors.textMuted }]}>{t('workout.sessionsCount', { count: weekCompare.lastGymCount })}</Text>
+                  <Text style={[s.weekCompareSub, { color: colors.textDim }]}>{t('workout.countCardio', { count: weekCompare.lastCardioCount })}</Text>
+                  <Text style={[s.weekCompareSub, { color: colors.textDim }]}>{t('workout.kgVolumeValue', { value: weekCompare.lastVol.toLocaleString() })}</Text>
                 </View>
               </View>
             )}
@@ -2786,12 +2790,12 @@ export default function WorkoutScreen() {
             {isViewingCurrentMonth && (
               <View style={s.card}>
                 <View style={s.cardTitleRow}>
-                  <Text style={s.cardTitle}>WEEK VOLUME</Text>
+                  <Text style={s.cardTitle}>{t('workout.weekVolumeUpper')}</Text>
                 </View>
                 <View style={s.legendRow}>
-                  <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.accent }]} /><Text style={s.legendLabel}>Gym</Text></View>
-                  <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.blue }]} /><Text style={s.legendLabel}>Cardio</Text></View>
-                  <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.good }]} /><Text style={s.legendLabel}>Rest</Text></View>
+                  <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.accent }]} /><Text style={s.legendLabel}>{t('workout.gym')}</Text></View>
+                  <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.blue }]} /><Text style={s.legendLabel}>{t('workout.cardio')}</Text></View>
+                  <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.good }]} /><Text style={s.legendLabel}>{t('workout.rest')}</Text></View>
                 </View>
                 <WorkoutWeekBarChart days={weekDays} colors={colors} width={chartWidth} />
               </View>
@@ -2800,12 +2804,12 @@ export default function WorkoutScreen() {
             {/* Monthly heatmap */}
             <View style={s.card}>
               <View style={s.cardTitleRow}>
-                <Text style={s.cardTitle}>MONTHLY HEATMAP</Text>
+                <Text style={s.cardTitle}>{t('workout.monthlyHeatmapUpper')}</Text>
               </View>
               <View style={s.legendRow}>
-                <View style={s.legendItem}><Ionicons name="barbell-outline" size={11} color={colors.accent} /><Text style={s.legendLabel}>Gym</Text></View>
-                <View style={s.legendItem}><Ionicons name="bicycle-outline" size={11} color={colors.blue} /><Text style={s.legendLabel}>Cardio</Text></View>
-                <View style={s.legendItem}><Ionicons name="moon-outline" size={11} color={colors.good} /><Text style={s.legendLabel}>Rest</Text></View>
+                <View style={s.legendItem}><Ionicons name="barbell-outline" size={11} color={colors.accent} /><Text style={s.legendLabel}>{t('workout.gym')}</Text></View>
+                <View style={s.legendItem}><Ionicons name="bicycle-outline" size={11} color={colors.blue} /><Text style={s.legendLabel}>{t('workout.cardio')}</Text></View>
+                <View style={s.legendItem}><Ionicons name="moon-outline" size={11} color={colors.good} /><Text style={s.legendLabel}>{t('workout.rest')}</Text></View>
               </View>
               <WorkoutHeatmap
                 sessionsByDate={heatmapByDate}
@@ -2817,14 +2821,14 @@ export default function WorkoutScreen() {
                 onDayPress={openDetailForDate}
               />
               {!hasAccess && (
-                <Text style={s.lockedHint}>🔒 Unlock full workout history beyond the last 14 days</Text>
+                <Text style={s.lockedHint}>🔒 {t('workout.unlockFullWorkoutHistory')}</Text>
               )}
             </View>
 
             {/* Volume trend */}
             <View style={s.card}>
               <View style={s.cardTitleRow}>
-                <Text style={s.cardTitle}>VOLUME TREND</Text>
+                <Text style={s.cardTitle}>{t('workout.volumeTrendUpper')}</Text>
               </View>
               <View style={s.segmentRow}>
                 {['30D', '60D', '90D', 'ALL'].map(r => {
@@ -2843,19 +2847,19 @@ export default function WorkoutScreen() {
                 })}
               </View>
               <View style={s.legendRow}>
-                <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.purple }]} /><Text style={s.legendLabel}>Daily</Text></View>
-                <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.accent }]} /><Text style={s.legendLabel}>7D Avg</Text></View>
+                <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.purple }]} /><Text style={s.legendLabel}>{t('workout.daily')}</Text></View>
+                <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.accent }]} /><Text style={s.legendLabel}>{t('workout.sevenDayAvg')}</Text></View>
               </View>
               <VolumeTrendChart data={trendData} colors={colors} width={chartWidth} />
               {trendStats && (
                 <View style={s.trendStatsRow}>
-                  <WeekStatCell value={trendStats.avgVol.toLocaleString()} label="AVG/SESSION" color={colors.accent} colors={colors} />
+                  <WeekStatCell value={trendStats.avgVol.toLocaleString()} label={t('workout.avgPerSessionUpper')} color={colors.accent} colors={colors} />
                   <View style={s.statDividerInline} />
-                  <WeekStatCell value={`${trendStats.sessionCount}/${trendStats.totalDays}`} label="SESSIONS" color={colors.good} colors={colors} />
+                  <WeekStatCell value={`${trendStats.sessionCount}/${trendStats.totalDays}`} label={t('workout.sessionsUpper')} color={colors.good} colors={colors} />
                   <View style={s.statDividerInline} />
-                  <WeekStatCell value={trendStats.bestVol.toLocaleString()} label="BEST" color="#22d3ee" colors={colors} />
+                  <WeekStatCell value={trendStats.bestVol.toLocaleString()} label={t('workout.bestUpper')} color="#22d3ee" colors={colors} />
                   <View style={s.statDividerInline} />
-                  <WeekStatCell value={trendStats.totalVol.toLocaleString()} label="TOTAL" color={colors.text} colors={colors} />
+                  <WeekStatCell value={trendStats.totalVol.toLocaleString()} label={t('workout.totalUpper')} color={colors.text} colors={colors} />
                 </View>
               )}
             </View>
@@ -2863,8 +2867,8 @@ export default function WorkoutScreen() {
             {/* Muscle Group Volume + Auto-Deload — Pro */}
             <View style={s.card}>
               <View style={s.cardTitleRow}>
-                <Text style={s.cardTitle}>MUSCLE GROUP VOLUME · THIS WEEK</Text>
-                <View style={s.proBadge}><Text style={s.proBadgeText}>PRO</Text></View>
+                <Text style={s.cardTitle}>{t('workout.muscleGroupVolumeThisWeekUpper')}</Text>
+                <View style={s.proBadge}><Text style={s.proBadgeText}>{t('workout.proUpper')}</Text></View>
               </View>
 
               {muscleExpanded && (hasAccess ? (
@@ -2872,14 +2876,14 @@ export default function WorkoutScreen() {
                   {deload && (
                     <View style={s.deloadBanner}>
                       <Text style={s.deloadBannerText}>
-                        ⚠️ Avg RPE {deload.avg} over your last 3 sessions — consider a deload week.
+                        ⚠️ {t('workout.avgRpeDeloadWarning', { value: deload.avg })}
                       </Text>
                     </View>
                   )}
                   {overtraining && (
                     <View style={s.deloadBanner}>
                       <Text style={s.deloadBannerText}>
-                        🔥 {overtraining.muscle} trained {overtraining.days} days in a row with no rest — risk of overtraining.
+                        🔥 {t('workout.overtrainingWarning', { muscle: overtraining.muscle, days: overtraining.days })}
                       </Text>
                     </View>
                   )}
@@ -2902,7 +2906,7 @@ export default function WorkoutScreen() {
                       </View>
                     </>
                   ) : (
-                    <Text style={s.lockedHint}>Log a gym session this week to see your muscle group balance.</Text>
+                    <Text style={s.lockedHint}>{t('workout.logGymSessionForMuscleBalance')}</Text>
                   )}
                 </>
               ) : (
@@ -2919,7 +2923,7 @@ export default function WorkoutScreen() {
                     ))}
                   </View>
                   <Text style={s.lockedHint}>
-                    🔒 Unlock muscle group balance, deload alerts, exercise swaps, progressive overload targets, auto-regulation, and saved templates
+                    🔒 {t('workout.unlockMuscleGroupBalanceAndMore')}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -2929,7 +2933,7 @@ export default function WorkoutScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingTop: muscleExpanded ? 12 : 0 }}
               >
                 <Text style={{ fontSize: 11, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.accent }}>
-                  {muscleExpanded ? 'Collapse' : 'Expand'}
+                  {muscleExpanded ? t('workout.collapse') : t('workout.expand')}
                 </Text>
                 <Ionicons name={muscleExpanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.accent} />
               </TouchableOpacity>
@@ -2939,10 +2943,10 @@ export default function WorkoutScreen() {
 
         <View style={s.card}>
           <View style={s.cardTitleRow}>
-            <Text style={s.cardTitle}>WORKOUT HISTORY</Text>
+            <Text style={s.cardTitle}>{t('workout.workoutHistoryUpper')}</Text>
             <TouchableOpacity onPress={toggleHideRestDays} style={s.collapseToggleWrap} activeOpacity={0.75}>
               <Text style={s.collapseToggleText}>
-                {hasAccess ? (hideRestDays ? 'SHOW ALL' : 'HIDE REST DAYS') : '🔒 HIDE REST DAYS'}
+                {hasAccess ? (hideRestDays ? t('workout.showAllUpper') : t('workout.hideRestDaysUpper')) : `🔒 ${t('workout.hideRestDaysUpper')}`}
               </Text>
               <View style={[s.toggleSwitch, hideRestDays && s.toggleSwitchOn]}>
                 <View style={[s.toggleKnob, hideRestDays && s.toggleKnobOn]} />
@@ -2955,10 +2959,10 @@ export default function WorkoutScreen() {
             <Ionicons name="barbell-outline" size={52} color={colors.textDim} />
             <Text style={s.emptyTitle}>
               {dayList.length === 0
-                ? `No sessions in ${MONTH_NAMES[viewMonth - 1]} ${viewYear}`
-                : 'All sessions this month are rest days'}
+                ? t('workout.noSessionsInMonth', { month: MONTH_NAMES[viewMonth - 1], year: viewYear })
+                : t('workout.allSessionsAreRestDays')}
             </Text>
-            <Text style={s.emptySub}>Tap + to log a workout</Text>
+            <Text style={s.emptySub}>{t('workout.tapPlusToLogWorkout')}</Text>
           </View>
         )}
 
@@ -2970,7 +2974,7 @@ export default function WorkoutScreen() {
                 style={s.restCard}
                 onPress={() => {
                   setEditIsNew(true);
-                  setEditInitial({ sessionId: null, date: item.date, name: 'Rest Day', exercises: [] });
+                  setEditInitial({ sessionId: null, date: item.date, name: t('workout.restDay'), exercises: [] });
                   setShowEdit(true);
                 }}
                 activeOpacity={0.75}
@@ -2979,8 +2983,8 @@ export default function WorkoutScreen() {
                   <Text style={{ fontSize: 20 }}>😴</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.restTitle}>Rest Day</Text>
-                  <Text style={s.restSub}>{fmtDate(item.date)} · Recovery · no workout</Text>
+                  <Text style={s.restTitle}>{t('workout.restDay')}</Text>
+                  <Text style={s.restSub}>{t('workout.recoveryNoWorkout', { date: fmtDate(item.date) })}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={14} color={colors.good} />
               </TouchableOpacity>
@@ -3020,7 +3024,7 @@ export default function WorkoutScreen() {
               <View style={{ flex: 1 }}>
                 <View style={s.sessionNameRow}>
                   <Text style={[s.sessionName, { color: ws.titleColor }]} numberOfLines={1}>
-                    {sess.notes || 'Workout'}
+                    {sess.notes || t('workout.workout')}
                   </Text>
                   {delta && (
                     <View style={[s.deltaBadge, { backgroundColor: delta.delta >= 0 ? colors.good + '22' : colors.danger + '22' }]}>
@@ -3080,16 +3084,16 @@ export default function WorkoutScreen() {
 
       <BottomSheet visible={showWorkoutGoalSheet} onClose={() => setShowWorkoutGoalSheet(false)} style={s.goalSheet}>
         <View style={s.goalSheetHeader}>
-          <Text style={s.goalSheetTitle}>🎯 WEEKLY WORKOUT GOAL</Text>
+          <Text style={s.goalSheetTitle}>🎯 {t('workout.weeklyWorkoutGoalUpper')}</Text>
           <TouchableOpacity onPress={() => setShowWorkoutGoalSheet(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         <Text style={s.goalBigVal}>{workoutGoalInput}</Text>
-        <Text style={s.goalBigSub}>session{workoutGoalInput === 1 ? '' : 's'} / week</Text>
+        <Text style={s.goalBigSub}>{t('workout.sessionsPerWeek', { count: workoutGoalInput })}</Text>
 
-        <Text style={s.goalFieldLabel}>DAYS PER WEEK</Text>
+        <Text style={s.goalFieldLabel}>{t('workout.daysPerWeekUpper')}</Text>
         <View style={s.goalChipRow}>
           {[1, 2, 3, 4, 5, 6, 7].map(n => (
             <TouchableOpacity
@@ -3101,14 +3105,14 @@ export default function WorkoutScreen() {
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={s.goalHint}>Drives your streak, consistency %, and weekly goal across the app. Cardio days don't count toward this goal.</Text>
+        <Text style={s.goalHint}>{t('workout.weeklyGoalHint')}</Text>
 
         <TouchableOpacity
           style={s.goalSaveBtn}
           onPress={() => goalMut.mutate(workoutGoalInput)}
           disabled={goalMut.isPending}
         >
-          <Text style={s.saveBtnText}>{goalMut.isPending ? 'Saving…' : 'Save Goal'}</Text>
+          <Text style={s.saveBtnText}>{goalMut.isPending ? t('workout.savingEllipsis') : t('workout.saveGoal')}</Text>
         </TouchableOpacity>
       </BottomSheet>
     </SafeAreaView>
