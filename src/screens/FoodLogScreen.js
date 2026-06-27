@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, FlatList, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Keyboard, Modal,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -635,130 +636,142 @@ export default function FoodLogScreen() {
         <Ionicons name="search" size={26} color={colors.bg} />
       </TouchableOpacity>
 
-      {/* Log Food Sheet: search -> detail (serving) or manual entry */}
-      <BottomSheet visible={showSheet} onClose={closeSheet} style={styles.sheet}>
-        <View style={styles.sheetHeader}>
-          {sheetStep !== 'search' ? (
-            <TouchableOpacity onPress={() => setSheetStep('search')} style={styles.sheetBackBtn}>
-              <Ionicons name="chevron-back" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          ) : <View style={styles.sheetBackBtn} />}
-          <Text style={styles.sheetTitle}>
-            {sheetStep === 'detail' ? 'Add Serving' : sheetStep === 'manual' ? 'Custom Food' : 'Log Food'}
-          </Text>
-          <TouchableOpacity onPress={closeSheet}>
-            <Ionicons name="close" size={22} color={colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Meal type chips (shown on every step) */}
-        <View style={styles.mealChips}>
-          {MEAL_TYPES.map(m => (
-            <TouchableOpacity key={m} style={[styles.mealChip, selectedMeal === m && { backgroundColor: MEAL_COLORS[m], borderColor: MEAL_COLORS[m] }]}
-              onPress={() => setSelectedMeal(m)}>
-              <Text style={[styles.mealChipText, selectedMeal === m && { color: '#fff' }]}>{m}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {sheetStep === 'search' && (
-          <View style={styles.searchStep}>
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={16} color={colors.textDim} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search 39,000+ foods (e.g. chicken breast)"
-                placeholderTextColor={colors.textDim}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-              />
-              {searching && <ActivityIndicator size="small" color={colors.accent} />}
-            </View>
-
-            <FlatList
-              data={searchResults ?? []}
-              keyExtractor={item => item.id}
-              keyboardShouldPersistTaps="handled"
-              style={styles.resultsList}
-              ListEmptyComponent={
-                debouncedQuery.length < 2 ? (
-                  <Text style={styles.searchHint}>Type at least 2 characters to search</Text>
-                ) : !searching ? (
-                  <Text style={styles.searchHint}>No matches found</Text>
-                ) : null
-              }
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.resultRow} onPress={() => pickFood(item)}>
-                  <View style={styles.resultLeft}>
-                    <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.resultMeta} numberOfLines={1}>
-                      {item.brand ? `${item.brand} · ` : ''}{SOURCE_LABELS[item.source] ?? item.source}
+      {/* Log Food Modal: search -> detail (serving) or manual entry — full-screen pageSheet, mirrors Workout's session modal */}
+      <Modal visible={showSheet} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeSheet}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <SafeAreaView style={styles.sheetContainer}>
+            <View style={styles.sheetHeader}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                {sheetStep !== 'search' && (
+                  <TouchableOpacity onPress={() => setSheetStep('search')} style={styles.sheetBackBtn}>
+                    <Ionicons name="chevron-back" size={20} color={colors.textMuted} />
+                  </TouchableOpacity>
+                )}
+                <View>
+                  <Text style={styles.sheetHeaderTop}>
+                    <Text style={styles.sheetHeaderLOG}>LOG </Text>
+                    <Text style={styles.sheetHeaderSub}>
+                      {sheetStep === 'detail' ? 'Add Serving' : sheetStep === 'manual' ? 'Custom Food' : 'Food'}
                     </Text>
-                  </View>
-                  <Text style={styles.resultCals}>{Math.round(item.calories ?? 0)} kcal</Text>
-                  <Text style={styles.resultUnit}>/{item.serving_qty ?? 100}{item.serving_unit ?? 'g'}</Text>
-                </TouchableOpacity>
-              )}
-            />
-
-            <TouchableOpacity style={styles.manualLink} onPress={() => setSheetStep('manual')}>
-              <Ionicons name="create-outline" size={14} color={colors.accent} />
-              <Text style={styles.manualLinkText}>Can't find it? Add a custom food</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {sheetStep === 'detail' && selectedFood && (
-          <View style={styles.detailStep}>
-            <Text style={styles.detailName}>{selectedFood.name}</Text>
-            {selectedFood.brand ? <Text style={styles.detailBrand}>{selectedFood.brand}</Text> : null}
-
-            <View style={styles.amountRow}>
-              <Text style={styles.amountLabel}>Amount</Text>
-              <View style={styles.amountInputWrap}>
-                <TextInput
-                  style={styles.amountInput}
-                  value={amountGrams}
-                  onChangeText={setAmountGrams}
-                  keyboardType="numeric"
-                />
-                <Text style={styles.amountUnit}>{selectedFood.serving_unit ?? 'g'}</Text>
+                  </Text>
+                  <Text style={styles.trackLabel}>TRACK WHAT YOU EAT</Text>
+                </View>
               </View>
+              <TouchableOpacity onPress={closeSheet} style={styles.sheetCloseBtn}>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.scaledMacros}>
-              <ScaledMacro label="Calories" value={scaled.calories} unit="kcal" color={colors.accent} />
-              <ScaledMacro label="Protein" value={scaled.protein} unit="g" color={colors.success} />
-              <ScaledMacro label="Carbs" value={scaled.carbs} unit="g" color="#fb923c" />
-              <ScaledMacro label="Fats" value={scaled.fats} unit="g" color={colors.warning} />
+            {/* Meal type chips (shown on every step) */}
+            <View style={[styles.mealChips, { paddingHorizontal: 16 }]}>
+              {MEAL_TYPES.map(m => (
+                <TouchableOpacity key={m} style={[styles.mealChip, selectedMeal === m && { backgroundColor: MEAL_COLORS[m], borderColor: MEAL_COLORS[m] }]}
+                  onPress={() => setSelectedMeal(m)}>
+                  <Text style={[styles.mealChipText, selectedMeal === m && { color: '#fff' }]}>{m}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
-            <TouchableOpacity style={styles.saveBtn} onPress={handleLogSelected} disabled={addMut.isPending}>
-              {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Add to {selectedMeal}</Text>}
-            </TouchableOpacity>
-          </View>
-        )}
+            {sheetStep === 'search' && (
+              <View style={[styles.searchStep, { paddingHorizontal: 16 }]}>
+                <View style={styles.searchBar}>
+                  <Ionicons name="search" size={16} color={colors.textDim} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search 39,000+ foods (e.g. chicken breast)"
+                    placeholderTextColor={colors.textDim}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoFocus
+                  />
+                  {searching && <ActivityIndicator size="small" color={colors.accent} />}
+                </View>
 
-        {sheetStep === 'manual' && (
-          <View>
-            <TextInput style={styles.inputFull} placeholder="Food name (e.g. Chicken breast 100g)"
-              placeholderTextColor={colors.textDim} value={form.food_name}
-              onChangeText={v => setForm(p => ({ ...p, food_name: v }))} />
+                <FlatList
+                  data={searchResults ?? []}
+                  keyExtractor={item => item.id}
+                  keyboardShouldPersistTaps="handled"
+                  style={styles.resultsList}
+                  ListEmptyComponent={
+                    debouncedQuery.length < 2 ? (
+                      <Text style={styles.searchHint}>Type at least 2 characters to search</Text>
+                    ) : !searching ? (
+                      <Text style={styles.searchHint}>No matches found</Text>
+                    ) : null
+                  }
+                  renderItem={({ item }) => (
+                    <TouchableOpacity style={styles.resultRow} onPress={() => pickFood(item)}>
+                      <View style={styles.resultLeft}>
+                        <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.resultMeta} numberOfLines={1}>
+                          {item.brand ? `${item.brand} · ` : ''}{SOURCE_LABELS[item.source] ?? item.source}
+                        </Text>
+                      </View>
+                      <Text style={styles.resultCals}>{Math.round(item.calories ?? 0)} kcal</Text>
+                      <Text style={styles.resultUnit}>/{item.serving_qty ?? 100}{item.serving_unit ?? 'g'}</Text>
+                    </TouchableOpacity>
+                  )}
+                />
 
-            <View style={styles.macroInputRow}>
-              <MacroInput label="Calories" value={form.calories} onChange={v => setForm(p => ({ ...p, calories: v }))} color={colors.accent} />
-              <MacroInput label="Protein" value={form.protein} onChange={v => setForm(p => ({ ...p, protein: v }))} color={colors.success} />
-              <MacroInput label="Carbs" value={form.carbs} onChange={v => setForm(p => ({ ...p, carbs: v }))} color="#fb923c" />
-              <MacroInput label="Fats" value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
-            </View>
+                <TouchableOpacity style={styles.manualLink} onPress={() => setSheetStep('manual')}>
+                  <Ionicons name="create-outline" size={14} color={colors.accent} />
+                  <Text style={styles.manualLinkText}>Can't find it? Add a custom food</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
-            <TouchableOpacity style={styles.saveBtn} onPress={handleAddManual} disabled={addMut.isPending}>
-              {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Food</Text>}
-            </TouchableOpacity>
-          </View>
-        )}
-      </BottomSheet>
+            {sheetStep === 'detail' && selectedFood && (
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
+                <Text style={styles.detailName}>{selectedFood.name}</Text>
+                {selectedFood.brand ? <Text style={styles.detailBrand}>{selectedFood.brand}</Text> : null}
+
+                <View style={styles.amountRow}>
+                  <Text style={styles.amountLabel}>Amount</Text>
+                  <View style={styles.amountInputWrap}>
+                    <TextInput
+                      style={styles.amountInput}
+                      value={amountGrams}
+                      onChangeText={setAmountGrams}
+                      keyboardType="numeric"
+                    />
+                    <Text style={styles.amountUnit}>{selectedFood.serving_unit ?? 'g'}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.scaledMacros}>
+                  <ScaledMacro label="Calories" value={scaled.calories} unit="kcal" color={colors.accent} />
+                  <ScaledMacro label="Protein" value={scaled.protein} unit="g" color={colors.success} />
+                  <ScaledMacro label="Carbs" value={scaled.carbs} unit="g" color="#fb923c" />
+                  <ScaledMacro label="Fats" value={scaled.fats} unit="g" color={colors.warning} />
+                </View>
+
+                <TouchableOpacity style={styles.saveBtn} onPress={handleLogSelected} disabled={addMut.isPending}>
+                  {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Add to {selectedMeal}</Text>}
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+
+            {sheetStep === 'manual' && (
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
+                <TextInput style={styles.inputFull} placeholder="Food name (e.g. Chicken breast 100g)"
+                  placeholderTextColor={colors.textDim} value={form.food_name}
+                  onChangeText={v => setForm(p => ({ ...p, food_name: v }))} />
+
+                <View style={styles.macroInputRow}>
+                  <MacroInput label="Calories" value={form.calories} onChange={v => setForm(p => ({ ...p, calories: v }))} color={colors.accent} />
+                  <MacroInput label="Protein" value={form.protein} onChange={v => setForm(p => ({ ...p, protein: v }))} color={colors.success} />
+                  <MacroInput label="Carbs" value={form.carbs} onChange={v => setForm(p => ({ ...p, carbs: v }))} color="#fb923c" />
+                  <MacroInput label="Fats" value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
+                </View>
+
+                <TouchableOpacity style={styles.saveBtn} onPress={handleAddManual} disabled={addMut.isPending}>
+                  {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Food</Text>}
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+      </Modal>
 
       <BottomSheet visible={showTargetsSheet} onClose={() => setShowTargetsSheet(false)}>
         <View style={styles.sheetHeader}>
@@ -951,11 +964,19 @@ const createStyles = (colors) => StyleSheet.create({
   servingChip: { fontSize: 10, color: colors.textDim, fontWeight: weight.medium },
   foodCals: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, minWidth: 60, textAlign: 'right' },
 
-  sheet: { paddingBottom: 16, height: '88%' },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sheetBackBtn: { width: 22 },
-  sheetTitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
-  mealChips: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, paddingBottom: 14 },
+  sheetContainer: { flex: 1, backgroundColor: colors.bg },
+  sheetHeader: {
+    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  sheetBackBtn: { marginRight: 8, marginTop: 2 },
+  sheetHeaderTop: { fontSize: typography.lg },
+  sheetHeaderLOG: { fontWeight: weight.black, fontStyle: 'italic', color: colors.text },
+  sheetHeaderSub: { fontWeight: weight.bold, fontStyle: 'italic', color: colors.accent },
+  trackLabel: { fontSize: 9, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 2, marginTop: 2 },
+  sheetCloseBtn: { padding: 6, borderRadius: 18, backgroundColor: colors.card },
+  mealChips: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, paddingTop: 14, paddingBottom: 14 },
   mealChip: { flexGrow: 0, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgElevated },
   mealChipText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
 
