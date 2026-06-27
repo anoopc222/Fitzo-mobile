@@ -24,6 +24,11 @@ import { typography, weight, fontFamily } from '../theme/typography';
 import Svg, { Polyline, Line } from 'react-native-svg';
 import Sparkline from '../components/Sparkline';
 import AchievementsRow from '../components/AchievementsRow';
+import LevelBadge from '../components/LevelBadge';
+import ChallengesCard from '../components/ChallengesCard';
+import StreakFreezeControl from '../components/StreakFreezeControl';
+import { getFreezeState, syncFreezeAwards } from '../lib/streakFreeze';
+import { computeXP, computeLevel } from '../lib/levels';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import { SkeletonBlock, SkeletonCard } from '../components/Skeleton';
 import PaywallModal from '../components/ui/PaywallModal';
@@ -457,13 +462,17 @@ async function fetchHome(userId) {
   const daysSinceSleep = latestSleep?.logged_at
     ? Math.floor((Date.now() - new Date(latestSleep.logged_at).getTime()) / 86400000) : null;
 
-  // Streak (consecutive days with step logs)
+  // Streak (consecutive days with step logs, with earned freezes covering gaps)
+  const freezeStateBefore = await getFreezeState(userId);
+  const frozenSet = new Set(freezeStateBefore.frozenDates ?? []);
   let streak = 0;
   for (let i = 0; i < 60; i++) {
     const d = localDateStr(new Date(Date.now() - i * 86400000));
-    if (stepsHist.data?.some(s => s.logged_at?.startsWith(d))) streak++;
+    if (stepsHist.data?.some(s => s.logged_at?.startsWith(d)) || frozenSet.has(d)) streak++;
     else if (i > 0) break;
   }
+  const freezeState = await syncFreezeAwards(userId, streak);
+  const todayStepsLogged = stepsHist.data?.some(s => s.logged_at?.startsWith(today)) || frozenSet.has(today);
 
   // Motivational line under name
   let motivText = 'Keep pushing! ⚡';
@@ -516,6 +525,8 @@ async function fetchHome(userId) {
     longestStreak,
     calorieInsight,
     sleepDebt,
+    freezesAvailable: freezeState.freezesAvailable,
+    todayStepsLogged,
   };
 }
 
@@ -1023,6 +1034,7 @@ export default function HomeScreen() {
   const [showForecastPaywall, setShowForecastPaywall] = useState(false);
   const [showProTeaserPaywall, setShowProTeaserPaywall] = useState(false);
   const consistencyExport = useGatedExport();
+  const recapExport = useGatedExport();
   const { hasAccess, isPro, isInTrial, trialDaysLeft, ready: subReady } = useSubscription();
   const qc = useQueryClient();
 
@@ -1294,6 +1306,7 @@ export default function HomeScreen() {
                   <Ionicons name="walk" size={12} color={colors.accent} />
                   <Text style={styles.motivText}>{data?.motivText}</Text>
                 </TouchableOpacity>
+                <StreakFreezeControl userId={user.id} home={data} />
                 <View style={styles.goalProgressRow}>
                   <Text style={styles.goalProgressLabel} numberOfLines={1}>This week</Text>
                   <View style={styles.goalProgressTrack}>
@@ -1301,10 +1314,12 @@ export default function HomeScreen() {
                   </View>
                   <Text style={styles.goalProgressPct}>{cutScore}%</Text>
                 </View>
+                <LevelBadge home={data} />
               </View>
             </View>
 
             <AchievementsRow home={data} />
+            <ChallengesCard home={data} />
 
             {/* ── Go Pro banner ─────────────────────────────────── */}
             {subReady && !isPro && (
@@ -1834,6 +1849,46 @@ export default function HomeScreen() {
               </ExportCardTemplate>
             </View>
 
+            {/* ── Weekly Recap (share-able summary) ───────────────── */}
+            <View style={{ position: 'relative', marginTop: 12 }}>
+              <View style={styles.recapCard}>
+                <Text style={styles.recapTitle}>This week's recap</Text>
+                <Text style={styles.recapLine}>
+                  🔥 {data?.streak ?? 0}-day streak · 🏋️ {thisWeekSessions}/{weeklyGoal} workouts · 👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={recapExport.onExportPress}
+                disabled={recapExport.exporting}
+                style={styles.cardExportBtn}
+              >
+                {recapExport.exporting ? (
+                  <ActivityIndicator size="small" color={colors.textMuted ?? colors.textDim} />
+                ) : (
+                  <Ionicons name="share-outline" size={13} color={colors.textMuted ?? colors.textDim} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate ref={recapExport.ref} title="Weekly Recap" colors={colors} width={340}>
+                <View style={{ gap: 10 }}>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    🔥 {data?.streak ?? 0}-day streak
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    🏋️ {thisWeekSessions}/{weeklyGoal} workouts this week
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    🏆 Level {computeLevel(computeXP(data)).level}
+                  </Text>
+                </View>
+              </ExportCardTemplate>
+            </View>
+
             {/* ── Workout Banner (today completed) ────────────────── */}
             {data?.hasTodayWorkout && (
               <View style={styles.banner}>
@@ -1988,6 +2043,7 @@ export default function HomeScreen() {
       />
 
       <PaywallModal visible={consistencyExport.showPaywall} onClose={() => consistencyExport.setShowPaywall(false)} />
+      <PaywallModal visible={recapExport.showPaywall} onClose={() => recapExport.setShowPaywall(false)} />
       <PaywallModal visible={showForecastPaywall} onClose={() => setShowForecastPaywall(false)} />
       <PaywallModal visible={showProTeaserPaywall} onClose={() => setShowProTeaserPaywall(false)} />
 
@@ -2161,6 +2217,12 @@ const createStyles = (colors) => StyleSheet.create({
   consistencyLabel: { fontSize: 7, color: colors.textDim, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, textAlign: 'center', marginTop: 4 },
   consistencyDivider: { width: 1, backgroundColor: colors.border },
   cardExportBtn: { position: 'absolute', top: 8, right: 24, padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated ?? colors.bgCard },
+  recapCard: {
+    backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 14, marginHorizontal: 16, padding: 14, gap: 4,
+  },
+  recapTitle: { fontSize: typography.sm, fontFamily: fontFamily.bodyBold, color: colors.text },
+  recapLine: { fontSize: typography.xs, color: colors.textMuted, lineHeight: 18 },
   overviewCard: {
     backgroundColor: colors.bgCard, borderRadius: 16, marginHorizontal: 16, marginBottom: 10,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
