@@ -623,7 +623,23 @@ export default function WeightScreen() {
 
   const deleteMut = useMutation({
     mutationFn: deleteWeightLog,
-    onSuccess: () => { qc.invalidateQueries(['weight', user.id]); qc.invalidateQueries(['home', user.id]); },
+    onMutate: async (id) => {
+      await qc.cancelQueries(['weight', user.id]);
+      const previous = qc.getQueryData(['weight', user.id]);
+      qc.setQueryData(['weight', user.id], (old) => {
+        if (!old) return old;
+        return { ...old, logs: old.logs.filter(l => l.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['weight', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['weight', user.id]);
+      qc.invalidateQueries(['home', user.id]);
+    },
   });
 
   const mk = `${year}-${String(month + 1).padStart(2, '0')}`;
