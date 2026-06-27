@@ -1312,8 +1312,6 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <AchievementsRow home={data} />
-
             {/* ── Go Pro banner ─────────────────────────────────── */}
             {subReady && !isPro && (
               <TouchableOpacity
@@ -1330,6 +1328,8 @@ export default function HomeScreen() {
                 <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
               </TouchableOpacity>
             )}
+
+            <AchievementsRow home={data} />
 
             {/* ── Insight Cards (auto-rotating) ──────────────────── */}
             <ScrollView
@@ -1631,13 +1631,13 @@ export default function HomeScreen() {
                       <Text style={styles.insightsHubSub} numberOfLines={2}>
                         {hasAccess && data?.longestStreak > 0
                           ? (data.streak >= data.longestStreak
-                            ? "Personal best — keep it alive! 🔥"
-                            : `${data.longestStreak - data.streak} more day${data.longestStreak - data.streak === 1 ? '' : 's'} to tie record`)
+                            ? "🔥 You're on your best streak ever!"
+                            : `Your best ever was ${data.longestStreak} day${data.longestStreak === 1 ? '' : 's'} in a row. You're now on a ${data.streak}-day streak.`)
                           : 'Track your best-ever streak 🔒'}
                       </Text>
                     </View>
                     {hasAccess && data?.longestStreak > 0 && (
-                      <Text style={styles.insightsHubVal}>{data.streak} / {data.longestStreak}d</Text>
+                      <Text style={styles.insightsHubVal}>Best: {data.longestStreak}d</Text>
                     )}
                   </TouchableOpacity>
                   <View style={styles.overviewDivider} />
