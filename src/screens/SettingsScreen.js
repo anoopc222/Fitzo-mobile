@@ -53,7 +53,7 @@ export default function SettingsScreen({ navigation }) {
   const handleInviteFriends = async () => {
     try {
       await Share.share({
-        message: "I've been tracking my workouts, sleep, and nutrition with FitZo — thought you'd like it too. https://fitzo.app",
+        message: "I've been tracking my workouts, sleep, and nutrition with FitZo — thought you'd like it too. https://www.myfitzo.com",
       });
     } catch (e) {
       Alert.alert('Error', e.message);
