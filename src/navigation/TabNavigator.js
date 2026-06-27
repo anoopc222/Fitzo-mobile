@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMoreMenu } from '../context/MoreMenuContext';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import HomeScreen from '../screens/HomeScreen';
 import WorkoutScreen from '../screens/WorkoutScreen';
@@ -58,6 +59,7 @@ export default function TabNavigator() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { open: openMore } = useMoreMenu();
+  const { t } = useTranslation();
 
   return (
     <Tab.Navigator
@@ -84,11 +86,11 @@ export default function TabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeStackNavigator} />
-      <Tab.Screen name="Workout" component={WorkoutScreen} />
-      <Tab.Screen name="Steps" component={StepsScreen} />
-      <Tab.Screen name="Weight" component={WeightScreen} />
-      <Tab.Screen name="Sleep" component={SleepScreen} />
+      <Tab.Screen name="Home" component={HomeStackNavigator} options={{ tabBarLabel: t('tabs.home') }} />
+      <Tab.Screen name="Workout" component={WorkoutScreen} options={{ tabBarLabel: t('tabs.workout') }} />
+      <Tab.Screen name="Steps" component={StepsScreen} options={{ tabBarLabel: t('tabs.steps') }} />
+      <Tab.Screen name="Weight" component={WeightScreen} options={{ tabBarLabel: t('tabs.weight') }} />
+      <Tab.Screen name="Sleep" component={SleepScreen} options={{ tabBarLabel: t('tabs.sleep') }} />
       <Tab.Screen
         name="Log"
         component={FoodLogScreen}
@@ -97,7 +99,7 @@ export default function TabNavigator() {
       <Tab.Screen
         name="MoreTab"
         component={BlankScreen}
-        options={{ tabBarLabel: 'More' }}
+        options={{ tabBarLabel: t('tabs.more') }}
         listeners={{
           tabPress: (e) => {
             e.preventDefault();
