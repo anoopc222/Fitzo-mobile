@@ -58,7 +58,7 @@ async function fetchFoodMonth(userId, year, month) {
 }
 
 // ─── Calorie Heatmap — mirrors WeightScreen's quartile-relative heatmap ──────
-function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true, onLockedPress, cardWidth }) {
+function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true, onLockedPress, cardWidth, target }) {
   const SCREEN_W = cardWidth ?? require('react-native').Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
@@ -67,20 +67,18 @@ function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true,
   const todayStr = localDateStr(new Date());
   const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
 
-  const vals = Object.values(caloriesByDate).filter(v => v > 0);
-  const minC = vals.length ? Math.min(...vals) : 0;
-  const maxC = vals.length ? Math.max(...vals) : 0;
-  const rangeC = maxC - minC || 0.001;
-
+  // Color cells by how far a day's calories sit from the user's calorie
+  // target (not month-relative min/max) — so a single logged day reads
+  // the same regardless of how few other days are logged that month.
   const cells = [];
   for (let i = 0; i < startDow; i++) cells.push({ key: `e${i}`, empty: true });
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const c = caloriesByDate[ds];
     let lvl = 0;
-    if (c) {
-      const rel = (c - minC) / rangeC;
-      if (rel < 0.25) lvl = 1; else if (rel < 0.5) lvl = 2; else if (rel < 0.75) lvl = 3; else lvl = 4;
+    if (c && target > 0) {
+      const ratio = c / target;
+      if (ratio < 0.5) lvl = 1; else if (ratio < 0.85) lvl = 2; else if (ratio < 1.15) lvl = 3; else lvl = 4;
     }
     const locked = !hasAccess && ds < cutoffStr;
     cells.push({ key: ds, day: d, c, lvl, isToday: ds === todayStr, locked });
@@ -589,7 +587,7 @@ export default function FoodLogScreen() {
                 ))}
                 <Text style={styles.hmLegendLabel}>High</Text>
               </View>
-              <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={hasAccess} onLockedPress={() => setShowHeatmapPaywall(true)} />
+              <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={hasAccess} onLockedPress={() => setShowHeatmapPaywall(true)} target={targets.calories} />
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
@@ -600,7 +598,7 @@ export default function FoodLogScreen() {
                 colors={colors}
                 width={340}
               >
-                <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={true} cardWidth={258} />
+                <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={true} cardWidth={258} target={targets.calories} />
               </ExportCardTemplate>
             </View>
 
