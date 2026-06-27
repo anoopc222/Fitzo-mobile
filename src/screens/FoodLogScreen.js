@@ -58,7 +58,7 @@ async function fetchFoodMonth(userId, year, month) {
 }
 
 // ─── Calorie Heatmap — mirrors WeightScreen's quartile-relative heatmap ──────
-function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true, onLockedPress, cardWidth }) {
+function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true, onLockedPress, cardWidth, target }) {
   const SCREEN_W = cardWidth ?? require('react-native').Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
@@ -67,20 +67,18 @@ function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true,
   const todayStr = localDateStr(new Date());
   const cutoffStr = localDateStr(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
 
-  const vals = Object.values(caloriesByDate).filter(v => v > 0);
-  const minC = vals.length ? Math.min(...vals) : 0;
-  const maxC = vals.length ? Math.max(...vals) : 0;
-  const rangeC = maxC - minC || 0.001;
-
+  // Color cells by how far a day's calories sit from the user's calorie
+  // target (not month-relative min/max) — so a single logged day reads
+  // the same regardless of how few other days are logged that month.
   const cells = [];
   for (let i = 0; i < startDow; i++) cells.push({ key: `e${i}`, empty: true });
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const c = caloriesByDate[ds];
     let lvl = 0;
-    if (c) {
-      const rel = (c - minC) / rangeC;
-      if (rel < 0.25) lvl = 1; else if (rel < 0.5) lvl = 2; else if (rel < 0.75) lvl = 3; else lvl = 4;
+    if (c && target > 0) {
+      const ratio = c / target;
+      if (ratio < 0.5) lvl = 1; else if (ratio < 0.85) lvl = 2; else if (ratio < 1.15) lvl = 3; else lvl = 4;
     }
     const locked = !hasAccess && ds < cutoffStr;
     cells.push({ key: ds, day: d, c, lvl, isToday: ds === todayStr, locked });
@@ -134,6 +132,11 @@ function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true,
               <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, marginTop: 1, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: cell.lvl === 0 ? 0.5 : 1 }}>
                 {cell.c ? Math.round(cell.c) : '—'}
               </Text>
+              {!!cell.c && (
+                <Text style={{ fontSize: 6, fontWeight: '600', fontFamily: fontFamily.mono, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: 0.7 }}>
+                  cal
+                </Text>
+              )}
             </View>
           );
         })}
@@ -223,6 +226,7 @@ export default function FoodLogScreen() {
   const { isPro, hasAccess } = useSubscription();
   const [showTargetsPaywall, setShowTargetsPaywall] = useState(false);
   const [showHeatmapPaywall, setShowHeatmapPaywall] = useState(false);
+  const [showHeatmapModal, setShowHeatmapModal] = useState(false);
   const summaryExport = useGatedExport();
   const heatmapExport = useExportCard();
   const now = new Date();
@@ -553,44 +557,17 @@ export default function FoodLogScreen() {
               </ExportCardTemplate>
             </View>
 
-            {/* ── Monthly Calorie Heatmap ── */}
-            <View style={styles.card}>
-              <View style={styles.topRow}>
-                <View style={styles.monthNav}>
-                  <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
-                    <Text style={styles.monthChevron}>‹</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setShowMonthPicker(true)}>
-                    <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={nextMonth} style={styles.monthBtn}>
-                    <Text style={styles.monthChevron}>›</Text>
-                  </TouchableOpacity>
-                </View>
+            {/* ── Monthly Calorie Heatmap (opens in popup) ── */}
+            <TouchableOpacity style={[styles.card, styles.hmTabRow]} onPress={() => setShowHeatmapModal(true)} activeOpacity={0.8}>
+              <View style={styles.hmTabIconWrap}>
+                <Ionicons name="calendar" size={18} color={colors.accent} />
               </View>
-              <View style={styles.cardTitleRow}>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>MONTHLY CALORIE HEATMAP</Text>
-                <TouchableOpacity
-                  onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowHeatmapPaywall(true))}
-                  disabled={heatmapExport.exporting}
-                  style={styles.avgViewToggleBtn}
-                >
-                  {heatmapExport.exporting ? (
-                    <ActivityIndicator size="small" color={colors.textMuted} />
-                  ) : (
-                    <Ionicons name="share-outline" size={14} color={colors.textMuted} />
-                  )}
-                </TouchableOpacity>
+                <Text style={styles.hmTabSub}>Tap to view daily calorie consumption</Text>
               </View>
-              <View style={[styles.hmLegend, styles.hmLegendRow]}>
-                <Text style={styles.hmLegendLabel}>Low</Text>
-                {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
-                  <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
-                ))}
-                <Text style={styles.hmLegendLabel}>High</Text>
-              </View>
-              <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={hasAccess} onLockedPress={() => setShowHeatmapPaywall(true)} />
-            </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
               <ExportCardTemplate
@@ -600,7 +577,7 @@ export default function FoodLogScreen() {
                 colors={colors}
                 width={340}
               >
-                <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={true} cardWidth={258} />
+                <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={true} cardWidth={258} target={targets.calories} />
               </ExportCardTemplate>
             </View>
 
@@ -823,6 +800,44 @@ export default function FoodLogScreen() {
         onSelect={(m, y) => { setMonth(m); setYear(y); }}
         onClose={() => setShowMonthPicker(false)}
       />
+
+      <BottomSheet visible={showHeatmapModal} onClose={() => setShowHeatmapModal(false)}>
+        <View style={styles.topRow}>
+          <View style={styles.monthNav}>
+            <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
+              <Text style={styles.monthChevron}>‹</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowMonthPicker(true)}>
+              <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={nextMonth} style={styles.monthBtn}>
+              <Text style={styles.monthChevron}>›</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.cardTitleRow}>
+          <Text style={styles.cardTitle}>MONTHLY CALORIE HEATMAP</Text>
+          <TouchableOpacity
+            onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowHeatmapPaywall(true))}
+            disabled={heatmapExport.exporting}
+            style={styles.avgViewToggleBtn}
+          >
+            {heatmapExport.exporting ? (
+              <ActivityIndicator size="small" color={colors.textMuted} />
+            ) : (
+              <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+            )}
+          </TouchableOpacity>
+        </View>
+        <View style={[styles.hmLegend, styles.hmLegendRow]}>
+          <Text style={styles.hmLegendLabel}>Low</Text>
+          {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
+            <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+          ))}
+          <Text style={styles.hmLegendLabel}>High</Text>
+        </View>
+        <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={hasAccess} onLockedPress={() => setShowHeatmapPaywall(true)} target={targets.calories} />
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -974,4 +989,7 @@ const createStyles = (colors) => StyleSheet.create({
   hmLegendLabel: { fontSize: 9, color: colors.textDim },
   hmLegendSwatch: { width: 10, height: 10, borderRadius: 2 },
   hmLegendRow: { justifyContent: 'flex-end', marginBottom: 10 },
+  hmTabRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  hmTabIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.bgElevated, alignItems: 'center', justifyContent: 'center' },
+  hmTabSub: { fontSize: typography.xs, color: colors.textMuted },
 });
