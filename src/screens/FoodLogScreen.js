@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, FlatList, StyleSheet, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, RefreshControl, Keyboard,
+  TextInput, Alert, ActivityIndicator, RefreshControl, Keyboard, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
@@ -801,43 +802,57 @@ export default function FoodLogScreen() {
         onClose={() => setShowMonthPicker(false)}
       />
 
-      <BottomSheet visible={showHeatmapModal} onClose={() => setShowHeatmapModal(false)}>
-        <View style={styles.topRow}>
-          <View style={styles.monthNav}>
-            <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
-              <Text style={styles.monthChevron}>‹</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowMonthPicker(true)}>
-              <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={nextMonth} style={styles.monthBtn}>
-              <Text style={styles.monthChevron}>›</Text>
-            </TouchableOpacity>
+      <Modal visible={showHeatmapModal} transparent animationType="fade" onRequestClose={() => setShowHeatmapModal(false)}>
+        <View style={styles.hmOverlay}>
+          <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFillObject} />
+          <View style={styles.hmPopup}>
+            <View style={styles.hmPopupHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hmPopupTitle}>🔥 Calorie Heatmap</Text>
+                <Text style={styles.hmPopupSubtitle}>{MONTH_FULL[month]} {year}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowHeatmapModal(false)} style={styles.hmPopupCloseBtn}>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
+              <View style={styles.topRow}>
+                <View style={styles.monthNav}>
+                  <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
+                    <Text style={styles.monthChevron}>‹</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowMonthPicker(true)}>
+                    <Text style={styles.monthLabel}>{MONTH_FULL[month]} {year}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={nextMonth} style={styles.monthBtn}>
+                    <Text style={styles.monthChevron}>›</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowHeatmapPaywall(true))}
+                  disabled={heatmapExport.exporting}
+                  style={styles.avgViewToggleBtn}
+                >
+                  {heatmapExport.exporting ? (
+                    <ActivityIndicator size="small" color={colors.textMuted} />
+                  ) : (
+                    <Ionicons name="share-outline" size={14} color={colors.textMuted} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.hmLegend, styles.hmLegendRow]}>
+                <Text style={styles.hmLegendLabel}>Low</Text>
+                {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
+                  <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
+                ))}
+                <Text style={styles.hmLegendLabel}>High</Text>
+              </View>
+              <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={hasAccess} onLockedPress={() => setShowHeatmapPaywall(true)} target={targets.calories} />
+            </ScrollView>
           </View>
         </View>
-        <View style={styles.cardTitleRow}>
-          <Text style={styles.cardTitle}>MONTHLY CALORIE HEATMAP</Text>
-          <TouchableOpacity
-            onPress={() => (hasAccess ? heatmapExport.exportCard() : setShowHeatmapPaywall(true))}
-            disabled={heatmapExport.exporting}
-            style={styles.avgViewToggleBtn}
-          >
-            {heatmapExport.exporting ? (
-              <ActivityIndicator size="small" color={colors.textMuted} />
-            ) : (
-              <Ionicons name="share-outline" size={14} color={colors.textMuted} />
-            )}
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.hmLegend, styles.hmLegendRow]}>
-          <Text style={styles.hmLegendLabel}>Low</Text>
-          {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
-            <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
-          ))}
-          <Text style={styles.hmLegendLabel}>High</Text>
-        </View>
-        <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={hasAccess} onLockedPress={() => setShowHeatmapPaywall(true)} target={targets.calories} />
-      </BottomSheet>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -992,4 +1007,11 @@ const createStyles = (colors) => StyleSheet.create({
   hmTabRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hmTabIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.bgElevated, alignItems: 'center', justifyContent: 'center' },
   hmTabSub: { fontSize: typography.xs, color: colors.textMuted },
+
+  hmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  hmPopup: { width: '100%', maxWidth: 420, maxHeight: '85%', backgroundColor: colors.bgElevated, borderRadius: 28, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  hmPopupHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  hmPopupTitle: { fontSize: 20, fontWeight: '900', color: colors.text },
+  hmPopupSubtitle: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
+  hmPopupCloseBtn: { padding: 8, borderRadius: 20, backgroundColor: colors.bgCard },
 });
