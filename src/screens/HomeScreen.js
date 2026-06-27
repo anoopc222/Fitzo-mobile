@@ -1033,7 +1033,6 @@ export default function HomeScreen() {
   const [showStreak,  setShowStreak]  = useState(false);
   const [showForecastPaywall, setShowForecastPaywall] = useState(false);
   const [showProTeaserPaywall, setShowProTeaserPaywall] = useState(false);
-  const consistencyExport = useGatedExport();
   const recapExport = useGatedExport();
   const { hasAccess, isPro, isInTrial, trialDaysLeft, ready: subReady } = useSubscription();
   const qc = useQueryClient();
@@ -1792,98 +1791,6 @@ export default function HomeScreen() {
               })()}
             </View>
 
-            {/* ── Consistency (replaces old goal-progress banner) ── */}
-            <View style={{ position: 'relative' }}>
-              <View style={styles.consistencyCard}>
-                <View style={styles.consistencyTile}>
-                  <Text style={[styles.consistencyNum, { color: colors.accent }]}>{data?.streak ?? 0}</Text>
-                  <Text style={styles.consistencyLabel}>DAY{'\n'}STREAK</Text>
-                </View>
-                <View style={styles.consistencyDivider} />
-                <View style={styles.consistencyTile}>
-                  <Text style={[styles.consistencyNum, { color: C_STEPS }]}>{data?.thisWeek?.goalDays ?? 0}/7</Text>
-                  <Text style={styles.consistencyLabel}>STEP GOAL{'\n'}DAYS</Text>
-                </View>
-                <View style={styles.consistencyDivider} />
-                <View style={styles.consistencyTile}>
-                  <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{weeklyGoal}</Text>
-                  <Text style={styles.consistencyLabel}>WORKOUT{'\n'}SESSIONS</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={consistencyExport.onExportPress}
-                disabled={consistencyExport.exporting}
-                style={styles.cardExportBtn}
-              >
-                {consistencyExport.exporting ? (
-                  <ActivityIndicator size="small" color={colors.textMuted ?? colors.textDim} />
-                ) : (
-                  <Ionicons name="share-outline" size={13} color={colors.textMuted ?? colors.textDim} />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-              <ExportCardTemplate ref={consistencyExport.ref} title="Consistency" colors={colors} width={340}>
-                <View style={[styles.consistencyCard, { marginHorizontal: 0, marginBottom: 0 }]}>
-                  <View style={styles.consistencyTile}>
-                    <Text style={[styles.consistencyNum, { color: colors.accent }]}>{data?.streak ?? 0}</Text>
-                    <Text style={styles.consistencyLabel}>DAY{'\n'}STREAK</Text>
-                  </View>
-                  <View style={styles.consistencyDivider} />
-                  <View style={styles.consistencyTile}>
-                    <Text style={[styles.consistencyNum, { color: C_STEPS }]}>{data?.thisWeek?.goalDays ?? 0}/7</Text>
-                    <Text style={styles.consistencyLabel}>STEP GOAL{'\n'}DAYS</Text>
-                  </View>
-                  <View style={styles.consistencyDivider} />
-                  <View style={styles.consistencyTile}>
-                    <Text style={[styles.consistencyNum, { color: C_GREEN }]}>{thisWeekSessions}/{weeklyGoal}</Text>
-                    <Text style={styles.consistencyLabel}>WORKOUT{'\n'}SESSIONS</Text>
-                  </View>
-                </View>
-              </ExportCardTemplate>
-            </View>
-
-            {/* ── Weekly Recap (share-able summary) ───────────────── */}
-            <View style={{ position: 'relative', marginTop: 12 }}>
-              <View style={styles.recapCard}>
-                <Text style={styles.recapTitle}>This week's recap</Text>
-                <Text style={styles.recapLine}>
-                  🔥 {data?.streak ?? 0}-day streak · 🏋️ {thisWeekSessions}/{weeklyGoal} workouts · 👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={recapExport.onExportPress}
-                disabled={recapExport.exporting}
-                style={styles.cardExportBtn}
-              >
-                {recapExport.exporting ? (
-                  <ActivityIndicator size="small" color={colors.textMuted ?? colors.textDim} />
-                ) : (
-                  <Ionicons name="share-outline" size={13} color={colors.textMuted ?? colors.textDim} />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-              <ExportCardTemplate ref={recapExport.ref} title="Weekly Recap" colors={colors} width={340}>
-                <View style={{ gap: 10 }}>
-                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    🔥 {data?.streak ?? 0}-day streak
-                  </Text>
-                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    🏋️ {thisWeekSessions}/{weeklyGoal} workouts this week
-                  </Text>
-                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
-                  </Text>
-                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    🏆 Level {computeLevel(computeXP(data)).level}
-                  </Text>
-                </View>
-              </ExportCardTemplate>
-            </View>
-
             {/* ── Workout Banner (today completed) ────────────────── */}
             {data?.hasTodayWorkout && (
               <View style={styles.banner}>
@@ -2025,6 +1932,46 @@ export default function HomeScreen() {
                 </>
               )}
             </View>
+
+            {/* ── Weekly Recap (share-able summary) ───────────────── */}
+            <View style={{ position: 'relative' }}>
+              <View style={styles.recapCard}>
+                <Text style={styles.recapTitle}>This week's recap</Text>
+                <Text style={styles.recapLine}>
+                  🔥 {data?.streak ?? 0}-day streak · 🏋️ {thisWeekSessions}/{weeklyGoal} workouts · 👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={recapExport.onExportPress}
+                disabled={recapExport.exporting}
+                style={styles.cardExportBtn}
+              >
+                {recapExport.exporting ? (
+                  <ActivityIndicator size="small" color={colors.textMuted ?? colors.textDim} />
+                ) : (
+                  <Ionicons name="share-outline" size={13} color={colors.textMuted ?? colors.textDim} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate ref={recapExport.ref} title="Weekly Recap" colors={colors} width={340}>
+                <View style={{ gap: 10 }}>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    🔥 {data?.streak ?? 0}-day streak
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    🏋️ {thisWeekSessions}/{weeklyGoal} workouts this week
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    🏆 Level {computeLevel(computeXP(data)).level}
+                  </Text>
+                </View>
+              </ExportCardTemplate>
+            </View>
           </>
         )}
       </ScrollView>
@@ -2037,7 +1984,6 @@ export default function HomeScreen() {
         weeklyGoal={data?.weeklyGoal ?? 4}
       />
 
-      <PaywallModal visible={consistencyExport.showPaywall} onClose={() => consistencyExport.setShowPaywall(false)} />
       <PaywallModal visible={recapExport.showPaywall} onClose={() => recapExport.setShowPaywall(false)} />
       <PaywallModal visible={showForecastPaywall} onClose={() => setShowForecastPaywall(false)} />
       <PaywallModal visible={showProTeaserPaywall} onClose={() => setShowProTeaserPaywall(false)} />
@@ -2201,15 +2147,10 @@ const createStyles = (colors) => StyleSheet.create({
   chartStatVal: { fontSize: 14, fontFamily: fontFamily.bodyBold, color: colors.text, fontWeight: weight.bold },
   chartStatLabel: { fontSize: 8, color: colors.textDim, fontFamily: fontFamily.body, letterSpacing: 0.4, marginTop: 2, textAlign: 'center' },
   chartStatDivider: { width: 1, height: 22, backgroundColor: colors.border },
-  consistencyCard: { flexDirection: 'row', backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, marginHorizontal: 16, marginBottom: 10, overflow: 'hidden' },
-  consistencyTile: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  consistencyNum: { fontSize: 18, fontFamily: fontFamily.monoBold },
-  consistencyLabel: { fontSize: 7, color: colors.textDim, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5, textAlign: 'center', marginTop: 4 },
-  consistencyDivider: { width: 1, backgroundColor: colors.border },
   cardExportBtn: { position: 'absolute', top: 8, right: 24, padding: 6, borderRadius: 14, backgroundColor: colors.bgElevated ?? colors.bgCard },
   recapCard: {
     backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 14, marginHorizontal: 16, padding: 14, gap: 4,
+    borderRadius: 14, marginHorizontal: 16, marginBottom: 10, padding: 14, gap: 4,
   },
   recapTitle: { fontSize: typography.sm, fontFamily: fontFamily.bodyBold, color: colors.text },
   recapLine: { fontSize: typography.xs, color: colors.textMuted, lineHeight: 18 },
@@ -2279,7 +2220,7 @@ const createStyles = (colors) => StyleSheet.create({
   lastHint: { fontSize: 10, color: colors.accent, fontFamily: fontFamily.mono },
   saveBtn: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
   saveBtnText: { color: colors.bg, fontWeight: weight.bold, fontSize: typography.base },
-  tabsCard: { marginHorizontal: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  tabsCard: { marginHorizontal: 16, marginBottom: 10, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   tabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative' },
   tabLabelRow: { flexDirection: 'row', alignItems: 'center' },
