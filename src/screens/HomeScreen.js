@@ -1312,8 +1312,6 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <AchievementsRow home={data} />
-
             {/* ── Go Pro banner ─────────────────────────────────── */}
             {subReady && !isPro && (
               <TouchableOpacity
@@ -1330,6 +1328,8 @@ export default function HomeScreen() {
                 <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
               </TouchableOpacity>
             )}
+
+            <AchievementsRow home={data} />
 
             {/* ── Insight Cards (auto-rotating) ──────────────────── */}
             <ScrollView
