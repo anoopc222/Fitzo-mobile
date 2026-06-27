@@ -164,7 +164,8 @@ export default function ProgressScreen({ navigation }) {
           }, { kg: 0, date: null });
           const trend = calcTrend(ex.sessions);
 
-          const onHeaderPress = () => hasAccess ? toggleExpand(ex.name) : setShowPaywall(true);
+          const unlocked = hasAccess || exIndex < 2;
+          const onHeaderPress = () => unlocked ? toggleExpand(ex.name) : setShowPaywall(true);
 
           return (
             <View key={ex.name} style={styles.exCard}>
@@ -173,11 +174,11 @@ export default function ProgressScreen({ navigation }) {
                   <Text style={styles.exName}>{ex.name}</Text>
                   <View style={styles.exMeta}>
                     <Text style={styles.exSessions}>{ex.sessions.length} sessions</Text>
-                    {hasAccess && <TrendIcon trend={trend} />}
+                    {unlocked && <TrendIcon trend={trend} />}
                   </View>
                 </View>
                 <View style={styles.exHeaderRight}>
-                  {!hasAccess ? (
+                  {!unlocked ? (
                     <View style={styles.proBadge}>
                       <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
                       <Text style={styles.proBadgeText}>PRO</Text>
@@ -188,7 +189,7 @@ export default function ProgressScreen({ navigation }) {
                       <Text style={styles.prText}>PR {pr.kg}kg</Text>
                     </View>
                   ) : null}
-                  {hasAccess && (
+                  {unlocked && (
                     <Ionicons
                       name={isExpanded ? 'chevron-up' : 'chevron-down'}
                       size={16} color={colors.textMuted}
@@ -203,18 +204,18 @@ export default function ProgressScreen({ navigation }) {
                   {last3.map((s, i) => (
                     <View key={i} style={styles.sessionPreviewRow}>
                       <Text style={styles.previewDate}>
-                        {hasAccess ? new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '●●●'}
+                        {unlocked ? new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '●●●'}
                       </Text>
                       <Text style={styles.previewBest}>
-                        {hasAccess ? `${s.bestSet?.weight_kg ?? '--'} kg × ${s.bestSet?.reps ?? '--'}` : '●● kg × ●●'}
+                        {unlocked ? `${s.bestSet?.weight_kg ?? '--'} kg × ${s.bestSet?.reps ?? '--'}` : '●● kg × ●●'}
                       </Text>
-                      <Text style={styles.previewVol}>{hasAccess ? `${s.volume.toLocaleString()} kg vol` : '●●● kg vol'}</Text>
-                      {hasAccess && i === 0 && <View style={[styles.statusDot, { backgroundColor: colors.success }]} />}
-                      {hasAccess && i === 1 && <View style={[styles.statusDot, { backgroundColor: colors.warning }]} />}
-                      {hasAccess && i === 2 && <View style={[styles.statusDot, { backgroundColor: colors.textDim }]} />}
+                      <Text style={styles.previewVol}>{unlocked ? `${s.volume.toLocaleString()} kg vol` : '●●● kg vol'}</Text>
+                      {unlocked && i === 0 && <View style={[styles.statusDot, { backgroundColor: colors.success }]} />}
+                      {unlocked && i === 1 && <View style={[styles.statusDot, { backgroundColor: colors.warning }]} />}
+                      {unlocked && i === 2 && <View style={[styles.statusDot, { backgroundColor: colors.textDim }]} />}
                     </View>
                   ))}
-                  {!hasAccess && (
+                  {!unlocked && (
                     <Text style={styles.lockedHint} onPress={() => setShowPaywall(true)}>
                       🔒 Unlock PR badges, trend insights, and full session history
                     </Text>
@@ -223,7 +224,7 @@ export default function ProgressScreen({ navigation }) {
               )}
 
               {/* Expanded full history */}
-              {hasAccess && isExpanded && (
+              {unlocked && isExpanded && (
                 <View style={styles.fullHistory}>
                   {pr.kg > 0 && (
                     <View style={styles.prRow}>
