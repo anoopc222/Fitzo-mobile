@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Modal, Animated, View, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { Modal, Animated, View, Pressable, StyleSheet, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -33,7 +33,11 @@ export default function BottomSheet({ visible, onClose, children, style }) {
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
         </Pressable>
       </Animated.View>
-      <View style={styles.bottomWrap} pointerEvents="box-none">
+      <KeyboardAvoidingView
+        style={styles.bottomWrap}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        pointerEvents="box-none"
+      >
         <Animated.View
           style={[
             styles.sheet,
@@ -48,7 +52,7 @@ export default function BottomSheet({ visible, onClose, children, style }) {
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           {children}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
