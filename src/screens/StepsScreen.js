@@ -934,6 +934,58 @@ export default function StepsScreen() {
               </ExportCardTemplate>
             </View>
 
+            {/* ── Analysis & Insights (Pro) ── */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>ANALYSIS & INSIGHTS</Text>
+                <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>
+              </View>
+              <View style={styles.weekStatsRow}>
+                <WeekStatCell value={hasAccess ? String(streaks.longest) : '●●'} label="BEST STREAK" color="#f59e0b" colors={colors} />
+                <View style={styles.weekStatDivider} />
+                <WeekStatCell value={hasAccess ? (consistency8wk != null ? `${consistency8wk}%` : '—') : '●●%'} label="8WK CONSISTENCY" color={colors.good} colors={colors} />
+                <View style={styles.weekStatDivider} />
+                <WeekStatCell value={hasAccess ? (busiestDow ? busiestDow.label : '—') : '●●'} label="BUSIEST DAY" color="#22d3ee" colors={colors} />
+              </View>
+              {hasAccess ? (
+                <View style={{ marginTop: 12, gap: 8 }}>
+                  {goalSuggestion && (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>📈</Text>
+                      <Text style={styles.tipText}>You're averaging {goalSuggestion.avg.toLocaleString()} steps/day and hitting your goal {goalSuggestion.hitRate}% of the time — consider raising your goal to {goalSuggestion.suggested.toLocaleString()}.</Text>
+                    </View>
+                  )}
+                  {sleepCorrelation && sleepCorrelation.diff > 200 && (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>😴</Text>
+                      <Text style={styles.tipText}>After nights with under 6h sleep, you average {sleepCorrelation.diff.toLocaleString()} fewer steps ({sleepCorrelation.avgLow.toLocaleString()} vs {sleepCorrelation.avgNormal.toLocaleString()}).</Text>
+                    </View>
+                  )}
+                  {milestone.best && (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>🌍</Text>
+                      <Text style={styles.tipText}>You've walked the distance of {milestone.best.name} ({Math.round(milestone.totalKm).toLocaleString()} km lifetime).</Text>
+                    </View>
+                  )}
+                  {!goalSuggestion && !sleepCorrelation && !milestone.best && (
+                    <Text style={styles.emptyText}>Log a few more days to unlock personalized insights.</Text>
+                  )}
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
+                  <View style={{ marginTop: 12, gap: 8 }}>
+                    {['📈', '😴', '🌍'].map((icon, i) => (
+                      <View key={i} style={styles.tipRow}>
+                        <Text style={styles.tipEmoji}>{icon}</Text>
+                        <Text style={styles.tipText}>●●●●●●●●●● ●●●●●●● ●●●●●●●●●●●●●●●●●●●●●●●●●●●</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>🔒 Unlock streak history, sleep correlation & adaptive goal tips with Pro.</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             {/* ── This Week sections — only meaningful for the current real month ── */}
             {isCurrentMonth && (
               <>
@@ -1056,59 +1108,6 @@ export default function StepsScreen() {
                   <View style={styles.weekStatDivider} />
                   <WeekStatCell value={trendStats.totalSteps.toLocaleString()} label="TOTAL" color={colors.text} colors={colors} />
                 </View>
-              )}
-            </View>
-
-            {/* ── Analysis & Insights (Pro) ── */}
-            <View style={styles.card}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>ANALYSIS & INSIGHTS</Text>
-                {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
-              </View>
-              {hasAccess ? (
-                <>
-                  <View style={styles.weekStatsRow}>
-                    <WeekStatCell value={String(streaks.longest)} label="BEST STREAK" color="#f59e0b" colors={colors} />
-                    <View style={styles.weekStatDivider} />
-                    <WeekStatCell value={consistency8wk != null ? `${consistency8wk}%` : '—'} label="8WK CONSISTENCY" color={colors.good} colors={colors} />
-                    <View style={styles.weekStatDivider} />
-                    <WeekStatCell value={busiestDow ? busiestDow.label : '—'} label="BUSIEST DAY" color="#22d3ee" colors={colors} />
-                  </View>
-                  <View style={{ marginTop: 12, gap: 8 }}>
-                    {goalSuggestion && (
-                      <View style={styles.tipRow}>
-                        <Text style={styles.tipEmoji}>📈</Text>
-                        <Text style={styles.tipText}>You're averaging {goalSuggestion.avg.toLocaleString()} steps/day and hitting your goal {goalSuggestion.hitRate}% of the time — consider raising your goal to {goalSuggestion.suggested.toLocaleString()}.</Text>
-                      </View>
-                    )}
-                    {sleepCorrelation && sleepCorrelation.diff > 200 && (
-                      <View style={styles.tipRow}>
-                        <Text style={styles.tipEmoji}>😴</Text>
-                        <Text style={styles.tipText}>After nights with under 6h sleep, you average {sleepCorrelation.diff.toLocaleString()} fewer steps ({sleepCorrelation.avgLow.toLocaleString()} vs {sleepCorrelation.avgNormal.toLocaleString()}).</Text>
-                      </View>
-                    )}
-                    {milestone.best && (
-                      <View style={styles.tipRow}>
-                        <Text style={styles.tipEmoji}>🌍</Text>
-                        <Text style={styles.tipText}>You've walked the distance of {milestone.best.name} ({Math.round(milestone.totalKm).toLocaleString()} km lifetime).</Text>
-                      </View>
-                    )}
-                    {!goalSuggestion && !sleepCorrelation && !milestone.best && (
-                      <Text style={styles.emptyText}>Log a few more days to unlock personalized insights.</Text>
-                    )}
-                  </View>
-                </>
-              ) : (
-                <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
-                  <View style={styles.weekStatsRow}>
-                    <WeekStatCell value="••" label="BEST STREAK" color={colors.textDim} colors={colors} />
-                    <View style={styles.weekStatDivider} />
-                    <WeekStatCell value="••%" label="8WK CONSISTENCY" color={colors.textDim} colors={colors} />
-                    <View style={styles.weekStatDivider} />
-                    <WeekStatCell value="••" label="BUSIEST DAY" color={colors.textDim} colors={colors} />
-                  </View>
-                  <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>Unlock streak history, sleep correlation & adaptive goal tips with Pro.</Text>
-                </TouchableOpacity>
               )}
             </View>
 
@@ -1398,6 +1397,8 @@ const createStyles = (colors) => StyleSheet.create({
   card: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
   cardTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardTitle: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5, fontFamily: fontFamily.mono },
+  proBadge: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  proBadgeText: { fontSize: 9, fontWeight: weight.black, color: colors.bg, letterSpacing: 0.5 },
 
   goalPill: { borderWidth: 1, borderColor: colors.accent, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4 },
   goalPillText: { fontSize: 10, fontWeight: weight.bold, color: colors.accent, fontFamily: fontFamily.mono },

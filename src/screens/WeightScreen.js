@@ -801,11 +801,54 @@ export default function WeightScreen() {
       volatility = sum / (sortedAsc.length - 1);
     }
 
+    // Weekend vs weekday average, relative to overall mean
+    let weekendDelta = null;
+    if (overallAvg != null) {
+      const weekendVals = sortedAsc.filter(l => [0, 6].includes(new Date(l.logged_at + 'T00:00:00').getDay())).map(l => l.weight);
+      const weekdayVals = sortedAsc.filter(l => ![0, 6].includes(new Date(l.logged_at + 'T00:00:00').getDay())).map(l => l.weight);
+      if (weekendVals.length >= 2 && weekdayVals.length >= 2) {
+        const weekendAvg = weekendVals.reduce((a, b) => a + b, 0) / weekendVals.length;
+        const weekdayAvg = weekdayVals.reduce((a, b) => a + b, 0) / weekdayVals.length;
+        weekendDelta = weekendAvg - weekdayAvg;
+      }
+    }
+
+    // Momentum: rate of change over the last 14 days vs the prior 14 days
+    const last14Entries = sortedAsc.filter(l => l.logged_at >= localDateStr(new Date(todayD.getTime() - 13 * 86400000)));
+    const prev14Entries = sortedAsc.filter(l =>
+      l.logged_at >= localDateStr(new Date(todayD.getTime() - 27 * 86400000)) &&
+      l.logged_at < localDateStr(new Date(todayD.getTime() - 13 * 86400000))
+    );
+    let momentumDelta = null;
+    if (last14Entries.length >= 2 && prev14Entries.length >= 2) {
+      const rateOf = (entries) => entries[entries.length - 1].weight - entries[0].weight;
+      momentumDelta = rateOf(last14Entries) - rateOf(prev14Entries);
+    }
+
+    // Biggest single-log-to-log jump in the last 30 days
+    const last30 = sortedAsc.filter(l => l.logged_at >= localDateStr(new Date(todayD.getTime() - 29 * 86400000)));
+    let biggestJump = null;
+    if (last30.length >= 2) {
+      for (let i = 1; i < last30.length; i++) {
+        const delta = last30[i].weight - last30[i - 1].weight;
+        if (biggestJump == null || Math.abs(delta) > Math.abs(biggestJump.delta)) {
+          biggestJump = { delta, date: last30[i].logged_at };
+        }
+      }
+    }
+
+    // Days since last log
+    const lastLogDate = sortedDesc[0]?.logged_at ?? null;
+    const daysSinceLastLog = lastLogDate
+      ? Math.floor((todayD.getTime() - new Date(lastLogDate + 'T00:00:00').getTime()) / 86400000)
+      : null;
+
     return {
       currentStreak, longestStreak, consistencyPct, prevConsistencyPct,
       bestDow, bestDowDelta, last14Range, volatility,
+      weekendDelta, momentumDelta, biggestJump, daysSinceLastLog,
     };
-  }, [logDateSet, sortedAsc]);
+  }, [logDateSet, sortedAsc, sortedDesc]);
 
   const weightInsights = useMemo(() => {
     const out = [];
@@ -837,6 +880,32 @@ export default function WeightScreen() {
       if (c.volatility >= 0.8) {
         out.push({ icon: '〜', text: 'Your weight swings ', bold: `±${toDisp(c.volatility, unit).toFixed(1)}${unit}`, rest: ' between logs on average — try logging at the same time each day for steadier readings.' });
       }
+    }
+    if (c.weekendDelta != null && Math.abs(c.weekendDelta) > 0.2) {
+      out.push({
+        icon: '🍔',
+        text: 'Weekends run ',
+        bold: `${c.weekendDelta >= 0 ? '+' : ''}${toDisp(c.weekendDelta, unit).toFixed(1)}${unit}`,
+        rest: ' vs weekdays — worth a look at weekend habits.',
+      });
+    }
+    if (c.momentumDelta != null && Math.abs(c.momentumDelta) > 0.3) {
+      if (c.momentumDelta < 0) {
+        out.push({ icon: '🚀', text: 'Momentum is building', bold: '', rest: ` — you lost ${toDisp(Math.abs(c.momentumDelta), unit).toFixed(1)}${unit} more in the last 14 days than the 14 before that.` });
+      } else {
+        out.push({ icon: '🐢', text: 'Progress has slowed', bold: '', rest: ` — ${toDisp(c.momentumDelta, unit).toFixed(1)}${unit} less change than the previous 14 days.` });
+      }
+    }
+    if (c.biggestJump && Math.abs(c.biggestJump.delta) >= 1) {
+      out.push({
+        icon: '⚡',
+        text: `Biggest single-log swing in the last 30 days: `,
+        bold: `${c.biggestJump.delta >= 0 ? '+' : ''}${toDisp(c.biggestJump.delta, unit).toFixed(1)}${unit}`,
+        rest: ` on ${new Date(c.biggestJump.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`,
+      });
+    }
+    if (c.daysSinceLastLog != null && c.daysSinceLastLog >= 3) {
+      out.push({ icon: '⚠️', text: 'It\'s been ', bold: `${c.daysSinceLastLog} days`, rest: ' since your last weigh-in — log today to keep your trend accurate.' });
     }
     return out;
   }, [weightConsistency, unit]);
@@ -1031,6 +1100,14 @@ export default function WeightScreen() {
                       <Text style={styles.tileVal}>±●.●</Text>
                       <Text style={styles.tileLbl}>VOLATILITY</Text>
                     </View>
+                  </View>
+                  <View style={styles.insightsList}>
+                    {['📈', '📅', '⚡'].map((icon, i) => (
+                      <View key={i} style={styles.insightRow}>
+                        <Text style={styles.insightIcon}>{icon}</Text>
+                        <Text style={styles.insightText}>●●●●●●●●●● ●●●●●●● ●●●●●●●●●●●●●●●●●●●●●●●●●●●</Text>
+                      </View>
+                    ))}
                   </View>
                   <Text style={styles.lockedHint}>
                     🔒 Unlock your streak record, consistency score, and personalized weight insights

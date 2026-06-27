@@ -2704,6 +2704,60 @@ export default function WorkoutScreen() {
               )}
             </View>
 
+            {/* Analysis & Insights — Pro */}
+            <View style={s.card}>
+              <View style={s.cardTitleRow}>
+                <Text style={s.cardTitle}>ANALYSIS & INSIGHTS</Text>
+                <View style={s.proBadge}><Text style={s.proBadgeText}>PRO</Text></View>
+              </View>
+
+              <View style={s.tileRow}>
+                <View style={s.tile}>
+                  <Text style={s.tileVal}>{hasAccess ? consistency.longestStreak : '●●'}</Text>
+                  <Text style={s.tileLbl}>BEST STREAK</Text>
+                </View>
+                <View style={s.tileColDivider} />
+                <View style={s.tile}>
+                  <Text style={s.tileVal}>{hasAccess ? `${consistency.consistencyPct}%` : '●●%'}</Text>
+                  <Text style={s.tileLbl}>8-WK CONSISTENCY</Text>
+                </View>
+                <View style={s.tileColDivider} />
+                <View style={s.tile}>
+                  <Text style={s.tileVal}>{hasAccess ? consistency.avgPerWeek.toFixed(1) : '●.●'}</Text>
+                  <Text style={s.tileLbl}>AVG / WEEK</Text>
+                </View>
+              </View>
+
+              {hasAccess ? (
+                insights.length > 0 && (
+                  <View style={s.insightsList}>
+                    {insights.map((ins, i) => (
+                      <View key={i} style={s.insightRow}>
+                        <Text style={s.insightIcon}>{ins.icon}</Text>
+                        <Text style={s.insightText}>
+                          {ins.text}<Text style={s.insightBold}>{ins.bold}</Text>{ins.rest}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )
+              ) : (
+                <TouchableOpacity activeOpacity={0.85} onPress={() => setShowInsightsPaywall(true)}>
+                  <View style={s.insightsList}>
+                    {['📈', '🔥', '📅'].map((icon, i) => (
+                      <View key={i} style={s.insightRow}>
+                        <Text style={s.insightIcon}>{icon}</Text>
+                        <Text style={s.insightText}>●●●●●●●●●● ●●●●●●● ●●●●●●●●●●●●●●●●●●●●●●●●●●●</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={s.lockedHint}>
+                    🔒 Unlock your streak record, consistency score, and personalized training insights
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             {/* This Week vs Last Week — session count, the consistency-first framing */}
             {isViewingCurrentMonth && (
               <View style={s.weekCompareCardMerged}>
@@ -2798,69 +2852,6 @@ export default function WorkoutScreen() {
                   <View style={s.statDividerInline} />
                   <WeekStatCell value={trendStats.totalVol.toLocaleString()} label="TOTAL" color={colors.text} colors={colors} />
                 </View>
-              )}
-            </View>
-
-            {/* Analysis & Insights — Pro */}
-            <View style={s.card}>
-              <View style={s.cardTitleRow}>
-                <Text style={s.cardTitle}>ANALYSIS & INSIGHTS</Text>
-                <View style={s.proBadge}><Text style={s.proBadgeText}>PRO</Text></View>
-              </View>
-
-              {hasAccess ? (
-                <>
-                  <View style={s.tileRow}>
-                    <View style={s.tile}>
-                      <Text style={s.tileVal}>{consistency.longestStreak}</Text>
-                      <Text style={s.tileLbl}>BEST STREAK</Text>
-                    </View>
-                    <View style={s.tileColDivider} />
-                    <View style={s.tile}>
-                      <Text style={s.tileVal}>{consistency.consistencyPct}%</Text>
-                      <Text style={s.tileLbl}>8-WK CONSISTENCY</Text>
-                    </View>
-                    <View style={s.tileColDivider} />
-                    <View style={s.tile}>
-                      <Text style={s.tileVal}>{consistency.avgPerWeek.toFixed(1)}</Text>
-                      <Text style={s.tileLbl}>AVG / WEEK</Text>
-                    </View>
-                  </View>
-                  {insights.length > 0 && (
-                    <View style={s.insightsList}>
-                      {insights.map((ins, i) => (
-                        <View key={i} style={s.insightRow}>
-                          <Text style={s.insightIcon}>{ins.icon}</Text>
-                          <Text style={s.insightText}>
-                            {ins.text}<Text style={s.insightBold}>{ins.bold}</Text>{ins.rest}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </>
-              ) : (
-                <TouchableOpacity activeOpacity={0.85} onPress={() => setShowInsightsPaywall(true)}>
-                  <View style={s.tileRow}>
-                    <View style={s.tile}>
-                      <Text style={s.tileVal}>●●</Text>
-                      <Text style={s.tileLbl}>BEST STREAK</Text>
-                    </View>
-                    <View style={s.tileColDivider} />
-                    <View style={s.tile}>
-                      <Text style={s.tileVal}>●●%</Text>
-                      <Text style={s.tileLbl}>8-WK CONSISTENCY</Text>
-                    </View>
-                    <View style={s.tileColDivider} />
-                    <View style={s.tile}>
-                      <Text style={s.tileVal}>●.●</Text>
-                      <Text style={s.tileLbl}>AVG / WEEK</Text>
-                    </View>
-                  </View>
-                  <Text style={s.lockedHint}>
-                    🔒 Unlock your streak record, consistency score, and personalized training insights
-                  </Text>
-                </TouchableOpacity>
               )}
             </View>
 

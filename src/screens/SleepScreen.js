@@ -701,12 +701,12 @@ export default function SleepScreen() {
               </ExportCardTemplate>
             </View>
 
-            {/* ── Insights (Pro) ── */}
+            {/* ── Analysis & Insights (Pro) ── */}
             {insights.length > 0 && (
               <View style={styles.card}>
                 <View style={styles.cardTitleRow}>
-                  <Text style={styles.cardTitle}>💡 INSIGHTS</Text>
-                  {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
+                  <Text style={styles.cardTitle}>ANALYSIS & INSIGHTS</Text>
+                  <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>
                 </View>
                 {hasAccess ? (
                   insights.map((ins, i) => (
@@ -719,6 +719,12 @@ export default function SleepScreen() {
                   ))
                 ) : (
                   <TouchableOpacity onPress={() => setShowRangePaywall(true)}>
+                    {insights.map((ins, i) => (
+                      <View key={i} style={styles.insightRow}>
+                        <Text style={styles.insightIcon}>{ins.icon}</Text>
+                        <Text style={styles.insightText}>●●●●●●●●●● ●●●●●●● ●●●●●●●●●●●●●●●●●●●●●●●●●●●</Text>
+                      </View>
+                    ))}
                     <Text style={styles.emptyText}>🔒 Unlock personalized sleep insights with Pro.</Text>
                   </TouchableOpacity>
                 )}
@@ -971,6 +977,8 @@ const createStyles = (colors) => StyleSheet.create({
   card: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
   cardTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardTitle: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5, fontFamily: fontFamily.mono },
+  proBadge: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  proBadgeText: { fontSize: 9, fontWeight: weight.black, color: colors.bg, letterSpacing: 0.5 },
 
   goalPill: { borderWidth: 1, borderColor: colors.purple, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4 },
   goalPillText: { fontSize: 10, fontWeight: weight.bold, color: colors.purple, fontFamily: fontFamily.mono },
