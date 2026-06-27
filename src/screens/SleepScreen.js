@@ -432,7 +432,23 @@ export default function SleepScreen() {
 
   const deleteMut = useMutation({
     mutationFn: deleteSleepLog,
-    onSuccess: () => { qc.invalidateQueries(['sleep', user.id]); qc.invalidateQueries(['home', user.id]); },
+    onMutate: async (id) => {
+      await qc.cancelQueries(['sleep', user.id]);
+      const previous = qc.getQueryData(['sleep', user.id]);
+      qc.setQueryData(['sleep', user.id], (old) => {
+        if (!old) return old;
+        return { ...old, logs: old.logs.filter(l => l.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['sleep', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['sleep', user.id]);
+      qc.invalidateQueries(['home', user.id]);
+    },
   });
 
   const logsByDate = useMemo(() => {

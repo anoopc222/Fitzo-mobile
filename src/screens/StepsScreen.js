@@ -592,7 +592,23 @@ export default function StepsScreen() {
 
   const deleteMut = useMutation({
     mutationFn: deleteStepLog,
-    onSuccess: () => { qc.invalidateQueries(['steps', user.id]); qc.invalidateQueries(['home', user.id]); },
+    onMutate: async (id) => {
+      await qc.cancelQueries(['steps', user.id]);
+      const previous = qc.getQueryData(['steps', user.id]);
+      qc.setQueryData(['steps', user.id], (old) => {
+        if (!old) return old;
+        return { ...old, logs: old.logs.filter(l => l.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['steps', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['steps', user.id]);
+      qc.invalidateQueries(['home', user.id]);
+    },
   });
 
   // ── Month-scoped derived data ────────────────────────────────────────────
