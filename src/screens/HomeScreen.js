@@ -438,11 +438,16 @@ async function fetchHome(userId) {
   let sleepDebt = null;
   {
     const recent = (sleepHist.data ?? []).slice(0, 7);
-    if (recent.length >= 3) {
-      const totalDebtHrs = recent.reduce((sum, s) => sum + Math.max(0, sleepGoal - s.hours), 0);
+    if (recent.length >= 1) {
+      // Mirrors SleepScreen's weekDebt: shortfall of the recent-nights average
+      // vs. goal, projected across a 7-night week — not a literal sum of each
+      // logged night's shortfall, so it stays consistent even with <3 nights logged.
+      const avg7 = recent.reduce((sum, s) => sum + s.hours, 0) / recent.length;
+      const debtPerNight = Math.max(0, sleepGoal - avg7);
+      const totalDebtHrs = +(debtPerNight * 7).toFixed(1);
       if (totalDebtHrs > 0) {
         sleepDebt = {
-          totalDebtHrs: +totalDebtHrs.toFixed(1),
+          totalDebtHrs,
           nights: recent.length,
           nightsToRecover: Math.ceil(totalDebtHrs / 1),
         };
