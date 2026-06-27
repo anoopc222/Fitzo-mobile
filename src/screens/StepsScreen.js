@@ -894,26 +894,26 @@ export default function StepsScreen() {
                 )}
               </View>
 
-              <View style={styles.streakRow}>
-                <View style={styles.streakPill}>
+              <View style={styles.streakNudgeRow}>
+                <View style={styles.streakPillCompact}>
                   <Text style={styles.streakPillEmoji}>🔥</Text>
-                  <Text style={styles.streakPillText}>{streaks.current} day streak</Text>
+                  <Text style={styles.streakPillText}>{streaks.current}d</Text>
                   {streaks.longest > streaks.current && (
                     <Text style={styles.streakPillSub}>best {streaks.longest}</Text>
                   )}
                 </View>
+                {todaySteps < defaultGoal && (
+                  <>
+                    <View style={styles.streakNudgeDivider} />
+                    <Ionicons name="walk-outline" size={13} color="#f59e0b" style={{ marginRight: 2 }} />
+                    <Text style={styles.nudgeTextCompact} numberOfLines={1}>
+                      {todaySteps > 0
+                        ? `Walk ${stepsNeededToday.toLocaleString()} more to hit goal`
+                        : `Log today — ${defaultGoal.toLocaleString()} to hit goal`}
+                    </Text>
+                  </>
+                )}
               </View>
-
-              {todaySteps < defaultGoal && (
-                <View style={styles.nudgeBanner}>
-                  <Ionicons name="walk-outline" size={15} color="#f59e0b" />
-                  <Text style={styles.nudgeText}>
-                    {todaySteps > 0
-                      ? `Walk ${stepsNeededToday.toLocaleString()} more today to hit your goal`
-                      : `Log today's steps — ${defaultGoal.toLocaleString()} to hit your goal`}
-                  </Text>
-                </View>
-              )}
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
@@ -1497,6 +1497,16 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 10, padding: 10,
   },
   nudgeText: { flex: 1, fontSize: 11, color: colors.text, lineHeight: 15 },
+
+  streakNudgeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12,
+    backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderWidth: 1, borderColor: 'rgba(245,158,11,0.18)',
+  },
+  streakPillCompact: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  streakNudgeDivider: { width: 1, height: 14, backgroundColor: 'rgba(245,158,11,0.25)', marginHorizontal: 4 },
+  nudgeTextCompact: { flex: 1, fontSize: 11, color: colors.text, lineHeight: 15 },
 
   repeatYesterdayBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
