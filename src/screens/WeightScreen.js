@@ -1190,13 +1190,13 @@ export default function WeightScreen() {
               <WeightTrendChart data={trendData} unit={unit} goalKg={goalKg} colors={colors} width={chartWidth} />
               {trendStats && (
                 <View style={styles.trendStatsRow}>
-                  <WeekStatCell value={trendStats.avg.toFixed(1)} label="AVG" color={colors.accent} colors={colors} />
+                  <WeekStatCell value={trendStats.avg.toFixed(1)} label={t('weight.avgStatLabel')} color={colors.accent} colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={`${trendStats.loggedDays}/${trendStats.totalDays}`} label="LOGGED DAYS" color={colors.good} colors={colors} />
+                  <WeekStatCell value={`${trendStats.loggedDays}/${trendStats.totalDays}`} label={t('weight.loggedDaysStatLabel')} color={colors.good} colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={trendStats.best.toFixed(1)} label="BEST" color="#22d3ee" colors={colors} />
+                  <WeekStatCell value={trendStats.best.toFixed(1)} label={t('weight.bestStatLabel')} color="#22d3ee" colors={colors} />
                   <View style={styles.statDividerInline} />
-                  <WeekStatCell value={`${trendStats.change >= 0 ? '+' : ''}${trendStats.change.toFixed(1)}`} label="CHANGE" color={trendStats.change <= 0 ? colors.good : colors.danger} colors={colors} />
+                  <WeekStatCell value={`${trendStats.change >= 0 ? '+' : ''}${trendStats.change.toFixed(1)}`} label={t('weight.changeStatLabel')} color={trendStats.change <= 0 ? colors.good : colors.danger} colors={colors} />
                 </View>
               )}
             </View>
@@ -1225,7 +1225,7 @@ export default function WeightScreen() {
                       onPress={() => setWkViewMode(v)}
                       style={[styles.segmentBtn, { flex: 1, alignItems: 'center' }, wkViewMode === v && styles.segmentBtnActive]}
                     >
-                      <Text style={[styles.segmentText, wkViewMode === v && styles.segmentTextActive]}>BY {v.toUpperCase()}</Text>
+                      <Text style={[styles.segmentText, wkViewMode === v && styles.segmentTextActive]}>{v === 'week' ? t('weight.byWeekLabel') : t('weight.byMonthLabel')}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -1236,7 +1236,7 @@ export default function WeightScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingTop: 12 }}
               >
                 <Text style={{ fontSize: 11, fontWeight: '700', fontFamily: fontFamily.mono, color: colors.accent }}>
-                  {avgExpanded ? 'Collapse' : 'Expand'}
+                  {avgExpanded ? t('weight.collapseLabel') : t('weight.expandLabel')}
                 </Text>
                 <Ionicons name={avgExpanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.accent} />
               </TouchableOpacity>
@@ -1245,8 +1245,8 @@ export default function WeightScreen() {
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
               <ExportCardTemplate
                 ref={avgWeightExport.ref}
-                title="Avg Weight"
-                subtitle={`${wkViewMode === 'month' ? 'Monthly' : 'Weekly'} averages`}
+                title={t('weight.avgWeightExportTitle')}
+                subtitle={wkViewMode === 'month' ? t('weight.avgWeightExportSubtitleMonthly') : t('weight.avgWeightExportSubtitleWeekly')}
                 colors={colors}
                 width={340}
               >

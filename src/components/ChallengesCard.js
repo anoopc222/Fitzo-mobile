@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
 import { computeChallenges } from '../lib/challenges';
 
 export default function ChallengesCard({ home }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const challenges = useMemo(() => computeChallenges(home), [home]);
   const completeCount = challenges.filter(c => c.complete).length;
@@ -13,7 +15,7 @@ export default function ChallengesCard({ home }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>WEEKLY CHALLENGES</Text>
+        <Text style={styles.title}>{t('gamification.weeklyChallengesTitle')}</Text>
         <Text style={styles.count}>{completeCount}/{challenges.length}</Text>
       </View>
       <View style={styles.card}>
@@ -23,13 +25,13 @@ export default function ChallengesCard({ home }) {
             <View style={styles.body}>
               <View style={styles.labelRow}>
                 <Text style={[styles.label, { color: c.complete ? colors.accent : colors.text }]} numberOfLines={1}>
-                  {c.label}
+                  {t(c.labelKey)}
                 </Text>
                 <Text style={[styles.progressText, { color: c.complete ? colors.accent : colors.textDim }]}>
                   {c.progress}/{c.target}
                 </Text>
               </View>
-              <Text style={styles.description} numberOfLines={1}>{c.description}</Text>
+              <Text style={styles.description} numberOfLines={1}>{t(c.descriptionKey)}</Text>
               <View style={styles.track}>
                 <View
                   style={[

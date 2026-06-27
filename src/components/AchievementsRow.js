@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
 import { computeAchievements } from '../lib/achievements';
 
 export default function AchievementsRow({ home }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const badges = useMemo(() => computeAchievements(home), [home]);
   const unlockedCount = badges.filter(b => b.unlocked).length;
@@ -15,7 +17,7 @@ export default function AchievementsRow({ home }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>ACHIEVEMENTS</Text>
+        <Text style={styles.title}>{t('gamification.achievementsTitle')}</Text>
         <Text style={styles.count}>{unlockedCount}/{badges.length}</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -35,7 +37,7 @@ export default function AchievementsRow({ home }) {
               style={[styles.badgeLabel, { color: b.unlocked ? colors.text : colors.textDim }]}
               numberOfLines={1}
             >
-              {b.label}
+              {t(b.labelKey)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -47,7 +49,7 @@ export default function AchievementsRow({ home }) {
             {selected && (
               <>
                 <Text style={styles.sheetIcon}>{selected.icon}</Text>
-                <Text style={styles.sheetLabel}>{selected.label}</Text>
+                <Text style={styles.sheetLabel}>{t(selected.labelKey)}</Text>
                 <View style={[
                   styles.statusChip,
                   selected.unlocked
@@ -60,13 +62,18 @@ export default function AchievementsRow({ home }) {
                     color={selected.unlocked ? colors.accent : colors.textDim}
                   />
                   <Text style={[styles.statusChipText, { color: selected.unlocked ? colors.accent : colors.textDim }]}>
-                    {selected.unlocked ? 'Unlocked' : 'Locked'}
+                    {selected.unlocked ? t('gamification.unlocked') : t('gamification.locked')}
                   </Text>
                 </View>
-                <Text style={styles.sheetDescription}>{selected.description}</Text>
-                <Text style={styles.sheetDetail}>{selected.detail}</Text>
+                <Text style={styles.sheetDescription}>{t(selected.descriptionKey)}</Text>
+                <Text style={styles.sheetDetail}>
+                  {t(selected.detail.key, {
+                    ...selected.detail.params,
+                    exercise: selected.detail.params?.exercise || t('gamification.achPrWatchDefaultExercise'),
+                  })}
+                </Text>
                 <TouchableOpacity style={styles.closeBtn} onPress={() => setSelected(null)}>
-                  <Text style={styles.closeBtnText}>Got it</Text>
+                  <Text style={styles.closeBtnText}>{t('gamification.gotIt')}</Text>
                 </TouchableOpacity>
               </>
             )}

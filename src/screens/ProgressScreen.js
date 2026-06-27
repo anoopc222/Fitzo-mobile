@@ -212,7 +212,7 @@ export default function ProgressScreen({ navigation }) {
                       <Text style={styles.previewBest}>
                         {unlocked ? `${s.bestSet?.weight_kg ?? '--'} kg × ${s.bestSet?.reps ?? '--'}` : '●● kg × ●●'}
                       </Text>
-                      <Text style={styles.previewVol}>{unlocked ? `${s.volume.toLocaleString()} kg vol` : '●●● kg vol'}</Text>
+                      <Text style={styles.previewVol}>{unlocked ? t('progress.kgVolLabel', { value: s.volume.toLocaleString() }) : t('progress.kgVolMasked')}</Text>
                       {unlocked && i === 0 && <View style={[styles.statusDot, { backgroundColor: colors.success }]} />}
                       {unlocked && i === 1 && <View style={[styles.statusDot, { backgroundColor: colors.warning }]} />}
                       {unlocked && i === 2 && <View style={[styles.statusDot, { backgroundColor: colors.textDim }]} />}

@@ -11,33 +11,13 @@ export const STORAGE_KEY = 'fitzo:language';
 // Languages with full translation resources — strings render natively.
 export const SUPPORTED_LANGUAGES = ['en', 'es', 'fr', 'hi'];
 
-// Full selectable list shown in Settings. Any code not in SUPPORTED_LANGUAGES
-// still works (i18next's fallbackLng below fills in English for untranslated
-// keys) — it just won't have native strings yet.
+// Full selectable list shown in Settings — kept in sync with SUPPORTED_LANGUAGES.
+// More languages can be added later once their translations are ready.
 export const ALL_LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'es', name: 'Español' },
   { code: 'fr', name: 'Français' },
-  { code: 'de', name: 'Deutsch' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'pt', name: 'Português' },
-  { code: 'nl', name: 'Nederlands' },
-  { code: 'ru', name: 'Русский' },
-  { code: 'tr', name: 'Türkçe' },
-  { code: 'pl', name: 'Polski' },
-  { code: 'sv', name: 'Svenska' },
-  { code: 'ar', name: 'العربية' },
   { code: 'hi', name: 'हिन्दी' },
-  { code: 'bn', name: 'বাংলা' },
-  { code: 'ta', name: 'தமிழ்' },
-  { code: 'te', name: 'తెలుగు' },
-  { code: 'mr', name: 'मराठी' },
-  { code: 'zh', name: '中文' },
-  { code: 'ja', name: '日本語' },
-  { code: 'ko', name: '한국어' },
-  { code: 'vi', name: 'Tiếng Việt' },
-  { code: 'th', name: 'ไทย' },
-  { code: 'id', name: 'Bahasa Indonesia' },
 ];
 
 const ALL_LANGUAGE_CODES = ALL_LANGUAGES.map(l => l.code);
