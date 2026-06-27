@@ -1117,7 +1117,7 @@ export default function HomeScreen() {
     onError: (e, vars, context) => {
       if (context?.previousHome) qc.setQueryData(['home', user.id], context.previousHome);
       if (context?.previousSleep) qc.setQueryData(['sleep', user.id], context.previousSleep);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('home.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['home', user.id]);
@@ -1150,7 +1150,7 @@ export default function HomeScreen() {
     onError: (e, vars, context) => {
       if (context?.previousHome) qc.setQueryData(['home', user.id], context.previousHome);
       if (context?.previousSteps) qc.setQueryData(['steps', user.id], context.previousSteps);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('home.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['home', user.id]);
