@@ -30,6 +30,7 @@ const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+const DOW_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 function localDateStr(d) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
@@ -735,6 +736,111 @@ export default function WeightScreen() {
     return { first, lastV, change, ratePerWk, avg, best, loggedDays: trendData.length, totalDays };
   }, [trendData, unit, goalKg]);
 
+  const logDateSet = useMemo(() => new Set(logs.map(l => l.logged_at)), [logs]);
+
+  const weightConsistency = useMemo(() => {
+    const todayD = new Date();
+    const todayStr = localDateStr(todayD);
+
+    let currentStreak = 0;
+    for (let i = 0; i < 365; i++) {
+      const d = localDateStr(new Date(todayD.getTime() - i * 86400000));
+      if (logDateSet.has(d)) currentStreak++;
+      else if (d !== todayStr) break;
+    }
+
+    let longestStreak = 0, run = 0;
+    for (let i = 364; i >= 0; i--) {
+      const d = localDateStr(new Date(todayD.getTime() - i * 86400000));
+      if (logDateSet.has(d)) { run++; longestStreak = Math.max(longestStreak, run); }
+      else run = 0;
+    }
+
+    const countInWindow = (startDaysAgo, endDaysAgo) => {
+      let c = 0;
+      for (let i = endDaysAgo; i < startDaysAgo; i++) {
+        const d = localDateStr(new Date(todayD.getTime() - i * 86400000));
+        if (logDateSet.has(d)) c++;
+      }
+      return c;
+    };
+    const last8WkLogged = countInWindow(56, 0);
+    const prev8WkLogged = countInWindow(112, 56);
+    const consistencyPct = Math.round((last8WkLogged / 56) * 100);
+    const prevConsistencyPct = Math.round((prev8WkLogged / 56) * 100);
+
+    // Weekday pattern: avg deviation from overall mean weight, per day-of-week
+    const overallVals = sortedAsc.map(l => l.weight);
+    const overallAvg = overallVals.length ? overallVals.reduce((a, b) => a + b, 0) / overallVals.length : null;
+    let bestDow = null, bestDowDelta = 0;
+    if (overallAvg != null) {
+      const dowSums = Array(7).fill(0), dowCounts = Array(7).fill(0);
+      for (const l of sortedAsc) {
+        const dow = new Date(l.logged_at + 'T00:00:00').getDay();
+        dowSums[dow] += l.weight - overallAvg;
+        dowCounts[dow]++;
+      }
+      let maxAbs = 0;
+      for (let i = 0; i < 7; i++) {
+        if (dowCounts[i] < 2) continue;
+        const avgDelta = dowSums[i] / dowCounts[i];
+        if (Math.abs(avgDelta) > maxAbs) { maxAbs = Math.abs(avgDelta); bestDow = i; bestDowDelta = avgDelta; }
+      }
+    }
+
+    // Plateau detection over trailing 14 days
+    const last14 = sortedAsc.filter(l => l.logged_at >= localDateStr(new Date(todayD.getTime() - 13 * 86400000)));
+    const last14Vals = last14.map(l => l.weight);
+    const last14Range = last14Vals.length >= 3 ? Math.max(...last14Vals) - Math.min(...last14Vals) : null;
+
+    // Day-to-day volatility: avg absolute delta between consecutive entries
+    let volatility = null;
+    if (sortedAsc.length >= 3) {
+      let sum = 0;
+      for (let i = 1; i < sortedAsc.length; i++) sum += Math.abs(sortedAsc[i].weight - sortedAsc[i - 1].weight);
+      volatility = sum / (sortedAsc.length - 1);
+    }
+
+    return {
+      currentStreak, longestStreak, consistencyPct, prevConsistencyPct,
+      bestDow, bestDowDelta, last14Range, volatility,
+    };
+  }, [logDateSet, sortedAsc]);
+
+  const weightInsights = useMemo(() => {
+    const out = [];
+    const c = weightConsistency;
+    if (c.consistencyPct > c.prevConsistencyPct) {
+      out.push({ icon: '📈', text: 'Logging consistency is up ', bold: `${c.consistencyPct - c.prevConsistencyPct}%`, rest: ' vs the previous 8 weeks.' });
+    } else if (c.consistencyPct < c.prevConsistencyPct) {
+      out.push({ icon: '📉', text: 'Logging consistency dipped ', bold: `${c.prevConsistencyPct - c.consistencyPct}%`, rest: ' vs the previous 8 weeks.' });
+    }
+    if (c.currentStreak >= c.longestStreak && c.currentStreak > 0) {
+      out.push({ icon: '🔥', text: 'You\'re on your ', bold: 'best-ever streak', rest: ` at ${c.currentStreak} day${c.currentStreak === 1 ? '' : 's'} — keep logging!` });
+    } else if (c.longestStreak > c.currentStreak && c.currentStreak > 0) {
+      out.push({ icon: '🎯', text: `${c.longestStreak - c.currentStreak} more day${c.longestStreak - c.currentStreak === 1 ? '' : 's'} `, bold: 'ties your record', rest: ` of ${c.longestStreak} days.` });
+    }
+    if (c.last14Range != null) {
+      if (c.last14Range < 0.6) {
+        out.push({ icon: '⏸️', text: 'You\'ve been ', bold: 'plateauing', rest: ` — weight stayed within ${toDisp(c.last14Range, unit).toFixed(1)}${unit} over the last 14 days.` });
+      }
+    }
+    if (c.bestDow != null && Math.abs(c.bestDowDelta) > 0.15) {
+      out.push({
+        icon: '📅',
+        text: `${DOW_FULL[c.bestDow]}s tend to run `,
+        bold: `${c.bestDowDelta >= 0 ? '+' : ''}${toDisp(c.bestDowDelta, unit).toFixed(1)}${unit}`,
+        rest: ' vs your overall average.',
+      });
+    }
+    if (c.volatility != null) {
+      if (c.volatility >= 0.8) {
+        out.push({ icon: '〜', text: 'Your weight swings ', bold: `±${toDisp(c.volatility, unit).toFixed(1)}${unit}`, rest: ' between logs on average — try logging at the same time each day for steadier readings.' });
+      }
+    }
+    return out;
+  }, [weightConsistency, unit]);
+
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
@@ -868,6 +974,69 @@ export default function WeightScreen() {
                   label={`${unit.toUpperCase()}/WK`} color={allTimeStats && allTimeStats.rateKgWk <= 0 ? colors.good : colors.danger} colors={colors}
                 />
               </View>
+            </View>
+
+            {/* ── Analysis & Insights — Pro ── */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>ANALYSIS & INSIGHTS</Text>
+                <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>
+              </View>
+
+              {hasAccess ? (
+                <>
+                  <View style={styles.tileRow}>
+                    <View style={styles.tile}>
+                      <Text style={styles.tileVal}>{weightConsistency.longestStreak}</Text>
+                      <Text style={styles.tileLbl}>BEST STREAK</Text>
+                    </View>
+                    <View style={styles.tileColDivider} />
+                    <View style={styles.tile}>
+                      <Text style={styles.tileVal}>{weightConsistency.consistencyPct}%</Text>
+                      <Text style={styles.tileLbl}>8-WK CONSISTENCY</Text>
+                    </View>
+                    <View style={styles.tileColDivider} />
+                    <View style={styles.tile}>
+                      <Text style={styles.tileVal}>{weightConsistency.volatility != null ? `±${toDisp(weightConsistency.volatility, unit).toFixed(1)}` : '—'}</Text>
+                      <Text style={styles.tileLbl}>VOLATILITY ({unit.toUpperCase()})</Text>
+                    </View>
+                  </View>
+                  {weightInsights.length > 0 && (
+                    <View style={styles.insightsList}>
+                      {weightInsights.map((ins, i) => (
+                        <View key={i} style={styles.insightRow}>
+                          <Text style={styles.insightIcon}>{ins.icon}</Text>
+                          <Text style={styles.insightText}>
+                            {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              ) : (
+                <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+                  <View style={styles.tileRow}>
+                    <View style={styles.tile}>
+                      <Text style={styles.tileVal}>●●</Text>
+                      <Text style={styles.tileLbl}>BEST STREAK</Text>
+                    </View>
+                    <View style={styles.tileColDivider} />
+                    <View style={styles.tile}>
+                      <Text style={styles.tileVal}>●●%</Text>
+                      <Text style={styles.tileLbl}>8-WK CONSISTENCY</Text>
+                    </View>
+                    <View style={styles.tileColDivider} />
+                    <View style={styles.tile}>
+                      <Text style={styles.tileVal}>±●.●</Text>
+                      <Text style={styles.tileLbl}>VOLATILITY</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.lockedHint}>
+                    🔒 Unlock your streak record, consistency score, and personalized weight insights
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* ── Monthly Heatmap ── */}
@@ -1218,6 +1387,20 @@ const createStyles = (colors) => StyleSheet.create({
   card: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
   cardTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardTitle: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.5, fontFamily: fontFamily.mono, marginBottom: 8 },
+
+  tileRow: { flexDirection: 'row' },
+  tile: { flex: 1, alignItems: 'center', paddingVertical: 8 },
+  tileColDivider: { width: 1, backgroundColor: colors.border },
+  tileVal: { fontSize: 18, fontWeight: weight.black, color: colors.text },
+  tileLbl: { fontSize: 10, color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2, textAlign: 'center' },
+  proBadge: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
+  proBadgeText: { fontSize: 9, fontWeight: weight.black, color: colors.bg, letterSpacing: 0.5 },
+  lockedHint: { fontSize: 12, color: colors.textMuted, marginTop: 12, lineHeight: 17 },
+  insightsList: { marginTop: 14, gap: 10 },
+  insightRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  insightIcon: { fontSize: 14, marginTop: 1 },
+  insightText: { flex: 1, fontSize: 12.5, color: colors.textMuted, lineHeight: 18 },
+  insightBold: { fontWeight: weight.bold, color: colors.text },
 
   legendRow: { flexDirection: 'row', gap: 16, marginBottom: 8 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
