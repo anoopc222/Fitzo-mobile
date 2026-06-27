@@ -47,7 +47,7 @@ export default function ChallengesCard({ home }) {
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  wrap: { marginTop: 18 },
+  wrap: { marginTop: 14, marginBottom: 10, paddingHorizontal: 16 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   title: { fontSize: typography.xs, fontWeight: weight.bold, fontFamily: fontFamily.bodyBold, color: colors.textMuted, letterSpacing: 0.6 },
   count: { fontSize: typography.xs, fontFamily: fontFamily.bodySemibold, color: colors.textDim },
@@ -55,14 +55,14 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.bgCard, borderRadius: 16,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 12 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  icon: { fontSize: 20 },
-  body: { flex: 1, gap: 4 },
+  icon: { fontSize: 16 },
+  body: { flex: 1, gap: 2 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { fontSize: typography.base, fontFamily: fontFamily.bodySemibold, flex: 1 },
+  label: { fontSize: typography.sm, fontFamily: fontFamily.bodySemibold, flex: 1 },
   progressText: { fontSize: typography.xs, fontFamily: fontFamily.bodySemibold },
-  description: { fontSize: typography.xs, color: colors.textDim },
-  track: { height: 5, borderRadius: 3, backgroundColor: colors.surface, overflow: 'hidden', marginTop: 2 },
-  fill: { height: 5, borderRadius: 3 },
+  description: { fontSize: 10.5, color: colors.textDim },
+  track: { height: 4, borderRadius: 2, backgroundColor: colors.surface, overflow: 'hidden', marginTop: 2 },
+  fill: { height: 4, borderRadius: 2 },
 });

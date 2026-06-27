@@ -1307,36 +1307,11 @@ export default function HomeScreen() {
                   <Text style={styles.motivText}>{data?.motivText}</Text>
                 </TouchableOpacity>
                 <StreakFreezeControl userId={user.id} home={data} />
-                <View style={styles.goalProgressRow}>
-                  <Text style={styles.goalProgressLabel} numberOfLines={1}>This week</Text>
-                  <View style={styles.goalProgressTrack}>
-                    <View style={[styles.goalProgressFill, { width: `${cutScore}%` }]} />
-                  </View>
-                  <Text style={styles.goalProgressPct}>{cutScore}%</Text>
-                </View>
                 <LevelBadge home={data} />
               </View>
             </View>
 
             <AchievementsRow home={data} />
-            <ChallengesCard home={data} />
-
-            {/* ── Go Pro banner ─────────────────────────────────── */}
-            {subReady && !isPro && (
-              <TouchableOpacity
-                style={styles.proBanner}
-                activeOpacity={0.85}
-                onPress={() => navigation.navigate('Subscription')}
-              >
-                <Ionicons name="rocket" size={18} color={colors.accentText} />
-                <Text style={styles.proBannerText}>
-                  {isInTrial
-                    ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in trial — see Pro plans`
-                    : 'Unlock long-range trends, insights & more with Pro'}
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
-              </TouchableOpacity>
-            )}
 
             {/* ── Insight Cards (auto-rotating) ──────────────────── */}
             <ScrollView
@@ -1369,6 +1344,25 @@ export default function HomeScreen() {
                   />
                 ))}
               </View>
+            )}
+
+            <ChallengesCard home={data} />
+
+            {/* ── Go Pro banner ─────────────────────────────────── */}
+            {subReady && !isPro && (
+              <TouchableOpacity
+                style={styles.proBanner}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('Subscription')}
+              >
+                <Ionicons name="rocket" size={18} color={colors.accentText} />
+                <Text style={styles.proBannerText}>
+                  {isInTrial
+                    ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in trial — see Pro plans`
+                    : 'Unlock long-range trends, insights & more with Pro'}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
+              </TouchableOpacity>
             )}
 
             {/* ── Stat Overview (merged, line-separated) ─────────── */}
@@ -2188,11 +2182,6 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.accent,
   },
   proBannerText: { flex: 1, fontSize: 12, fontWeight: weight.bold, color: colors.accentText },
-  goalProgressRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  goalProgressLabel: { fontSize: 10, color: colors.textMuted, width: 76, fontFamily: fontFamily.body },
-  goalProgressTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, overflow: 'hidden' },
-  goalProgressFill: { height: '100%', borderRadius: 2, backgroundColor: colors.accent },
-  goalProgressPct: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono },
   insightScroll: { marginBottom: 8, marginHorizontal: 16 },
   insightCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 14, borderRadius: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border },
   insightText: { flex: 1, fontSize: 11, color: colors.textMuted, lineHeight: 15, fontFamily: fontFamily.body },

@@ -78,7 +78,7 @@ export default function AchievementsRow({ home }) {
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  wrap: { marginTop: 14, marginBottom: 4 },
+  wrap: { marginTop: 14, marginBottom: 4, paddingHorizontal: 16 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   title: { fontSize: typography.xs, fontWeight: weight.bold, fontFamily: fontFamily.bodyBold, color: colors.textMuted, letterSpacing: 0.6 },
   count: { fontSize: typography.xs, fontFamily: fontFamily.bodySemibold, color: colors.textDim },
