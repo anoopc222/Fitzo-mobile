@@ -77,6 +77,7 @@ function groupByWeek(items, getDate) {
 }
 function fmtK(n) {
   if (n == null) return '—';
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
 function fmtDateShort(iso) {
@@ -889,31 +890,30 @@ export default function StepsScreen() {
                 </View>
                 {lifetimeSteps > 0 && (
                   <View style={styles.pbChip}>
-                    <Text style={styles.pbChipText}>{(lifetimeSteps / 1000000).toFixed(2)}M lifetime</Text>
+                    <Text style={styles.pbChipText}>{fmtK(lifetimeSteps)} steps total</Text>
                   </View>
                 )}
               </View>
 
-              <View style={styles.streakRow}>
-                <View style={styles.streakPill}>
+              <View style={styles.streakNudgeRow}>
+                <View style={styles.streakNudgeLine}>
                   <Text style={styles.streakPillEmoji}>🔥</Text>
-                  <Text style={styles.streakPillText}>{streaks.current} day streak</Text>
-                  {streaks.longest > streaks.current && (
-                    <Text style={styles.streakPillSub}>best {streaks.longest}</Text>
-                  )}
-                </View>
-              </View>
-
-              {todaySteps < defaultGoal && (
-                <View style={styles.nudgeBanner}>
-                  <Ionicons name="walk-outline" size={15} color="#f59e0b" />
-                  <Text style={styles.nudgeText}>
-                    {todaySteps > 0
-                      ? `Walk ${stepsNeededToday.toLocaleString()} more today to hit your goal`
-                      : `Log today's steps — ${defaultGoal.toLocaleString()} to hit your goal`}
+                  <Text style={styles.streakPillText} numberOfLines={1}>
+                    {streaks.current > 0 ? `${streaks.current}-day streak` : 'No active streak'}
+                    {streaks.longest > streaks.current ? `  ·  best ${streaks.longest} days` : ''}
                   </Text>
                 </View>
-              )}
+                {todaySteps < defaultGoal && (
+                  <View style={[styles.streakNudgeLine, { marginTop: 4 }]}>
+                    <Ionicons name="walk-outline" size={13} color="#f59e0b" />
+                    <Text style={styles.nudgeTextCompact} numberOfLines={1}>
+                      {todaySteps > 0
+                        ? `Walk ${stepsNeededToday.toLocaleString()} more steps today to hit your goal`
+                        : `Log today's steps — ${defaultGoal.toLocaleString()} to hit your goal`}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
@@ -1497,6 +1497,15 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 10, padding: 10,
   },
   nudgeText: { flex: 1, fontSize: 11, color: colors.text, lineHeight: 15 },
+
+  streakNudgeRow: {
+    marginTop: 12,
+    backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 9,
+    borderWidth: 1, borderColor: 'rgba(245,158,11,0.18)',
+  },
+  streakNudgeLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nudgeTextCompact: { flex: 1, fontSize: 11.5, color: colors.text, lineHeight: 15 },
 
   repeatYesterdayBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
