@@ -2,24 +2,26 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import ScreenHeader from '../components/ScreenHeader';
 import { typography, weight, fontFamily } from '../theme/typography';
 
-const PRO_FEATURES = [
-  { icon: 'trending-up', text: 'Long-range trend charts (60D / 90D / ALL)' },
-  { icon: 'calendar', text: 'Month heatmaps for Weight, Steps & Sleep' },
-  { icon: 'trophy', text: 'Progress tracking with PR badges & trend insights' },
-  { icon: 'body', text: 'Body measurements history' },
-  { icon: 'pulse', text: 'Recovery, Cut Score & sleep-debt analysis' },
-  { icon: 'calculator', text: 'Full calculator suite' },
-  { icon: 'share-social', text: 'Branded export/share cards' },
+const PRO_FEATURE_KEYS = [
+  { icon: 'trending-up', key: 'featureTrendCharts' },
+  { icon: 'calendar', key: 'featureMonthHeatmaps' },
+  { icon: 'trophy', key: 'featureProgressTracking' },
+  { icon: 'body', key: 'featureBodyMeasurements' },
+  { icon: 'pulse', key: 'featureRecoveryAnalysis' },
+  { icon: 'calculator', key: 'featureCalculatorSuite' },
+  { icon: 'share-social', key: 'featureExportCards' },
 ];
 
 export default function SubscriptionScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
+  const { t } = useTranslation();
   const {
     isPro, isInTrial, trialDaysLeft, offering, purchasePackage, restorePurchases,
   } = useSubscription();
@@ -34,7 +36,7 @@ export default function SubscriptionScreen({ navigation }) {
       await purchasePackage(plan);
       navigation.goBack();
     } catch (e) {
-      if (!e?.userCancelled) Alert.alert('Purchase failed', e?.message ?? 'Please try again.');
+      if (!e?.userCancelled) Alert.alert(t('subscription.purchaseFailed'), e?.message ?? t('subscription.tryAgain'));
     } finally {
       setBusy(false);
     }
@@ -44,9 +46,9 @@ export default function SubscriptionScreen({ navigation }) {
     setBusy(true);
     try {
       await restorePurchases();
-      Alert.alert('Restored', 'Your purchases have been restored.');
+      Alert.alert(t('subscription.restored'), t('subscription.restoredMessage'));
     } catch (e) {
-      Alert.alert('Restore failed', e?.message ?? 'Please try again.');
+      Alert.alert(t('subscription.restoreFailed'), e?.message ?? t('subscription.tryAgain'));
     } finally {
       setBusy(false);
     }
@@ -54,27 +56,27 @@ export default function SubscriptionScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenHeader title="GO PRO" colors={colors} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('subscription.goPro')} colors={colors} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Fitzo <Text style={{ color: colors.accent }}>Pro</Text></Text>
+          <Text style={styles.heroTitle}>{t('subscription.fitzo')} <Text style={{ color: colors.accent }}>{t('subscription.pro')}</Text></Text>
           <Text style={styles.heroSubtitle}>
             {isPro
-              ? 'You have full access to every feature.'
+              ? t('subscription.fullAccess')
               : isInTrial
-                ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in your free trial`
-                : 'Unlock deeper insights into your training, body & recovery'}
+                ? t('subscription.trialDaysLeft', { count: trialDaysLeft })
+                : t('subscription.unlockInsights')}
           </Text>
         </View>
 
         <View style={styles.featureList}>
-          {PRO_FEATURES.map(f => (
-            <View key={f.text} style={styles.featureRow}>
+          {PRO_FEATURE_KEYS.map(f => (
+            <View key={f.key} style={styles.featureRow}>
               <View style={styles.featureIconWrap}>
                 <Ionicons name={f.icon} size={15} color={colors.accent} />
               </View>
-              <Text style={styles.featureText}>{f.text}</Text>
+              <Text style={styles.featureText}>{t(`subscription.${f.key}`)}</Text>
             </View>
           ))}
         </View>
@@ -82,14 +84,14 @@ export default function SubscriptionScreen({ navigation }) {
         {isPro ? (
           <View style={styles.proneBadgeRow}>
             <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-            <Text style={styles.proneBadgeText}>You're subscribed to Fitzo Pro</Text>
+            <Text style={styles.proneBadgeText}>{t('subscription.subscribedBadge')}</Text>
           </View>
         ) : !plan ? (
-          <Text style={styles.noOffer}>Subscription plans aren't available yet.</Text>
+          <Text style={styles.noOffer}>{t('subscription.noPlansAvailable')}</Text>
         ) : (
           <TouchableOpacity style={styles.planBtn} onPress={handlePurchase} disabled={busy} activeOpacity={0.85}>
             <Text style={styles.planTitle}>{plan.product.title || plan.identifier}</Text>
-            <Text style={styles.planPrice}>{plan.product.priceString}/mo</Text>
+            <Text style={styles.planPrice}>{t('subscription.pricePerMonth', { price: plan.product.priceString })}</Text>
           </TouchableOpacity>
         )}
 
@@ -97,7 +99,7 @@ export default function SubscriptionScreen({ navigation }) {
 
         {!isPro && (
           <TouchableOpacity onPress={handleRestore} disabled={busy} style={styles.restoreBtn}>
-            <Text style={styles.restoreText}>Restore purchases</Text>
+            <Text style={styles.restoreText}>{t('subscription.restorePurchases')}</Text>
           </TouchableOpacity>
         )}
       </ScrollView>

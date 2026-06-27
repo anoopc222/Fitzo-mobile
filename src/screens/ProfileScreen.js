@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -28,7 +29,26 @@ const GOALS = [
   'Athletic Performance', 'Endurance', 'General Health',
 ];
 
+const GOAL_KEYS = {
+  'Weight Loss': 'goalWeightLoss',
+  'Fat Loss': 'goalFatLoss',
+  'Muscle Gain': 'goalMuscleGain',
+  'Recomposition': 'goalRecomposition',
+  'Fat Loss & Recomp': 'goalFatLossRecomp',
+  'Maintain & Tone': 'goalMaintainTone',
+  'Strength & Power': 'goalStrengthPower',
+  'Athletic Performance': 'goalAthleticPerformance',
+  'Endurance': 'goalEndurance',
+  'General Health': 'goalGeneralHealth',
+};
+
 const SEX_OPTIONS = ['Male', 'Female', 'Other'];
+
+const SEX_KEYS = {
+  Male: 'sexMale',
+  Female: 'sexFemale',
+  Other: 'sexOther',
+};
 
 export async function fetchProfile(userId) {
   const [profile, stats] = await Promise.all([
@@ -58,6 +78,7 @@ async function updateProfile(userId, fields) {
 export default function ProfileScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { isSuperAdmin, setUserAdmin } = useSubscription();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
@@ -73,10 +94,15 @@ export default function ProfileScreen({ navigation }) {
     setGrantBusy(true);
     try {
       await setUserAdmin(email, makeAdmin);
-      Alert.alert('Done', `${email} is ${makeAdmin ? 'now an admin' : 'no longer an admin'}.`);
+      Alert.alert(
+        t('profile.done'),
+        makeAdmin
+          ? t('profile.nowAdmin', { email })
+          : t('profile.noLongerAdmin', { email })
+      );
       setGrantEmail('');
     } catch (e) {
-      Alert.alert('Error', e.message);
+      Alert.alert(t('profile.error'), e.message);
     } finally {
       setGrantBusy(false);
     }
@@ -112,7 +138,7 @@ export default function ProfileScreen({ navigation }) {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['profile', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('profile.error'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['profile', user.id]);
@@ -133,22 +159,22 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: signOut },
+    Alert.alert(t('profile.signOutTitle'), t('profile.signOutConfirm'), [
+      { text: t('profile.cancel'), style: 'cancel' },
+      { text: t('profile.signOut'), style: 'destructive', onPress: signOut },
     ]);
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert('Delete Account', 'This will permanently delete your account and all data. This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountConfirm'), [
+      { text: t('profile.cancel'), style: 'cancel' },
       {
-        text: 'Delete Account', style: 'destructive', onPress: async () => {
+        text: t('profile.deleteAccount'), style: 'destructive', onPress: async () => {
           try {
             await supabase.rpc('delete_user');
             await signOut();
           } catch (e) {
-            Alert.alert('Error', e.message);
+            Alert.alert(t('profile.error'), e.message);
           }
         },
       },
@@ -164,14 +190,14 @@ export default function ProfileScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenHeader
-        title="PROFILE"
+        title={t('profile.title')}
         colors={colors}
         onBack={() => navigation.goBack()}
         right={(
           <TouchableOpacity onPress={() => editing ? handleSave() : setEditing(true)} disabled={updateMut.isPending}>
             {updateMut.isPending
               ? <ActivityIndicator color={colors.accent} />
-              : <Text style={styles.editBtn}>{editing ? 'Save' : 'Edit'}</Text>
+              : <Text style={styles.editBtn}>{editing ? t('profile.save') : t('profile.edit')}</Text>
             }
           </TouchableOpacity>
         )}
@@ -190,31 +216,31 @@ export default function ProfileScreen({ navigation }) {
                 </View>
               </View>
               {editing ? (
-                <TextInput style={styles.nameInput} placeholder="Full Name" placeholderTextColor={colors.textDim}
+                <TextInput style={styles.nameInput} placeholder={t('profile.fullNamePlaceholder')} placeholderTextColor={colors.textDim}
                   value={form.full_name} onChangeText={v => setForm(p => ({ ...p, full_name: v }))} />
               ) : (
-                <Text style={styles.profileName}>{form.full_name || 'Add your name'}</Text>
+                <Text style={styles.profileName}>{form.full_name || t('profile.addYourName')}</Text>
               )}
               <Text style={styles.profileEmail}>{user?.email}</Text>
             </View>
 
             {/* Stats tiles */}
             <View style={styles.statsRow}>
-              <StatTile label="Sessions" value={data?.sessionCount ?? 0} icon="barbell" color={colors.accent} />
-              <StatTile label="Weight Logs" value={data?.weightLogCount ?? 0} icon="scale" color="#e879f9" />
+              <StatTile label={t('profile.sessions')} value={data?.sessionCount ?? 0} icon="barbell" color={colors.accent} />
+              <StatTile label={t('profile.weightLogs')} value={data?.weightLogCount ?? 0} icon="scale" color="#e879f9" />
               {weightLost !== null && (
-                <StatTile label="Weight Lost" value={`${Math.abs(weightLost)}kg`} icon="trending-down" color={colors.success} />
+                <StatTile label={t('profile.weightLost')} value={`${Math.abs(weightLost)}kg`} icon="trending-down" color={colors.success} />
               )}
             </View>
 
             {/* Goal */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Fitness Goal</Text>
+              <Text style={styles.sectionTitle}>{t('profile.fitnessGoal')}</Text>
               {editing ? (
                 <>
                   <TouchableOpacity style={styles.goalSelector} onPress={() => setShowGoalPicker(!showGoalPicker)}>
                     <Text style={[styles.goalSelectorText, !form.goal && { color: colors.textDim }]}>
-                      {form.goal || 'Select your goal'}
+                      {form.goal ? t(`profile.${GOAL_KEYS[form.goal]}`) : t('profile.selectYourGoal')}
                     </Text>
                     <Ionicons name={showGoalPicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
                   </TouchableOpacity>
@@ -223,7 +249,7 @@ export default function ProfileScreen({ navigation }) {
                       {GOALS.map(g => (
                         <TouchableOpacity key={g} style={[styles.goalOption, form.goal === g && styles.goalOptionActive]}
                           onPress={() => { setForm(p => ({ ...p, goal: g })); setShowGoalPicker(false); }}>
-                          <Text style={[styles.goalOptionText, form.goal === g && { color: colors.bg }]}>{g}</Text>
+                          <Text style={[styles.goalOptionText, form.goal === g && { color: colors.bg }]}>{t(`profile.${GOAL_KEYS[g]}`)}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -232,22 +258,22 @@ export default function ProfileScreen({ navigation }) {
               ) : (
                 <View style={styles.goalDisplay}>
                   <Ionicons name="trophy" size={16} color={colors.accent} />
-                  <Text style={styles.goalDisplayText}>{form.goal || 'Not set'}</Text>
+                  <Text style={styles.goalDisplayText}>{form.goal ? t(`profile.${GOAL_KEYS[form.goal]}`) : t('profile.notSet')}</Text>
                 </View>
               )}
             </View>
 
             {/* Body stats */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Body Stats</Text>
+              <Text style={styles.sectionTitle}>{t('profile.bodyStats')}</Text>
               <View style={styles.bodyGrid}>
                 <BodyField
-                  label="Height (cm)" value={form.height_cm}
+                  label={t('profile.heightCm')} value={form.height_cm}
                   editing={editing} onChange={v => setForm(p => ({ ...p, height_cm: v }))}
                   placeholder="175" numeric
                 />
                 <View style={styles.bodyField}>
-                  <Text style={styles.bodyFieldLabel}>Date of Birth</Text>
+                  <Text style={styles.bodyFieldLabel}>{t('profile.dateOfBirth')}</Text>
                   {editing ? (
                     <DatePickerField
                       value={form.date_of_birth}
@@ -262,18 +288,18 @@ export default function ProfileScreen({ navigation }) {
               </View>
               <View style={styles.bodyGrid}>
                 <View style={styles.bodyField}>
-                  <Text style={styles.bodyFieldLabel}>Sex</Text>
+                  <Text style={styles.bodyFieldLabel}>{t('profile.sex')}</Text>
                   {editing ? (
                     <View style={styles.sexPicker}>
                       {SEX_OPTIONS.map(s => (
                         <TouchableOpacity key={s} style={[styles.sexOpt, form.sex === s && styles.sexOptActive]}
                           onPress={() => setForm(p => ({ ...p, sex: s }))}>
-                          <Text style={[styles.sexOptText, form.sex === s && { color: colors.bg }]}>{s}</Text>
+                          <Text style={[styles.sexOptText, form.sex === s && { color: colors.bg }]}>{t(`profile.${SEX_KEYS[s]}`)}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                   ) : (
-                    <Text style={styles.bodyFieldValue}>{form.sex || '--'}</Text>
+                    <Text style={styles.bodyFieldValue}>{form.sex ? t(`profile.${SEX_KEYS[form.sex]}`) : '--'}</Text>
                   )}
                 </View>
               </View>
@@ -282,11 +308,11 @@ export default function ProfileScreen({ navigation }) {
             {/* Super admin: grant admin access */}
             {isSuperAdmin && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Super Admin</Text>
-                <Text style={[styles.bodyFieldLabel, { marginBottom: 10 }]}>Grant or revoke admin access by email</Text>
+                <Text style={styles.sectionTitle}>{t('profile.superAdmin')}</Text>
+                <Text style={[styles.bodyFieldLabel, { marginBottom: 10 }]}>{t('profile.grantRevokeAdmin')}</Text>
                 <TextInput
                   style={[styles.bodyFieldInput, { marginBottom: 10 }]}
-                  placeholder="user@example.com"
+                  placeholder={t('profile.emailPlaceholder')}
                   placeholderTextColor={colors.textDim}
                   value={grantEmail}
                   onChangeText={setGrantEmail}
@@ -301,7 +327,7 @@ export default function ProfileScreen({ navigation }) {
                   >
                     {grantBusy
                       ? <ActivityIndicator color={colors.bg} />
-                      : <Text style={[styles.signOutText, { color: colors.bg }]}>Grant</Text>}
+                      : <Text style={[styles.signOutText, { color: colors.bg }]}>{t('profile.grant')}</Text>}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.deleteBtn, { flex: 1, justifyContent: 'center' }]}
@@ -310,12 +336,12 @@ export default function ProfileScreen({ navigation }) {
                   >
                     {grantBusy
                       ? <ActivityIndicator color={colors.danger} />
-                      : <Text style={styles.deleteBtnText}>Revoke</Text>}
+                      : <Text style={styles.deleteBtnText}>{t('profile.revoke')}</Text>}
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity style={{ marginTop: 12 }} onPress={() => navigation.navigate('AdminDashboard')}>
                   <Text style={{ color: colors.accent, fontSize: typography.sm, fontWeight: weight.semibold }}>
-                    Open Admin Dashboard →
+                    {t('profile.openAdminDashboard')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -325,11 +351,11 @@ export default function ProfileScreen({ navigation }) {
             <View style={styles.dangerSection}>
               <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
                 <Ionicons name="log-out-outline" size={18} color={colors.text} />
-                <Text style={styles.signOutText}>Sign Out</Text>
+                <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount}>
                 <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                <Text style={styles.deleteBtnText}>Delete Account</Text>
+                <Text style={styles.deleteBtnText}>{t('profile.deleteAccount')}</Text>
               </TouchableOpacity>
             </View>
           </>

@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -19,55 +20,55 @@ const resolveColor = (token, colors) => colors[token] ?? token;
 // ─── math helpers ────────────────────────────────────────────────────────────
 const fmt = (v, d = 1) => isNaN(v) || !isFinite(v) ? '--' : Number(v).toFixed(d);
 
-const ACTIVITY = [
-  { label: 'Sedentary', multiplier: 1.2 },
-  { label: 'Lightly active (1-3d/wk)', multiplier: 1.375 },
-  { label: 'Moderately active (3-5d/wk)', multiplier: 1.55 },
-  { label: 'Very active (6-7d/wk)', multiplier: 1.725 },
-  { label: 'Extra active (athlete)', multiplier: 1.9 },
+const ACTIVITY_KEYS = [
+  { full: 'activitySedentary', short: 'activitySedentaryShort' },
+  { full: 'activityLight', short: 'activityLightShort' },
+  { full: 'activityModerate', short: 'activityModerateShort' },
+  { full: 'activityVery', short: 'activityVeryShort' },
+  { full: 'activityExtra', short: 'activityExtraShort' },
 ];
 
-// ─── calculator definitions ───────────────────────────────────────────────────
-const CALCULATORS = [
+// ─── calculator definitions (factory; needs `t` for translated strings) ──────
+const buildCalculators = (t, ACTIVITY) => [
   {
     id: 'bmi', label: 'BMI', icon: 'scale', color: '#e879f9',
-    desc: 'Body Mass Index',
+    desc: t('calculators.bmiDesc'),
     fields: [
-      { key: 'weight', label: 'Weight (kg)', placeholder: '75' },
-      { key: 'height', label: 'Height (cm)', placeholder: '175' },
+      { key: 'weight', label: t('calculators.fieldWeightKg'), placeholder: '75' },
+      { key: 'height', label: t('calculators.fieldHeightCm'), placeholder: '175' },
     ],
     compute: ({ weight, height }) => {
       const h = height / 100;
       const bmi = weight / (h * h);
-      let cat = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
-      return [{ label: 'BMI', value: fmt(bmi) }, { label: 'Category', value: cat }];
+      let cat = bmi < 18.5 ? t('calculators.categoryUnderweight') : bmi < 25 ? t('calculators.categoryNormal') : bmi < 30 ? t('calculators.categoryOverweight') : t('calculators.categoryObese');
+      return [{ label: t('calculators.resultBmi'), value: fmt(bmi) }, { label: t('calculators.resultCategory'), value: cat }];
     },
   },
   {
     id: 'bmr', label: 'BMR', icon: 'flame', color: '#fb923c',
-    desc: 'Basal Metabolic Rate (Mifflin-St Jeor)',
+    desc: t('calculators.bmrDesc'),
     fields: [
-      { key: 'weight', label: 'Weight (kg)', placeholder: '75' },
-      { key: 'height', label: 'Height (cm)', placeholder: '175' },
-      { key: 'age', label: 'Age (years)', placeholder: '30' },
-      { key: 'sex', label: 'Sex (M/F)', placeholder: 'M' },
+      { key: 'weight', label: t('calculators.fieldWeightKg'), placeholder: '75' },
+      { key: 'height', label: t('calculators.fieldHeightCm'), placeholder: '175' },
+      { key: 'age', label: t('calculators.fieldAgeYears'), placeholder: '30' },
+      { key: 'sex', label: t('calculators.fieldSex'), placeholder: 'M' },
     ],
     compute: ({ weight, height, age, sex }) => {
       const isMale = sex?.toUpperCase() === 'M';
       const bmr = isMale
         ? 10 * weight + 6.25 * height - 5 * age + 5
         : 10 * weight + 6.25 * height - 5 * age - 161;
-      return [{ label: 'BMR', value: `${fmt(bmr, 0)} kcal/day` }];
+      return [{ label: t('calculators.resultBmr'), value: t('calculators.valueKcalPerDay', { value: fmt(bmr, 0) }) }];
     },
   },
   {
     id: 'tdee', label: 'TDEE', icon: 'restaurant', color: '#fb923c',
-    desc: 'Total Daily Energy Expenditure',
+    desc: t('calculators.tdeeDesc'),
     fields: [
-      { key: 'weight', label: 'Weight (kg)', placeholder: '75' },
-      { key: 'height', label: 'Height (cm)', placeholder: '175' },
-      { key: 'age', label: 'Age', placeholder: '30' },
-      { key: 'sex', label: 'Sex (M/F)', placeholder: 'M' },
+      { key: 'weight', label: t('calculators.fieldWeightKg'), placeholder: '75' },
+      { key: 'height', label: t('calculators.fieldHeightCm'), placeholder: '175' },
+      { key: 'age', label: t('calculators.fieldAge'), placeholder: '30' },
+      { key: 'sex', label: t('calculators.fieldSex'), placeholder: 'M' },
     ],
     hasActivitySelect: true,
     compute: ({ weight, height, age, sex, activity }) => {
@@ -78,18 +79,18 @@ const CALCULATORS = [
       const mult = ACTIVITY[activity ?? 1]?.multiplier ?? 1.55;
       const tdee = bmr * mult;
       return [
-        { label: 'TDEE', value: `${fmt(tdee, 0)} kcal` },
-        { label: 'Cut (-500)', value: `${fmt(tdee - 500, 0)} kcal` },
-        { label: 'Bulk (+300)', value: `${fmt(tdee + 300, 0)} kcal` },
+        { label: t('calculators.resultTdee'), value: t('calculators.valueKcal', { value: fmt(tdee, 0) }) },
+        { label: t('calculators.resultCut'), value: t('calculators.valueKcal', { value: fmt(tdee - 500, 0) }) },
+        { label: t('calculators.resultBulk'), value: t('calculators.valueKcal', { value: fmt(tdee + 300, 0) }) },
       ];
     },
   },
   {
     id: 'oneRM', label: '1RM', icon: 'barbell', color: 'accent',
-    desc: 'One Rep Max (Brzycki formula)',
+    desc: t('calculators.oneRmDesc'),
     fields: [
-      { key: 'weight', label: 'Weight lifted (kg)', placeholder: '100' },
-      { key: 'reps', label: 'Reps performed', placeholder: '5' },
+      { key: 'weight', label: t('calculators.fieldWeightLifted'), placeholder: '100' },
+      { key: 'reps', label: t('calculators.fieldRepsPerformed'), placeholder: '5' },
     ],
     compute: ({ weight, reps }) => {
       const r = parseInt(reps, 10);
@@ -97,22 +98,22 @@ const CALCULATORS = [
       const oneRM = w * (36 / (37 - r));
       const epley = w * (1 + r / 30);
       return [
-        { label: '1RM (Brzycki)', value: `${fmt(oneRM)} kg` },
-        { label: '1RM (Epley)', value: `${fmt(epley)} kg` },
-        { label: '90% of 1RM', value: `${fmt(oneRM * 0.9)} kg` },
-        { label: '80% of 1RM', value: `${fmt(oneRM * 0.8)} kg` },
+        { label: t('calculators.resultOneRmBrzycki'), value: t('calculators.valueKg', { value: fmt(oneRM) }) },
+        { label: t('calculators.resultOneRmEpley'), value: t('calculators.valueKg', { value: fmt(epley) }) },
+        { label: t('calculators.resultNinetyPercent'), value: t('calculators.valueKg', { value: fmt(oneRM * 0.9) }) },
+        { label: t('calculators.resultEightyPercent'), value: t('calculators.valueKg', { value: fmt(oneRM * 0.8) }) },
       ];
     },
   },
   {
-    id: 'bodyFat', label: 'Body Fat %', icon: 'body', color: '#22d3ee', pro: true,
-    desc: 'Navy method body fat estimate',
+    id: 'bodyFat', label: t('calculators.labelBodyFat'), icon: 'body', color: '#22d3ee', pro: true,
+    desc: t('calculators.bodyFatDesc'),
     fields: [
-      { key: 'sex', label: 'Sex (M/F)', placeholder: 'M' },
-      { key: 'height', label: 'Height (cm)', placeholder: '175' },
-      { key: 'neck', label: 'Neck (cm)', placeholder: '38' },
-      { key: 'waist', label: 'Waist (cm)', placeholder: '85' },
-      { key: 'hips', label: 'Hips cm (F only)', placeholder: '' },
+      { key: 'sex', label: t('calculators.fieldSex'), placeholder: 'M' },
+      { key: 'height', label: t('calculators.fieldHeightCm'), placeholder: '175' },
+      { key: 'neck', label: t('calculators.fieldNeckCm'), placeholder: '38' },
+      { key: 'waist', label: t('calculators.fieldWaistCm'), placeholder: '85' },
+      { key: 'hips', label: t('calculators.fieldHipsCmFemaleOnly'), placeholder: '' },
     ],
     compute: ({ sex, height, neck, waist, hips }) => {
       const isMale = sex?.toUpperCase() === 'M';
@@ -122,17 +123,17 @@ const CALCULATORS = [
       } else {
         bf = 495 / (1.29579 - 0.35004 * Math.log10(parseFloat(waist) + parseFloat(hips || 0) - neck) + 0.22100 * Math.log10(height)) - 450;
       }
-      return [{ label: 'Body Fat', value: `${fmt(bf)}%` }];
+      return [{ label: t('calculators.resultBodyFat'), value: `${fmt(bf)}%` }];
     },
   },
   {
-    id: 'macros', label: 'Macro Split', icon: 'pie-chart', color: 'success',
-    desc: 'Calculate macros from TDEE',
+    id: 'macros', label: t('calculators.labelMacroSplit'), icon: 'pie-chart', color: 'success',
+    desc: t('calculators.macrosDesc'),
     fields: [
-      { key: 'calories', label: 'Daily calories (kcal)', placeholder: '2000' },
-      { key: 'protein', label: 'Protein % (e.g. 30)', placeholder: '30' },
-      { key: 'carbs', label: 'Carbs % (e.g. 45)', placeholder: '45' },
-      { key: 'fats', label: 'Fats % (e.g. 25)', placeholder: '25' },
+      { key: 'calories', label: t('calculators.fieldDailyCalories'), placeholder: '2000' },
+      { key: 'protein', label: t('calculators.fieldProteinPercent'), placeholder: '30' },
+      { key: 'carbs', label: t('calculators.fieldCarbsPercent'), placeholder: '45' },
+      { key: 'fats', label: t('calculators.fieldFatsPercent'), placeholder: '25' },
     ],
     compute: ({ calories, protein, carbs, fats }) => {
       const cal = parseFloat(calories);
@@ -140,56 +141,56 @@ const CALCULATORS = [
       const c = (cal * parseFloat(carbs) / 100) / 4;
       const f = (cal * parseFloat(fats) / 100) / 9;
       return [
-        { label: 'Protein', value: `${fmt(p, 0)}g (${fmt(p * 4, 0)} kcal)` },
-        { label: 'Carbs', value: `${fmt(c, 0)}g (${fmt(c * 4, 0)} kcal)` },
-        { label: 'Fats', value: `${fmt(f, 0)}g (${fmt(f * 9, 0)} kcal)` },
+        { label: t('calculators.resultProtein'), value: t('calculators.valueGramsKcal', { grams: fmt(p, 0), kcal: fmt(p * 4, 0) }) },
+        { label: t('calculators.resultCarbs'), value: t('calculators.valueGramsKcal', { grams: fmt(c, 0), kcal: fmt(c * 4, 0) }) },
+        { label: t('calculators.resultFats'), value: t('calculators.valueGramsKcal', { grams: fmt(f, 0), kcal: fmt(f * 9, 0) }) },
       ];
     },
   },
   {
-    id: 'lbm', label: 'Lean Body Mass', icon: 'fitness', color: 'blue', pro: true,
-    desc: 'LBM and fat mass from body fat %',
+    id: 'lbm', label: t('calculators.labelLeanBodyMass'), icon: 'fitness', color: 'blue', pro: true,
+    desc: t('calculators.lbmDesc'),
     fields: [
-      { key: 'weight', label: 'Body weight (kg)', placeholder: '80' },
-      { key: 'bf', label: 'Body fat %', placeholder: '20' },
+      { key: 'weight', label: t('calculators.fieldBodyWeight'), placeholder: '80' },
+      { key: 'bf', label: t('calculators.fieldBodyFatPercent'), placeholder: '20' },
     ],
     compute: ({ weight, bf }) => {
       const bfFrac = parseFloat(bf) / 100;
       const lbm = parseFloat(weight) * (1 - bfFrac);
       const fatMass = parseFloat(weight) * bfFrac;
       return [
-        { label: 'LBM', value: `${fmt(lbm)} kg` },
-        { label: 'Fat Mass', value: `${fmt(fatMass)} kg` },
+        { label: t('calculators.resultLbm'), value: t('calculators.valueKg', { value: fmt(lbm) }) },
+        { label: t('calculators.resultFatMass'), value: t('calculators.valueKg', { value: fmt(fatMass) }) },
       ];
     },
   },
   {
     id: 'ffmi', label: 'FFMI', icon: 'barbell', color: 'accent', pro: true,
-    desc: 'Fat-Free Mass Index',
+    desc: t('calculators.ffmiDesc'),
     fields: [
-      { key: 'weight', label: 'Weight (kg)', placeholder: '80' },
-      { key: 'height', label: 'Height (cm)', placeholder: '175' },
-      { key: 'bf', label: 'Body fat %', placeholder: '15' },
+      { key: 'weight', label: t('calculators.fieldWeightKg'), placeholder: '80' },
+      { key: 'height', label: t('calculators.fieldHeightCm'), placeholder: '175' },
+      { key: 'bf', label: t('calculators.fieldBodyFatPercent'), placeholder: '15' },
     ],
     compute: ({ weight, height, bf }) => {
       const lbm = parseFloat(weight) * (1 - parseFloat(bf) / 100);
       const h = parseFloat(height) / 100;
       const ffmi = lbm / (h * h);
       const normalized = ffmi + 6.1 * (1.8 - h);
-      let rating = normalized > 25 ? 'Elite/Enhanced' : normalized > 22 ? 'Excellent (natural limit)' : normalized > 20 ? 'Good' : 'Average';
+      let rating = normalized > 25 ? t('calculators.ratingEliteEnhanced') : normalized > 22 ? t('calculators.ratingExcellentNaturalLimit') : normalized > 20 ? t('calculators.ratingGood') : t('calculators.ratingAverage');
       return [
-        { label: 'FFMI', value: fmt(ffmi) },
-        { label: 'Normalized FFMI', value: fmt(normalized) },
-        { label: 'Rating', value: rating },
+        { label: t('calculators.resultFfmi'), value: fmt(ffmi) },
+        { label: t('calculators.resultNormalizedFfmi'), value: fmt(normalized) },
+        { label: t('calculators.resultRating'), value: rating },
       ];
     },
   },
   {
-    id: 'idealWeight', label: 'Ideal Body Weight', icon: 'scale', color: '#e879f9', pro: true,
-    desc: 'Estimated ideal weight (Devine formula)',
+    id: 'idealWeight', label: t('calculators.labelIdealBodyWeight'), icon: 'scale', color: '#e879f9', pro: true,
+    desc: t('calculators.idealWeightDesc'),
     fields: [
-      { key: 'height', label: 'Height (cm)', placeholder: '175' },
-      { key: 'sex', label: 'Sex (M/F)', placeholder: 'M' },
+      { key: 'height', label: t('calculators.fieldHeightCm'), placeholder: '175' },
+      { key: 'sex', label: t('calculators.fieldSex'), placeholder: 'M' },
     ],
     compute: ({ height, sex }) => {
       const isMale = sex?.toUpperCase() === 'M';
@@ -197,36 +198,36 @@ const CALCULATORS = [
       const ibw = isMale ? 50 + 2.3 * hIn : 45.5 + 2.3 * hIn;
       const low = ibw * 0.9; const high = ibw * 1.1;
       return [
-        { label: 'Ideal Weight', value: `${fmt(ibw)} kg` },
-        { label: 'Healthy Range', value: `${fmt(low)}–${fmt(high)} kg` },
+        { label: t('calculators.resultIdealWeight'), value: t('calculators.valueKg', { value: fmt(ibw) }) },
+        { label: t('calculators.resultHealthyRange'), value: t('calculators.valueRangeKg', { low: fmt(low), high: fmt(high) }) },
       ];
     },
   },
   {
     id: 'hrZones', label: 'HR Zones', icon: 'heart', color: 'danger',
-    desc: 'Heart rate training zones',
-    fields: [{ key: 'age', label: 'Age (years)', placeholder: '30' }],
+    desc: t('calculators.hrZonesDesc'),
+    fields: [{ key: 'age', label: t('calculators.fieldAgeYears'), placeholder: '30' }],
     compute: ({ age }) => {
       const maxHR = 220 - parseInt(age, 10);
       const zones = [
-        { z: 'Zone 1 (Recovery)', pct: '50-60%', low: 0.5, high: 0.6 },
-        { z: 'Zone 2 (Fat burn)', pct: '60-70%', low: 0.6, high: 0.7 },
-        { z: 'Zone 3 (Aerobic)', pct: '70-80%', low: 0.7, high: 0.8 },
-        { z: 'Zone 4 (Threshold)', pct: '80-90%', low: 0.8, high: 0.9 },
-        { z: 'Zone 5 (Max)', pct: '90-100%', low: 0.9, high: 1.0 },
+        { z: t('calculators.zoneRecovery'), low: 0.5, high: 0.6 },
+        { z: t('calculators.zoneFatBurn'), low: 0.6, high: 0.7 },
+        { z: t('calculators.zoneAerobic'), low: 0.7, high: 0.8 },
+        { z: t('calculators.zoneThreshold'), low: 0.8, high: 0.9 },
+        { z: t('calculators.zoneMax'), low: 0.9, high: 1.0 },
       ];
       return [
-        { label: 'Max HR', value: `${maxHR} bpm` },
-        ...zones.map(z => ({ label: z.z, value: `${Math.round(z.low * maxHR)}–${Math.round(z.high * maxHR)} bpm` })),
+        { label: t('calculators.resultMaxHr'), value: t('calculators.valueBpm', { value: maxHR }) },
+        ...zones.map(z => ({ label: z.z, value: t('calculators.valueRangeBpm', { low: Math.round(z.low * maxHR), high: Math.round(z.high * maxHR) }) })),
       ];
     },
   },
   {
-    id: 'protein', label: 'Protein Needs', icon: 'nutrition', color: 'success',
-    desc: 'Daily protein target for your goal',
+    id: 'protein', label: t('calculators.labelProteinNeeds'), icon: 'nutrition', color: 'success',
+    desc: t('calculators.proteinDesc'),
     fields: [
-      { key: 'weight', label: 'Body weight (kg)', placeholder: '80' },
-      { key: 'goal', label: 'Goal (build/maintain/cut)', placeholder: 'build' },
+      { key: 'weight', label: t('calculators.fieldBodyWeight'), placeholder: '80' },
+      { key: 'goal', label: t('calculators.fieldGoalBuildMaintainCut'), placeholder: 'build' },
     ],
     compute: ({ weight, goal }) => {
       const g = goal?.toLowerCase() ?? 'maintain';
@@ -234,35 +235,35 @@ const CALCULATORS = [
       const min = parseFloat(weight) * mult;
       const max = parseFloat(weight) * (mult + 0.3);
       return [
-        { label: 'Protein target', value: `${fmt(min, 0)}–${fmt(max, 0)}g/day` },
-        { label: 'Per meal (4 meals)', value: `${fmt(min / 4, 0)}g/meal` },
+        { label: t('calculators.resultProteinTarget'), value: t('calculators.valueRangeGramsPerDay', { low: fmt(min, 0), high: fmt(max, 0) }) },
+        { label: t('calculators.resultPerMeal'), value: t('calculators.valueGramsPerMeal', { value: fmt(min / 4, 0) }) },
       ];
     },
   },
   {
-    id: 'hydration', label: 'Hydration', icon: 'water', color: '#22d3ee',
-    desc: 'Daily water intake target',
+    id: 'hydration', label: t('calculators.labelHydration'), icon: 'water', color: '#22d3ee',
+    desc: t('calculators.hydrationDesc'),
     fields: [
-      { key: 'weight', label: 'Body weight (kg)', placeholder: '80' },
-      { key: 'activity', label: 'Activity (low/med/high)', placeholder: 'med' },
+      { key: 'weight', label: t('calculators.fieldBodyWeight'), placeholder: '80' },
+      { key: 'activity', label: t('calculators.fieldActivityLowMedHigh'), placeholder: 'med' },
     ],
     compute: ({ weight, activity }) => {
       const act = activity?.toLowerCase() ?? 'med';
       const mult = act === 'high' ? 45 : act === 'low' ? 30 : 37;
       const ml = parseFloat(weight) * mult;
       return [
-        { label: 'Water target', value: `${fmt(ml / 1000, 2)} L/day` },
-        { label: 'In cups (250ml)', value: `${fmt(ml / 250, 0)} cups` },
+        { label: t('calculators.resultWaterTarget'), value: t('calculators.valueLitersPerDay', { value: fmt(ml / 1000, 2) }) },
+        { label: t('calculators.resultInCups'), value: t('calculators.valueCups', { value: fmt(ml / 250, 0) }) },
       ];
     },
   },
   {
-    id: 'deficit', label: 'Deficit Planner', icon: 'trending-down', color: 'warning', pro: true,
-    desc: 'How long to reach your goal weight',
+    id: 'deficit', label: t('calculators.labelDeficitPlanner'), icon: 'trending-down', color: 'warning', pro: true,
+    desc: t('calculators.deficitDesc'),
     fields: [
-      { key: 'current', label: 'Current weight (kg)', placeholder: '90' },
-      { key: 'goal', label: 'Goal weight (kg)', placeholder: '80' },
-      { key: 'deficit', label: 'Daily deficit (kcal)', placeholder: '500' },
+      { key: 'current', label: t('calculators.fieldCurrentWeight'), placeholder: '90' },
+      { key: 'goal', label: t('calculators.fieldGoalWeight'), placeholder: '80' },
+      { key: 'deficit', label: t('calculators.fieldDailyDeficit'), placeholder: '500' },
     ],
     compute: ({ current, goal, deficit }) => {
       const kgToLose = parseFloat(current) - parseFloat(goal);
@@ -271,56 +272,56 @@ const CALCULATORS = [
       const days = totalKcal / parseFloat(deficit);
       const weeks = days / 7;
       return [
-        { label: 'Weight to lose', value: `${fmt(kgToLose)} kg` },
-        { label: 'Estimated time', value: `${fmt(weeks, 0)} weeks (${fmt(days, 0)} days)` },
-        { label: 'Rate of loss', value: `${fmt(parseFloat(deficit) / kcalPerKg * 7, 2)} kg/week` },
+        { label: t('calculators.resultWeightToLose'), value: t('calculators.valueKg', { value: fmt(kgToLose) }) },
+        { label: t('calculators.resultEstimatedTime'), value: t('calculators.valueWeeksDays', { weeks: fmt(weeks, 0), days: fmt(days, 0) }) },
+        { label: t('calculators.resultRateOfLoss'), value: t('calculators.valueKgPerWeek', { value: fmt(parseFloat(deficit) / kcalPerKg * 7, 2) }) },
       ];
     },
   },
   {
-    id: 'waistHip', label: 'Waist-Hip Ratio', icon: 'body', color: '#e879f9', pro: true,
-    desc: 'Cardiovascular risk indicator',
+    id: 'waistHip', label: t('calculators.labelWaistHipRatio'), icon: 'body', color: '#e879f9', pro: true,
+    desc: t('calculators.waistHipDesc'),
     fields: [
-      { key: 'waist', label: 'Waist (cm)', placeholder: '85' },
-      { key: 'hips', label: 'Hips (cm)', placeholder: '95' },
-      { key: 'sex', label: 'Sex (M/F)', placeholder: 'M' },
+      { key: 'waist', label: t('calculators.fieldWaistCm'), placeholder: '85' },
+      { key: 'hips', label: t('calculators.fieldHipsCm'), placeholder: '95' },
+      { key: 'sex', label: t('calculators.fieldSex'), placeholder: 'M' },
     ],
     compute: ({ waist, hips, sex }) => {
       const ratio = parseFloat(waist) / parseFloat(hips);
       const isMale = sex?.toUpperCase() === 'M';
       const risk = isMale
-        ? ratio < 0.9 ? 'Low' : ratio < 1.0 ? 'Moderate' : 'High'
-        : ratio < 0.8 ? 'Low' : ratio < 0.85 ? 'Moderate' : 'High';
+        ? ratio < 0.9 ? t('calculators.riskLow') : ratio < 1.0 ? t('calculators.riskModerate') : t('calculators.riskHigh')
+        : ratio < 0.8 ? t('calculators.riskLow') : ratio < 0.85 ? t('calculators.riskModerate') : t('calculators.riskHigh');
       return [
-        { label: 'WHR', value: fmt(ratio, 2) },
-        { label: 'Risk', value: risk },
+        { label: t('calculators.resultWhr'), value: fmt(ratio, 2) },
+        { label: t('calculators.resultRisk'), value: risk },
       ];
     },
   },
   {
-    id: 'volumeLoad', label: 'Volume Load', icon: 'layers', color: 'accent', pro: true,
-    desc: 'Total training volume for a set',
+    id: 'volumeLoad', label: t('calculators.labelVolumeLoad'), icon: 'layers', color: 'accent', pro: true,
+    desc: t('calculators.volumeLoadDesc'),
     fields: [
-      { key: 'sets', label: 'Sets', placeholder: '4' },
-      { key: 'reps', label: 'Reps per set', placeholder: '8' },
-      { key: 'weight', label: 'Weight (kg)', placeholder: '100' },
+      { key: 'sets', label: t('calculators.fieldSets'), placeholder: '4' },
+      { key: 'reps', label: t('calculators.fieldRepsPerSet'), placeholder: '8' },
+      { key: 'weight', label: t('calculators.fieldWeightKg'), placeholder: '100' },
     ],
     compute: ({ sets, reps, weight }) => {
       const vol = parseInt(sets, 10) * parseInt(reps, 10) * parseFloat(weight);
       const e1rm = parseFloat(weight) * (1 + parseInt(reps, 10) / 30);
       return [
-        { label: 'Volume Load', value: `${fmt(vol, 0)} kg` },
-        { label: 'Estimated 1RM (Epley)', value: `${fmt(e1rm)} kg` },
+        { label: t('calculators.resultVolumeLoad'), value: t('calculators.valueKg', { value: fmt(vol, 0) }) },
+        { label: t('calculators.resultEstimatedOneRmEpley'), value: t('calculators.valueKg', { value: fmt(e1rm) }) },
       ];
     },
   },
   {
     id: 'wilks', label: 'Wilks Score', icon: 'trophy', color: 'warning', pro: true,
-    desc: 'Powerlifting strength standard',
+    desc: t('calculators.wilksDesc'),
     fields: [
-      { key: 'total', label: 'Powerlifting total (kg)', placeholder: '400' },
-      { key: 'bw', label: 'Body weight (kg)', placeholder: '75' },
-      { key: 'sex', label: 'Sex (M/F)', placeholder: 'M' },
+      { key: 'total', label: t('calculators.fieldPowerliftingTotal'), placeholder: '400' },
+      { key: 'bw', label: t('calculators.fieldBodyWeight'), placeholder: '75' },
+      { key: 'sex', label: t('calculators.fieldSex'), placeholder: 'M' },
     ],
     compute: ({ total, bw, sex }) => {
       const isMale = sex?.toUpperCase() === 'M';
@@ -330,15 +331,15 @@ const CALCULATORS = [
         : [594.31747775582, -27.23842536447, 0.82112226871, -0.00930733913, 4.731582e-5, -9.054e-8];
       const denom = coeffs[0] + coeffs[1]*b + coeffs[2]*b**2 + coeffs[3]*b**3 + coeffs[4]*b**4 + coeffs[5]*b**5;
       const wilks = (500 / denom) * parseFloat(total);
-      return [{ label: 'Wilks Score', value: fmt(wilks) }];
+      return [{ label: t('calculators.resultWilksScore'), value: fmt(wilks) }];
     },
   },
   {
-    id: 'sleep', label: 'Sleep Calculator', icon: 'moon', color: 'purple', pro: true,
-    desc: 'Optimal wake-up times based on sleep cycles',
-    fields: [{ key: 'bedtime', label: 'Bedtime (HH:MM, 24h)', placeholder: '23:00' }],
+    id: 'sleep', label: t('calculators.labelSleepCalculator'), icon: 'moon', color: 'purple', pro: true,
+    desc: t('calculators.sleepDesc'),
+    fields: [{ key: 'bedtime', label: t('calculators.fieldBedtime'), placeholder: '23:00' }],
     compute: ({ bedtime }) => {
-      if (!bedtime?.includes(':')) return [{ label: 'Error', value: 'Enter time as HH:MM' }];
+      if (!bedtime?.includes(':')) return [{ label: t('calculators.resultError'), value: t('calculators.errorEnterTimeFormat') }];
       const [h, m] = bedtime.split(':').map(Number);
       const base = h * 60 + m + 14;
       const cycles = [3, 4, 5, 6];
@@ -346,17 +347,17 @@ const CALCULATORS = [
         const total = base + c * 90;
         const wh = Math.floor(total / 60) % 24;
         const wm = total % 60;
-        return { label: `${c} cycles (${c * 1.5}h)`, value: `Wake at ${String(wh).padStart(2,'0')}:${String(wm).padStart(2,'0')}` };
+        return { label: t('calculators.cyclesLabel', { cycles: c, hours: c * 1.5 }), value: t('calculators.wakeAt', { time: `${String(wh).padStart(2,'0')}:${String(wm).padStart(2,'0')}` }) };
       });
     },
   },
   {
-    id: 'strengthLevel', label: 'Strength Level', icon: 'barbell', color: 'blue', pro: true,
-    desc: 'Strength standard relative to bodyweight',
+    id: 'strengthLevel', label: t('calculators.labelStrengthLevel'), icon: 'barbell', color: 'blue', pro: true,
+    desc: t('calculators.strengthLevelDesc'),
     fields: [
-      { key: 'lift', label: 'Lift (bench/squat/deadlift)', placeholder: 'bench' },
-      { key: 'weight', label: 'Weight lifted (kg)', placeholder: '100' },
-      { key: 'bw', label: 'Body weight (kg)', placeholder: '80' },
+      { key: 'lift', label: t('calculators.fieldLiftType'), placeholder: 'bench' },
+      { key: 'weight', label: t('calculators.fieldWeightLifted'), placeholder: '100' },
+      { key: 'bw', label: t('calculators.fieldBodyWeight'), placeholder: '80' },
     ],
     compute: ({ lift, weight, bw }) => {
       const ratio = parseFloat(weight) / parseFloat(bw);
@@ -367,32 +368,32 @@ const CALCULATORS = [
       };
       const key = lift?.toLowerCase() in standards ? lift.toLowerCase() : 'bench';
       const [beg, nov, int, adv, eli] = standards[key];
-      let level = ratio < beg ? 'Beginner' : ratio < nov ? 'Novice' : ratio < int ? 'Intermediate' : ratio < adv ? 'Advanced' : ratio < eli ? 'Elite' : 'World Class';
+      let level = ratio < beg ? t('calculators.levelBeginner') : ratio < nov ? t('calculators.levelNovice') : ratio < int ? t('calculators.levelIntermediate') : ratio < adv ? t('calculators.levelAdvanced') : ratio < eli ? t('calculators.levelElite') : t('calculators.levelWorldClass');
       return [
-        { label: 'Ratio (lift/BW)', value: fmt(ratio, 2) },
-        { label: 'Level', value: level },
+        { label: t('calculators.resultRatioLiftBw'), value: fmt(ratio, 2) },
+        { label: t('calculators.resultLevel'), value: level },
       ];
     },
   },
   {
-    id: 'caloriesBurned', label: 'Calories Burned', icon: 'flame', color: '#fb923c', pro: true,
-    desc: 'Estimate calories burned during exercise',
+    id: 'caloriesBurned', label: t('calculators.labelCaloriesBurned'), icon: 'flame', color: '#fb923c', pro: true,
+    desc: t('calculators.caloriesBurnedDesc'),
     fields: [
-      { key: 'weight', label: 'Body weight (kg)', placeholder: '80' },
-      { key: 'duration', label: 'Duration (minutes)', placeholder: '45' },
-      { key: 'met', label: 'MET value (run=8, walk=3.5)', placeholder: '5' },
+      { key: 'weight', label: t('calculators.fieldBodyWeight'), placeholder: '80' },
+      { key: 'duration', label: t('calculators.fieldDurationMinutes'), placeholder: '45' },
+      { key: 'met', label: t('calculators.fieldMetValue'), placeholder: '5' },
     ],
     compute: ({ weight, duration, met }) => {
       const kcal = (parseFloat(met) * 3.5 * parseFloat(weight) / 200) * parseFloat(duration);
-      return [{ label: 'Calories burned', value: `${fmt(kcal, 0)} kcal` }];
+      return [{ label: t('calculators.resultCaloriesBurned'), value: t('calculators.valueKcal', { value: fmt(kcal, 0) }) }];
     },
   },
   {
-    id: 'plateCalc', label: 'Plate Calculator', icon: 'barbell', color: 'accent',
-    desc: 'Plates needed per side for a barbell',
+    id: 'plateCalc', label: t('calculators.labelPlateCalculator'), icon: 'barbell', color: 'accent',
+    desc: t('calculators.plateCalcDesc'),
     fields: [
-      { key: 'target', label: 'Target weight (kg)', placeholder: '100' },
-      { key: 'bar', label: 'Bar weight (kg)', placeholder: '20' },
+      { key: 'target', label: t('calculators.fieldTargetWeight'), placeholder: '100' },
+      { key: 'bar', label: t('calculators.fieldBarWeight'), placeholder: '20' },
     ],
     compute: ({ target, bar }) => {
       let remaining = (parseFloat(target) - parseFloat(bar)) / 2;
@@ -402,8 +403,8 @@ const CALCULATORS = [
         const count = Math.floor(remaining / p);
         if (count > 0) { used.push({ plate: p, count }); remaining -= count * p; }
       }
-      if (Math.abs(remaining) > 0.1) used.push({ plate: remaining, count: 1, note: '(non-standard)' });
-      return used.map(u => ({ label: `${u.plate}kg plates`, value: `× ${u.count} each side${u.note ? ' ' + u.note : ''}` }));
+      if (Math.abs(remaining) > 0.1) used.push({ plate: remaining, count: 1, note: t('calculators.nonStandard') });
+      return used.map(u => ({ label: t('calculators.platesLabel', { plate: u.plate }), value: t('calculators.eachSideValue', { count: u.count, note: u.note ? ' ' + u.note : '' }) }));
     },
   },
 ];
@@ -411,6 +412,7 @@ const CALCULATORS = [
 // ─── screen ───────────────────────────────────────────────────────────────────
 export default function CalculatorsScreen({ navigation }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [openId, setOpenId] = useState(null);
   const [inputs, setInputs] = useState({});
@@ -419,13 +421,16 @@ export default function CalculatorsScreen({ navigation }) {
   const { hasAccess } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
 
+  const ACTIVITY = useMemo(() => ACTIVITY_KEYS.map(k => ({ label: t(`calculators.${k.full}`), shortLabel: t(`calculators.${k.short}`) })), [t]);
+  const CALCULATORS = useMemo(() => buildCalculators(t, ACTIVITY), [t, ACTIVITY]);
+
   const handleCompute = (calc) => {
     try {
       const inp = inputs[calc.id] ?? {};
       const res = calc.compute({ ...inp, activity: activityIdx });
       setResults(prev => ({ ...prev, [calc.id]: res }));
     } catch (e) {
-      setResults(prev => ({ ...prev, [calc.id]: [{ label: 'Error', value: e.message }] }));
+      setResults(prev => ({ ...prev, [calc.id]: [{ label: t('calculators.resultError'), value: e.message }] }));
     }
   };
 
@@ -436,7 +441,7 @@ export default function CalculatorsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenHeader
-        title="CALCULATORS"
+        title={t('calculators.screenTitle')}
         colors={colors}
         onBack={() => navigation.goBack()}
         right={<Text style={styles.count}>{CALCULATORS.length}</Text>}
@@ -490,11 +495,11 @@ export default function CalculatorsScreen({ navigation }) {
                   {/* Activity selector (TDEE) */}
                   {calc.hasActivitySelect && (
                     <View style={styles.activityWrap}>
-                      <Text style={styles.fieldLabel}>Activity Level</Text>
+                      <Text style={styles.fieldLabel}>{t('calculators.activityLevel')}</Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activityRow}>
                         {ACTIVITY.map((a, i) => (
                           <TouchableOpacity key={i} style={[styles.actChip, activityIdx === i && styles.actChipActive]} onPress={() => setActivityIdx(i)}>
-                            <Text style={[styles.actChipText, activityIdx === i && { color: colors.bg }]}>{a.label.split(' ')[0]}</Text>
+                            <Text style={[styles.actChipText, activityIdx === i && { color: colors.bg }]}>{a.shortLabel}</Text>
                           </TouchableOpacity>
                         ))}
                       </ScrollView>
@@ -503,7 +508,7 @@ export default function CalculatorsScreen({ navigation }) {
 
                   {/* Calculate button */}
                   <TouchableOpacity style={[styles.calcBtn, { backgroundColor: calcColor }]} onPress={() => handleCompute(calc)}>
-                    <Text style={styles.calcBtnText}>Calculate</Text>
+                    <Text style={styles.calcBtnText}>{t('calculators.calculateButton')}</Text>
                   </TouchableOpacity>
 
                   {/* Results */}
