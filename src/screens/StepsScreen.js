@@ -4,6 +4,7 @@ import {
   TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
@@ -1065,51 +1066,46 @@ export default function StepsScreen() {
                 <Text style={styles.cardTitle}>ANALYSIS & INSIGHTS</Text>
                 {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
               </View>
-              {hasAccess ? (
-                <>
-                  <View style={styles.weekStatsRow}>
-                    <WeekStatCell value={String(streaks.longest)} label="BEST STREAK" color="#f59e0b" colors={colors} />
-                    <View style={styles.weekStatDivider} />
-                    <WeekStatCell value={consistency8wk != null ? `${consistency8wk}%` : '—'} label="8WK CONSISTENCY" color={colors.good} colors={colors} />
-                    <View style={styles.weekStatDivider} />
-                    <WeekStatCell value={busiestDow ? busiestDow.label : '—'} label="BUSIEST DAY" color="#22d3ee" colors={colors} />
-                  </View>
-                  <View style={{ marginTop: 12, gap: 8 }}>
-                    {goalSuggestion && (
-                      <View style={styles.tipRow}>
-                        <Text style={styles.tipEmoji}>📈</Text>
-                        <Text style={styles.tipText}>You're averaging {goalSuggestion.avg.toLocaleString()} steps/day and hitting your goal {goalSuggestion.hitRate}% of the time — consider raising your goal to {goalSuggestion.suggested.toLocaleString()}.</Text>
-                      </View>
-                    )}
-                    {sleepCorrelation && sleepCorrelation.diff > 200 && (
-                      <View style={styles.tipRow}>
-                        <Text style={styles.tipEmoji}>😴</Text>
-                        <Text style={styles.tipText}>After nights with under 6h sleep, you average {sleepCorrelation.diff.toLocaleString()} fewer steps ({sleepCorrelation.avgLow.toLocaleString()} vs {sleepCorrelation.avgNormal.toLocaleString()}).</Text>
-                      </View>
-                    )}
-                    {milestone.best && (
-                      <View style={styles.tipRow}>
-                        <Text style={styles.tipEmoji}>🌍</Text>
-                        <Text style={styles.tipText}>You've walked the distance of {milestone.best.name} ({Math.round(milestone.totalKm).toLocaleString()} km lifetime).</Text>
-                      </View>
-                    )}
-                    {!goalSuggestion && !sleepCorrelation && !milestone.best && (
-                      <Text style={styles.emptyText}>Log a few more days to unlock personalized insights.</Text>
-                    )}
-                  </View>
-                </>
-              ) : (
-                <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
-                  <View style={styles.weekStatsRow}>
-                    <WeekStatCell value="••" label="BEST STREAK" color={colors.textDim} colors={colors} />
-                    <View style={styles.weekStatDivider} />
-                    <WeekStatCell value="••%" label="8WK CONSISTENCY" color={colors.textDim} colors={colors} />
-                    <View style={styles.weekStatDivider} />
-                    <WeekStatCell value="••" label="BUSIEST DAY" color={colors.textDim} colors={colors} />
-                  </View>
-                  <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>Unlock streak history, sleep correlation & adaptive goal tips with Pro.</Text>
-                </TouchableOpacity>
-              )}
+              <View style={{ position: 'relative' }}>
+                <View style={styles.weekStatsRow}>
+                  <WeekStatCell value={String(streaks.longest)} label="BEST STREAK" color="#f59e0b" colors={colors} />
+                  <View style={styles.weekStatDivider} />
+                  <WeekStatCell value={consistency8wk != null ? `${consistency8wk}%` : '—'} label="8WK CONSISTENCY" color={colors.good} colors={colors} />
+                  <View style={styles.weekStatDivider} />
+                  <WeekStatCell value={busiestDow ? busiestDow.label : '—'} label="BUSIEST DAY" color="#22d3ee" colors={colors} />
+                </View>
+                <View style={{ marginTop: 12, gap: 8 }}>
+                  {goalSuggestion && (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>📈</Text>
+                      <Text style={styles.tipText}>You're averaging {goalSuggestion.avg.toLocaleString()} steps/day and hitting your goal {goalSuggestion.hitRate}% of the time — consider raising your goal to {goalSuggestion.suggested.toLocaleString()}.</Text>
+                    </View>
+                  )}
+                  {sleepCorrelation && sleepCorrelation.diff > 200 && (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>😴</Text>
+                      <Text style={styles.tipText}>After nights with under 6h sleep, you average {sleepCorrelation.diff.toLocaleString()} fewer steps ({sleepCorrelation.avgLow.toLocaleString()} vs {sleepCorrelation.avgNormal.toLocaleString()}).</Text>
+                    </View>
+                  )}
+                  {milestone.best && (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>🌍</Text>
+                      <Text style={styles.tipText}>You've walked the distance of {milestone.best.name} ({Math.round(milestone.totalKm).toLocaleString()} km lifetime).</Text>
+                    </View>
+                  )}
+                  {!goalSuggestion && !sleepCorrelation && !milestone.best && (
+                    <Text style={styles.emptyText}>Log a few more days to unlock personalized insights.</Text>
+                  )}
+                </View>
+                {!hasAccess && (
+                  <BlurView intensity={18} tint="dark" style={styles.proLockOverlay}>
+                    <TouchableOpacity style={styles.proLockCta} onPress={() => setShowInsightsPaywall(true)} activeOpacity={0.85}>
+                      <Ionicons name="lock-closed" size={14} color={colors.bg} />
+                      <Text style={styles.proLockCtaText}>Unlock with Pro</Text>
+                    </TouchableOpacity>
+                  </BlurView>
+                )}
+              </View>
             </View>
 
             {/* ── Day-of-Week Average (Pro) ── */}
@@ -1118,7 +1114,7 @@ export default function StepsScreen() {
                 <Text style={styles.cardTitle}>AVG STEPS BY DAY OF WEEK</Text>
                 {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
               </View>
-              {hasAccess ? (
+              <View style={{ position: 'relative' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 110, gap: 6 }}>
                   {(() => {
                     const maxAvg = Math.max(...dowAverages.map(d => d.avg), defaultGoal, 1);
@@ -1138,11 +1134,15 @@ export default function StepsScreen() {
                     ));
                   })()}
                 </View>
-              ) : (
-                <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
-                  <Text style={styles.emptyText}>Unlock weekday patterns with Pro.</Text>
-                </TouchableOpacity>
-              )}
+                {!hasAccess && (
+                  <BlurView intensity={18} tint="dark" style={styles.proLockOverlay}>
+                    <TouchableOpacity style={styles.proLockCta} onPress={() => setShowInsightsPaywall(true)} activeOpacity={0.85}>
+                      <Ionicons name="lock-closed" size={14} color={colors.bg} />
+                      <Text style={styles.proLockCtaText}>Unlock with Pro</Text>
+                    </TouchableOpacity>
+                  </BlurView>
+                )}
+              </View>
             </View>
 
             {/* ── Activity Breakdown (Pro) ── */}
@@ -1152,7 +1152,7 @@ export default function StepsScreen() {
                   <Text style={styles.cardTitle}>ACTIVITY BREAKDOWN</Text>
                   {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
                 </View>
-                {hasAccess ? (
+                <View style={{ position: 'relative' }}>
                   <View style={{ gap: 10 }}>
                     {actBreakdown.map(a => (
                       <View key={a.key}>
@@ -1166,11 +1166,15 @@ export default function StepsScreen() {
                       </View>
                     ))}
                   </View>
-                ) : (
-                  <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
-                    <Text style={styles.emptyText}>Unlock activity-type breakdown with Pro.</Text>
-                  </TouchableOpacity>
-                )}
+                  {!hasAccess && (
+                    <BlurView intensity={18} tint="dark" style={styles.proLockOverlay}>
+                      <TouchableOpacity style={styles.proLockCta} onPress={() => setShowInsightsPaywall(true)} activeOpacity={0.85}>
+                        <Ionicons name="lock-closed" size={14} color={colors.bg} />
+                        <Text style={styles.proLockCtaText}>Unlock with Pro</Text>
+                      </TouchableOpacity>
+                    </BlurView>
+                  )}
+                </View>
               </View>
             )}
 
@@ -1408,6 +1412,9 @@ const createStyles = (colors) => StyleSheet.create({
   legendLabel: { fontSize: 11, color: colors.textMuted },
 
   emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
+  proLockOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: 10, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  proLockCta: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, backgroundColor: colors.accent },
+  proLockCtaText: { fontSize: typography.sm, fontFamily: fontFamily.bodyBold, color: colors.bg },
 
   logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 9 },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
