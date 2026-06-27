@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Platform,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Platform, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,10 @@ import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import PaywallModal from '../components/ui/PaywallModal';
+import { useTranslation } from 'react-i18next';
+import { setAppLanguage, SUPPORTED_LANGUAGES } from '../i18n';
+
+const LANGUAGE_NAMES = { en: 'English', es: 'Español' };
 
 function formatTime(hour, minute) {
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
@@ -28,6 +32,13 @@ export default function SettingsScreen({ navigation }) {
     useNotificationPrefs() ?? { prefs: {}, times: {}, setPref: () => {}, setReminderTime: () => {} };
   const [showPaywall, setShowPaywall] = useState(false);
   const [editingTimeKey, setEditingTimeKey] = useState(null);
+  const { t, i18n } = useTranslation();
+
+  const handleCycleLanguage = () => {
+    const idx = SUPPORTED_LANGUAGES.indexOf(i18n.language);
+    const next = SUPPORTED_LANGUAGES[(idx + 1) % SUPPORTED_LANGUAGES.length];
+    setAppLanguage(next);
+  };
 
   const handleToggleNotif = async (key, value) => {
     const ok = await setNotifPref(key, value);
@@ -37,6 +48,16 @@ export default function SettingsScreen({ navigation }) {
   const handleEditTime = (key) => {
     if (!isPro) { setShowPaywall(true); return; }
     setEditingTimeKey(key);
+  };
+
+  const handleInviteFriends = async () => {
+    try {
+      await Share.share({
+        message: "I've been tracking my workouts, sleep, and nutrition with FitZo — thought you'd like it too. https://fitzo.app",
+      });
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    }
   };
 
   const handleManageSubscription = async () => {
@@ -105,6 +126,21 @@ export default function SettingsScreen({ navigation }) {
           )}
           <SettingRow icon="settings-outline" label="Manage / Cancel Subscription" chevron last
             onPress={handleManageSubscription} />
+        </View>
+
+        {/* ── Language ───────────────────────────────────────────── */}
+        <SectionHeader title={t('settings.language')} />
+        <View style={styles.card}>
+          <SettingRow icon="globe-outline" label={t('settings.language')}
+            value={LANGUAGE_NAMES[i18n.language]} chevron last
+            onPress={handleCycleLanguage} />
+        </View>
+
+        {/* ── Invite Friends ─────────────────────────────────────── */}
+        <SectionHeader title="Invite Friends" />
+        <View style={styles.card}>
+          <SettingRow icon="people-outline" label="Share FitZo with a friend" chevron last
+            onPress={handleInviteFriends} />
         </View>
 
         {/* ── Notifications ──────────────────────────────────────── */}

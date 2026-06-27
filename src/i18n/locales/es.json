@@ -1,0 +1,34 @@
+{
+  "tabs": {
+    "home": "Inicio",
+    "workout": "Entreno",
+    "steps": "Pasos",
+    "weight": "Peso",
+    "sleep": "Sueño",
+    "more": "Más"
+  },
+  "home": {
+    "greetingMorning": "Buenos días",
+    "greetingAfternoon": "Buenas tardes",
+    "greetingEvening": "Buenas noches",
+    "thisWeek": "Esta semana",
+    "achievements": "Logros",
+    "goPro": "Desbloquea tendencias, estadísticas y más con Pro"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "loading": "Cargando…",
+    "error": "Error",
+    "logWeight": "Registrar peso",
+    "logSteps": "Registrar pasos",
+    "logSleep": "Registrar sueño"
+  },
+  "settings": {
+    "language": "Idioma",
+    "languageSystem": "Predeterminado del sistema"
+  }
+}

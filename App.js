@@ -19,6 +19,8 @@ import AppNavigator from './src/navigation/AppNavigator';
 import MoreSheetModal from './src/components/MoreSheetModal';
 import { navigate } from './src/navigation/navigationRef';
 import { POSTHOG_API_KEY, POSTHOG_HOST } from './src/config/analytics';
+import './src/i18n';
+import { loadStoredLanguage } from './src/i18n';
 
 const REMINDER_TAG_TO_TAB = {
   dailyLog: 'Log',
@@ -59,6 +61,10 @@ function Root() {
     });
     const sub = Notifications.addNotificationResponseReceivedListener(navigateForNotification);
     return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    loadStoredLanguage();
   }, []);
 
   // Tie events to the logged-in user (or reset to anonymous on sign-out) so

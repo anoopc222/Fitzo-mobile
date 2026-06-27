@@ -1,0 +1,34 @@
+{
+  "tabs": {
+    "home": "Home",
+    "workout": "Workout",
+    "steps": "Steps",
+    "weight": "Weight",
+    "sleep": "Sleep",
+    "more": "More"
+  },
+  "home": {
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "thisWeek": "This week",
+    "achievements": "Achievements",
+    "goPro": "Unlock long-range trends, insights & more with Pro"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "loading": "Loading…",
+    "error": "Error",
+    "logWeight": "Log Weight",
+    "logSteps": "Log Steps",
+    "logSleep": "Log Sleep"
+  },
+  "settings": {
+    "language": "Language",
+    "languageSystem": "System default"
+  }
+}
