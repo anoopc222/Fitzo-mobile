@@ -1026,7 +1026,7 @@ const createStyles = (colors) => StyleSheet.create({
   insightRow: { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'flex-start' },
   insightIcon: { fontSize: 16 },
   insightText: { flex: 1, fontSize: typography.sm, color: colors.textMuted, lineHeight: 19 },
-  skeletonBar: { flex: 0, height: 13, marginTop: 3, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)' },
+  skeletonBar: { flex: 0, height: 13, marginTop: 3, borderRadius: 4, backgroundColor: colors.dim, borderWidth: 1, borderColor: colors.border },
   insightBold: { color: colors.text, fontWeight: weight.bold },
 
   fab: {
