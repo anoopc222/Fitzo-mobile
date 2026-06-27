@@ -2747,7 +2747,7 @@ export default function WorkoutScreen() {
                     {['📈', '🔥', '📅'].map((icon, i) => (
                       <View key={i} style={s.insightRow}>
                         <Text style={s.insightIcon}>{icon}</Text>
-                        <Text style={s.insightText}>●●●●●●●●●● ●●●●●●● ●●●●●●●●●●●●●●●●●●●●●●●●●●●</Text>
+                        <Text style={s.insightText}>●● ●●</Text>
                       </View>
                     ))}
                   </View>
