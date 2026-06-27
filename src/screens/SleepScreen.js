@@ -427,7 +427,23 @@ export default function SleepScreen() {
 
   const goalMut = useMutation({
     mutationFn: (h) => updateSleepGoal(user.id, parseFloat(h)),
-    onSuccess: () => { qc.invalidateQueries(['sleep', user.id]); setGoalInput(''); setShowGoalSheet(false); },
+    onMutate: async (h) => {
+      await qc.cancelQueries(['sleep', user.id]);
+      const previous = qc.getQueryData(['sleep', user.id]);
+      const hoursVal = parseFloat(h);
+      qc.setQueryData(['sleep', user.id], (old) => {
+        if (!old) return old;
+        return { ...old, profile: { ...old.profile, sleep_goal_hours: hoursVal } };
+      });
+      setGoalInput('');
+      setShowGoalSheet(false);
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['sleep', user.id], context.previous);
+      Alert.alert('Error', e.message);
+    },
+    onSettled: () => { qc.invalidateQueries(['sleep', user.id]); },
   });
 
   const deleteMut = useMutation({
