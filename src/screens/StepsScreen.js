@@ -974,10 +974,10 @@ export default function StepsScreen() {
               ) : (
                 <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
                   <View style={{ marginTop: 12, gap: 8 }}>
-                    {['📈', '😴', '🌍'].map((icon, i) => (
+                    {[['📈', 0.92], ['😴', 0.68], ['🌍', 0.8]].map(([icon, w], i) => (
                       <View key={i} style={styles.tipRow}>
                         <Text style={styles.tipEmoji}>{icon}</Text>
-                        <Text style={styles.tipText}>●● ●●</Text>
+                        <View style={[styles.skeletonBar, { width: `${w * 100}%` }]} />
                       </View>
                     ))}
                   </View>
@@ -1484,6 +1484,7 @@ const createStyles = (colors) => StyleSheet.create({
   tipRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   tipEmoji: { fontSize: 14 },
   tipText: { flex: 1, fontSize: 11, color: colors.textMuted, lineHeight: 15 },
+  skeletonBar: { flex: 0, height: 11, marginTop: 2, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)' },
 
   actBreakdownLabel: { fontSize: 11, color: colors.text, fontWeight: weight.semibold },
   actBreakdownVal: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.mono },
