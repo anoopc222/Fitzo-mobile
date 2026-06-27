@@ -1139,7 +1139,18 @@ export default function StepsScreen() {
                 </View>
               ) : (
                 <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
-                  <Text style={styles.emptyText}>Unlock weekday patterns with Pro.</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 110, gap: 6 }}>
+                    {[0.4, 0.65, 0.5, 0.8, 0.55, 0.7, 0.45].map((h, i) => (
+                      <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+                        <View style={{ width: '100%', height: 80, justifyContent: 'flex-end' }}>
+                          <View style={{ width: '100%', borderRadius: 5, height: 80 * h, backgroundColor: colors.dim, borderWidth: 1, borderColor: colors.border }} />
+                        </View>
+                        <Text style={styles.weekDayLabel}>{['S', 'M', 'T', 'W', 'T', 'F', 'S'][i]}</Text>
+                        <Text style={styles.weekDayNum}>●●</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={[styles.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock weekday patterns with Pro.</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1167,7 +1178,20 @@ export default function StepsScreen() {
                   </View>
                 ) : (
                   <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
-                    <Text style={styles.emptyText}>Unlock activity-type breakdown with Pro.</Text>
+                    <View style={{ gap: 10 }}>
+                      {actBreakdown.map((a, i) => (
+                        <View key={a.key}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <Text style={styles.actBreakdownLabel}>{a.icon} ●●●● · ●x</Text>
+                            <Text style={styles.actBreakdownVal}>●● steps · ●.●km · ●●cal</Text>
+                          </View>
+                          <View style={styles.weekCompareBarTrack}>
+                            <View style={[styles.weekCompareBarFill, { width: `${[70, 45, 60, 30][i % 4]}%`, backgroundColor: colors.dim }]} />
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                    <Text style={[styles.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock activity-type breakdown with Pro.</Text>
                   </TouchableOpacity>
                 )}
               </View>
