@@ -77,6 +77,7 @@ function groupByWeek(items, getDate) {
 }
 function fmtK(n) {
   if (n == null) return '—';
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
 function fmtDateShort(iso) {
@@ -889,7 +890,7 @@ export default function StepsScreen() {
                 </View>
                 {lifetimeSteps > 0 && (
                   <View style={styles.pbChip}>
-                    <Text style={styles.pbChipText}>{(lifetimeSteps / 1000000).toFixed(2)}M lifetime</Text>
+                    <Text style={styles.pbChipText}>{fmtK(lifetimeSteps)} steps total</Text>
                   </View>
                 )}
               </View>
