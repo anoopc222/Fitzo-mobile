@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -24,10 +25,12 @@ import { useExportCard } from '../hooks/useExportCard';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
+const MEAL_TYPE_I18N_KEYS = { Breakfast: 'foodLog.mealBreakfast', Lunch: 'foodLog.mealLunch', Dinner: 'foodLog.mealDinner', Snack: 'foodLog.mealSnack' };
 
 const MACRO_TARGETS = { calories: 2000, protein: 150, carbs: 250, fats: 65 };
 
 const SOURCE_LABELS = { USDA: 'USDA', CoFID: 'UK CoFID', OFF: 'Open Food Facts', CUSTOM: 'Custom' };
+const SOURCE_LABEL_I18N_KEYS = { USDA: 'foodLog.sourceUsda', CoFID: 'foodLog.sourceCofid', OFF: 'foodLog.sourceOff', CUSTOM: 'foodLog.sourceCustom' };
 
 const EMPTY_FORM = { food_name: '', calories: '', protein: '', carbs: '', fats: '' };
 
@@ -60,7 +63,7 @@ async function fetchFoodMonth(userId, year, month) {
 }
 
 // ─── Calorie Heatmap — mirrors WeightScreen's quartile-relative heatmap ──────
-function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true, onLockedPress, cardWidth, target }) {
+function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true, onLockedPress, cardWidth, target, t }) {
   const SCREEN_W = cardWidth ?? require('react-native').Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
@@ -136,7 +139,7 @@ function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true,
               </Text>
               {!!cell.c && (
                 <Text style={{ fontSize: 6, fontWeight: '600', fontFamily: fontFamily.mono, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: 0.7 }}>
-                  cal
+                  {t ? t('foodLog.calAbbrev') : 'cal'}
                 </Text>
               )}
             </View>
@@ -187,11 +190,11 @@ function dateStr(d) {
   return d.toISOString().split('T')[0];
 }
 
-function fmtDate(d) {
+function fmtDate(d, t) {
   const today = new Date();
-  if (dateStr(d) === dateStr(today)) return 'Today';
+  if (dateStr(d) === dateStr(today)) return t('foodLog.today');
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-  if (dateStr(d) === dateStr(yesterday)) return 'Yesterday';
+  if (dateStr(d) === dateStr(yesterday)) return t('foodLog.yesterday');
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -218,6 +221,7 @@ function MacroBar({ label, value, target, color }) {
 }
 
 export default function FoodLogScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -305,7 +309,7 @@ export default function FoodLogScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['food', user.id, today], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('foodLog.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['food', user.id, today]);
@@ -326,7 +330,7 @@ export default function FoodLogScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['food', user.id, today], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('foodLog.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['food', user.id, today]);
@@ -357,7 +361,7 @@ export default function FoodLogScreen() {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['food', user.id, today], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('foodLog.errorTitle'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['food', user.id, today]);
@@ -388,7 +392,7 @@ export default function FoodLogScreen() {
   const computedCalories = Math.round(targetProteinG * 4 + targetCarbsG * 4 + targetFatsG * 9);
 
   const handleSaveTargets = () => {
-    if (!proteinInput || !carbsInput || !fatsInput) return Alert.alert('Required', 'Enter protein, carbs, and fats targets');
+    if (!proteinInput || !carbsInput || !fatsInput) return Alert.alert(t('foodLog.requiredTitle'), t('foodLog.requiredTargetsMessage'));
     targetsMut.mutate({ protein: targetProteinG, carbs: targetCarbsG, fats: targetFatsG, calories: computedCalories });
   };
 
@@ -453,7 +457,7 @@ export default function FoodLogScreen() {
   };
 
   const handleAddManual = () => {
-    if (!form.food_name.trim() || !form.calories) return Alert.alert('Required', 'Enter food name and calories');
+    if (!form.food_name.trim() || !form.calories) return Alert.alert(t('foodLog.requiredTitle'), t('foodLog.requiredFoodMessage'));
     addMut.mutate({
       food_name: form.food_name.trim(),
       calories: parseFloat(form.calories) || 0,
@@ -475,7 +479,7 @@ export default function FoodLogScreen() {
         <TouchableOpacity onPress={prevDay} style={styles.dateArrow}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.dateLabel}>{fmtDate(currentDate)}</Text>
+        <Text style={styles.dateLabel}>{fmtDate(currentDate, t)}</Text>
         <TouchableOpacity onPress={nextDay} style={styles.dateArrow}>
           <Ionicons name="chevron-forward" size={22} color={colors.text} />
         </TouchableOpacity>
@@ -490,7 +494,7 @@ export default function FoodLogScreen() {
               <View style={styles.summaryCard}>
                 <View style={styles.targetsPillRow}>
                   <TouchableOpacity style={styles.goalPillBtn} onPress={openTargetsSheet}>
-                    <Text style={styles.goalPillBtnText}>Edit Targets</Text>
+                    <Text style={styles.goalPillBtnText}>{t('foodLog.editTargets')}</Text>
                     <Ionicons name={isPro ? 'pencil' : 'lock-closed'} size={11} color={colors.accent} />
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -510,14 +514,14 @@ export default function FoodLogScreen() {
                     <Text style={[styles.ringNum, { color: calPct >= 100 ? colors.danger : colors.accent }]}>
                       {totals.calories.toFixed(0)}
                     </Text>
-                    <Text style={styles.ringLabel}>kcal</Text>
+                    <Text style={styles.ringLabel}>{t('foodLog.kcal')}</Text>
                   </View>
                   <View style={styles.ringRight}>
-                    <Text style={styles.ringTarget}>Goal: {targets.calories} kcal</Text>
+                    <Text style={styles.ringTarget}>{t('foodLog.goalKcal', { value: targets.calories })}</Text>
                     <Text style={[styles.ringRemain, { color: calPct >= 100 ? colors.danger : colors.success }]}>
                       {calPct >= 100
-                        ? `+${(totals.calories - targets.calories).toFixed(0)} over`
-                        : `${(targets.calories - totals.calories).toFixed(0)} remaining`
+                        ? t('foodLog.overAmount', { value: (totals.calories - targets.calories).toFixed(0) })
+                        : t('foodLog.remainingAmount', { value: (targets.calories - totals.calories).toFixed(0) })
                       }
                     </Text>
                   </View>
@@ -525,36 +529,36 @@ export default function FoodLogScreen() {
 
                 {/* Macro bars */}
                 <View style={styles.macroBars}>
-                  <MacroBar label="Protein" value={Math.round(totals.protein)} target={targets.protein} color={colors.success} />
-                  <MacroBar label="Carbs" value={Math.round(totals.carbs)} target={targets.carbs} color="#fb923c" />
-                  <MacroBar label="Fats" value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
+                  <MacroBar label={t('foodLog.protein')} value={Math.round(totals.protein)} target={targets.protein} color={colors.success} />
+                  <MacroBar label={t('foodLog.carbs')} value={Math.round(totals.carbs)} target={targets.carbs} color="#fb923c" />
+                  <MacroBar label={t('foodLog.fats')} value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
                 </View>
               </View>
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-              <ExportCardTemplate ref={summaryExport.ref} title="Today's Nutrition" colors={colors} width={340}>
+              <ExportCardTemplate ref={summaryExport.ref} title={t('foodLog.todaysNutrition')} colors={colors} width={340}>
                 <View style={styles.calorieRing}>
                   <View style={[styles.ringOuter, { borderColor: calPct >= 100 ? colors.danger : colors.accent }]}>
                     <Text style={[styles.ringNum, { color: calPct >= 100 ? colors.danger : colors.accent }]}>
                       {totals.calories.toFixed(0)}
                     </Text>
-                    <Text style={styles.ringLabel}>kcal</Text>
+                    <Text style={styles.ringLabel}>{t('foodLog.kcal')}</Text>
                   </View>
                   <View style={styles.ringRight}>
-                    <Text style={styles.ringTarget}>Goal: {targets.calories} kcal</Text>
+                    <Text style={styles.ringTarget}>{t('foodLog.goalKcal', { value: targets.calories })}</Text>
                     <Text style={[styles.ringRemain, { color: calPct >= 100 ? colors.danger : colors.success }]}>
                       {calPct >= 100
-                        ? `+${(totals.calories - targets.calories).toFixed(0)} over`
-                        : `${(targets.calories - totals.calories).toFixed(0)} remaining`
+                        ? t('foodLog.overAmount', { value: (totals.calories - targets.calories).toFixed(0) })
+                        : t('foodLog.remainingAmount', { value: (targets.calories - totals.calories).toFixed(0) })
                       }
                     </Text>
                   </View>
                 </View>
                 <View style={styles.macroBars}>
-                  <MacroBar label="Protein" value={Math.round(totals.protein)} target={targets.protein} color={colors.success} />
-                  <MacroBar label="Carbs" value={Math.round(totals.carbs)} target={targets.carbs} color="#fb923c" />
-                  <MacroBar label="Fats" value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
+                  <MacroBar label={t('foodLog.protein')} value={Math.round(totals.protein)} target={targets.protein} color={colors.success} />
+                  <MacroBar label={t('foodLog.carbs')} value={Math.round(totals.carbs)} target={targets.carbs} color="#fb923c" />
+                  <MacroBar label={t('foodLog.fats')} value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
                 </View>
               </ExportCardTemplate>
             </View>
@@ -565,8 +569,8 @@ export default function FoodLogScreen() {
                 <Ionicons name="calendar" size={18} color={colors.accent} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>MONTHLY CALORIE HEATMAP</Text>
-                <Text style={styles.hmTabSub}>Tap to view daily calorie consumption</Text>
+                <Text style={styles.cardTitle}>{t('foodLog.monthlyCalorieHeatmap')}</Text>
+                <Text style={styles.hmTabSub}>{t('foodLog.tapToViewHeatmap')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </TouchableOpacity>
@@ -574,12 +578,12 @@ export default function FoodLogScreen() {
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
               <ExportCardTemplate
                 ref={heatmapExport.ref}
-                title="Monthly Calorie Heatmap"
+                title={t('foodLog.monthlyCalorieHeatmap')}
                 subtitle={`${MONTH_NAMES[month]} ${year}`}
                 colors={colors}
                 width={340}
               >
-                <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={true} cardWidth={258} target={targets.calories} />
+                <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={true} cardWidth={258} target={targets.calories} t={t} />
               </ExportCardTemplate>
             </View>
 
@@ -594,14 +598,14 @@ export default function FoodLogScreen() {
                     <View style={[styles.mealIconWrap, { backgroundColor: mealColor + '22' }]}>
                       <Ionicons name={MEAL_ICONS[meal]} size={18} color={mealColor} />
                     </View>
-                    <Text style={styles.mealTitle}>{meal}</Text>
-                    <Text style={[styles.mealCals, { color: mealColor }]}>{mealCals.toFixed(0)} kcal</Text>
+                    <Text style={styles.mealTitle}>{t(MEAL_TYPE_I18N_KEYS[meal])}</Text>
+                    <Text style={[styles.mealCals, { color: mealColor }]}>{t('foodLog.kcalAmount', { value: mealCals.toFixed(0) })}</Text>
                     <TouchableOpacity onPress={() => openSheet(meal)}>
                       <Ionicons name="add-circle-outline" size={22} color={mealColor} />
                     </TouchableOpacity>
                   </View>
                   {items.length === 0 ? (
-                    <Text style={styles.mealEmpty}>Nothing logged yet</Text>
+                    <Text style={styles.mealEmpty}>{t('foodLog.nothingLoggedYet')}</Text>
                   ) : (
                     items.map(item => (
                       <View key={item.id} style={styles.foodItem}>
@@ -609,15 +613,15 @@ export default function FoodLogScreen() {
                           <Text style={styles.foodName}>{item.food_name}</Text>
                           <View style={styles.macroChips}>
                             {item.serving_size ? <Text style={styles.servingChip}>{item.serving_size}</Text> : null}
-                            {item.protein > 0 && <MacroChip label={`${Math.round(item.protein)}P`} color={colors.success} />}
-                            {item.carbs > 0 && <MacroChip label={`${Math.round(item.carbs)}C`} color="#fb923c" />}
-                            {item.fats > 0 && <MacroChip label={`${Math.round(item.fats)}F`} color={colors.warning} />}
+                            {item.protein > 0 && <MacroChip label={t('foodLog.macroChipProtein', { value: Math.round(item.protein) })} color={colors.success} />}
+                            {item.carbs > 0 && <MacroChip label={t('foodLog.macroChipCarbs', { value: Math.round(item.carbs) })} color="#fb923c" />}
+                            {item.fats > 0 && <MacroChip label={t('foodLog.macroChipFats', { value: Math.round(item.fats) })} color={colors.warning} />}
                           </View>
                         </View>
-                        <Text style={styles.foodCals}>{item.calories} kcal</Text>
-                        <TouchableOpacity onPress={() => Alert.alert('Delete', `Remove "${item.food_name}"?`, [
-                          { text: 'Cancel', style: 'cancel' },
-                          { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(item.id) },
+                        <Text style={styles.foodCals}>{t('foodLog.kcalAmount', { value: item.calories })}</Text>
+                        <TouchableOpacity onPress={() => Alert.alert(t('foodLog.deleteTitle'), t('foodLog.deleteConfirmMessage', { name: item.food_name }), [
+                          { text: t('foodLog.cancel'), style: 'cancel' },
+                          { text: t('foodLog.delete'), style: 'destructive', onPress: () => deleteMut.mutate(item.id) },
                         ])}>
                           <Ionicons name="close" size={16} color={colors.textDim} />
                         </TouchableOpacity>
@@ -649,12 +653,12 @@ export default function FoodLogScreen() {
                 )}
                 <View>
                   <Text style={styles.sheetHeaderTop}>
-                    <Text style={styles.sheetHeaderLOG}>LOG </Text>
+                    <Text style={styles.sheetHeaderLOG}>{t('foodLog.logPrefix')} </Text>
                     <Text style={styles.sheetHeaderSub}>
-                      {sheetStep === 'detail' ? 'Add Serving' : sheetStep === 'manual' ? 'Custom Food' : 'Food'}
+                      {sheetStep === 'detail' ? t('foodLog.addServing') : sheetStep === 'manual' ? t('foodLog.customFood') : t('foodLog.food')}
                     </Text>
                   </Text>
-                  <Text style={styles.trackLabel}>TRACK WHAT YOU EAT</Text>
+                  <Text style={styles.trackLabel}>{t('foodLog.trackWhatYouEat')}</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={closeSheet} style={styles.sheetCloseBtn}>
@@ -667,7 +671,7 @@ export default function FoodLogScreen() {
               {MEAL_TYPES.map(m => (
                 <TouchableOpacity key={m} style={[styles.mealChip, selectedMeal === m && { backgroundColor: MEAL_COLORS[m], borderColor: MEAL_COLORS[m] }]}
                   onPress={() => setSelectedMeal(m)}>
-                  <Text style={[styles.mealChipText, selectedMeal === m && { color: '#fff' }]}>{m}</Text>
+                  <Text style={[styles.mealChipText, selectedMeal === m && { color: '#fff' }]}>{t(MEAL_TYPE_I18N_KEYS[m])}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -678,7 +682,7 @@ export default function FoodLogScreen() {
                   <Ionicons name="search" size={16} color={colors.textDim} />
                   <TextInput
                     style={styles.searchInput}
-                    placeholder="Search 39,000+ foods (e.g. chicken breast)"
+                    placeholder={t('foodLog.searchFoodsPlaceholder')}
                     placeholderTextColor={colors.textDim}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -694,9 +698,9 @@ export default function FoodLogScreen() {
                   style={styles.resultsList}
                   ListEmptyComponent={
                     debouncedQuery.length < 2 ? (
-                      <Text style={styles.searchHint}>Type at least 2 characters to search</Text>
+                      <Text style={styles.searchHint}>{t('foodLog.searchHintMinChars')}</Text>
                     ) : !searching ? (
-                      <Text style={styles.searchHint}>No matches found</Text>
+                      <Text style={styles.searchHint}>{t('foodLog.noMatchesFound')}</Text>
                     ) : null
                   }
                   renderItem={({ item }) => (
@@ -704,10 +708,10 @@ export default function FoodLogScreen() {
                       <View style={styles.resultLeft}>
                         <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
                         <Text style={styles.resultMeta} numberOfLines={1}>
-                          {item.brand ? `${item.brand} · ` : ''}{SOURCE_LABELS[item.source] ?? item.source}
+                          {item.brand ? `${item.brand} · ` : ''}{SOURCE_LABEL_I18N_KEYS[item.source] ? t(SOURCE_LABEL_I18N_KEYS[item.source]) : item.source}
                         </Text>
                       </View>
-                      <Text style={styles.resultCals}>{Math.round(item.calories ?? 0)} kcal</Text>
+                      <Text style={styles.resultCals}>{t('foodLog.kcalAmount', { value: Math.round(item.calories ?? 0) })}</Text>
                       <Text style={styles.resultUnit}>/{item.serving_qty ?? 100}{item.serving_unit ?? 'g'}</Text>
                     </TouchableOpacity>
                   )}
@@ -715,7 +719,7 @@ export default function FoodLogScreen() {
 
                 <TouchableOpacity style={styles.manualLink} onPress={() => setSheetStep('manual')}>
                   <Ionicons name="create-outline" size={14} color={colors.accent} />
-                  <Text style={styles.manualLinkText}>Can't find it? Add a custom food</Text>
+                  <Text style={styles.manualLinkText}>{t('foodLog.cantFindAddCustom')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -726,7 +730,7 @@ export default function FoodLogScreen() {
                 {selectedFood.brand ? <Text style={styles.detailBrand}>{selectedFood.brand}</Text> : null}
 
                 <View style={styles.amountRow}>
-                  <Text style={styles.amountLabel}>Amount</Text>
+                  <Text style={styles.amountLabel}>{t('foodLog.amount')}</Text>
                   <View style={styles.amountInputWrap}>
                     <TextInput
                       style={styles.amountInput}
@@ -739,33 +743,33 @@ export default function FoodLogScreen() {
                 </View>
 
                 <View style={styles.scaledMacros}>
-                  <ScaledMacro label="Calories" value={scaled.calories} unit="kcal" color={colors.accent} />
-                  <ScaledMacro label="Protein" value={scaled.protein} unit="g" color={colors.success} />
-                  <ScaledMacro label="Carbs" value={scaled.carbs} unit="g" color="#fb923c" />
-                  <ScaledMacro label="Fats" value={scaled.fats} unit="g" color={colors.warning} />
+                  <ScaledMacro label={t('foodLog.calories')} value={scaled.calories} unit={t('foodLog.kcal')} color={colors.accent} />
+                  <ScaledMacro label={t('foodLog.protein')} value={scaled.protein} unit="g" color={colors.success} />
+                  <ScaledMacro label={t('foodLog.carbs')} value={scaled.carbs} unit="g" color="#fb923c" />
+                  <ScaledMacro label={t('foodLog.fats')} value={scaled.fats} unit="g" color={colors.warning} />
                 </View>
 
                 <TouchableOpacity style={styles.saveBtn} onPress={handleLogSelected} disabled={addMut.isPending}>
-                  {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Add to {selectedMeal}</Text>}
+                  {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('foodLog.addToMeal', { meal: t(MEAL_TYPE_I18N_KEYS[selectedMeal]) })}</Text>}
                 </TouchableOpacity>
               </ScrollView>
             )}
 
             {sheetStep === 'manual' && (
               <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
-                <TextInput style={styles.inputFull} placeholder="Food name (e.g. Chicken breast 100g)"
+                <TextInput style={styles.inputFull} placeholder={t('foodLog.foodNamePlaceholder')}
                   placeholderTextColor={colors.textDim} value={form.food_name}
                   onChangeText={v => setForm(p => ({ ...p, food_name: v }))} />
 
                 <View style={styles.macroInputRow}>
-                  <MacroInput label="Calories" value={form.calories} onChange={v => setForm(p => ({ ...p, calories: v }))} color={colors.accent} />
-                  <MacroInput label="Protein" value={form.protein} onChange={v => setForm(p => ({ ...p, protein: v }))} color={colors.success} />
-                  <MacroInput label="Carbs" value={form.carbs} onChange={v => setForm(p => ({ ...p, carbs: v }))} color="#fb923c" />
-                  <MacroInput label="Fats" value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
+                  <MacroInput label={t('foodLog.calories')} value={form.calories} onChange={v => setForm(p => ({ ...p, calories: v }))} color={colors.accent} />
+                  <MacroInput label={t('foodLog.protein')} value={form.protein} onChange={v => setForm(p => ({ ...p, protein: v }))} color={colors.success} />
+                  <MacroInput label={t('foodLog.carbs')} value={form.carbs} onChange={v => setForm(p => ({ ...p, carbs: v }))} color="#fb923c" />
+                  <MacroInput label={t('foodLog.fats')} value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
                 </View>
 
                 <TouchableOpacity style={styles.saveBtn} onPress={handleAddManual} disabled={addMut.isPending}>
-                  {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Food</Text>}
+                  {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('foodLog.saveFood')}</Text>}
                 </TouchableOpacity>
               </ScrollView>
             )}
@@ -775,30 +779,30 @@ export default function FoodLogScreen() {
 
       <BottomSheet visible={showTargetsSheet} onClose={() => setShowTargetsSheet(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>SET MACRO TARGETS</Text>
+          <Text style={styles.sheetTitle}>{t('foodLog.setMacroTargets')}</Text>
           <TouchableOpacity onPress={() => setShowTargetsSheet(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.goalBigVal}>{computedCalories} kcal</Text>
-        <Text style={styles.goalBigSub}>auto-calculated calorie target</Text>
+        <Text style={styles.goalBigVal}>{t('foodLog.kcalAmount', { value: computedCalories })}</Text>
+        <Text style={styles.goalBigSub}>{t('foodLog.autoCalculatedCalorieTarget')}</Text>
 
         <View style={styles.targetsFieldRow}>
-          <Text style={styles.sheetFieldLabel}>PROTEIN (G)</Text>
+          <Text style={styles.sheetFieldLabel}>{t('foodLog.proteinGLabel')}</Text>
           <TextInput style={styles.sheetInput} value={proteinInput} onChangeText={setProteinInput} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.textDim} />
         </View>
         <View style={styles.targetsFieldRow}>
-          <Text style={styles.sheetFieldLabel}>CARBS (G)</Text>
+          <Text style={styles.sheetFieldLabel}>{t('foodLog.carbsGLabel')}</Text>
           <TextInput style={styles.sheetInput} value={carbsInput} onChangeText={setCarbsInput} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.textDim} />
         </View>
         <View style={styles.targetsFieldRow}>
-          <Text style={styles.sheetFieldLabel}>FATS (G)</Text>
+          <Text style={styles.sheetFieldLabel}>{t('foodLog.fatsGLabel')}</Text>
           <TextInput style={styles.sheetInput} value={fatsInput} onChangeText={setFatsInput} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.textDim} />
         </View>
 
         <TouchableOpacity style={styles.saveBtn} onPress={handleSaveTargets} disabled={targetsMut.isPending}>
-          {targetsMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>Save Targets</Text>}
+          {targetsMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('foodLog.saveTargets')}</Text>}
         </TouchableOpacity>
       </BottomSheet>
 
@@ -820,7 +824,7 @@ export default function FoodLogScreen() {
           <View style={styles.hmPopup}>
             <View style={styles.hmPopupHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.hmPopupTitle}>🔥 Calorie Heatmap</Text>
+                <Text style={styles.hmPopupTitle}>🔥 {t('foodLog.calorieHeatmap')}</Text>
                 <Text style={styles.hmPopupSubtitle}>{MONTH_FULL[month]} {year}</Text>
               </View>
               <TouchableOpacity onPress={() => setShowHeatmapModal(false)} style={styles.hmPopupCloseBtn}>
@@ -854,13 +858,13 @@ export default function FoodLogScreen() {
                 </TouchableOpacity>
               </View>
               <View style={[styles.hmLegend, styles.hmLegendRow]}>
-                <Text style={styles.hmLegendLabel}>Low</Text>
+                <Text style={styles.hmLegendLabel}>{t('foodLog.low')}</Text>
                 {['rgba(52,211,153,0.25)', 'rgba(52,211,153,0.5)', 'rgba(251,191,36,0.55)', 'rgba(248,113,113,0.7)'].map((c, i) => (
                   <View key={i} style={[styles.hmLegendSwatch, { backgroundColor: c }]} />
                 ))}
-                <Text style={styles.hmLegendLabel}>High</Text>
+                <Text style={styles.hmLegendLabel}>{t('foodLog.high')}</Text>
               </View>
-              <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={hasAccess} onLockedPress={() => setShowHeatmapPaywall(true)} target={targets.calories} />
+              <CalorieHeatmap year={year} month={month} caloriesByDate={caloriesByDate} colors={colors} hasAccess={hasAccess} onLockedPress={() => setShowHeatmapPaywall(true)} target={targets.calories} t={t} />
             </ScrollView>
           </View>
         </View>

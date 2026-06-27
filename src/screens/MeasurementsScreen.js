@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
@@ -20,22 +21,28 @@ import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
 
 const SITES = [
-  { key: 'chest',       label: 'Chest',        icon: 'body',    dir: 'up' },
-  { key: 'waist',       label: 'Waist',        icon: 'body',    dir: 'down' },
-  { key: 'hips',        label: 'Hips',         icon: 'body',    dir: 'neutral' },
-  { key: 'left_arm',    label: 'L.Arm',        icon: 'fitness', dir: 'up' },
-  { key: 'right_arm',   label: 'R.Arm',        icon: 'fitness', dir: 'up' },
-  { key: 'left_thigh',  label: 'L.Thigh',      icon: 'walk',    dir: 'up' },
-  { key: 'right_thigh', label: 'R.Thigh',      icon: 'walk',    dir: 'up' },
-  { key: 'neck',        label: 'Neck',         icon: 'body',    dir: 'down' },
-  { key: 'calf_left',   label: 'L.Calf',       icon: 'walk',    dir: 'up' },
-  { key: 'calf_right',  label: 'R.Calf',       icon: 'walk',    dir: 'up' },
+  { key: 'chest',       labelKey: 'chest',      label: 'Chest',        icon: 'body',    dir: 'up' },
+  { key: 'waist',       labelKey: 'waist',      label: 'Waist',        icon: 'body',    dir: 'down' },
+  { key: 'hips',        labelKey: 'hips',       label: 'Hips',         icon: 'body',    dir: 'neutral' },
+  { key: 'left_arm',    labelKey: 'lArm',       label: 'L.Arm',        icon: 'fitness', dir: 'up' },
+  { key: 'right_arm',   labelKey: 'rArm',       label: 'R.Arm',        icon: 'fitness', dir: 'up' },
+  { key: 'left_thigh',  labelKey: 'lThigh',     label: 'L.Thigh',      icon: 'walk',    dir: 'up' },
+  { key: 'right_thigh', labelKey: 'rThigh',     label: 'R.Thigh',      icon: 'walk',    dir: 'up' },
+  { key: 'neck',        labelKey: 'neck',       label: 'Neck',         icon: 'body',    dir: 'down' },
+  { key: 'calf_left',   labelKey: 'lCalf',      label: 'L.Calf',       icon: 'walk',    dir: 'up' },
+  { key: 'calf_right',  labelKey: 'rCalf',      label: 'R.Calf',       icon: 'walk',    dir: 'up' },
 ];
 const SITE_BY_KEY = Object.fromEntries(SITES.map(s => [s.key, s]));
+function siteLabel(t, site) {
+  return t(`measurements.site${site.labelKey[0].toUpperCase()}${site.labelKey.slice(1)}`, site.label);
+}
+function pairLabel(t, pair) {
+  return t(`measurements.pair${pair.labelKey[0].toUpperCase()}${pair.labelKey.slice(1)}`, pair.label);
+}
 const SYMMETRY_PAIRS = [
-  { label: 'Arms',   l: 'left_arm',    r: 'right_arm',   icon: 'fitness' },
-  { label: 'Thighs', l: 'left_thigh',  r: 'right_thigh', icon: 'walk' },
-  { label: 'Calves', l: 'calf_left',   r: 'calf_right',  icon: 'walk' },
+  { labelKey: 'arms',   label: 'Arms',   l: 'left_arm',    r: 'right_arm',   icon: 'fitness' },
+  { labelKey: 'thighs', label: 'Thighs', l: 'left_thigh',  r: 'right_thigh', icon: 'walk' },
+  { labelKey: 'calves', label: 'Calves', l: 'calf_left',   r: 'calf_right', icon: 'walk' },
 ];
 const PROGRESS_SITES = ['chest', 'waist', 'hips', 'left_arm', 'right_arm'];
 
@@ -137,14 +144,18 @@ function ratioScore(value, threshold, betterWhenLower) {
   return clampScore(score);
 }
 
+const BMI_CATEGORY_FALLBACK = { underweight: 'Underweight', normal: 'Normal', overweight: 'Overweight', obese: 'Obese' };
 function bmiInfo(bmi) {
   if (bmi == null) return null;
-  let category, color;
-  if (bmi < 18.5) { category = 'Underweight'; color = 'warn'; }
-  else if (bmi < 25) { category = 'Normal'; color = 'good'; }
-  else if (bmi < 30) { category = 'Overweight'; color = 'warn'; }
-  else { category = 'Obese'; color = 'danger'; }
-  return { value: bmi, category, color, score: clampScore(100 - Math.abs(bmi - 22) * 7) };
+  let categoryKey, color;
+  if (bmi < 18.5) { categoryKey = 'underweight'; color = 'warn'; }
+  else if (bmi < 25) { categoryKey = 'normal'; color = 'good'; }
+  else if (bmi < 30) { categoryKey = 'overweight'; color = 'warn'; }
+  else { categoryKey = 'obese'; color = 'danger'; }
+  return { value: bmi, categoryKey, color, score: clampScore(100 - Math.abs(bmi - 22) * 7) };
+}
+function bmiCategoryLabel(t, categoryKey) {
+  return t(`measurements.bmiCategory${categoryKey[0].toUpperCase()}${categoryKey.slice(1)}`, BMI_CATEGORY_FALLBACK[categoryKey]);
 }
 
 // Catmull-Rom -> cubic-bezier smoothing for a polyline's points
@@ -166,7 +177,7 @@ function smoothPath(pts) {
   return d;
 }
 
-function ProgressChart({ logsAsc, site, colors, width, dir }) {
+function ProgressChart({ logsAsc, site, colors, width, dir, t }) {
   const H = 150;
   const P = { t: 16, r: 8, b: 18, l: 8 };
   const pw = width - P.l - P.r;
@@ -176,7 +187,7 @@ function ProgressChart({ logsAsc, site, colors, width, dir }) {
   if (pts.length < 2) {
     return (
       <View style={{ height: H, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>Not enough data yet</Text>
+        <Text style={{ color: colors.textDim, fontSize: typography.sm }}>{t('measurements.notEnoughData', 'Not enough data yet')}</Text>
       </View>
     );
   }
@@ -209,13 +220,13 @@ function ProgressChart({ logsAsc, site, colors, width, dir }) {
           <Text style={[styles_static.chartStatVal, { color: colors.text }]}>{fmt(vals[0])}cm</Text>
         </View>
         <View style={styles_static.chartStatCell}>
-          <Text style={[styles_static.chartStatLabel, { color: colors.textDim }]}>OVER {days}d</Text>
+          <Text style={[styles_static.chartStatLabel, { color: colors.textDim }]}>{t('measurements.overDays', 'OVER {{days}}d', { days })}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
             {Math.abs(change) >= 0.05 && (
               <Ionicons name={change > 0 ? 'arrow-up' : 'arrow-down'} size={11} color={changeColor} />
             )}
             <Text style={[styles_static.chartStatVal, { color: Math.abs(change) >= 0.05 ? changeColor : colors.textMuted }]}>
-              {Math.abs(change) >= 0.05 ? `${change > 0 ? '+' : ''}${change}cm` : 'No change'}
+              {Math.abs(change) >= 0.05 ? `${change > 0 ? '+' : ''}${change}cm` : t('measurements.noChange', 'No change')}
             </Text>
           </View>
         </View>
@@ -236,6 +247,7 @@ const styles_static = StyleSheet.create({
 });
 
 export default function MeasurementsScreen({ navigation }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
   const { hasAccess } = useSubscription();
@@ -290,7 +302,7 @@ export default function MeasurementsScreen({ navigation }) {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['measurements', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('measurements.errorAlertTitle', 'Error'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['measurements', user.id]);
@@ -307,7 +319,7 @@ export default function MeasurementsScreen({ navigation }) {
     },
     onError: (e, vars, context) => {
       if (context?.previous) qc.setQueryData(['measurements', user.id], context.previous);
-      Alert.alert('Error', e.message);
+      Alert.alert(t('measurements.errorAlertTitle', 'Error'), e.message);
     },
     onSettled: () => {
       qc.invalidateQueries(['measurements', user.id]);
@@ -338,13 +350,13 @@ export default function MeasurementsScreen({ navigation }) {
   const waistHeightScore = waistToHeight != null ? ratioScore(waistToHeight, 0.5, true) : null;
   const bodyScoreParts = [bmiData?.score, whrScore, waistHeightScore, consistencyScore].filter(v => v != null);
   const bodyScore = bodyScoreParts.length ? Math.round(bodyScoreParts.reduce((a, b) => a + b, 0) / bodyScoreParts.length) : null;
-  const bodyScoreLabel = bodyScore == null ? '' : bodyScore >= 85 ? 'Elite' : bodyScore >= 70 ? 'Fit' : bodyScore >= 50 ? 'Average' : 'Needs Focus';
-  const bodyScoreSub = bodyScore == null ? 'Log more data to unlock your score' : bodyScore >= 85 ? 'Excellent shape across the board.' : bodyScore >= 70 ? 'Solid foundation, room to grow.' : bodyScore >= 50 ? 'On track — stay consistent.' : 'Focus on consistency and ratios.';
+  const bodyScoreLabel = bodyScore == null ? '' : bodyScore >= 85 ? t('measurements.scoreElite', 'Elite') : bodyScore >= 70 ? t('measurements.scoreFit', 'Fit') : bodyScore >= 50 ? t('measurements.scoreAverage', 'Average') : t('measurements.scoreNeedsFocus', 'Needs Focus');
+  const bodyScoreSub = bodyScore == null ? t('measurements.scoreSubLogMore', 'Log more data to unlock your score') : bodyScore >= 85 ? t('measurements.scoreSubElite', 'Excellent shape across the board.') : bodyScore >= 70 ? t('measurements.scoreSubFit', 'Solid foundation, room to grow.') : bodyScore >= 50 ? t('measurements.scoreSubAverage', 'On track — stay consistent.') : t('measurements.scoreSubNeedsFocus', 'Focus on consistency and ratios.');
 
   const handleSave = () => {
     const hasAny = SITES.some(s => form[s.key]);
-    if (!hasAny) return Alert.alert('Required', 'Enter at least one measurement');
-    if (!logDate) return Alert.alert('Required', 'Select a date');
+    if (!hasAny) return Alert.alert(t('measurements.alertRequiredTitle', 'Required'), t('measurements.alertEnterOneMeasurement', 'Enter at least one measurement'));
+    if (!logDate) return Alert.alert(t('measurements.alertRequiredTitle', 'Required'), t('measurements.alertSelectDate', 'Select a date'));
     const values = {};
     SITES.forEach(s => {
       if (form[s.key]) values[s.key] = parseFloat(form[s.key]);
@@ -363,7 +375,7 @@ export default function MeasurementsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenHeader
-        title="MEASUREMENTS"
+        title={t('measurements.headerTitle', 'MEASUREMENTS')}
         colors={colors}
         onBack={() => navigation.goBack()}
       />
@@ -383,12 +395,12 @@ export default function MeasurementsScreen({ navigation }) {
                   <Text style={styles.previewIcon}>📊</Text>
                   {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
                 </View>
-                <Text style={styles.previewTitle}>Analytics</Text>
+                <Text style={styles.previewTitle}>{t('measurements.analyticsTitle', 'Analytics')}</Text>
                 <View style={styles.previewChips}>
-                  <Text style={styles.previewChip}>🏆 BESTS</Text>
-                  <Text style={styles.previewChip}>🥇 SCORE</Text>
+                  <Text style={styles.previewChip}>🏆 {t('measurements.bestsChip', 'BESTS')}</Text>
+                  <Text style={styles.previewChip}>🥇 {t('measurements.scoreChip', 'SCORE')}</Text>
                 </View>
-                <Text style={styles.previewSub}>{bmiData ? `BMI ${bmiData.value} · ${personalBests.length} PBs` : (latest ? `${personalBests.length} PBs logged` : 'Log measurements to unlock')}</Text>
+                <Text style={styles.previewSub}>{bmiData ? t('measurements.analyticsSubBmi', 'BMI {{bmi}} · {{count}} PBs', { bmi: bmiData.value, count: personalBests.length }) : (latest ? t('measurements.analyticsSubPbs', '{{count}} PBs logged', { count: personalBests.length }) : t('measurements.analyticsSubLocked', 'Log measurements to unlock'))}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.previewCard} activeOpacity={0.85} onPress={() => openProModal(setShowInsights)}>
@@ -396,20 +408,20 @@ export default function MeasurementsScreen({ navigation }) {
                   <Text style={styles.previewIcon}>🔬</Text>
                   {!hasAccess && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
                 </View>
-                <Text style={styles.previewTitle}>Insights</Text>
+                <Text style={styles.previewTitle}>{t('measurements.insightsTitle', 'Insights')}</Text>
                 <View style={styles.previewChips}>
-                  <Text style={styles.previewChip}>⚖️ SYMMETRY</Text>
-                  <Text style={styles.previewChip}>📐 RATIOS</Text>
+                  <Text style={styles.previewChip}>⚖️ {t('measurements.symmetryChip', 'SYMMETRY')}</Text>
+                  <Text style={styles.previewChip}>📐 {t('measurements.ratiosChip', 'RATIOS')}</Text>
                 </View>
-                <Text style={styles.previewSub}>{whr != null ? `WHR ${whr} · ${rates.length} rates` : 'Log more to unlock'}</Text>
+                <Text style={styles.previewSub}>{whr != null ? t('measurements.insightsSubWhr', 'WHR {{whr}} · {{count}} rates', { whr, count: rates.length }) : t('measurements.insightsSubLocked', 'Log more to unlock')}</Text>
               </TouchableOpacity>
             </View>
 
             {!latest ? (
               <View style={styles.empty}>
                 <Ionicons name="body-outline" size={52} color={colors.textDim} />
-                <Text style={styles.emptyTitle}>No measurements yet</Text>
-                <Text style={styles.emptySub}>Tap "Log" to record your first measurements</Text>
+                <Text style={styles.emptyTitle}>{t('measurements.emptyTitle', 'No measurements yet')}</Text>
+                <Text style={styles.emptySub}>{t('measurements.emptySub', 'Tap "Log" to record your first measurements')}</Text>
               </View>
             ) : (
               <>
@@ -417,7 +429,7 @@ export default function MeasurementsScreen({ navigation }) {
             {/* Body Map */}
             <View style={styles.card}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardTitleCaps}>📐 BODY MAP</Text>
+                <Text style={styles.cardTitleCaps}>📐 {t('measurements.bodyMapTitle', 'BODY MAP')}</Text>
                 {whr != null && (
                   <View style={styles.whrBadge}>
                     <Text style={styles.whrBadgeText}>WHR {whr}</Text>
@@ -433,7 +445,7 @@ export default function MeasurementsScreen({ navigation }) {
                     return (
                       <View key={s.key} style={styles.bodyMapItem}>
                         <View style={[styles.bodyMapDot, { backgroundColor: color }]} />
-                        <Text style={styles.bodyMapLabel}>{s.label}</Text>
+                        <Text style={styles.bodyMapLabel}>{siteLabel(t, s)}</Text>
                         <Text style={styles.bodyMapValue}>
                           {fmt(latest[s.key])}
                           {diff != null && Math.abs(diff) >= 0.05 && (
@@ -448,7 +460,7 @@ export default function MeasurementsScreen({ navigation }) {
               </View>
               {previous && (
                 <View style={styles.sinceRow}>
-                  <Text style={styles.sinceLabel}>Since {fmtDate(logs[logs.length - 1].logged_at)} ({daysBetween(logs[logs.length - 1].logged_at, latest.logged_at)}d):</Text>
+                  <Text style={styles.sinceLabel}>{t('measurements.sinceLabel', 'Since {{date}} ({{days}}d):', { date: fmtDate(logs[logs.length - 1].logged_at), days: daysBetween(logs[logs.length - 1].logged_at, latest.logged_at) })}</Text>
                   <View style={styles.sinceChips}>
                     {['waist', 'chest'].map(k => {
                       const first = logs[logs.length - 1][k];
@@ -457,7 +469,7 @@ export default function MeasurementsScreen({ navigation }) {
                       const color = trendColor(diff, SITE_BY_KEY[k].dir, colors);
                       return (
                         <View key={k} style={[styles.sinceChip, { borderColor: color }]}>
-                          <Text style={[styles.sinceChipText, { color }]}>{SITE_BY_KEY[k].label} {diff > 0 ? '+' : ''}{diff}cm</Text>
+                          <Text style={[styles.sinceChipText, { color }]}>{siteLabel(t, SITE_BY_KEY[k])} {diff > 0 ? '+' : ''}{diff}cm</Text>
                         </View>
                       );
                     })}
@@ -468,7 +480,7 @@ export default function MeasurementsScreen({ navigation }) {
 
             {/* Progress Chart */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Progress Chart</Text>
+              <Text style={styles.cardTitle}>{t('measurements.progressChartTitle', 'Progress Chart')}</Text>
               <View style={styles.tabRow}>
                 {PROGRESS_SITES.map(key => (
                   <TouchableOpacity
@@ -476,22 +488,22 @@ export default function MeasurementsScreen({ navigation }) {
                     style={[styles.tabBtn, progressSite === key && styles.tabBtnActive]}
                     onPress={() => setProgressSite(key)}
                   >
-                    <Text style={[styles.tabBtnText, progressSite === key && styles.tabBtnTextActive]}>{SITE_BY_KEY[key].label}</Text>
+                    <Text style={[styles.tabBtnText, progressSite === key && styles.tabBtnTextActive]}>{siteLabel(t, SITE_BY_KEY[key])}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              <ProgressChart logsAsc={logsAsc} site={progressSite} colors={colors} width={328} dir={SITE_BY_KEY[progressSite].dir} />
+              <ProgressChart logsAsc={logsAsc} site={progressSite} colors={colors} width={328} dir={SITE_BY_KEY[progressSite].dir} t={t} />
             </View>
 
             {/* Compare Entries */}
             <TouchableOpacity style={styles.compareBtn} activeOpacity={0.85} onPress={() => { setCompareOldIdx(Math.min(1, logs.length - 1)); setCompareNewIdx(0); setShowCompare(true); }}>
               <Ionicons name="swap-horizontal" size={16} color={colors.accent} />
-              <Text style={styles.compareBtnText}>Compare Entries</Text>
+              <Text style={styles.compareBtnText}>{t('measurements.compareEntriesBtn', 'Compare Entries')}</Text>
             </TouchableOpacity>
 
             {/* History */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>History</Text>
+              <Text style={styles.cardTitle}>{t('measurements.historyTitle', 'History')}</Text>
               {logs.map((log) => (
                 <View key={log.id} style={styles.historyItem}>
                   <View style={styles.historyLeft}>
@@ -501,15 +513,15 @@ export default function MeasurementsScreen({ navigation }) {
                     <View style={styles.historyValues}>
                       {SITES.filter(s => log[s.key] != null).map(site => (
                         <Text key={site.key} style={styles.historyValue}>
-                          {site.label}: <Text style={styles.historyValueNum}>{fmt(log[site.key])}</Text>
+                          {siteLabel(t, site)}: <Text style={styles.historyValueNum}>{fmt(log[site.key])}</Text>
                         </Text>
                       ))}
                     </View>
                   </View>
                   <TouchableOpacity
-                    onPress={() => Alert.alert('Delete', 'Remove this measurement entry?', [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Delete', style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                    onPress={() => Alert.alert(t('measurements.deleteAlertTitle', 'Delete'), t('measurements.deleteAlertMessage', 'Remove this measurement entry?'), [
+                      { text: t('measurements.cancelBtn', 'Cancel'), style: 'cancel' },
+                      { text: t('measurements.deleteBtn', 'Delete'), style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
                     ])}
                     style={styles.deleteBtn}
                   >
@@ -532,15 +544,15 @@ export default function MeasurementsScreen({ navigation }) {
       {/* Log Modal */}
       <BottomSheet visible={showModal} onClose={() => setShowModal(false)} style={styles.sheet}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Log Measurements</Text>
+          <Text style={styles.sheetTitle}>{t('measurements.logModalTitle', 'Log Measurements')}</Text>
           <TouchableOpacity onPress={() => setShowModal(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
-        <Text style={styles.sheetSub}>Enter values in centimetres (cm)</Text>
+        <Text style={styles.sheetSub}>{t('measurements.logModalSub', 'Enter values in centimetres (cm)')}</Text>
         <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled">
           <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>Date</Text>
+            <Text style={styles.fieldLabel}>{t('measurements.dateLabel', 'Date')}</Text>
             <DatePickerField
               value={logDate}
               onChange={setLogDate}
@@ -551,10 +563,10 @@ export default function MeasurementsScreen({ navigation }) {
           </View>
           {SITES.map(site => (
             <View key={site.key} style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>{site.label}</Text>
+              <Text style={styles.fieldLabel}>{siteLabel(t, site)}</Text>
               <TextInput
                 style={styles.fieldInput}
-                placeholder="cm"
+                placeholder={t('measurements.cmPlaceholder', 'cm')}
                 placeholderTextColor={colors.textDim}
                 value={form[site.key] ?? ''}
                 onChangeText={v => setForm(p => ({ ...p, [site.key]: v }))}
@@ -565,12 +577,12 @@ export default function MeasurementsScreen({ navigation }) {
         </ScrollView>
         <View style={styles.sheetBtns}>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
+            <Text style={styles.cancelBtnText}>{t('measurements.cancelBtn', 'Cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={logMut.isPending}>
             {logMut.isPending
               ? <ActivityIndicator color={colors.bg} />
-              : <Text style={styles.saveBtnText}>Save</Text>
+              : <Text style={styles.saveBtnText}>{t('measurements.saveBtn', 'Save')}</Text>
             }
           </TouchableOpacity>
         </View>
@@ -579,19 +591,19 @@ export default function MeasurementsScreen({ navigation }) {
       {/* Analytics Modal */}
       <BottomSheet visible={showAnalytics} onClose={() => setShowAnalytics(false)} style={styles.sheet}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>📊 Analytics</Text>
+          <Text style={styles.sheetTitle}>📊 {t('measurements.analyticsTitle', 'Analytics')}</Text>
           <TouchableOpacity onPress={() => setShowAnalytics(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
         <ScrollView style={styles.sheetScrollTall} showsVerticalScrollIndicator={false}>
           <View style={[styles.subCard, { borderColor: colors.accent + '55' }]}>
-            <Text style={styles.subCardTitleCaps}>🏆 PERSONAL BESTS</Text>
+            <Text style={styles.subCardTitleCaps}>🏆 {t('measurements.personalBestsTitle', 'PERSONAL BESTS')}</Text>
             <View style={styles.pbGrid}>
               {personalBests.map(s => (
                 <View key={s.key} style={styles.pbCell}>
                   <Text style={styles.pbValue}>{fmt(s.pb.value)}cm</Text>
-                  <Text style={styles.pbLabel}>{s.label.toUpperCase()}</Text>
+                  <Text style={styles.pbLabel}>{siteLabel(t, s).toUpperCase()}</Text>
                   <Text style={styles.pbDate}>{fmtDate(s.pb.date)}</Text>
                 </View>
               ))}
@@ -599,20 +611,20 @@ export default function MeasurementsScreen({ navigation }) {
           </View>
 
           <View style={styles.subCard}>
-            <Text style={styles.subCardTitleCaps}>⚕️ HEALTH METRICS</Text>
+            <Text style={styles.subCardTitleCaps}>⚕️ {t('measurements.healthMetricsTitle', 'HEALTH METRICS')}</Text>
             {bmiData ? (
               <View style={styles.bmiBox}>
                 <Text style={[styles.bmiValue, { color: colors[bmiData.color] }]}>{bmiData.value}</Text>
-                <Text style={styles.bmiLabel}>BMI</Text>
+                <Text style={styles.bmiLabel}>{t('measurements.bmiLabel', 'BMI')}</Text>
                 <View style={[styles.bmiPill, { backgroundColor: colors[bmiData.color] + '22' }]}>
-                  <Text style={[styles.bmiPillText, { color: colors[bmiData.color] }]}>{bmiData.category}</Text>
+                  <Text style={[styles.bmiPillText, { color: colors[bmiData.color] }]}>{bmiCategoryLabel(t, bmiData.categoryKey)}</Text>
                 </View>
                 <View style={styles.bmiBar}>
                   <View style={[styles.bmiBarFill, { width: `${bmiData.score}%`, backgroundColor: colors[bmiData.color] }]} />
                 </View>
               </View>
             ) : (
-              <Text style={styles.muted}>Log your weight and height to see BMI</Text>
+              <Text style={styles.muted}>{t('measurements.bmiUnlockHint', 'Log your weight and height to see BMI')}</Text>
             )}
           </View>
 
@@ -620,16 +632,16 @@ export default function MeasurementsScreen({ navigation }) {
             <View style={styles.scoreHeaderRow}>
               <CircularGauge percent={bodyScore ?? 0} size={64} strokeWidth={6} color={colors.accent} bgColor={colors.border} value={bodyScore ?? '--'} label="/100" valueStyle={{ color: colors.text }} labelStyle={{ color: colors.textMuted }} />
               <View style={styles.scoreTextCol}>
-                <Text style={styles.subCardTitleCaps}>🥇 BODY SCORE</Text>
+                <Text style={styles.subCardTitleCaps}>🥇 {t('measurements.bodyScoreTitle', 'BODY SCORE')}</Text>
                 <Text style={[styles.scoreLabel, { color: colors.accent }]}>{bodyScoreLabel}</Text>
                 <Text style={styles.scoreSub}>{bodyScoreSub}</Text>
               </View>
             </View>
             {[
-              { label: 'BMI', score: bmiData?.score, color: colors.blue },
-              { label: 'WHR', score: whrScore, color: colors.pink },
-              { label: 'Waist:Height', score: waistHeightScore, color: colors.accent },
-              { label: 'Consistency', score: consistencyScore, color: colors.good },
+              { label: t('measurements.bmiLabel', 'BMI'), score: bmiData?.score, color: colors.blue },
+              { label: t('measurements.whrLabel', 'WHR'), score: whrScore, color: colors.pink },
+              { label: t('measurements.waistHeightLabel', 'Waist:Height'), score: waistHeightScore, color: colors.accent },
+              { label: t('measurements.consistencyLabel', 'Consistency'), score: consistencyScore, color: colors.good },
             ].filter(b => b.score != null).map(b => (
               <View key={b.label} style={styles.scoreBarRow}>
                 <Text style={styles.scoreBarLabel}>{b.label}</Text>
@@ -646,14 +658,14 @@ export default function MeasurementsScreen({ navigation }) {
       {/* Insights Modal */}
       <BottomSheet visible={showInsights} onClose={() => setShowInsights(false)} style={styles.sheet}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>🔬 Insights</Text>
+          <Text style={styles.sheetTitle}>🔬 {t('measurements.insightsTitle', 'Insights')}</Text>
           <TouchableOpacity onPress={() => setShowInsights(false)}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
         <ScrollView style={styles.sheetScrollTall} showsVerticalScrollIndicator={false}>
           <View style={styles.subCard}>
-            <Text style={styles.subCardTitleCaps}>⚖️ SYMMETRY TRACKER</Text>
+            <Text style={styles.subCardTitleCaps}>⚖️ {t('measurements.symmetryTrackerTitle', 'SYMMETRY TRACKER')}</Text>
             {SYMMETRY_PAIRS.map(pair => {
               const lv = latest?.[pair.l];
               const rv = latest?.[pair.r];
@@ -663,7 +675,7 @@ export default function MeasurementsScreen({ navigation }) {
               return (
                 <View key={pair.label} style={styles.symRow}>
                   <Ionicons name={pair.icon} size={15} color={colors.accent} style={{ width: 20 }} />
-                  <Text style={styles.symLabel}>{pair.label}</Text>
+                  <Text style={styles.symLabel}>{pairLabel(t, pair)}</Text>
                   <Text style={styles.symValues}>{fmt(lv)} / {fmt(rv)} cm</Text>
                   <View style={styles.symTrack}>
                     <View style={[styles.symMarker, { left: `${50 + Math.max(-40, Math.min(40, diff * 10))}%`, backgroundColor: balanced ? colors.good : colors.warn }]} />
@@ -677,37 +689,37 @@ export default function MeasurementsScreen({ navigation }) {
           </View>
 
           <View style={styles.subCard}>
-            <Text style={styles.subCardTitleCaps}>📐 PHYSIQUE RATIOS</Text>
+            <Text style={styles.subCardTitleCaps}>📐 {t('measurements.physiqueRatiosTitle', 'PHYSIQUE RATIOS')}</Text>
             {whr != null && (
-              <RatioRow icon="infinite-outline" label="Waist-to-Hip (WHR)" sub={`< ${whrThreshold} threshold`} value={whr} good={whr <= whrThreshold} colors={colors} />
+              <RatioRow icon="infinite-outline" label={t('measurements.whrRatioLabel', 'Waist-to-Hip (WHR)')} sub={t('measurements.whrThresholdSub', '< {{threshold}} threshold', { threshold: whrThreshold })} value={whr} good={whr <= whrThreshold} colors={colors} goodLabel={t('measurements.ratioGoodLabel', 'Healthy')} badLabel={t('measurements.ratioBadLabel', 'Watch')} />
             )}
             {waistToHeight != null && (
-              <RatioRow icon="resize-outline" label="Waist-to-Height" sub="< 0.50 (universal)" value={waistToHeight} good={waistToHeight <= 0.5} colors={colors} />
+              <RatioRow icon="resize-outline" label={t('measurements.waistHeightRatioLabel', 'Waist-to-Height')} sub={t('measurements.waistHeightSub', '< 0.50 (universal)')} value={waistToHeight} good={waistToHeight <= 0.5} colors={colors} goodLabel={t('measurements.ratioGoodLabel', 'Healthy')} badLabel={t('measurements.ratioBadLabel', 'Watch')} />
             )}
             {chestToWaist != null && (
-              <RatioRow icon="barbell-outline" label="Chest-to-Waist" sub="≥ 1.35 (athletic V-taper)" value={chestToWaist} good={chestToWaist >= 1.35} colors={colors} goodLabel="Athletic" badLabel="Room to grow" />
+              <RatioRow icon="barbell-outline" label={t('measurements.chestWaistRatioLabel', 'Chest-to-Waist')} sub={t('measurements.chestWaistSub', '≥ 1.35 (athletic V-taper)')} value={chestToWaist} good={chestToWaist >= 1.35} colors={colors} goodLabel={t('measurements.athleticLabel', 'Athletic')} badLabel={t('measurements.roomToGrowLabel', 'Room to grow')} />
             )}
             {whr == null && waistToHeight == null && chestToWaist == null && (
-              <Text style={styles.muted}>Log waist, hips and chest together to see ratios</Text>
+              <Text style={styles.muted}>{t('measurements.ratiosUnlockHint', 'Log waist, hips and chest together to see ratios')}</Text>
             )}
           </View>
 
           <View style={styles.subCard}>
-            <Text style={styles.subCardTitleCaps}>📈 RATE OF CHANGE</Text>
+            <Text style={styles.subCardTitleCaps}>📈 {t('measurements.rateOfChangeTitle', 'RATE OF CHANGE')}</Text>
             {rates.map(s => (
               <View key={s.key} style={styles.rateRow}>
                 <Ionicons name={s.icon} size={15} color={colors.accent} style={{ width: 20 }} />
-                <Text style={styles.rateLabel}>{s.label}</Text>
+                <Text style={styles.rateLabel}>{siteLabel(t, s)}</Text>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={[styles.rateVal, { color: trendColor(s.rate.perWeek, s.dir, colors) }]}>
                     {s.rate.perWeek > 0 ? '+' : ''}{s.rate.perWeek}cm/wk
                   </Text>
-                  <Text style={styles.rateSub}>{s.rate.logs} logs · {s.rate.days}d</Text>
+                  <Text style={styles.rateSub}>{t('measurements.rateSubInfo', '{{logs}} logs · {{days}}d', { logs: s.rate.logs, days: s.rate.days })}</Text>
                 </View>
               </View>
             ))}
-            {rates.length === 0 && <Text style={styles.muted}>Log the same site twice to see rate of change</Text>}
-            {rates.length > 0 && <Text style={styles.footnote}>Avg per week, based on first vs latest log per site</Text>}
+            {rates.length === 0 && <Text style={styles.muted}>{t('measurements.rateUnlockHint', 'Log the same site twice to see rate of change')}</Text>}
+            {rates.length > 0 && <Text style={styles.footnote}>{t('measurements.rateFootnote', 'Avg per week, based on first vs latest log per site')}</Text>}
           </View>
         </ScrollView>
       </BottomSheet>
@@ -715,14 +727,14 @@ export default function MeasurementsScreen({ navigation }) {
       {/* Compare Entries Modal */}
       <BottomSheet visible={showCompare} onClose={() => { setShowCompare(false); setOpenPicker(null); }} style={styles.sheet}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Compare Entries</Text>
+          <Text style={styles.sheetTitle}>{t('measurements.compareEntriesBtn', 'Compare Entries')}</Text>
           <TouchableOpacity onPress={() => { setShowCompare(false); setOpenPicker(null); }}>
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
         <View style={styles.compareSelectRow}>
           <View style={styles.compareSelectCol}>
-            <Text style={styles.compareSelectLabel}>OLDER</Text>
+            <Text style={styles.compareSelectLabel}>{t('measurements.olderLabel', 'OLDER')}</Text>
             <TouchableOpacity style={styles.compareSelectBtn} onPress={() => setOpenPicker(openPicker === 'OLD' ? null : 'OLD')}>
               <Text style={styles.compareSelectBtnText}>{entryOld ? fmtDate(entryOld.logged_at) : '--'}</Text>
               <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
@@ -730,7 +742,7 @@ export default function MeasurementsScreen({ navigation }) {
           </View>
           <Ionicons name="arrow-forward" size={16} color={colors.textDim} style={{ marginTop: 22 }} />
           <View style={styles.compareSelectCol}>
-            <Text style={styles.compareSelectLabel}>NEWER</Text>
+            <Text style={styles.compareSelectLabel}>{t('measurements.newerLabel', 'NEWER')}</Text>
             <TouchableOpacity style={styles.compareSelectBtn} onPress={() => setOpenPicker(openPicker === 'NEW' ? null : 'NEW')}>
               <Text style={styles.compareSelectBtnText}>{entryNew ? fmtDate(entryNew.logged_at) : '--'}</Text>
               <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
@@ -746,13 +758,13 @@ export default function MeasurementsScreen({ navigation }) {
                 onPress={() => {
                   if (openPicker === 'OLD') {
                     if (new Date(l.logged_at) >= new Date(entryNew.logged_at)) {
-                      Alert.alert('Invalid selection', 'The older entry must be before the newer entry. Please reselect.');
+                      Alert.alert(t('measurements.invalidSelectionTitle', 'Invalid selection'), t('measurements.invalidOlderMessage', 'The older entry must be before the newer entry. Please reselect.'));
                       return;
                     }
                     setCompareOldIdx(idx);
                   } else {
                     if (new Date(l.logged_at) <= new Date(entryOld.logged_at)) {
-                      Alert.alert('Invalid selection', 'The newer entry must be after the older entry. Please reselect.');
+                      Alert.alert(t('measurements.invalidSelectionTitle', 'Invalid selection'), t('measurements.invalidNewerMessage', 'The newer entry must be after the older entry. Please reselect.'));
                       return;
                     }
                     setCompareNewIdx(idx);
@@ -768,8 +780,8 @@ export default function MeasurementsScreen({ navigation }) {
         {entryOld && entryNew && (
           <ScrollView style={styles.sheetScrollTall}>
             <View style={styles.compareHeaderRow}>
-              <Text style={styles.compareHeaderCell}>Old · {fmtDate(entryOld.logged_at)}</Text>
-              <Text style={styles.compareHeaderCell}>New · {fmtDate(entryNew.logged_at)}</Text>
+              <Text style={styles.compareHeaderCell}>{t('measurements.oldHeader', 'Old · {{date}}', { date: fmtDate(entryOld.logged_at) })}</Text>
+              <Text style={styles.compareHeaderCell}>{t('measurements.newHeader', 'New · {{date}}', { date: fmtDate(entryNew.logged_at) })}</Text>
             </View>
             {SITES.filter(s => entryOld[s.key] != null || entryNew[s.key] != null).map(s => {
               const ov = entryOld[s.key];
@@ -779,13 +791,13 @@ export default function MeasurementsScreen({ navigation }) {
               const color = trendColor(diff, s.dir, colors);
               return (
                 <View key={s.key} style={styles.compareRow}>
-                  <Text style={styles.compareLabel}>{s.label}</Text>
+                  <Text style={styles.compareLabel}>{siteLabel(t, s)}</Text>
                   <Text style={styles.compareVal}>{fmt(ov)}cm</Text>
                   <Text style={styles.compareVal}>{fmt(nv)}cm</Text>
                   {diff === null ? (
                     <Text style={styles.compareDiffMuted}>--</Text>
                   ) : balanced ? (
-                    <View style={styles.compareDiffChip}><Text style={styles.compareDiffMuted}>= same</Text></View>
+                    <View style={styles.compareDiffChip}><Text style={styles.compareDiffMuted}>{t('measurements.sameLabel', '= same')}</Text></View>
                   ) : (
                     <View style={[styles.compareDiffChip, { backgroundColor: color + '22' }]}>
                       <Ionicons name={diff > 0 ? 'arrow-up' : 'arrow-down'} size={11} color={color} />
