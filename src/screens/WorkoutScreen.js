@@ -2744,10 +2744,10 @@ export default function WorkoutScreen() {
               ) : (
                 <TouchableOpacity activeOpacity={0.85} onPress={() => setShowInsightsPaywall(true)}>
                   <View style={s.insightsList}>
-                    {['📈', '🔥', '📅'].map((icon, i) => (
+                    {[['📈', 0.92], ['🔥', 0.68], ['📅', 0.8]].map(([icon, w], i) => (
                       <View key={i} style={s.insightRow}>
                         <Text style={s.insightIcon}>{icon}</Text>
-                        <Text style={s.insightText}>●● ●●</Text>
+                        <View style={[s.skeletonBar, { width: `${w * 100}%` }]} />
                       </View>
                     ))}
                   </View>
@@ -3215,6 +3215,7 @@ const createS = (colors) => StyleSheet.create({
   insightRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   insightIcon: { fontSize: 14, marginTop: 1 },
   insightText: { flex: 1, fontSize: 12.5, color: colors.textMuted, lineHeight: 18 },
+  skeletonBar: { flex: 0, height: 12, marginTop: 3, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)' },
   insightBold: { fontWeight: weight.bold, color: colors.text },
 
   appHeader: {

@@ -722,7 +722,7 @@ export default function SleepScreen() {
                     {insights.map((ins, i) => (
                       <View key={i} style={styles.insightRow}>
                         <Text style={styles.insightIcon}>{ins.icon}</Text>
-                        <Text style={styles.insightText}>●● ●●</Text>
+                        <View style={[styles.skeletonBar, { width: `${[92, 68, 80, 75][i % 4]}%` }]} />
                       </View>
                     ))}
                     <Text style={styles.emptyText}>🔒 Unlock personalized sleep insights with Pro.</Text>
@@ -1026,6 +1026,7 @@ const createStyles = (colors) => StyleSheet.create({
   insightRow: { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'flex-start' },
   insightIcon: { fontSize: 16 },
   insightText: { flex: 1, fontSize: typography.sm, color: colors.textMuted, lineHeight: 19 },
+  skeletonBar: { flex: 0, height: 13, marginTop: 3, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)' },
   insightBold: { color: colors.text, fontWeight: weight.bold },
 
   fab: {
