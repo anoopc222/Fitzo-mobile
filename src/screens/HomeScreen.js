@@ -1266,7 +1266,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       {/* ── App Header ─────────────────────────────────────────── */}
-      <ScreenHeader title="HOME" colors={colors} />
+      <ScreenHeader title={t('home.homeTitle')} colors={colors} />
 
       <ScrollView
         style={styles.scroll}

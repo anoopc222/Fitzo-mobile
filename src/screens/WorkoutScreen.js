@@ -692,16 +692,17 @@ function getPrevSetSummary(allSessions, exerciseName, beforeDate) {
   return null;
 }
 
-function suggestProgressiveOverload(prev) {
+function suggestProgressiveOverload(prev, t) {
+  const tr = t ?? ((k, opts) => opts?.defaultValue ?? k);
   if (!prev || !prev.weight) return null;
   const rpe = parseFloat(prev.rpe);
   if (!isNaN(rpe) && rpe >= 9) {
-    return { weight: prev.weight, reps: prev.reps, note: 'last RPE was high — hold steady' };
+    return { weight: prev.weight, reps: prev.reps, note: tr('workout.lastRpeWasHighHoldSteady') };
   }
   if ((prev.reps ?? 0) >= 10) {
-    return { weight: Math.round((prev.weight + 5) / 5) * 5, reps: Math.max(6, prev.reps - 2), note: 'increase weight' };
+    return { weight: Math.round((prev.weight + 5) / 5) * 5, reps: Math.max(6, prev.reps - 2), note: tr('workout.increaseWeight') };
   }
-  return { weight: prev.weight, reps: (prev.reps ?? 0) + 1, note: 'add a rep' };
+  return { weight: prev.weight, reps: (prev.reps ?? 0) + 1, note: tr('workout.addARep') };
 }
 
 const WARMUP_PCTS = [0.4, 0.6, 0.8];
@@ -870,12 +871,13 @@ function detectOvertraining(sessions) {
   return { muscle: hitMuscle, days: streak };
 }
 
-function suggestAutoReg(prevSetInSession) {
+function suggestAutoReg(prevSetInSession, t) {
+  const tr = t ?? ((k, opts) => opts?.defaultValue ?? k);
   const rpe = parseFloat(prevSetInSession?.rpe);
   const w = parseFloat(prevSetInSession?.weight_kg);
   if (isNaN(rpe) || isNaN(w) || !w) return null;
-  if (rpe >= 9) return { weight: Math.round(w * 0.95 / 5) * 5, note: 'RPE was high last set — ease off' };
-  if (rpe <= 6) return { weight: Math.round(w * 1.05 / 5) * 5, note: 'RPE was low last set — push more' };
+  if (rpe >= 9) return { weight: Math.round(w * 0.95 / 5) * 5, note: tr('workout.rpeWasHighLastSetEaseOff') };
+  if (rpe <= 6) return { weight: Math.round(w * 1.05 / 5) * 5, note: tr('workout.rpeWasLowLastSetPushMore') };
   return null;
 }
 
@@ -1800,7 +1802,7 @@ function EditSessionModal({
                         {!isCardio && !!ex.name.trim() && (() => {
                           const prev = getPrevSetSummary(allSessions, ex.name, date || undefined);
                           if (!prev) return null;
-                          const suggestion = suggestProgressiveOverload(prev);
+                          const suggestion = suggestProgressiveOverload(prev, t);
                           const warmups = getWarmupSets(suggestion?.weight ?? prev.weight);
                           return (
                             <View style={eS.prevPerfBox}>
@@ -1914,7 +1916,7 @@ function EditSessionModal({
                         ) : (
                           (ex.sets ?? []).map((s, sIdx) => {
                             const plates = calcPlates(parseFloat(s.weight_kg));
-                            const autoReg = hasAccess && sIdx > 0 ? suggestAutoReg(ex.sets[sIdx - 1]) : null;
+                            const autoReg = hasAccess && sIdx > 0 ? suggestAutoReg(ex.sets[sIdx - 1], t) : null;
                             const pr = getSetPR(ex.name, s.weight_kg, s.reps);
                             const oneRM = hasAccess ? estimate1RM(s.weight_kg, s.reps) : null;
                             return (
