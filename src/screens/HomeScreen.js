@@ -1301,11 +1301,13 @@ export default function HomeScreen() {
               <View style={styles.profileInfo}>
                 <Text style={styles.greeting}>{getGreeting()} ⚡</Text>
                 <Text style={styles.profileName}>{displayName}</Text>
-                <TouchableOpacity style={styles.motivRow} onPress={() => setShowStreak(true)} activeOpacity={0.7}>
-                  <Ionicons name="walk" size={12} color={colors.accent} />
-                  <Text style={styles.motivText}>{data?.motivText}</Text>
-                </TouchableOpacity>
-                <StreakFreezeControl userId={user.id} home={data} />
+                <View style={styles.motivLine}>
+                  <TouchableOpacity style={styles.motivRow} onPress={() => setShowStreak(true)} activeOpacity={0.7}>
+                    <Ionicons name="walk" size={12} color={colors.accent} />
+                    <Text style={styles.motivText}>{data?.motivText}</Text>
+                  </TouchableOpacity>
+                  <StreakFreezeControl userId={user.id} home={data} />
+                </View>
                 <LevelBadge home={data} />
               </View>
             </View>
@@ -1448,6 +1450,46 @@ export default function HomeScreen() {
                 <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
               </TouchableOpacity>
             )}
+
+            {/* ── Weekly Recap (share-able summary) ───────────────── */}
+            <View style={{ position: 'relative' }}>
+              <View style={styles.recapCard}>
+                <Text style={styles.recapTitle}>This week's recap</Text>
+                <Text style={styles.recapLine}>
+                  🔥 {data?.streak ?? 0}-day streak · 🏋️ {thisWeekSessions}/{weeklyGoal} workouts · 👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={recapExport.onExportPress}
+                disabled={recapExport.exporting}
+                style={styles.cardExportBtn}
+              >
+                {recapExport.exporting ? (
+                  <ActivityIndicator size="small" color={colors.textMuted ?? colors.textDim} />
+                ) : (
+                  <Ionicons name="share-outline" size={13} color={colors.textMuted ?? colors.textDim} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
+              <ExportCardTemplate ref={recapExport.ref} title="Weekly Recap" colors={colors} width={340}>
+                <View style={{ gap: 10 }}>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    🔥 {data?.streak ?? 0}-day streak
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    🏋️ {thisWeekSessions}/{weeklyGoal} workouts this week
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    🏆 Level {computeLevel(computeXP(data)).level}
+                  </Text>
+                </View>
+              </ExportCardTemplate>
+            </View>
 
             {/* ── Pro Insights Hub (consolidated) ─────────────────── */}
             <View style={styles.insightsHubCard}>
@@ -1932,46 +1974,6 @@ export default function HomeScreen() {
                 </>
               )}
             </View>
-
-            {/* ── Weekly Recap (share-able summary) ───────────────── */}
-            <View style={{ position: 'relative' }}>
-              <View style={styles.recapCard}>
-                <Text style={styles.recapTitle}>This week's recap</Text>
-                <Text style={styles.recapLine}>
-                  🔥 {data?.streak ?? 0}-day streak · 🏋️ {thisWeekSessions}/{weeklyGoal} workouts · 👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={recapExport.onExportPress}
-                disabled={recapExport.exporting}
-                style={styles.cardExportBtn}
-              >
-                {recapExport.exporting ? (
-                  <ActivityIndicator size="small" color={colors.textMuted ?? colors.textDim} />
-                ) : (
-                  <Ionicons name="share-outline" size={13} color={colors.textMuted ?? colors.textDim} />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
-              <ExportCardTemplate ref={recapExport.ref} title="Weekly Recap" colors={colors} width={340}>
-                <View style={{ gap: 10 }}>
-                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    🔥 {data?.streak ?? 0}-day streak
-                  </Text>
-                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    🏋️ {thisWeekSessions}/{weeklyGoal} workouts this week
-                  </Text>
-                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    👟 {data?.thisWeek?.goalDays ?? 0}/7 step-goal days
-                  </Text>
-                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
-                    🏆 Level {computeLevel(computeXP(data)).level}
-                  </Text>
-                </View>
-              </ExportCardTemplate>
-            </View>
           </>
         )}
       </ScrollView>
@@ -2121,7 +2123,8 @@ const createStyles = (colors) => StyleSheet.create({
   profileInfo: { flex: 1 },
   greeting: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.bodySemibold, letterSpacing: 0.8, marginBottom: 2, textTransform: 'uppercase' },
   profileName: { fontSize: 22, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.text, lineHeight: 26, letterSpacing: -0.5 },
-  motivRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  motivLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  motivRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
   motivText: { fontSize: 11, color: colors.accent, fontFamily: fontFamily.bodySemibold, textDecorationLine: 'underline' },
   proBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
