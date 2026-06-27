@@ -1105,7 +1105,7 @@ export default function WeightScreen() {
                     {['📈', '📅', '⚡'].map((icon, i) => (
                       <View key={i} style={styles.insightRow}>
                         <Text style={styles.insightIcon}>{icon}</Text>
-                        <Text style={styles.insightText}>●●●●●●●●●● ●●●●●●● ●●●●●●●●●●●●●●●●●●●●●●●●●●●</Text>
+                        <Text style={styles.insightText}>●● ●●</Text>
                       </View>
                     ))}
                   </View>

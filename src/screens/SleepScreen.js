@@ -722,7 +722,7 @@ export default function SleepScreen() {
                     {insights.map((ins, i) => (
                       <View key={i} style={styles.insightRow}>
                         <Text style={styles.insightIcon}>{ins.icon}</Text>
-                        <Text style={styles.insightText}>●●●●●●●●●● ●●●●●●● ●●●●●●●●●●●●●●●●●●●●●●●●●●●</Text>
+                        <Text style={styles.insightText}>●● ●●</Text>
                       </View>
                     ))}
                     <Text style={styles.emptyText}>🔒 Unlock personalized sleep insights with Pro.</Text>

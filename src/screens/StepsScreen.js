@@ -977,7 +977,7 @@ export default function StepsScreen() {
                     {['📈', '😴', '🌍'].map((icon, i) => (
                       <View key={i} style={styles.tipRow}>
                         <Text style={styles.tipEmoji}>{icon}</Text>
-                        <Text style={styles.tipText}>●●●●●●●●●● ●●●●●●● ●●●●●●●●●●●●●●●●●●●●●●●●●●●</Text>
+                        <Text style={styles.tipText}>●● ●●</Text>
                       </View>
                     ))}
                   </View>
