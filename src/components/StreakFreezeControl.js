@@ -75,7 +75,7 @@ const createStyles = (colors) => StyleSheet.create({
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10,
-    backgroundColor: colors.surface, alignSelf: 'flex-start', marginTop: 6,
+    backgroundColor: colors.surface, alignSelf: 'flex-start', marginLeft: 8,
   },
   pillIcon: { fontSize: 12 },
   pillText: { fontSize: typography.xs, fontFamily: fontFamily.bodySemibold, color: colors.textMuted },
