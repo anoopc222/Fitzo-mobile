@@ -1314,6 +1314,23 @@ export default function HomeScreen() {
 
             <AchievementsRow home={data} />
 
+            {/* ── Go Pro banner ─────────────────────────────────── */}
+            {subReady && !isPro && (
+              <TouchableOpacity
+                style={styles.proBanner}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('Subscription')}
+              >
+                <Ionicons name="rocket" size={18} color={colors.accentText} />
+                <Text style={styles.proBannerText}>
+                  {isInTrial
+                    ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in trial — see Pro plans`
+                    : 'Unlock long-range trends, insights & more with Pro'}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
+              </TouchableOpacity>
+            )}
+
             {/* ── Insight Cards (auto-rotating) ──────────────────── */}
             <ScrollView
               ref={insightScrollRef}
@@ -1433,23 +1450,6 @@ export default function HomeScreen() {
             </View>
 
             <ChallengesCard home={data} />
-
-            {/* ── Go Pro banner ─────────────────────────────────── */}
-            {subReady && !isPro && (
-              <TouchableOpacity
-                style={styles.proBanner}
-                activeOpacity={0.85}
-                onPress={() => navigation.navigate('Subscription')}
-              >
-                <Ionicons name="rocket" size={18} color={colors.accentText} />
-                <Text style={styles.proBannerText}>
-                  {isInTrial
-                    ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in trial — see Pro plans`
-                    : 'Unlock long-range trends, insights & more with Pro'}
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
-              </TouchableOpacity>
-            )}
 
             {/* ── Weekly Recap (share-able summary) ───────────────── */}
             <View style={{ position: 'relative' }}>
