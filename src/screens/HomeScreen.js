@@ -290,8 +290,7 @@ async function fetchHome(userId) {
   const todayExCount  = todaySession?.workout_exercises?.length ?? 0;
   const todaySetCount = (todaySession?.workout_exercises ?? [])
     .reduce((s, ex) => s + (ex.sets?.length ?? 0), 0);
-  const todayWorkoutName = todaySession?.notes?.trim()
-    || (todaySession?.workout_exercises?.[0]?.exercise_name ? 'Workout' : 'Workout');
+  const todayWorkoutName = todaySession?.notes?.trim() || null;
 
   // Weekly / Monthly
   const thisWeekSessions = (thisWeekWorkouts.data ?? []).filter(s => classifySession(s.notes) === 'gym').length;
@@ -1313,7 +1312,7 @@ export default function HomeScreen() {
                 <View style={styles.motivLine}>
                   <TouchableOpacity style={styles.motivRow} onPress={() => setShowStreak(true)} activeOpacity={0.7}>
                     <Ionicons name="walk" size={12} color={colors.accent} />
-                    <Text style={styles.motivText}>{data?.motiv ? t(data.motiv.key, data.motiv.params) : ''}</Text>
+                    <Text style={styles.motivText}>{data?.motiv ? t(data.motiv.key, { ...data.motiv.params, workoutName: data.motiv.params?.workoutName ?? t('home.workout') }) : ''}</Text>
                   </TouchableOpacity>
                   <StreakFreezeControl userId={user.id} home={data} />
                 </View>
@@ -1427,7 +1426,7 @@ export default function HomeScreen() {
                 <View style={styles.overviewBody}>
                   <Text style={[styles.overviewLabel, { color: C_KCAL }]}>{t('home.todayKcalLabel')}</Text>
                   <Text style={styles.overviewSub}>
-                    {(data?.todayKcal ?? 0) === 0 ? t('home.notLoggedTapToLogFood') : t('home.kcalToday')}
+                    {(data?.todayKcal ?? 0) === 0 ? t('home.notLoggedTapToLogFood') : t('home.kcalToday', { value: data.todayKcal })}
                   </Text>
                 </View>
                 <View style={styles.overviewRight}>
@@ -1850,7 +1849,7 @@ export default function HomeScreen() {
               <View style={styles.banner}>
                 <Text style={styles.bannerEmoji}>✅</Text>
                 <View style={styles.bannerBody}>
-                  <Text style={styles.bannerTitle}>{t('home.workoutDoneToday', { workoutName: data.todayWorkoutName })}</Text>
+                  <Text style={styles.bannerTitle}>{t('home.workoutDoneToday', { workoutName: data.todayWorkoutName ?? t('home.workout') })}</Text>
                   <Text style={styles.bannerSub}>{t('home.exercisesSetsLogged', { exercises: data.todayExCount, sets: data.todaySetCount })}</Text>
                 </View>
                 <TouchableOpacity style={styles.viewBtn} onPress={() => navigation.navigate('Workout')}>

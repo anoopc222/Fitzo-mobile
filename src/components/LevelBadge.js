@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
 import { computeXP, computeXPBreakdown, computeLevel } from '../lib/levels';
 
 export default function LevelBadge({ home }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [showDetail, setShowDetail] = useState(false);
   const xp = useMemo(() => computeXP(home), [home]);
@@ -15,7 +17,7 @@ export default function LevelBadge({ home }) {
   return (
     <>
       <TouchableOpacity style={styles.wrap} onPress={() => setShowDetail(true)} activeOpacity={0.8}>
-        <Text style={styles.levelText}>LV {level.level} · {level.title.toUpperCase()}</Text>
+        <Text style={styles.levelText}>LV {level.level} · {t(level.titleKey).toUpperCase()}</Text>
         <View style={styles.track}>
           <View style={[styles.fill, { width: `${level.progressPct}%` }]} />
         </View>
@@ -25,17 +27,19 @@ export default function LevelBadge({ home }) {
       <Modal visible={showDetail} transparent animationType="fade" onRequestClose={() => setShowDetail(false)}>
         <Pressable style={styles.overlay} onPress={() => setShowDetail(false)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
-            <Text style={styles.sheetLevel}>Level {level.level}</Text>
-            <Text style={styles.sheetTitle}>{level.title}</Text>
+            <Text style={styles.sheetLevel}>{t('gamification.levelDetailTitle', { level: level.level })}</Text>
+            <Text style={styles.sheetTitle}>{t(level.titleKey)}</Text>
             <View style={styles.sheetTrack}>
               <View style={[styles.sheetFill, { width: `${level.progressPct}%` }]} />
             </View>
-            <Text style={styles.sheetXp}>{level.xpIntoLevel}/{level.xpForNextLevel} XP to Level {level.level + 1}</Text>
+            <Text style={styles.sheetXp}>
+              {t('gamification.xpToNextLevel', { xpIntoLevel: level.xpIntoLevel, xpForNextLevel: level.xpForNextLevel, nextLevel: level.level + 1 })}
+            </Text>
 
             <ScrollView style={styles.breakdownList}>
               {breakdown.map((b) => (
                 <View key={b.key} style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>{b.label}</Text>
+                  <Text style={styles.breakdownLabel}>{t(b.labelKey)}</Text>
                   <Text style={[styles.breakdownXp, { color: b.xp > 0 ? colors.accent : colors.textDim }]}>
                     +{b.xp} XP
                   </Text>
@@ -44,7 +48,7 @@ export default function LevelBadge({ home }) {
             </ScrollView>
 
             <TouchableOpacity style={styles.closeBtn} onPress={() => setShowDetail(false)}>
-              <Text style={styles.closeBtnText}>Got it</Text>
+              <Text style={styles.closeBtnText}>{t('gamification.gotIt')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>

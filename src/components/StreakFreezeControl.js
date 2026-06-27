@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Alert } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
 import { useFreezeForDate } from '../lib/streakFreeze';
@@ -16,6 +17,7 @@ function todayStr() {
 
 export default function StreakFreezeControl({ userId, home }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [showDetail, setShowDetail] = useState(false);
@@ -43,12 +45,9 @@ export default function StreakFreezeControl({ userId, home }) {
         <Pressable style={styles.overlay} onPress={() => setShowDetail(false)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <Text style={styles.sheetIcon}>🧊</Text>
-            <Text style={styles.sheetTitle}>Streak Freezes</Text>
-            <Text style={styles.sheetCount}>{freezesAvailable} available</Text>
-            <Text style={styles.sheetBody}>
-              You earn a freeze every 7-day streak milestone. Use one to cover a day you forgot
-              to log, so your streak keeps going instead of resetting to zero.
-            </Text>
+            <Text style={styles.sheetTitle}>{t('gamification.streakFreezesTitle')}</Text>
+            <Text style={styles.sheetCount}>{t('gamification.freezesAvailableCount', { count: freezesAvailable })}</Text>
+            <Text style={styles.sheetBody}>{t('gamification.freezeDescription')}</Text>
             {canUseToday ? (
               <TouchableOpacity
                 style={styles.actionBtn}
@@ -56,12 +55,12 @@ export default function StreakFreezeControl({ userId, home }) {
                 disabled={useFreezeMut.isPending}
               >
                 <Text style={styles.actionBtnText}>
-                  {useFreezeMut.isPending ? 'Using…' : 'Use a freeze for today'}
+                  {useFreezeMut.isPending ? t('gamification.freezeUsing') : t('gamification.useFreezeToday')}
                 </Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.closeBtn} onPress={() => setShowDetail(false)}>
-                <Text style={styles.closeBtnText}>Got it</Text>
+                <Text style={styles.closeBtnText}>{t('gamification.gotIt')}</Text>
               </TouchableOpacity>
             )}
           </Pressable>
