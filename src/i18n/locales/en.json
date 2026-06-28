@@ -77,6 +77,8 @@
     "weeklyRecapTitle": "Weekly Recap",
     "workoutsThisWeek": "{{count}}/{{weeklyGoal}} workouts this week",
     "levelExport": "Level {{level}}",
+    "weightChangeExport": "{{sign}}{{value}}kg this week",
+    "weightChangeNoData": "No weigh-ins logged this week",
     "proInsights": "Pro Insights",
     "unlockAll6": "Unlock all 6 insights with Pro",
     "goalForecast": "Goal Forecast",

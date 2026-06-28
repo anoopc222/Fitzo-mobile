@@ -1493,6 +1493,11 @@ export default function HomeScreen() {
                     👟 {t('home.stepGoalDays', { count: data?.thisWeek?.goalDays ?? 0 })}
                   </Text>
                   <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
+                    ⚖️ {data?.thisWeek?.weightDelta != null
+                      ? t('home.weightChangeExport', { sign: data.thisWeek.weightDelta > 0 ? '+' : '', value: data.thisWeek.weightDelta })
+                      : t('home.weightChangeNoData')}
+                  </Text>
+                  <Text style={{ fontSize: typography.base, fontFamily: fontFamily.bodySemibold, color: colors.text }}>
                     🏆 {t('home.levelExport', { level: computeLevel(computeXP(data)).level })}
                   </Text>
                 </View>
