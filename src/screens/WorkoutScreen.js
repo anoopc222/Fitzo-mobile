@@ -2851,7 +2851,7 @@ export default function WorkoutScreen() {
                 <>
                   {insights.length > 0 && (
                     <View style={s.insightsList}>
-                      {insights.slice(0, 2).map((ins, i) => (
+                      {insights.slice(0, 1).map((ins, i) => (
                         <View key={`real-${i}`} style={s.insightRow}>
                           <Text style={s.insightIcon}>{ins.icon}</Text>
                           <Text style={s.insightText}>
@@ -2863,8 +2863,8 @@ export default function WorkoutScreen() {
                   )}
                   <TouchableOpacity activeOpacity={0.85} onPress={() => setShowInsightsPaywall(true)}>
                     <View style={s.insightsList}>
-                      {(insights.length > 2
-                        ? insights.slice(2)
+                      {(insights.length > 1
+                        ? insights.slice(1)
                         : [['📈', 0.92], ['🔥', 0.68], ['📅', 0.8]].slice(insights.length)
                       ).map((ins, i) => (
                         <View key={`locked-${i}`} style={s.insightRow}>

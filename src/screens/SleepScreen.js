@@ -900,7 +900,7 @@ export default function SleepScreen() {
                   ))
                 ) : (
                   <>
-                    {insights.slice(0, 2).map((ins, i) => (
+                    {insights.slice(0, 1).map((ins, i) => (
                       <View key={i} style={styles.insightRow}>
                         <Text style={styles.insightIcon}>{ins.icon}</Text>
                         <Text style={styles.insightText}>
@@ -908,9 +908,9 @@ export default function SleepScreen() {
                         </Text>
                       </View>
                     ))}
-                    {insights.length > 2 && (
+                    {insights.length > 1 && (
                       <TouchableOpacity onPress={() => setShowRangePaywall(true)}>
-                        {insights.slice(2).map((ins, i) => (
+                        {insights.slice(1).map((ins, i) => (
                           <View key={i} style={styles.insightRow}>
                             <Text style={styles.insightIcon}>{ins.icon}</Text>
                             <View style={[styles.skeletonBar, { width: `${[92, 68, 80, 75][i % 4]}%` }]} />

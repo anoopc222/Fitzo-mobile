@@ -1191,7 +1191,7 @@ export default function WeightScreen() {
                     </View>
                   </View>
                   <View style={styles.insightsList}>
-                    {weightInsights.slice(0, 2).map((ins, i) => (
+                    {weightInsights.slice(0, 1).map((ins, i) => (
                       <View key={`real-${i}`} style={styles.insightRow}>
                         <Text style={styles.insightIcon}>{ins.icon}</Text>
                         <Text style={styles.insightText}>
@@ -1199,8 +1199,8 @@ export default function WeightScreen() {
                         </Text>
                       </View>
                     ))}
-                    {(weightInsights.length > 2
-                      ? weightInsights.slice(2)
+                    {(weightInsights.length > 1
+                      ? weightInsights.slice(1)
                       : [['📈', 0.92], ['📅', 0.68], ['⚡', 0.8]].slice(weightInsights.length)
                     ).map((ins, i) => (
                       <View key={`locked-${i}`} style={styles.insightRow}>
