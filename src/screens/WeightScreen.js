@@ -553,21 +553,50 @@ function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded, hasAc
   );
 }
 
-// ─── History slider bar row — ports renderBody()'s history list ────────────
-function WeightHistoryBar({ value, goalVal, barMin, barMax, colors }) {
+// ─── History row — ports the Sleep/Steps log-row design (colored side bar +
+// status pill) so weight entries are as readable as those screens. ─────────
+function WeightLogRow({ log, delta, goalVal, unit, barMin, barMax, colors, onDelete, isLast, t }) {
+  const value = toDisp(log.weight, unit);
   const span = barMax - barMin || 1;
-  const toPct = v => Math.min(98, Math.max(2, ((v - barMin) / span) * 100));
-  const fillPct = toPct(value);
-  const goalPct = goalVal != null ? toPct(goalVal) : null;
+  const pct = Math.min(100, Math.max(0, ((value - barMin) / span) * 100));
+  const absDiff = goalVal != null ? Math.abs(+(value - goalVal).toFixed(1)) : null;
+
+  let statusLabel, statusBg, statusTxt, barColor;
+  if (absDiff == null) {
+    statusLabel = null; barColor = '#67e8f9';
+  } else if (absDiff <= 0.5) {
+    statusLabel = t('weight.goalHit'); statusBg = 'rgba(52,211,153,0.10)'; statusTxt = '#34d399'; barColor = '#34d399';
+  } else if (absDiff <= 2) {
+    statusLabel = t('weight.close'); statusBg = 'rgba(251,191,36,0.10)'; statusTxt = '#fbbf24'; barColor = '#fbbf24';
+  } else {
+    statusLabel = t('weight.kgToGo', { value: absDiff, unit }); statusBg = 'rgba(248,113,113,0.10)'; statusTxt = '#f87171'; barColor = '#f87171';
+  }
 
   return (
-    <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, position: 'relative' }}>
-      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2, backgroundColor: 'rgba(103,232,249,0.18)', width: `${fillPct}%` }} />
-      {goalPct != null && <View style={{ position: 'absolute', top: -1, width: 6, height: 6, borderRadius: 3, marginLeft: -3, left: `${goalPct}%`, backgroundColor: '#34d399' }} />}
-      <View style={{ position: 'absolute', top: -1, width: 6, height: 6, borderRadius: 3, marginLeft: -3, left: `${fillPct}%`, backgroundColor: '#67e8f9' }} />
+    <View style={[styles_weightLogRow, { borderBottomWidth: isLast ? 0 : 1, borderBottomColor: colors.border }]}>
+      <View style={{ width: 3, height: 30, borderRadius: 2, backgroundColor: barColor }} />
+      <Text style={{ width: 64, fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{fmtDateShort(log.logged_at)}</Text>
+      <Text style={{ fontSize: typography.base, fontWeight: '800', fontFamily: fontFamily.monoBold, color: barColor }}>{value.toFixed(1)}</Text>
+      <View style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.dim, overflow: 'hidden' }}>
+        <View style={{ height: '100%', borderRadius: 3, width: `${pct}%`, backgroundColor: barColor }} />
+      </View>
+      {delta != null && (
+        <Text style={{ fontSize: 10, fontWeight: '700', fontFamily: fontFamily.mono, minWidth: 32, textAlign: 'right', color: delta > 0 ? colors.danger : colors.good }}>
+          {delta > 0 ? '+' : ''}{toDisp(delta, unit).toFixed(1)}
+        </Text>
+      )}
+      {statusLabel && (
+        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: statusBg }}>
+          <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, letterSpacing: 0.2, color: statusTxt }}>{statusLabel}</Text>
+        </View>
+      )}
+      <TouchableOpacity onPress={onDelete} style={{ padding: 3 }}>
+        <Ionicons name="close" size={14} color={colors.textDim} />
+      </TouchableOpacity>
     </View>
   );
 }
+const styles_weightLogRow = { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 10 };
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function WeightScreen() {
@@ -1319,27 +1348,25 @@ export default function WeightScreen() {
               ).map(week => (
                 <View key={week.key} style={styles.weekGroupBox}>
                   {week.items.map(({ log, delta }, i) => (
-                    <View key={log.id} style={[styles.logRowWrap, i === week.items.length - 1 && { borderBottomWidth: 0 }]}>
-                      <View style={styles.logRow}>
-                        <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
-                        <WeightHistoryBar value={toDisp(log.weight, unit)} goalVal={goalKg ? toDisp(goalKg, unit) : null} barMin={toDisp(historyBarRange.min, unit)} barMax={toDisp(historyBarRange.max, unit)} colors={colors} />
-                        <Text style={styles.logVal}>{toDisp(log.weight, unit).toFixed(1)}</Text>
-                        {delta != null && (
-                          <Text style={[styles.logDelta, { color: delta > 0 ? colors.danger : colors.good }]}>
-                            {delta > 0 ? '+' : ''}{toDisp(delta, unit).toFixed(1)}
-                          </Text>
-                        )}
-                        <TouchableOpacity
-                          onPress={() => Alert.alert(t('weight.deleteAlertTitle'), t('weight.deleteAlertMessage', { date: fmtDateShort(log.logged_at) }), [
-                            { text: t('weight.cancel'), style: 'cancel' },
-                            { text: t('weight.delete'), style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
-                          ])}
-                          style={styles.logDelBtn}
-                        >
-                          <Ionicons name="close" size={14} color={colors.textDim} />
-                        </TouchableOpacity>
-                      </View>
-                      {log.notes ? <Text style={styles.logNote}>{log.notes}</Text> : null}
+                    <View key={log.id}>
+                      <WeightLogRow
+                        log={log}
+                        delta={delta}
+                        goalVal={goalKg ? toDisp(goalKg, unit) : null}
+                        unit={unit}
+                        barMin={toDisp(historyBarRange.min, unit)}
+                        barMax={toDisp(historyBarRange.max, unit)}
+                        colors={colors}
+                        t={t}
+                        isLast={i === week.items.length - 1 && !log.notes}
+                        onDelete={() => Alert.alert(t('weight.deleteAlertTitle'), t('weight.deleteAlertMessage', { date: fmtDateShort(log.logged_at) }), [
+                          { text: t('weight.cancel'), style: 'cancel' },
+                          { text: t('weight.delete'), style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                        ])}
+                      />
+                      {log.notes ? (
+                        <Text style={[styles.logNote, { paddingLeft: 80, borderBottomWidth: i === week.items.length - 1 ? 0 : 1, borderBottomColor: colors.border, paddingBottom: 8 }]}>{log.notes}</Text>
+                      ) : null}
                     </View>
                   ))}
                 </View>
@@ -1547,13 +1574,7 @@ const createStyles = (colors) => StyleSheet.create({
 
   emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
 
-  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 9 },
-  logRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  logDate: { width: 76, fontSize: 10, color: colors.text, fontFamily: fontFamily.bodyMedium },
-  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 52, paddingTop: 4 },
-  logVal: { fontSize: 12, fontWeight: weight.bold, minWidth: 40, textAlign: 'right', fontFamily: fontFamily.monoBold, color: '#67e8f9' },
-  logDelta: { fontSize: 10, fontWeight: weight.bold, minWidth: 36, textAlign: 'right', fontFamily: fontFamily.mono },
-  logDelBtn: { padding: 3 },
+  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingTop: 4 },
   weekGroupBox: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 8, marginBottom: 10 },
 
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
