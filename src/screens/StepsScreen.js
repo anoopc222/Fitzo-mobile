@@ -44,6 +44,7 @@ const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+const DOW_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const ACT_TYPES = [
   { key: 'walk', labelKey: 'steps.activityWalk', label: 'Walk', icon: '🚶' },
   { key: 'run', labelKey: 'steps.activityRun', label: 'Run', icon: '🏃' },
@@ -790,6 +791,170 @@ export default function StepsScreen() {
     return Math.round((hit / recent.length) * 100);
   }, [logs, defaultGoal]);
 
+  const logDateSet = useMemo(() => new Set(logs.filter(l => l.steps).map(l => l.logged_at)), [logs]);
+  const sortedAsc = useMemo(() => logs.filter(l => l.steps).sort((a, b) => a.logged_at.localeCompare(b.logged_at)), [logs]);
+  const sortedDesc = useMemo(() => [...sortedAsc].reverse(), [sortedAsc]);
+
+  // Deeper logging/pattern analysis — mirrors Weight/Sleep screens' expanded insights
+  const stepsConsistency = useMemo(() => {
+    const todayD = new Date();
+    const todayStr = localDateStr(todayD);
+
+    let currentLogStreak = 0;
+    for (let i = 0; i < 365; i++) {
+      const d = localDateStr(new Date(todayD.getTime() - i * 86400000));
+      if (logDateSet.has(d)) currentLogStreak++;
+      else if (d !== todayStr) break;
+    }
+
+    let longestLogStreak = 0, run = 0;
+    for (let i = 364; i >= 0; i--) {
+      const d = localDateStr(new Date(todayD.getTime() - i * 86400000));
+      if (logDateSet.has(d)) { run++; longestLogStreak = Math.max(longestLogStreak, run); }
+      else run = 0;
+    }
+
+    const countInWindow = (startDaysAgo, endDaysAgo) => {
+      let c = 0;
+      for (let i = endDaysAgo; i < startDaysAgo; i++) {
+        const d = localDateStr(new Date(todayD.getTime() - i * 86400000));
+        if (logDateSet.has(d)) c++;
+      }
+      return c;
+    };
+    const prev8WkLogged = countInWindow(112, 56);
+    const prevConsistencyPct = Math.round((prev8WkLogged / 56) * 100);
+
+    // Day-of-week pattern: avg deviation from overall mean steps, per weekday
+    const overallVals = sortedAsc.map(l => l.steps);
+    const overallAvg = overallVals.length ? overallVals.reduce((a, b) => a + b, 0) / overallVals.length : null;
+    let bestDow = null, bestDowDelta = 0;
+    if (overallAvg != null) {
+      const dowSums = Array(7).fill(0), dowCounts = Array(7).fill(0);
+      for (const l of sortedAsc) {
+        const dow = new Date(l.logged_at + 'T00:00:00').getDay();
+        dowSums[dow] += l.steps - overallAvg;
+        dowCounts[dow]++;
+      }
+      let maxAbs = 0;
+      for (let i = 0; i < 7; i++) {
+        if (dowCounts[i] < 2) continue;
+        const avgDelta = dowSums[i] / dowCounts[i];
+        if (Math.abs(avgDelta) > maxAbs) { maxAbs = Math.abs(avgDelta); bestDow = i; bestDowDelta = avgDelta; }
+      }
+    }
+
+    // Day-to-day volatility: avg absolute delta between consecutive logs
+    let volatility = null;
+    if (sortedAsc.length >= 3) {
+      let sum = 0;
+      for (let i = 1; i < sortedAsc.length; i++) sum += Math.abs(sortedAsc[i].steps - sortedAsc[i - 1].steps);
+      volatility = sum / (sortedAsc.length - 1);
+    }
+
+    // Weekend vs weekday average, relative to overall mean
+    let weekendDelta = null;
+    if (overallAvg != null) {
+      const weekendVals = sortedAsc.filter(l => [0, 6].includes(new Date(l.logged_at + 'T00:00:00').getDay())).map(l => l.steps);
+      const weekdayVals = sortedAsc.filter(l => ![0, 6].includes(new Date(l.logged_at + 'T00:00:00').getDay())).map(l => l.steps);
+      if (weekendVals.length >= 2 && weekdayVals.length >= 2) {
+        const weekendAvg = weekendVals.reduce((a, b) => a + b, 0) / weekendVals.length;
+        const weekdayAvg = weekdayVals.reduce((a, b) => a + b, 0) / weekdayVals.length;
+        weekendDelta = weekendAvg - weekdayAvg;
+      }
+    }
+
+    // Momentum: avg steps over the last 14 days vs the prior 14 days
+    const last14Entries = sortedAsc.filter(l => l.logged_at >= localDateStr(new Date(todayD.getTime() - 13 * 86400000)));
+    const prev14Entries = sortedAsc.filter(l =>
+      l.logged_at >= localDateStr(new Date(todayD.getTime() - 27 * 86400000)) &&
+      l.logged_at < localDateStr(new Date(todayD.getTime() - 13 * 86400000))
+    );
+    let momentumDelta = null;
+    if (last14Entries.length >= 2 && prev14Entries.length >= 2) {
+      const avgOf = (entries) => entries.reduce((s, e) => s + e.steps, 0) / entries.length;
+      momentumDelta = avgOf(last14Entries) - avgOf(prev14Entries);
+    }
+
+    // Biggest single day-to-day swing in the last 30 days
+    const last30 = sortedAsc.filter(l => l.logged_at >= localDateStr(new Date(todayD.getTime() - 29 * 86400000)));
+    let biggestSwing = null;
+    if (last30.length >= 2) {
+      for (let i = 1; i < last30.length; i++) {
+        const delta = last30[i].steps - last30[i - 1].steps;
+        if (biggestSwing == null || Math.abs(delta) > Math.abs(biggestSwing.delta)) {
+          biggestSwing = { delta, date: last30[i].logged_at };
+        }
+      }
+    }
+
+    // Days since last log
+    const lastLogDate = sortedDesc[0]?.logged_at ?? null;
+    const daysSinceLastLog = lastLogDate
+      ? Math.floor((todayD.getTime() - new Date(lastLogDate + 'T00:00:00').getTime()) / 86400000)
+      : null;
+
+    return {
+      currentLogStreak, longestLogStreak, prevConsistencyPct,
+      bestDow, bestDowDelta, volatility, weekendDelta, momentumDelta, biggestSwing, daysSinceLastLog,
+    };
+  }, [logDateSet, sortedAsc, sortedDesc]);
+
+  const stepsDeepInsights = useMemo(() => {
+    const out = [];
+    const c = stepsConsistency;
+    if (consistency8wk != null && c.prevConsistencyPct != null) {
+      if (consistency8wk > c.prevConsistencyPct) {
+        out.push({ icon: '📈', text: t('steps.insightConsistencyUpText'), bold: `${consistency8wk - c.prevConsistencyPct}%`, rest: t('steps.insightConsistencyUpRest') });
+      } else if (consistency8wk < c.prevConsistencyPct) {
+        out.push({ icon: '📉', text: t('steps.insightConsistencyDownText'), bold: `${c.prevConsistencyPct - consistency8wk}%`, rest: t('steps.insightConsistencyDownRest') });
+      }
+    }
+    if (c.currentLogStreak >= c.longestLogStreak && c.currentLogStreak > 0) {
+      out.push({ icon: '🔥', text: t('steps.insightBestStreakText'), bold: t('steps.insightBestStreakBold'), rest: t('steps.insightBestStreakRest', { count: c.currentLogStreak }) });
+    } else if (c.longestLogStreak > c.currentLogStreak && c.currentLogStreak > 0) {
+      out.push({ icon: '🎯', text: t('steps.insightTiesRecordText', { count: c.longestLogStreak - c.currentLogStreak }), bold: t('steps.insightTiesRecordBold'), rest: t('steps.insightTiesRecordRest', { count: c.longestLogStreak }) });
+    }
+    if (c.bestDow != null && Math.abs(c.bestDowDelta) > 300) {
+      out.push({
+        icon: '📅',
+        text: t('steps.insightBestDowText', { day: DOW_FULL[c.bestDow] }),
+        bold: `${c.bestDowDelta >= 0 ? '+' : ''}${Math.round(c.bestDowDelta).toLocaleString()}`,
+        rest: t('steps.insightBestDowRest'),
+      });
+    }
+    if (c.volatility != null && c.volatility >= 1500) {
+      out.push({ icon: '〜', text: t('steps.insightVolatilityText'), bold: `±${Math.round(c.volatility).toLocaleString()}`, rest: t('steps.insightVolatilityRest') });
+    }
+    if (c.weekendDelta != null && Math.abs(c.weekendDelta) > 500) {
+      out.push({
+        icon: '🛋️',
+        text: t('steps.insightWeekendText'),
+        bold: `${c.weekendDelta >= 0 ? '+' : ''}${Math.round(c.weekendDelta).toLocaleString()}`,
+        rest: t('steps.insightWeekendRest'),
+      });
+    }
+    if (c.momentumDelta != null && Math.abs(c.momentumDelta) > 500) {
+      if (c.momentumDelta > 0) {
+        out.push({ icon: '🚀', text: t('steps.insightMomentumBuildingText'), bold: '', rest: t('steps.insightMomentumBuildingRest', { value: Math.round(c.momentumDelta).toLocaleString() }) });
+      } else {
+        out.push({ icon: '🐢', text: t('steps.insightProgressSlowedText'), bold: '', rest: t('steps.insightProgressSlowedRest', { value: Math.round(Math.abs(c.momentumDelta)).toLocaleString() }) });
+      }
+    }
+    if (c.biggestSwing && Math.abs(c.biggestSwing.delta) >= 3000) {
+      out.push({
+        icon: '⚡',
+        text: t('steps.insightBiggestSwingText'),
+        bold: `${c.biggestSwing.delta >= 0 ? '+' : ''}${Math.round(c.biggestSwing.delta).toLocaleString()}`,
+        rest: t('steps.insightBiggestSwingRest', { date: new Date(c.biggestSwing.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }),
+      });
+    }
+    if (c.daysSinceLastLog != null && c.daysSinceLastLog >= 3) {
+      out.push({ icon: '⚠️', text: t('steps.insightDaysSinceLastLogText'), bold: t('steps.insightDaysSinceLastLogBold', { count: c.daysSinceLastLog }), rest: t('steps.insightDaysSinceLastLogRest') });
+    }
+    return out;
+  }, [stepsConsistency, consistency8wk, t]);
+
   const [showInsightsPaywall, setShowInsightsPaywall] = useState(false);
 
   const [thisWStart, thisWEnd] = getWeekRange(new Date(), 0);
@@ -1002,9 +1167,17 @@ export default function StepsScreen() {
                       <Text style={styles.tipText}>{t('steps.tipMilestone', { name: t(milestone.best.nameKey), km: Math.round(milestone.totalKm).toLocaleString() })}</Text>
                     </View>
                   )}
-                  {!goalSuggestion && !sleepCorrelation && !milestone.best && (
+                  {!goalSuggestion && !sleepCorrelation && !milestone.best && stepsDeepInsights.length === 0 && (
                     <Text style={styles.emptyText}>{t('steps.logMoreDaysForInsights')}</Text>
                   )}
+                  {stepsDeepInsights.map((ins, i) => (
+                    <View key={`deep-${i}`} style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>{ins.icon}</Text>
+                      <Text style={styles.tipText}>
+                        {ins.text}<Text style={{ fontWeight: '800' }}>{ins.bold}</Text>{ins.rest}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
               ) : (
                 <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
