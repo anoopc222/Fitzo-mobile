@@ -67,6 +67,15 @@ async function addComment(activityId, userId, body) {
   if (error) throw error;
 }
 
+function detailChipIcon(part) {
+  const p = part.toLowerCase();
+  if (p.includes('top set') || p.includes('pr')) return 'flame';
+  if (p.includes('exercise')) return 'list';
+  if (p.includes('volume') || p.includes('kg')) return 'stats-chart';
+  if (p.includes('goal')) return 'checkmark-circle';
+  return 'stats-chart';
+}
+
 function timeAgo(iso, t) {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
@@ -151,9 +160,13 @@ export default function ActivityFeedScreen({ navigation }) {
 
                   <Text style={styles.cardTitle}>{item.title}</Text>
                   {item.detail ? (
-                    <View style={[styles.detailBadge, { backgroundColor: typeColor + '14', borderColor: typeColor + '40' }]}>
-                      <Ionicons name="stats-chart" size={12} color={typeColor} style={{ marginRight: 6 }} />
-                      <Text style={[styles.cardDetail, { color: typeColor }]}>{item.detail}</Text>
+                    <View style={styles.detailRow}>
+                      {item.detail.split(' • ').map((part, i) => (
+                        <View key={i} style={[styles.detailBadge, { backgroundColor: typeColor + '14', borderColor: typeColor + '40' }]}>
+                          <Ionicons name={detailChipIcon(part)} size={12} color={typeColor} style={{ marginRight: 6 }} />
+                          <Text style={[styles.cardDetail, { color: typeColor }]}>{part}</Text>
+                        </View>
+                      ))}
                     </View>
                   ) : null}
 
@@ -254,6 +267,7 @@ const createStyles = (colors) => StyleSheet.create({
   typeIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 
   cardTitle: { fontSize: typography.base, fontWeight: weight.bold, color: colors.text, marginBottom: 8 },
+  detailRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   detailBadge: {
     flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
     borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6,

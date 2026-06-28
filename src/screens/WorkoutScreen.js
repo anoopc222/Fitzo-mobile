@@ -204,12 +204,18 @@ async function saveSession(userId, { sessionId, date, name, exercises, duration_
     const idByOrder = new Map(newExs.map(row => [row.order_index, row.id]));
 
     const setRows = [];
+    let bestSet = null;
     for (const { ex, order_index } of validExercises) {
       const exerciseId = idByOrder.get(order_index);
       (ex.sets ?? []).forEach((s, j) => {
         const row = computeSetRow(ex, s);
         if (!row.hasAny) return;
-        if (row.weight_kg && row.reps) totalVol += row.weight_kg * row.reps;
+        if (row.weight_kg && row.reps) {
+          totalVol += row.weight_kg * row.reps;
+          if (!bestSet || row.weight_kg > bestSet.weight_kg) {
+            bestSet = { weight_kg: row.weight_kg, reps: row.reps, name: ex.name.trim() };
+          }
+        }
         const { hasAny, ...dbRow } = row;
         setRows.push({ exercise_id: exerciseId, set_number: j + 1, ...dbRow });
       });
@@ -218,14 +224,22 @@ async function saveSession(userId, { sessionId, date, name, exercises, duration_
       const { error: setErr } = await supabase.from('sets').insert(setRows);
       if (setErr) throw setErr;
     }
+    if (isNewSession && totalVol > 0 && shareFeed) {
+      const names = validExercises.map(({ ex }) => ex.name.trim());
+      const exCount = names.length;
+      const namesPreview = names.length > 3
+        ? `${names.slice(0, 3).join(', ')} +${names.length - 3} more`
+        : names.join(', ');
+      const parts = [
+        `${exCount} exercise${exCount === 1 ? '' : 's'}: ${namesPreview}`,
+        bestSet ? `Top set ${bestSet.name} ${bestSet.weight_kg}kg×${bestSet.reps}` : null,
+        `${Math.round(totalVol).toLocaleString()} kg volume`,
+      ].filter(Boolean);
+      logActivity(userId, 'workout', name || 'Workout', parts.join(' • '));
+    }
   }
   await supabase.from('workout_sessions')
     .update({ total_volume: Math.round(totalVol) }).eq('id', sid);
-
-  if (isNewSession && totalVol > 0 && shareFeed) {
-    const exCount = validExercises.length;
-    logActivity(userId, 'workout', name || 'Workout', `${exCount} exercise${exCount === 1 ? '' : 's'} • ${Math.round(totalVol).toLocaleString()} kg volume`);
-  }
 }
 
 async function deleteFullSession(sessionId) {
