@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { View, Text, Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -13,7 +13,6 @@ import { fetchProgress } from '../screens/ProgressScreen';
 import { fetchMeasurements, fetchBodyStats } from '../screens/MeasurementsScreen';
 import { fetchProfile } from '../screens/ProfileScreen';
 import { fetchDietPlans } from '../screens/DietScreen';
-import { fetchFriendsData } from '../screens/FriendsScreen';
 
 const getSections = (t, colors, isAdmin, isPro, subReady) => [
   {
@@ -34,12 +33,6 @@ const getSections = (t, colors, isAdmin, isPro, subReady) => [
     title: t('more.sectionTools'),
     items: [
       { label: t('more.calculators'),  icon: 'calculator',  target: ['Home', 'Calculators'],  color: colors.warning },
-    ],
-  },
-  {
-    title: t('more.sectionSocial'),
-    items: [
-      { label: t('more.feed'),          icon: 'newspaper',       target: ['Home', 'Social'],       color: colors.accent },
     ],
   },
   {
@@ -69,13 +62,6 @@ export default function MoreSheetModal() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const SECTIONS = useMemo(() => getSections(t, colors, isAdmin, isPro, subReady), [t, colors, isAdmin, isPro, subReady]);
   const qc = useQueryClient();
-
-  const { data: friendsData } = useQuery({
-    queryKey: ['friends', user?.id],
-    queryFn: () => fetchFriendsData(user.id),
-    enabled: !!user?.id && visible,
-  });
-  const incomingCount = friendsData?.incoming?.length ?? 0;
 
   // Prefetch the screens reachable from this sheet as soon as it opens, so
   // by the time the user taps a row its data is already in cache instead of
@@ -124,14 +110,8 @@ export default function MoreSheetModal() {
                   >
                     <View style={[styles.iconWrap, { backgroundColor: item.color + '18' }]}>
                       <Ionicons name={item.icon} size={17} color={item.color} />
-                      {item.target[1] === 'Social' && incomingCount > 0 && <View style={styles.iconBadge} />}
                     </View>
                     <Text style={styles.rowLabel}>{item.label}</Text>
-                    {item.target[1] === 'Social' && incomingCount > 0 && (
-                      <View style={styles.rowBadge}>
-                        <Text style={styles.rowBadgeText}>{incomingCount > 9 ? '9+' : incomingCount}</Text>
-                      </View>
-                    )}
                     <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
                   </TouchableOpacity>
                 ))}
@@ -177,14 +157,5 @@ const createStyles = (colors) => StyleSheet.create({
   },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
   iconWrap: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  iconBadge: {
-    position: 'absolute', top: -2, right: -2, width: 9, height: 9, borderRadius: 5,
-    backgroundColor: colors.danger, borderWidth: 1.5, borderColor: colors.bg,
-  },
   rowLabel: { flex: 1, fontSize: typography.sm, fontWeight: weight.medium, color: colors.text },
-  rowBadge: {
-    minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.danger,
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, marginRight: 4,
-  },
-  rowBadgeText: { color: '#fff', fontSize: 10, fontWeight: weight.bold },
 });

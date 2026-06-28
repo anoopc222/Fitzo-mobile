@@ -1,6 +1,8 @@
 {
   "tabs": {
     "home": "Accueil",
+    "activity": "Activité",
+    "social": "Social",
     "workout": "Entraînement",
     "steps": "Pas",
     "weight": "Poids",

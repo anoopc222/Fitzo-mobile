@@ -2221,7 +2221,7 @@ function EditSessionModal({
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function WorkoutScreen() {
+export default function WorkoutScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -2740,10 +2740,11 @@ export default function WorkoutScreen() {
     ]);
   };
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={s.safe}>
-      {/* Header */}
-      <ScreenHeader title={t('workout.workoutTitleUpper')} colors={colors} right={<Text style={s.sessionCount}>{t('workout.sessionsCountUpper', { count: sessions.length })}</Text>} />
+    <Wrap style={s.safe}>
+      {!embedded && <ScreenHeader title={t('workout.workoutTitleUpper')} colors={colors} right={<Text style={s.sessionCount}>{t('workout.sessionsCountUpper', { count: sessions.length })}</Text>} />}
 
       {/* Month nav */}
       <View style={s.monthNav}>
@@ -3267,7 +3268,7 @@ export default function WorkoutScreen() {
           <Text style={s.saveBtnText}>{goalMut.isPending ? t('workout.savingEllipsis') : t('workout.saveGoal')}</Text>
         </TouchableOpacity>
       </BottomSheet>
-    </SafeAreaView>
+    </Wrap>
   );
 }
 

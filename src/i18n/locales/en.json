@@ -1,6 +1,8 @@
 {
   "tabs": {
     "home": "Home",
+    "activity": "Activity",
+    "social": "Social",
     "workout": "Workout",
     "steps": "Steps",
     "weight": "Weight",

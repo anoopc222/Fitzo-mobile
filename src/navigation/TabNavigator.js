@@ -9,6 +9,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import HomeScreen from '../screens/HomeScreen';
+import ActivityScreen from '../screens/ActivityScreen';
 import WorkoutScreen from '../screens/WorkoutScreen';
 import FoodLogScreen from '../screens/FoodLogScreen';
 import StepsScreen from '../screens/StepsScreen';
@@ -32,12 +33,14 @@ const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 
 const TAB_CONFIG = {
-  Home:    ['home',      'home-outline'],
-  Workout: ['barbell',   'barbell-outline'],
-  Steps:   ['footsteps', 'footsteps-outline'],
-  Weight:  ['scale',     'scale-outline'],
-  Sleep:   ['moon',      'moon-outline'],
-  MoreTab: ['ellipsis-horizontal', 'ellipsis-horizontal-outline'],
+  Home:     ['home',      'home-outline'],
+  Activity: ['barbell',   'barbell-outline'],
+  Social:   ['people',    'people-outline'],
+  Workout:  ['barbell',   'barbell-outline'],
+  Steps:    ['footsteps', 'footsteps-outline'],
+  Weight:   ['scale',     'scale-outline'],
+  Sleep:    ['moon',      'moon-outline'],
+  MoreTab:  ['ellipsis-horizontal', 'ellipsis-horizontal-outline'],
 };
 
 function BlankScreen() {
@@ -56,7 +59,6 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Settings" component={SettingsScreen} />
       <HomeStack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
       <HomeStack.Screen name="Subscription" component={SubscriptionScreen} />
-      <HomeStack.Screen name="Social" component={SocialScreen} />
       <HomeStack.Screen name="Friends" component={FriendsScreen} />
       <HomeStack.Screen name="ActivityFeed" component={ActivityFeedScreen} />
       <HomeStack.Screen name="Challenges" component={ChallengesScreen} />
@@ -97,10 +99,28 @@ export default function TabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeStackNavigator} options={{ tabBarLabel: t('tabs.home') }} />
-      <Tab.Screen name="Workout" component={WorkoutScreen} options={{ tabBarLabel: t('tabs.workout') }} />
-      <Tab.Screen name="Steps" component={StepsScreen} options={{ tabBarLabel: t('tabs.steps') }} />
-      <Tab.Screen name="Weight" component={WeightScreen} options={{ tabBarLabel: t('tabs.weight') }} />
-      <Tab.Screen name="Sleep" component={SleepScreen} options={{ tabBarLabel: t('tabs.sleep') }} />
+      <Tab.Screen name="Activity" component={ActivityScreen} options={{ tabBarLabel: t('tabs.activity') }} />
+      <Tab.Screen name="Social" component={SocialScreen} options={{ tabBarLabel: t('tabs.social') }} />
+      <Tab.Screen
+        name="Workout"
+        component={WorkoutScreen}
+        options={{ tabBarButton: () => null }}
+      />
+      <Tab.Screen
+        name="Steps"
+        component={StepsScreen}
+        options={{ tabBarButton: () => null }}
+      />
+      <Tab.Screen
+        name="Weight"
+        component={WeightScreen}
+        options={{ tabBarButton: () => null }}
+      />
+      <Tab.Screen
+        name="Sleep"
+        component={SleepScreen}
+        options={{ tabBarButton: () => null }}
+      />
       <Tab.Screen
         name="Log"
         component={FoodLogScreen}

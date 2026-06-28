@@ -129,9 +129,7 @@ export default function SocialScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <View style={styles.backBtn} />
         <Text style={styles.logo}>Fitzo<Text style={styles.logoDot}>•</Text></Text>
         <View style={styles.topBarRight}>
           <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={() => setTab('friends')}>

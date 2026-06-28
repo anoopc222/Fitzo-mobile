@@ -604,7 +604,7 @@ function WeightLogRow({ log, delta, goalVal, unit, barMin, barMax, colors, onDel
 const styles_weightLogRow = { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 10 };
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
-export default function WeightScreen() {
+export default function WeightScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -1018,10 +1018,11 @@ export default function WeightScreen() {
     setShowLogSheet(true);
   };
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* App header */}
-      <ScreenHeader title={t('weight.screenTitle')} colors={colors} />
+    <Wrap style={styles.safe}>
+      {!embedded && <ScreenHeader title={t('weight.screenTitle')} colors={colors} />}
 
       {/* Month nav + unit toggle */}
       <View style={styles.topRow}>
@@ -1518,7 +1519,7 @@ export default function WeightScreen() {
       </BottomSheet>
 
       <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
-    </SafeAreaView>
+    </Wrap>
   );
 }
 
