@@ -106,7 +106,7 @@ function timeAgo(iso, t) {
   return t('activity.daysAgo', { count: days });
 }
 
-export default function ActivityFeedScreen({ navigation }) {
+export default function ActivityFeedScreen({ navigation, embedded = false }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -147,9 +147,11 @@ export default function ActivityFeedScreen({ navigation }) {
     Share.share({ message: lines.join('\n') }).catch(() => {});
   };
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScreenHeader title={t('activity.title')} colors={colors} onBack={() => navigation.goBack()} />
+    <Wrap style={styles.safe}>
+      {!embedded && <ScreenHeader title={t('activity.title')} colors={colors} onBack={() => navigation.goBack()} />}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -276,7 +278,7 @@ export default function ActivityFeedScreen({ navigation }) {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Wrap>
   );
 }
 

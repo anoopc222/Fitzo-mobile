@@ -68,7 +68,7 @@ async function removeFriendship(friendshipId) {
   if (error) throw error;
 }
 
-export default function FriendsScreen({ navigation }) {
+export default function FriendsScreen({ navigation, embedded = false }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -111,9 +111,11 @@ export default function FriendsScreen({ navigation }) {
     return ids;
   }, [data]);
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScreenHeader title={t('friends.title')} colors={colors} onBack={() => navigation.goBack()} />
+    <Wrap style={styles.safe}>
+      {!embedded && <ScreenHeader title={t('friends.title')} colors={colors} onBack={() => navigation.goBack()} />}
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.searchRow}>
           <Ionicons name="search" size={16} color={colors.textDim} />
@@ -209,7 +211,7 @@ export default function FriendsScreen({ navigation }) {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </Wrap>
   );
 }
 
