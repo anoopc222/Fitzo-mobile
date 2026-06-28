@@ -1186,6 +1186,10 @@ export default function StepsScreen() {
                     if (goalSuggestion) tips.push({ icon: '📈', node: t('steps.tipRaiseGoal', { avg: goalSuggestion.avg.toLocaleString(), hitRate: goalSuggestion.hitRate, suggested: goalSuggestion.suggested.toLocaleString() }) });
                     if (sleepCorrelation && sleepCorrelation.diff > 200) tips.push({ icon: '😴', node: t('steps.tipSleepCorrelation', { diff: sleepCorrelation.diff.toLocaleString(), avgLow: sleepCorrelation.avgLow.toLocaleString(), avgNormal: sleepCorrelation.avgNormal.toLocaleString() }) });
                     if (milestone.best) tips.push({ icon: '🌍', node: t('steps.tipMilestone', { name: t(milestone.best.nameKey), km: Math.round(milestone.totalKm).toLocaleString() }) });
+                    stepsDeepInsights.forEach(ins => tips.push({
+                      icon: ins.icon,
+                      node: (<>{ins.text}<Text style={{ fontWeight: '800' }}>{ins.bold}</Text>{ins.rest}</>),
+                    }));
                     const real = tips[0];
                     const maskedIcons = tips.slice(1).map(tp => tp.icon);
                     const fallbackIcons = ['😴', '🌍'];
