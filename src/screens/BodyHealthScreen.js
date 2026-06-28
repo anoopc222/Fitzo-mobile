@@ -11,16 +11,16 @@ import ProgressScreen from './ProgressScreen';
 import MeasurementsScreen from './MeasurementsScreen';
 
 const TABS = [
-  { key: 'diet', icon: 'restaurant-outline', activeIcon: 'restaurant' },
   { key: 'progress', icon: 'trending-up-outline', activeIcon: 'trending-up' },
   { key: 'measurements', icon: 'body-outline', activeIcon: 'body' },
+  { key: 'diet', icon: 'restaurant-outline', activeIcon: 'restaurant' },
 ];
 
 export default function BodyHealthScreen() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [tab, setTab] = useState('diet');
+  const [tab, setTab] = useState('progress');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
