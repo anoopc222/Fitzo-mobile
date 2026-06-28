@@ -34,48 +34,12 @@ export async function fetchChallenges(userId) {
   // progress column — it must be derived from step_logs / workout_sessions.
   const withProgress = await Promise.all(list.map(async (c) => {
     const participants = c.challenge_participants ?? [];
-    const userIds = participants.map(p => p.user_id);
     let progressByUser = {};
-    if (userIds.length > 0) {
-      if (c.type === 'steps') {
-        const { data: steps } = await supabase
-          .from('step_logs')
-          .select('user_id, steps, logged_at')
-          .in('user_id', userIds)
-          .gte('logged_at', `${c.start_date}T00:00:00`)
-          .lte('logged_at', `${c.end_date}T23:59:59`);
-        (steps ?? []).forEach(s => {
-          progressByUser[s.user_id] = (progressByUser[s.user_id] ?? 0) + s.steps;
-        });
-      } else if (c.type === 'workout_streak') {
-        const { data: sessions } = await supabase
-          .from('workout_sessions')
-          .select('user_id, date')
-          .in('user_id', userIds)
-          .gte('date', c.start_date)
-          .lte('date', c.end_date);
-        const datesByUser = {};
-        (sessions ?? []).forEach(s => {
-          if (!datesByUser[s.user_id]) datesByUser[s.user_id] = new Set();
-          datesByUser[s.user_id].add(s.date);
-        });
-        Object.entries(datesByUser).forEach(([uid, dateSet]) => {
-          // Longest consecutive-day streak within the challenge window.
-          const sorted = Array.from(dateSet).sort();
-          let best = 0, run = 0, prev = null;
-          sorted.forEach(d => {
-            if (prev) {
-              const diffDays = (new Date(d) - new Date(prev)) / 86400000;
-              run = diffDays === 1 ? run + 1 : 1;
-            } else {
-              run = 1;
-            }
-            best = Math.max(best, run);
-            prev = d;
-          });
-          progressByUser[uid] = best;
-        });
-      }
+    if (participants.length > 0) {
+      const { data: progressRows } = await supabase.rpc('get_challenge_progress', { p_challenge_id: c.id });
+      (progressRows ?? []).forEach(r => {
+        progressByUser[r.user_id] = r.progress;
+      });
     }
     const participantsWithProgress = participants
       .map(p => ({ ...p, progress: progressByUser[p.user_id] ?? 0 }))
