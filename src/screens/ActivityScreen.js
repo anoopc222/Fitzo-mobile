@@ -10,12 +10,14 @@ import WorkoutScreen from './WorkoutScreen';
 import StepsScreen from './StepsScreen';
 import SleepScreen from './SleepScreen';
 import WeightScreen from './WeightScreen';
+import FoodLogScreen from './FoodLogScreen';
 
 const TABS = [
   { key: 'workout', icon: 'barbell-outline', activeIcon: 'barbell' },
   { key: 'steps', icon: 'footsteps-outline', activeIcon: 'footsteps' },
   { key: 'sleep', icon: 'moon-outline', activeIcon: 'moon' },
   { key: 'weight', icon: 'scale-outline', activeIcon: 'scale' },
+  { key: 'food', icon: 'restaurant-outline', activeIcon: 'restaurant' },
 ];
 
 export default function ActivityScreen() {
@@ -51,6 +53,7 @@ export default function ActivityScreen() {
         {tab === 'steps' && <StepsScreen embedded />}
         {tab === 'sleep' && <SleepScreen embedded />}
         {tab === 'weight' && <WeightScreen embedded />}
+        {tab === 'food' && <FoodLogScreen embedded />}
       </View>
     </SafeAreaView>
   );
