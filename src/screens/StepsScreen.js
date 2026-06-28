@@ -1181,35 +1181,41 @@ export default function StepsScreen() {
                 </View>
               ) : (
                 <View style={{ marginTop: 12, gap: 8 }}>
-                  {goalSuggestion ? (
-                    <View style={styles.tipRow}>
-                      <Text style={styles.tipEmoji}>📈</Text>
-                      <Text style={styles.tipText}>{t('steps.tipRaiseGoal', { avg: goalSuggestion.avg.toLocaleString(), hitRate: goalSuggestion.hitRate, suggested: goalSuggestion.suggested.toLocaleString() })}</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.tipRow}>
-                      <Text style={styles.tipEmoji}>📈</Text>
-                      <View style={[styles.skeletonBar, { width: '92%' }]} />
-                    </View>
-                  )}
-                  {sleepCorrelation && sleepCorrelation.diff > 200 ? (
-                    <View style={styles.tipRow}>
-                      <Text style={styles.tipEmoji}>😴</Text>
-                      <Text style={styles.tipText}>{t('steps.tipSleepCorrelation', { diff: sleepCorrelation.diff.toLocaleString(), avgLow: sleepCorrelation.avgLow.toLocaleString(), avgNormal: sleepCorrelation.avgNormal.toLocaleString() })}</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.tipRow}>
-                      <Text style={styles.tipEmoji}>😴</Text>
-                      <View style={[styles.skeletonBar, { width: '68%' }]} />
-                    </View>
-                  )}
-                  <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
-                    <View style={styles.tipRow}>
-                      <Text style={styles.tipEmoji}>🌍</Text>
-                      <View style={[styles.skeletonBar, { width: '80%' }]} />
-                    </View>
-                    <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>{t('steps.unlockInsightsPro')}</Text>
-                  </TouchableOpacity>
+                  {(() => {
+                    const tips = [];
+                    if (goalSuggestion) tips.push({ icon: '📈', node: t('steps.tipRaiseGoal', { avg: goalSuggestion.avg.toLocaleString(), hitRate: goalSuggestion.hitRate, suggested: goalSuggestion.suggested.toLocaleString() }) });
+                    if (sleepCorrelation && sleepCorrelation.diff > 200) tips.push({ icon: '😴', node: t('steps.tipSleepCorrelation', { diff: sleepCorrelation.diff.toLocaleString(), avgLow: sleepCorrelation.avgLow.toLocaleString(), avgNormal: sleepCorrelation.avgNormal.toLocaleString() }) });
+                    if (milestone.best) tips.push({ icon: '🌍', node: t('steps.tipMilestone', { name: t(milestone.best.nameKey), km: Math.round(milestone.totalKm).toLocaleString() }) });
+                    const real = tips[0];
+                    const maskedIcons = tips.slice(1).map(tp => tp.icon);
+                    const fallbackIcons = ['😴', '🌍'];
+                    while (maskedIcons.length < 2) maskedIcons.push(fallbackIcons[maskedIcons.length] ?? '⚡');
+                    const maskedWidths = [68, 80];
+                    return (
+                      <>
+                        {real ? (
+                          <View style={styles.tipRow}>
+                            <Text style={styles.tipEmoji}>{real.icon}</Text>
+                            <Text style={styles.tipText}>{real.node}</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.tipRow}>
+                            <Text style={styles.tipEmoji}>📈</Text>
+                            <View style={[styles.skeletonBar, { width: '92%' }]} />
+                          </View>
+                        )}
+                        <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
+                          {maskedIcons.map((icon, i) => (
+                            <View key={`locked-${i}`} style={styles.tipRow}>
+                              <Text style={styles.tipEmoji}>{icon}</Text>
+                              <View style={[styles.skeletonBar, { width: `${maskedWidths[i]}%` }]} />
+                            </View>
+                          ))}
+                          <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>{t('steps.unlockInsightsPro')}</Text>
+                        </TouchableOpacity>
+                      </>
+                    );
+                  })()}
                 </View>
               )}
             </View>
