@@ -43,6 +43,7 @@ export default function SocialScreen({ navigation }) {
     enabled: !!user?.id,
   });
   const friends = friendsData?.friends ?? [];
+  const incomingCount = friendsData?.incoming?.length ?? 0;
 
   const goQuickAction = (target) => {
     setComposerOpen(false);
@@ -76,7 +77,14 @@ export default function SocialScreen({ navigation }) {
               onPress={() => setTab(tb.key)}
               activeOpacity={0.7}
             >
-              <Ionicons name={active ? tb.activeIcon : tb.icon} size={22} color={active ? colors.accent : colors.textDim} />
+              <View>
+                <Ionicons name={active ? tb.activeIcon : tb.icon} size={22} color={active ? colors.accent : colors.textDim} />
+                {tb.key === 'friends' && incomingCount > 0 && (
+                  <View style={styles.tabBadge}>
+                    <Text style={styles.tabBadgeText}>{incomingCount > 9 ? '9+' : incomingCount}</Text>
+                  </View>
+                )}
+              </View>
               <View style={[styles.tabUnderline, active && { backgroundColor: colors.accent }]} />
             </TouchableOpacity>
           );
@@ -168,6 +176,11 @@ const createStyles = (colors) => StyleSheet.create({
   },
   tabItem: { flex: 1, alignItems: 'center', paddingVertical: 10 },
   tabUnderline: { height: 3, width: '60%', borderRadius: 2, marginTop: 6, backgroundColor: 'transparent' },
+  tabBadge: {
+    position: 'absolute', top: -4, right: -10, minWidth: 16, height: 16, borderRadius: 8,
+    backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
+  },
+  tabBadgeText: { color: '#fff', fontSize: 9, fontWeight: weight.bold },
 
   storiesRail: { paddingTop: 12 },
   storiesContent: { paddingHorizontal: 16, gap: 14 },
