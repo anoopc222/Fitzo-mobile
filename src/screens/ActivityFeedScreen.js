@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, KeyboardAvoidingView, Platform,
+  TextInput, ActivityIndicator, RefreshControl, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -111,7 +111,7 @@ export default function ActivityFeedScreen({ navigation }) {
         <ScrollView
           contentContainerStyle={styles.content}
           refreshControl={
-            <ActivityIndicator />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} colors={[colors.accent]} />
           }
         >
           {isLoading ? (
