@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { supabase } from '../lib/supabase';
+import { logActivity } from '../lib/activity';
 import { typography, weight, fontFamily } from '../theme/typography';
 import ActivityFeedScreen from './ActivityFeedScreen';
 import FriendsScreen, { fetchFriendsData } from './FriendsScreen';
@@ -18,12 +20,52 @@ const TABS = [
 ];
 
 const QUICK_ACTIONS = [
-  { label: 'Weight', icon: 'scale', target: 'Weight', color: 'blue' },
-  { label: 'Steps', icon: 'footsteps', target: 'Steps', color: 'good' },
-  { label: 'Sleep', icon: 'moon', target: 'Sleep', color: 'purple' },
-  { label: 'Food', icon: 'restaurant', target: 'Log', color: 'accent2' },
-  { label: 'Workout', icon: 'barbell', target: 'Workout', color: 'danger' },
+  { label: 'Weight', icon: 'scale', target: 'Weight', type: 'weight', color: 'blue' },
+  { label: 'Steps', icon: 'footsteps', target: 'Steps', type: 'steps', color: 'good' },
+  { label: 'Sleep', icon: 'moon', target: 'Sleep', type: 'sleep', color: 'purple' },
+  { label: 'Food', icon: 'restaurant', target: 'Log', type: 'food', color: 'accent2' },
+  { label: 'Workout', icon: 'barbell', target: 'Workout', type: 'workout', color: 'danger' },
 ];
+
+function localDateStr(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+async function fetchTodaySummary(userId, type) {
+  const today = localDateStr(new Date());
+
+  if (type === 'weight') {
+    const { data } = await supabase.from('weight_logs').select('weight, notes').eq('user_id', userId).eq('logged_at', today).order('id', { ascending: false }).limit(1).maybeSingle();
+    if (!data) return null;
+    return { title: 'Logged weight', detail: data.notes ? `${data.weight} kg — ${data.notes}` : `${data.weight} kg` };
+  }
+  if (type === 'steps') {
+    const { data } = await supabase.from('step_logs').select('steps, goal').eq('user_id', userId).eq('logged_at', today).order('id', { ascending: false }).limit(1).maybeSingle();
+    if (!data || !data.steps) return null;
+    return { title: 'Logged steps', detail: `${data.steps.toLocaleString()} steps${data.goal && data.steps >= data.goal ? ' — goal reached!' : ''}` };
+  }
+  if (type === 'sleep') {
+    const { data } = await supabase.from('sleep_logs').select('hours').eq('user_id', userId).eq('logged_at', today).order('id', { ascending: false }).limit(1).maybeSingle();
+    if (!data) return null;
+    return { title: 'Logged sleep', detail: `${data.hours} hrs` };
+  }
+  if (type === 'food') {
+    const { data } = await supabase.from('food_logs').select('calories').eq('user_id', userId).gte('logged_at', `${today}T00:00:00`).lte('logged_at', `${today}T23:59:59`);
+    if (!data || data.length === 0) return null;
+    const totalCalories = data.reduce((s, f) => s + (f.calories || 0), 0);
+    return { title: 'Logged meals today', detail: `${data.length} meal${data.length > 1 ? 's' : ''} — ${Math.round(totalCalories)} kcal` };
+  }
+  if (type === 'workout') {
+    const { data } = await supabase.from('workout_sessions').select('id, notes, total_volume, duration_min').eq('user_id', userId).eq('date', today).order('id', { ascending: false }).limit(1).maybeSingle();
+    if (!data) return null;
+    const parts = [];
+    if (data.total_volume) parts.push(`${Math.round(data.total_volume)} kg volume`);
+    if (data.duration_min) parts.push(`${data.duration_min} min`);
+    return { title: data.notes || 'Workout', detail: parts.join(' • ') };
+  }
+  return null;
+}
 
 export default function SocialScreen({ navigation }) {
   const { user } = useAuth();
@@ -32,6 +74,9 @@ export default function SocialScreen({ navigation }) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [tab, setTab] = useState('feed');
   const [composerOpen, setComposerOpen] = useState(false);
+  const [shareSheet, setShareSheet] = useState(null); // { qa, loading, summary }
+  const [posting, setPosting] = useState(false);
+  const qc = useQueryClient();
 
   const displayName = user?.user_metadata?.full_name ?? 'You';
   const initial = (displayName[0] ?? 'F').toUpperCase();
@@ -43,9 +88,25 @@ export default function SocialScreen({ navigation }) {
   });
   const incomingCount = friendsData?.incoming?.length ?? 0;
 
-  const goQuickAction = (target) => {
+  const goQuickAction = async (qa) => {
     setComposerOpen(false);
-    navigation.navigate(target);
+    if (!user?.id) { navigation.navigate(qa.target); return; }
+    setShareSheet({ qa, loading: true, summary: null });
+    const summary = await fetchTodaySummary(user.id, qa.type).catch(() => null);
+    if (!summary) { setShareSheet(null); navigation.navigate(qa.target); return; }
+    setShareSheet({ qa, loading: false, summary });
+  };
+
+  const closeShareSheet = () => setShareSheet(null);
+
+  const postShare = () => {
+    if (!shareSheet?.summary || !user?.id) return;
+    setPosting(true);
+    logActivity(user.id, shareSheet.qa.type, shareSheet.summary.title, shareSheet.summary.detail);
+    qc.invalidateQueries(['activityFeed', user.id]);
+    setPosting(false);
+    setShareSheet(null);
+    setTab('feed');
   };
 
   return (
@@ -104,7 +165,7 @@ export default function SocialScreen({ navigation }) {
           {composerOpen && (
             <View style={styles.quickActionsRow}>
               {QUICK_ACTIONS.map(qa => (
-                <TouchableOpacity key={qa.label} style={styles.quickAction} onPress={() => goQuickAction(qa.target)} activeOpacity={0.8}>
+                <TouchableOpacity key={qa.label} style={styles.quickAction} onPress={() => goQuickAction(qa)} activeOpacity={0.8}>
                   <View style={[styles.quickActionIcon, { backgroundColor: colors[qa.color] + '20' }]}>
                     <Ionicons name={qa.icon} size={17} color={colors[qa.color]} />
                   </View>
@@ -121,6 +182,32 @@ export default function SocialScreen({ navigation }) {
         {tab === 'friends' && <FriendsScreen navigation={navigation} embedded />}
         {tab === 'challenges' && <ChallengesScreen navigation={navigation} embedded />}
       </View>
+
+      <Modal visible={!!shareSheet} transparent animationType="fade" onRequestClose={closeShareSheet}>
+        <Pressable style={styles.shareBackdrop} onPress={closeShareSheet} />
+        <View style={styles.shareSheet}>
+          {shareSheet?.loading ? (
+            <ActivityIndicator color={colors.accent} style={{ paddingVertical: 24 }} />
+          ) : shareSheet?.summary && (
+            <>
+              <View style={styles.shareHeader}>
+                <View style={[styles.shareIcon, { backgroundColor: colors[shareSheet.qa.color] + '20' }]}>
+                  <Ionicons name={shareSheet.qa.icon} size={18} color={colors[shareSheet.qa.color]} />
+                </View>
+                <Text style={styles.shareTitle}>{shareSheet.summary.title}</Text>
+              </View>
+              <Text style={styles.shareDetail}>{shareSheet.summary.detail}</Text>
+              <TouchableOpacity style={styles.sharePostBtn} onPress={postShare} disabled={posting} activeOpacity={0.8}>
+                <Ionicons name="share-social" size={16} color={colors.accentText ?? colors.bg} />
+                <Text style={styles.sharePostBtnText}>Share to feed</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.shareCancelBtn} onPress={closeShareSheet}>
+                <Text style={styles.shareCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -171,4 +258,22 @@ const createStyles = (colors) => StyleSheet.create({
   quickActionLabel: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
 
   body: { flex: 1 },
+
+  shareBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  shareSheet: {
+    position: 'absolute', left: 16, right: 16, top: '32%',
+    backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: colors.border,
+    padding: 18,
+  },
+  shareHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  shareIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  shareTitle: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text, flex: 1 },
+  shareDetail: { fontSize: typography.sm, color: colors.textMuted, marginTop: 10, marginBottom: 16 },
+  sharePostBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 12,
+  },
+  sharePostBtnText: { color: colors.accentText ?? colors.bg, fontWeight: weight.bold, fontSize: typography.sm },
+  shareCancelBtn: { alignItems: 'center', paddingVertical: 12 },
+  shareCancelBtnText: { color: colors.textDim, fontWeight: weight.semibold, fontSize: typography.sm },
 });
