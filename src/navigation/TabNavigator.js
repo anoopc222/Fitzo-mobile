@@ -10,14 +10,12 @@ import { useTranslation } from 'react-i18next';
 
 import HomeScreen from '../screens/HomeScreen';
 import ActivityScreen from '../screens/ActivityScreen';
+import BodyHealthScreen from '../screens/BodyHealthScreen';
 import WorkoutScreen from '../screens/WorkoutScreen';
 import FoodLogScreen from '../screens/FoodLogScreen';
 import StepsScreen from '../screens/StepsScreen';
 import WeightScreen from '../screens/WeightScreen';
 import SleepScreen from '../screens/SleepScreen';
-import DietScreen from '../screens/DietScreen';
-import ProgressScreen from '../screens/ProgressScreen';
-import MeasurementsScreen from '../screens/MeasurementsScreen';
 import CalculatorsScreen from '../screens/CalculatorsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -33,14 +31,16 @@ const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 
 const TAB_CONFIG = {
-  Home:     ['home',      'home-outline'],
-  Activity: ['barbell',   'barbell-outline'],
-  Social:   ['people',    'people-outline'],
-  Workout:  ['barbell',   'barbell-outline'],
-  Steps:    ['footsteps', 'footsteps-outline'],
-  Weight:   ['scale',     'scale-outline'],
-  Sleep:    ['moon',      'moon-outline'],
-  MoreTab:  ['ellipsis-horizontal', 'ellipsis-horizontal-outline'],
+  Home:       ['home',      'home-outline'],
+  Activity:   ['barbell',   'barbell-outline'],
+  Social:     ['people',    'people-outline'],
+  BodyHealth: ['body',      'body-outline'],
+  SettingsTab: ['settings', 'settings-outline'],
+  Workout:    ['barbell',   'barbell-outline'],
+  Steps:      ['footsteps', 'footsteps-outline'],
+  Weight:     ['scale',     'scale-outline'],
+  Sleep:      ['moon',      'moon-outline'],
+  MoreTab:    ['ellipsis-horizontal', 'ellipsis-horizontal-outline'],
 };
 
 function BlankScreen() {
@@ -51,12 +51,8 @@ function HomeStackNavigator() {
   return (
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
       <HomeStack.Screen name="HomeMain" component={HomeScreen} />
-      <HomeStack.Screen name="Diet" component={DietScreen} />
-      <HomeStack.Screen name="Progress" component={ProgressScreen} />
-      <HomeStack.Screen name="Measurements" component={MeasurementsScreen} />
       <HomeStack.Screen name="Calculators" component={CalculatorsScreen} />
       <HomeStack.Screen name="Profile" component={ProfileScreen} />
-      <HomeStack.Screen name="Settings" component={SettingsScreen} />
       <HomeStack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
       <HomeStack.Screen name="Subscription" component={SubscriptionScreen} />
       <HomeStack.Screen name="Friends" component={FriendsScreen} />
@@ -101,6 +97,8 @@ export default function TabNavigator() {
       <Tab.Screen name="Home" component={HomeStackNavigator} options={{ tabBarLabel: t('tabs.home') }} />
       <Tab.Screen name="Activity" component={ActivityScreen} options={{ tabBarLabel: t('tabs.activity') }} />
       <Tab.Screen name="Social" component={SocialScreen} options={{ tabBarLabel: t('tabs.social') }} />
+      <Tab.Screen name="BodyHealth" component={BodyHealthScreen} options={{ tabBarLabel: t('tabs.bodyHealth') }} />
+      <Tab.Screen name="SettingsTab" component={SettingsScreen} options={{ tabBarLabel: t('tabs.settingsTab') }} />
       <Tab.Screen
         name="Workout"
         component={WorkoutScreen}

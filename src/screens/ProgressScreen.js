@@ -87,7 +87,7 @@ function TrendIcon({ trend }) {
   );
 }
 
-export default function ProgressScreen({ navigation }) {
+export default function ProgressScreen({ navigation, embedded = false } = {}) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { hasAccess } = useSubscription();
@@ -120,9 +120,11 @@ export default function ProgressScreen({ navigation }) {
 
   const toggleExpand = (name) => setExpandedEx(prev => prev === name ? null : name);
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScreenHeader title={t('progress.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />
+    <Wrap style={styles.safe}>
+      {!embedded && <ScreenHeader title={t('progress.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />}
       <Text style={styles.subtitle}>{t('progress.exercisesTracked', { count: grouped.length })}</Text>
 
       <View style={styles.searchWrap}>
@@ -261,7 +263,7 @@ export default function ProgressScreen({ navigation }) {
         <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
       </>
       </ScrollView>
-    </SafeAreaView>
+    </Wrap>
   );
 }
 

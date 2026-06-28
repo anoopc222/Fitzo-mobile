@@ -246,7 +246,7 @@ const styles_static = StyleSheet.create({
   chartStatVal: { fontSize: typography.sm, fontWeight: weight.bold },
 });
 
-export default function MeasurementsScreen({ navigation }) {
+export default function MeasurementsScreen({ navigation, embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -372,13 +372,17 @@ export default function MeasurementsScreen({ navigation }) {
   const entryOld = logs[compareOldIdx];
   const entryNew = logs[compareNewIdx];
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScreenHeader
-        title={t('measurements.headerTitle', 'MEASUREMENTS')}
-        colors={colors}
-        onBack={() => navigation.goBack()}
-      />
+    <Wrap style={styles.safe}>
+      {!embedded && (
+        <ScreenHeader
+          title={t('measurements.headerTitle', 'MEASUREMENTS')}
+          colors={colors}
+          onBack={() => navigation.goBack()}
+        />
+      )}
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -812,7 +816,7 @@ export default function MeasurementsScreen({ navigation }) {
       </BottomSheet>
 
       <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
-    </SafeAreaView>
+    </Wrap>
   );
 }
 
