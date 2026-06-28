@@ -103,6 +103,60 @@ async function repeatTemplateForWeeks(userId, template, weeks, startDate) {
   }
 }
 
+// Parses a raw set's text-input fields into numeric DB-ready values. Shared by
+// saveSession (real insert) and buildOptimisticSession (client-side preview),
+// so the optimistic total_volume/sets match what the server will compute.
+function computeSetRow(ex, s) {
+  const num = (v) => {
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  };
+  const wVal = num(s.weight_kg);
+  const rVal = s.reps === '' || s.reps == null ? null : (isNaN(parseInt(s.reps, 10)) ? null : parseInt(s.reps, 10));
+  const rpeVal = num(s.rpe);
+  const durVal = num(s.duration_min);
+  const distVal = num(s.distance_km);
+  const rpmVal = num(s.avg_rpm);
+  const speedVal = num(s.speed_kmh);
+  const inclineVal = num(s.incline_pct);
+  const calVal = num(s.calories) ?? (durVal != null
+    ? calcCardioEntryKcal(ex.name, {
+        duration_min: durVal, speed_kmh: speedVal, incline_pct: inclineVal, avg_rpm: rpmVal,
+      }) || null
+    : null);
+  const hasAny = [wVal, rVal, rpeVal, durVal, distVal, rpmVal, speedVal, inclineVal, calVal]
+    .some(v => v !== null);
+  return { hasAny, weight_kg: wVal, reps: rVal, rpe: rpeVal, duration_min: durVal, distance_km: distVal,
+    avg_rpm: rpmVal, speed_kmh: speedVal, incline_pct: inclineVal, calories: calVal };
+}
+
+// Builds a client-side preview of a session in the same shape fetchSessions
+// returns, so the workout list can update instantly while the real save
+// (multiple sequential round trips server-side) is still in flight.
+function buildOptimisticSession(sessionId, { date, name, exercises, duration_min }, existing) {
+  let totalVol = 0;
+  const workout_exercises = (exercises ?? [])
+    .filter(ex => ex.name.trim())
+    .map((ex, i) => {
+      const sets = (ex.sets ?? [])
+        .map((s, j) => ({ row: computeSetRow(ex, s), j }))
+        .filter(({ row }) => row.hasAny)
+        .map(({ row, j }) => {
+          if (row.weight_kg && row.reps) totalVol += row.weight_kg * row.reps;
+          return { id: `optimistic-set-${sessionId}-${i}-${j}`, set_number: j + 1, ...row };
+        });
+      return { id: `optimistic-ex-${sessionId}-${i}`, exercise_name: ex.name.trim(), order_index: i, group_id: ex.group_id ?? null, sets };
+    });
+  return {
+    id: sessionId,
+    date, notes: name || 'Workout',
+    total_volume: Math.round(totalVol),
+    duration_min: duration_min != null ? duration_min : (existing?.duration_min ?? null),
+    calories_burned: existing?.calories_burned ?? null,
+    workout_exercises,
+  };
+}
+
 async function saveSession(userId, { sessionId, date, name, exercises, duration_min }) {
   let sid = sessionId;
   const durPatch = duration_min != null ? { duration_min } : {};
@@ -130,47 +184,36 @@ async function saveSession(userId, { sessionId, date, name, exercises, duration_
     await supabase.from('workout_exercises').delete().eq('session_id', sid);
   }
 
-  // Insert new exercises + sets
+  // Insert new exercises in one batch call, then all of their sets in another —
+  // avoids one round trip per exercise/set, which is what made saving feel slow.
+  const validExercises = exercises
+    .map((ex, i) => ({ ex, order_index: i }))
+    .filter(({ ex }) => ex.name.trim());
   let totalVol = 0;
-  for (let i = 0; i < exercises.length; i++) {
-    const ex = exercises[i];
-    if (!ex.name.trim()) continue;
-    const { data: newEx, error: exErr } = await supabase
+  if (validExercises.length > 0) {
+    const { data: newExs, error: exErr } = await supabase
       .from('workout_exercises')
-      .insert({ session_id: sid, exercise_name: ex.name.trim(), order_index: i, group_id: ex.group_id ?? null })
-      .select().single();
+      .insert(validExercises.map(({ ex, order_index }) => ({
+        session_id: sid, exercise_name: ex.name.trim(), order_index, group_id: ex.group_id ?? null,
+      })))
+      .select('id, order_index');
     if (exErr) throw exErr;
+    const idByOrder = new Map(newExs.map(row => [row.order_index, row.id]));
 
-    for (let j = 0; j < (ex.sets ?? []).length; j++) {
-      const s = ex.sets[j];
-      const num = (v) => {
-        const n = parseFloat(v);
-        return isNaN(n) ? null : n;
-      };
-      const wVal = num(s.weight_kg);
-      const rVal = s.reps === '' || s.reps == null ? null : (isNaN(parseInt(s.reps, 10)) ? null : parseInt(s.reps, 10));
-      const rpeVal = num(s.rpe);
-      const durVal = num(s.duration_min);
-      const distVal = num(s.distance_km);
-      const rpmVal = num(s.avg_rpm);
-      const speedVal = num(s.speed_kmh);
-      const inclineVal = num(s.incline_pct);
-      const calVal = num(s.calories) ?? (durVal != null
-        ? calcCardioEntryKcal(ex.name, {
-            duration_min: durVal, speed_kmh: speedVal, incline_pct: inclineVal, avg_rpm: rpmVal,
-          }) || null
-        : null);
-      const hasAny = [wVal, rVal, rpeVal, durVal, distVal, rpmVal, speedVal, inclineVal, calVal]
-        .some(v => v !== null);
-      if (hasAny) {
-        if (wVal && rVal) totalVol += wVal * rVal;
-        await supabase.from('sets').insert({
-          exercise_id: newEx.id, set_number: j + 1,
-          weight_kg: wVal, reps: rVal, rpe: rpeVal,
-          duration_min: durVal, distance_km: distVal, avg_rpm: rpmVal,
-          speed_kmh: speedVal, incline_pct: inclineVal, calories: calVal,
-        });
-      }
+    const setRows = [];
+    for (const { ex, order_index } of validExercises) {
+      const exerciseId = idByOrder.get(order_index);
+      (ex.sets ?? []).forEach((s, j) => {
+        const row = computeSetRow(ex, s);
+        if (!row.hasAny) return;
+        if (row.weight_kg && row.reps) totalVol += row.weight_kg * row.reps;
+        const { hasAny, ...dbRow } = row;
+        setRows.push({ exercise_id: exerciseId, set_number: j + 1, ...dbRow });
+      });
+    }
+    if (setRows.length > 0) {
+      const { error: setErr } = await supabase.from('sets').insert(setRows);
+      if (setErr) throw setErr;
     }
   }
   await supabase.from('workout_sessions')
@@ -1340,7 +1383,7 @@ const createEhS = (colors) => StyleSheet.create({
 const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
 
 function EditSessionModal({
-  visible, isNew, initialData, recentTypes, allSessions, onSave, onCancel, isSaving,
+  visible, isNew, initialData, recentTypes, allSessions, onSave, onCancel,
   hasAccess, templates, onSaveTemplate, onOpenToolsPaywall,
   onRepeatTemplate, isRepeatingTemplate,
 }) {
@@ -2108,11 +2151,8 @@ function EditSessionModal({
             <TouchableOpacity style={eS.cancelBtn} onPress={onCancel}>
               <Text style={eS.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={eS.saveBtn} onPress={handleSave} disabled={isSaving}>
-              {isSaving
-                ? <ActivityIndicator color={colors.bg} />
-                : <Text style={eS.saveBtnText}>{isNew ? t('workout.saveSession') : t('workout.updateSession')}</Text>
-              }
+            <TouchableOpacity style={eS.saveBtn} onPress={handleSave}>
+              <Text style={eS.saveBtnText}>{isNew ? t('workout.saveSession') : t('workout.updateSession')}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -2199,12 +2239,26 @@ export default function WorkoutScreen() {
 
   const saveMut = useMutation({
     mutationFn: (params) => saveSession(user.id, params),
-    // NOTE: not optimistic — server computes total_volume and generates
-    // exercise/set ids across multiple round trips (delete-then-reinsert),
-    // so the cached shape can't be reliably reconstructed client-side
-    // without risking incorrect derived data (PRs, volume, trend badges).
-    onSuccess: () => { qc.invalidateQueries(['sessions', user.id]); setShowEdit(false); },
-    onError: (e) => Alert.alert(t('workout.errorSaving'), e.message),
+    onMutate: async (params) => {
+      await qc.cancelQueries(['sessions', user.id]);
+      const previous = qc.getQueryData(['sessions', user.id]);
+      const sid = params.sessionId ?? `optimistic-session-${Date.now()}`;
+      const existing = (previous ?? []).find((s) => s.id === params.sessionId);
+      const preview = buildOptimisticSession(sid, params, existing);
+      qc.setQueryData(['sessions', user.id], (old) => {
+        const list = old ?? [];
+        const idx = params.sessionId ? list.findIndex((s) => s.id === params.sessionId) : -1;
+        const next = idx >= 0 ? list.map((s, i) => (i === idx ? preview : s)) : [preview, ...list];
+        return next.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+      });
+      setShowEdit(false);
+      return { previous };
+    },
+    onSuccess: () => { qc.invalidateQueries(['sessions', user.id]); },
+    onError: (e, params, context) => {
+      if (context?.previous) qc.setQueryData(['sessions', user.id], context.previous);
+      Alert.alert(t('workout.errorSaving'), e.message);
+    },
   });
 
   const deleteMut = useMutation({
@@ -3071,7 +3125,6 @@ export default function WorkoutScreen() {
         allSessions={sessions}
         onSave={(data) => saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null })}
         onCancel={() => setShowEdit(false)}
-        isSaving={saveMut.isPending}
         hasAccess={hasAccess}
         templates={templates}
         onSaveTemplate={(params) => saveTemplateMut.mutate(params)}
