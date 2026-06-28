@@ -13,12 +13,6 @@ import { fetchProfile } from '../screens/ProfileScreen';
 
 const getSections = (t, colors, isAdmin, isPro, subReady) => [
   {
-    title: t('more.sectionLog'),
-    items: [
-      { label: t('more.foodLog'), icon: 'clipboard', target: ['Log'], color: colors.accent },
-    ],
-  },
-  {
     title: t('more.sectionTools'),
     items: [
       { label: t('more.calculators'),  icon: 'calculator',  target: ['Home', 'Calculators'],  color: colors.warning },
