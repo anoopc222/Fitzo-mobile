@@ -30,6 +30,7 @@ const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
 const DAY_NAMES = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const DOW_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 function localDateStr(d) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
@@ -408,6 +409,7 @@ export default function SleepScreen() {
   }, [isLoading, notifPrefs.sleepReminder, logs, reminderTime.hour, reminderTime.minute]);
 
   const sortedDesc = useMemo(() => [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)), [logs]);
+  const sortedAsc = useMemo(() => [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at)), [logs]);
 
   const logMut = useMutation({
     mutationFn: ({ date, hours }) => logSleep(user.id, { date, hours }),
@@ -541,6 +543,115 @@ export default function SleepScreen() {
 
   const recoveryColor = recoveryScore >= 75 ? '#34d399' : recoveryScore >= 50 ? '#f59e0b' : '#f87171';
 
+  const logDateSet = useMemo(() => new Set(logs.map(l => l.logged_at)), [logs]);
+
+  // Deeper logging/pattern analysis — mirrors Weight screen's expanded insights
+  const sleepConsistency = useMemo(() => {
+    const todayD = new Date();
+    const todayStr = localDateStr(todayD);
+
+    let currentLogStreak = 0;
+    for (let i = 0; i < 365; i++) {
+      const d = localDateStr(new Date(todayD.getTime() - i * 86400000));
+      if (logDateSet.has(d)) currentLogStreak++;
+      else if (d !== todayStr) break;
+    }
+
+    let longestLogStreak = 0, run = 0;
+    for (let i = 364; i >= 0; i--) {
+      const d = localDateStr(new Date(todayD.getTime() - i * 86400000));
+      if (logDateSet.has(d)) { run++; longestLogStreak = Math.max(longestLogStreak, run); }
+      else run = 0;
+    }
+
+    const countInWindow = (startDaysAgo, endDaysAgo) => {
+      let c = 0;
+      for (let i = endDaysAgo; i < startDaysAgo; i++) {
+        const d = localDateStr(new Date(todayD.getTime() - i * 86400000));
+        if (logDateSet.has(d)) c++;
+      }
+      return c;
+    };
+    const last8WkLogged = countInWindow(56, 0);
+    const prev8WkLogged = countInWindow(112, 56);
+    const consistencyPct = Math.round((last8WkLogged / 56) * 100);
+    const prevConsistencyPct = Math.round((prev8WkLogged / 56) * 100);
+
+    // Day-of-week pattern: avg deviation from overall mean hours, per weekday
+    const overallVals = sortedAsc.map(l => l.hours);
+    const overallAvg = overallVals.length ? overallVals.reduce((a, b) => a + b, 0) / overallVals.length : null;
+    let bestDow = null, bestDowDelta = 0;
+    if (overallAvg != null) {
+      const dowSums = Array(7).fill(0), dowCounts = Array(7).fill(0);
+      for (const l of sortedAsc) {
+        const dow = new Date(l.logged_at + 'T00:00:00').getDay();
+        dowSums[dow] += l.hours - overallAvg;
+        dowCounts[dow]++;
+      }
+      let maxAbs = 0;
+      for (let i = 0; i < 7; i++) {
+        if (dowCounts[i] < 2) continue;
+        const avgDelta = dowSums[i] / dowCounts[i];
+        if (Math.abs(avgDelta) > maxAbs) { maxAbs = Math.abs(avgDelta); bestDow = i; bestDowDelta = avgDelta; }
+      }
+    }
+
+    // Night-to-night volatility: avg absolute delta between consecutive logs
+    let volatility = null;
+    if (sortedAsc.length >= 3) {
+      let sum = 0;
+      for (let i = 1; i < sortedAsc.length; i++) sum += Math.abs(sortedAsc[i].hours - sortedAsc[i - 1].hours);
+      volatility = sum / (sortedAsc.length - 1);
+    }
+
+    // Weekend vs weekday average, relative to overall mean
+    let weekendDelta = null;
+    if (overallAvg != null) {
+      const weekendVals = sortedAsc.filter(l => [0, 6].includes(new Date(l.logged_at + 'T00:00:00').getDay())).map(l => l.hours);
+      const weekdayVals = sortedAsc.filter(l => ![0, 6].includes(new Date(l.logged_at + 'T00:00:00').getDay())).map(l => l.hours);
+      if (weekendVals.length >= 2 && weekdayVals.length >= 2) {
+        const weekendAvg = weekendVals.reduce((a, b) => a + b, 0) / weekendVals.length;
+        const weekdayAvg = weekdayVals.reduce((a, b) => a + b, 0) / weekdayVals.length;
+        weekendDelta = weekendAvg - weekdayAvg;
+      }
+    }
+
+    // Momentum: avg hours over the last 14 days vs the prior 14 days
+    const last14Entries = sortedAsc.filter(l => l.logged_at >= localDateStr(new Date(todayD.getTime() - 13 * 86400000)));
+    const prev14Entries = sortedAsc.filter(l =>
+      l.logged_at >= localDateStr(new Date(todayD.getTime() - 27 * 86400000)) &&
+      l.logged_at < localDateStr(new Date(todayD.getTime() - 13 * 86400000))
+    );
+    let momentumDelta = null;
+    if (last14Entries.length >= 2 && prev14Entries.length >= 2) {
+      const avgOf = (entries) => entries.reduce((s, e) => s + e.hours, 0) / entries.length;
+      momentumDelta = avgOf(last14Entries) - avgOf(prev14Entries);
+    }
+
+    // Biggest single night-to-night swing in the last 30 days
+    const last30 = sortedAsc.filter(l => l.logged_at >= localDateStr(new Date(todayD.getTime() - 29 * 86400000)));
+    let biggestSwing = null;
+    if (last30.length >= 2) {
+      for (let i = 1; i < last30.length; i++) {
+        const delta = last30[i].hours - last30[i - 1].hours;
+        if (biggestSwing == null || Math.abs(delta) > Math.abs(biggestSwing.delta)) {
+          biggestSwing = { delta, date: last30[i].logged_at };
+        }
+      }
+    }
+
+    // Days since last log
+    const lastLogDate = sortedDesc[0]?.logged_at ?? null;
+    const daysSinceLastLog = lastLogDate
+      ? Math.floor((todayD.getTime() - new Date(lastLogDate + 'T00:00:00').getTime()) / 86400000)
+      : null;
+
+    return {
+      currentLogStreak, longestLogStreak, consistencyPct, prevConsistencyPct,
+      bestDow, bestDowDelta, volatility, weekendDelta, momentumDelta, biggestSwing, daysSinceLastLog,
+    };
+  }, [logDateSet, sortedAsc, sortedDesc]);
+
   // Insights
   const insights = useMemo(() => {
     const out = [];
@@ -581,8 +692,57 @@ export default function SleepScreen() {
     if (weekDebt >= 5) out.push({ icon: '⚠️', text: t('sleep.insightDebtPrefix'), bold: t('sleep.insightDebtBold', { value: weekDebt }), rest: t('sleep.insightDebtSuffix') });
     if (consistencyRaw === 'Poor') out.push({ icon: '🕐', text: t('sleep.insightIrregularPrefix'), bold: t('sleep.insightIrregularBold'), rest: t('sleep.insightIrregularSuffix') });
     if (avg7 >= goal) out.push({ icon: '✅', text: t('sleep.insightAveragingPrefix'), bold: `${avg7}h`, rest: t('sleep.insightAveragingSuffix', { goal }) });
+
+    const c = sleepConsistency;
+    if (c.consistencyPct > c.prevConsistencyPct) {
+      out.push({ icon: '📈', text: t('sleep.insightConsistencyUpText'), bold: `${c.consistencyPct - c.prevConsistencyPct}%`, rest: t('sleep.insightConsistencyUpRest') });
+    } else if (c.consistencyPct < c.prevConsistencyPct) {
+      out.push({ icon: '📉', text: t('sleep.insightConsistencyDownText'), bold: `${c.prevConsistencyPct - c.consistencyPct}%`, rest: t('sleep.insightConsistencyDownRest') });
+    }
+    if (c.currentLogStreak >= c.longestLogStreak && c.currentLogStreak > 0) {
+      out.push({ icon: '🔥', text: t('sleep.insightBestStreakText'), bold: t('sleep.insightBestStreakBold'), rest: t('sleep.insightBestStreakRest', { count: c.currentLogStreak }) });
+    } else if (c.longestLogStreak > c.currentLogStreak && c.currentLogStreak > 0) {
+      out.push({ icon: '🎯', text: t('sleep.insightTiesRecordText', { count: c.longestLogStreak - c.currentLogStreak }), bold: t('sleep.insightTiesRecordBold'), rest: t('sleep.insightTiesRecordRest', { count: c.longestLogStreak }) });
+    }
+    if (c.bestDow != null && Math.abs(c.bestDowDelta) > 0.2) {
+      out.push({
+        icon: '📅',
+        text: t('sleep.insightBestDowText', { day: DOW_FULL[c.bestDow] }),
+        bold: `${c.bestDowDelta >= 0 ? '+' : ''}${c.bestDowDelta.toFixed(1)}h`,
+        rest: t('sleep.insightBestDowRest'),
+      });
+    }
+    if (c.volatility != null && c.volatility >= 1) {
+      out.push({ icon: '〜', text: t('sleep.insightVolatilityText'), bold: `±${c.volatility.toFixed(1)}h`, rest: t('sleep.insightVolatilityRest') });
+    }
+    if (c.weekendDelta != null && Math.abs(c.weekendDelta) > 0.3) {
+      out.push({
+        icon: '🌙',
+        text: t('sleep.insightWeekendText'),
+        bold: `${c.weekendDelta >= 0 ? '+' : ''}${c.weekendDelta.toFixed(1)}h`,
+        rest: t('sleep.insightWeekendRest'),
+      });
+    }
+    if (c.momentumDelta != null && Math.abs(c.momentumDelta) > 0.4) {
+      if (c.momentumDelta > 0) {
+        out.push({ icon: '🚀', text: t('sleep.insightMomentumBuildingText'), bold: '', rest: t('sleep.insightMomentumBuildingRest', { value: c.momentumDelta.toFixed(1) }) });
+      } else {
+        out.push({ icon: '🐢', text: t('sleep.insightProgressSlowedText'), bold: '', rest: t('sleep.insightProgressSlowedRest', { value: Math.abs(c.momentumDelta).toFixed(1) }) });
+      }
+    }
+    if (c.biggestSwing && Math.abs(c.biggestSwing.delta) >= 2) {
+      out.push({
+        icon: '⚡',
+        text: t('sleep.insightBiggestSwingText'),
+        bold: `${c.biggestSwing.delta >= 0 ? '+' : ''}${c.biggestSwing.delta.toFixed(1)}h`,
+        rest: t('sleep.insightBiggestSwingRest', { date: new Date(c.biggestSwing.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }),
+      });
+    }
+    if (c.daysSinceLastLog != null && c.daysSinceLastLog >= 3) {
+      out.push({ icon: '⚠️', text: t('sleep.insightDaysSinceLastLogText'), bold: t('sleep.insightDaysSinceLastLogBold', { count: c.daysSinceLastLog }), rest: t('sleep.insightDaysSinceLastLogRest') });
+    }
     return out;
-  }, [weekDebt, consistencyRaw, avg7, goal, sortedDesc, steps, sessions, t]);
+  }, [weekDebt, consistencyRaw, avg7, goal, sortedDesc, steps, sessions, sleepConsistency, t]);
 
   // Trend chart data
   const chartData = useMemo(() => {
