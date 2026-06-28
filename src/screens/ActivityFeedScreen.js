@@ -22,6 +22,15 @@ const TYPE_ICON = {
   food: 'restaurant',
 };
 
+const TYPE_COLOR = {
+  workout: '#9d4edd',
+  pr: '#ffd60a',
+  weight: '#4ea8ff',
+  steps: '#3ddc84',
+  sleep: '#7c8cff',
+  food: '#ff9f4e',
+};
+
 export async function fetchActivityFeed(userId) {
   const { data, error } = await supabase
     .from('activity_feed')
@@ -126,27 +135,34 @@ export default function ActivityFeedScreen({ navigation }) {
           ) : (
             data.map(item => {
               const isExpanded = expandedId === item.id;
+              const typeColor = TYPE_COLOR[item.type] ?? colors.accent;
               return (
-                <View key={item.id} style={styles.card}>
+                <View key={item.id} style={[styles.card, { borderLeftColor: typeColor }]}>
                   <View style={styles.cardHeader}>
                     <Avatar name={item.profiles?.full_name} colors={colors} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardName}>{item.profiles?.full_name || t('friends.unnamed')}</Text>
                       <Text style={styles.cardTime}>{timeAgo(item.created_at, t)}</Text>
                     </View>
-                    <View style={[styles.typeIconWrap, { backgroundColor: colors.accent + '18' }]}>
-                      <Ionicons name={TYPE_ICON[item.type] ?? 'sparkles'} size={14} color={colors.accent} />
+                    <View style={[styles.typeIconWrap, { backgroundColor: typeColor + '22' }]}>
+                      <Ionicons name={TYPE_ICON[item.type] ?? 'sparkles'} size={18} color={typeColor} />
                     </View>
                   </View>
 
                   <Text style={styles.cardTitle}>{item.title}</Text>
-                  {item.detail ? <Text style={styles.cardDetail}>{item.detail}</Text> : null}
+                  {item.detail ? (
+                    <View style={[styles.detailBadge, { backgroundColor: typeColor + '14', borderColor: typeColor + '40' }]}>
+                      <Ionicons name="stats-chart" size={12} color={typeColor} style={{ marginRight: 6 }} />
+                      <Text style={[styles.cardDetail, { color: typeColor }]}>{item.detail}</Text>
+                    </View>
+                  ) : null}
 
                   <View style={styles.actionsRow}>
                     <TouchableOpacity
-                      style={styles.actionBtn}
+                      style={[styles.actionBtn, item.likedByMe && styles.actionBtnActive]}
                       onPress={() => likeMut.mutate({ activityId: item.id, likedByMe: item.likedByMe })}
                       disabled={likeMut.isPending}
+                      activeOpacity={0.7}
                     >
                       <Ionicons
                         name={item.likedByMe ? 'heart' : 'heart-outline'}
@@ -158,11 +174,12 @@ export default function ActivityFeedScreen({ navigation }) {
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.actionBtn}
+                      style={[styles.actionBtn, isExpanded && styles.actionBtnActive]}
                       onPress={() => setExpandedId(isExpanded ? null : item.id)}
+                      activeOpacity={0.7}
                     >
-                      <Ionicons name="chatbubble-outline" size={15} color={colors.textMuted} />
-                      <Text style={styles.actionText}>
+                      <Ionicons name={isExpanded ? 'chatbubble' : 'chatbubble-outline'} size={15} color={isExpanded ? colors.accent : colors.textMuted} />
+                      <Text style={[styles.actionText, isExpanded && { color: colors.accent }]}>
                         {item.comments.length > 0 ? item.comments.length : t('activity.comment')}
                       </Text>
                     </TouchableOpacity>
@@ -170,10 +187,15 @@ export default function ActivityFeedScreen({ navigation }) {
 
                   {isExpanded && (
                     <View style={styles.commentsSection}>
-                      {item.comments.map(c => (
+                      {item.comments.length === 0 ? (
+                        <Text style={styles.noComments}>{t('activity.commentPlaceholder')}</Text>
+                      ) : item.comments.map(c => (
                         <View key={c.id} style={styles.commentRow}>
-                          <Text style={styles.commentName}>{c.profiles?.full_name || t('friends.unnamed')}</Text>
-                          <Text style={styles.commentBody}>{c.body}</Text>
+                          <Avatar name={c.profiles?.full_name} colors={colors} size={26} />
+                          <View style={styles.commentBubble}>
+                            <Text style={styles.commentName}>{c.profiles?.full_name || t('friends.unnamed')}</Text>
+                            <Text style={styles.commentBody}>{c.body}</Text>
+                          </View>
                         </View>
                       ))}
                       <View style={styles.commentInputRow}>
@@ -186,7 +208,7 @@ export default function ActivityFeedScreen({ navigation }) {
                           maxLength={500}
                         />
                         <TouchableOpacity
-                          style={styles.commentSendBtn}
+                          style={[styles.commentSendBtn, !(commentDrafts[item.id] ?? '').trim() && { opacity: 0.4 }]}
                           onPress={() => submitComment(item.id)}
                           disabled={commentMut.isPending || !(commentDrafts[item.id] ?? '').trim()}
                         >
@@ -205,11 +227,11 @@ export default function ActivityFeedScreen({ navigation }) {
   );
 }
 
-function Avatar({ name, colors }) {
+function Avatar({ name, colors, size = 34 }) {
   const initial = (name?.[0] ?? '?').toUpperCase();
   return (
-    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: colors.bg, fontWeight: weight.bold, fontSize: typography.sm }}>{initial}</Text>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: colors.bg, fontWeight: weight.bold, fontSize: size > 30 ? typography.sm : typography.xs }}>{initial}</Text>
     </View>
   );
 }
@@ -224,24 +246,37 @@ const createStyles = (colors) => StyleSheet.create({
 
   card: {
     backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border,
-    padding: 14, marginBottom: 12,
+    borderLeftWidth: 3, padding: 14, marginBottom: 12,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   cardName: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text },
   cardTime: { fontSize: typography.xs, color: colors.textDim, marginTop: 1 },
-  typeIconWrap: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  typeIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 
-  cardTitle: { fontSize: typography.base, fontWeight: weight.semibold, color: colors.text, marginBottom: 2 },
-  cardDetail: { fontSize: typography.sm, color: colors.textMuted },
+  cardTitle: { fontSize: typography.base, fontWeight: weight.bold, color: colors.text, marginBottom: 8 },
+  detailBadge: {
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
+    borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6,
+  },
+  cardDetail: { fontSize: typography.sm, fontWeight: weight.semibold },
 
-  actionsRow: { flexDirection: 'row', gap: 18, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  actionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16,
+  },
+  actionBtnActive: { backgroundColor: colors.bg },
   actionText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
 
-  commentsSection: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border, gap: 8 },
-  commentRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  commentName: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.text },
-  commentBody: { fontSize: typography.xs, color: colors.textMuted, flex: 1 },
+  commentsSection: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border, gap: 10 },
+  noComments: { fontSize: typography.xs, color: colors.textDim, fontStyle: 'italic', paddingVertical: 4 },
+  commentRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  commentBubble: {
+    flex: 1, backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 10, paddingVertical: 8,
+  },
+  commentName: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.text, marginBottom: 2 },
+  commentBody: { fontSize: typography.xs, color: colors.textMuted },
 
   commentInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   commentInput: {
