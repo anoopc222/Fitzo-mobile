@@ -3,43 +3,103 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { typography, weight } from '../theme/typography';
-import ScreenHeader from '../components/ScreenHeader';
+import { typography, weight, fontFamily } from '../theme/typography';
 import ActivityFeedScreen from './ActivityFeedScreen';
 import FriendsScreen from './FriendsScreen';
 import ChallengesScreen from './ChallengesScreen';
 
 const TABS = [
-  { key: 'feed', icon: 'newspaper' },
-  { key: 'friends', icon: 'people' },
-  { key: 'challenges', icon: 'trophy' },
+  { key: 'feed', icon: 'home', activeIcon: 'home' },
+  { key: 'friends', icon: 'people-outline', activeIcon: 'people' },
+  { key: 'challenges', icon: 'trophy-outline', activeIcon: 'trophy' },
+];
+
+const QUICK_ACTIONS = [
+  { label: 'Weight', icon: 'scale', target: 'Weight', color: 'blue' },
+  { label: 'Steps', icon: 'footsteps', target: 'Steps', color: 'good' },
+  { label: 'Sleep', icon: 'moon', target: 'Sleep', color: 'purple' },
+  { label: 'Food', icon: 'restaurant', target: 'Log', color: 'accent2' },
+  { label: 'Workout', icon: 'barbell', target: 'Workout', color: 'danger' },
 ];
 
 export default function SocialScreen({ navigation }) {
-  const { colors } = useTheme();
+  const { user } = useAuth();
+  const { colors, isDark, setIsDark } = useTheme();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [tab, setTab] = useState('feed');
+  const [composerOpen, setComposerOpen] = useState(false);
+
+  const displayName = user?.user_metadata?.full_name ?? 'You';
+  const initial = (displayName[0] ?? 'F').toUpperCase();
+
+  const goQuickAction = (target) => {
+    setComposerOpen(false);
+    navigation.navigate(target);
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenHeader title={t('more.feed')} colors={colors} onBack={() => navigation.goBack()} />
-      <View style={styles.tabRow}>
-        {TABS.map(tb => (
-          <TouchableOpacity
-            key={tb.key}
-            style={[styles.tabBtn, tab === tb.key && styles.tabBtnActive]}
-            onPress={() => setTab(tb.key)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name={tb.icon} size={15} color={tab === tb.key ? colors.bg : colors.textMuted} />
-            <Text style={[styles.tabBtnText, tab === tb.key && styles.tabBtnTextActive]}>
-              {t(`more.${tb.key === 'feed' ? 'activityFeed' : tb.key}`)}
-            </Text>
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.logo}>Fitzo<Text style={styles.logoDot}>•</Text></Text>
+        <View style={styles.topBarRight}>
+          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={() => setTab('friends')}>
+            <Ionicons name="person-add-outline" size={20} color={colors.text} />
           </TouchableOpacity>
-        ))}
+          <TouchableOpacity onPress={() => setIsDark(!isDark)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={isDark ? colors.accent : colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <View style={styles.tabBar}>
+        {TABS.map(tb => {
+          const active = tab === tb.key;
+          return (
+            <TouchableOpacity
+              key={tb.key}
+              style={styles.tabItem}
+              onPress={() => setTab(tb.key)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={active ? tb.activeIcon : tb.icon} size={22} color={active ? colors.accent : colors.textDim} />
+              <View style={[styles.tabUnderline, active && { backgroundColor: colors.accent }]} />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {tab === 'feed' && (
+        <View style={styles.composerWrap}>
+          <TouchableOpacity style={styles.composerRow} onPress={() => setComposerOpen(o => !o)} activeOpacity={0.8}>
+            <View style={styles.composerAvatar}>
+              <Text style={styles.composerAvatarText}>{initial}</Text>
+            </View>
+            <View style={styles.composerPill}>
+              <Text style={styles.composerPillText}>{t('activity.whatsOnYourMind')}</Text>
+            </View>
+            <Ionicons name={composerOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textDim} />
+          </TouchableOpacity>
+
+          {composerOpen && (
+            <View style={styles.quickActionsRow}>
+              {QUICK_ACTIONS.map(qa => (
+                <TouchableOpacity key={qa.label} style={styles.quickAction} onPress={() => goQuickAction(qa.target)} activeOpacity={0.8}>
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors[qa.color] + '20' }]}>
+                    <Ionicons name={qa.icon} size={17} color={colors[qa.color]} />
+                  </View>
+                  <Text style={styles.quickActionLabel}>{qa.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={styles.body}>
         {tab === 'feed' && <ActivityFeedScreen navigation={navigation} embedded />}
@@ -52,16 +112,43 @@ export default function SocialScreen({ navigation }) {
 
 const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  tabRow: {
-    flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
+
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8,
   },
-  tabBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border,
-    paddingVertical: 9,
+  backBtn: { padding: 2, width: 28 },
+  logo: { flex: 1, fontSize: typography.lg, fontFamily: fontFamily.displayItalic, fontStyle: 'italic', color: colors.text },
+  logoDot: { color: colors.accent },
+  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+
+  tabBar: {
+    flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  tabBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  tabBtnText: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted },
-  tabBtnTextActive: { color: colors.bg },
+  tabItem: { flex: 1, alignItems: 'center', paddingVertical: 10 },
+  tabUnderline: { height: 3, width: '60%', borderRadius: 2, marginTop: 6, backgroundColor: 'transparent' },
+
+  composerWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  composerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bgCard,
+    borderRadius: 22, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 8,
+  },
+  composerAvatar: {
+    width: 34, height: 34, borderRadius: 17, backgroundColor: colors.accent,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  composerAvatarText: { color: colors.accentText ?? colors.bg, fontWeight: weight.bold, fontSize: typography.sm },
+  composerPill: { flex: 1 },
+  composerPillText: { color: colors.textDim, fontSize: typography.sm },
+
+  quickActionsRow: {
+    flexDirection: 'row', justifyContent: 'space-between', marginTop: 10,
+    backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+    paddingVertical: 12, paddingHorizontal: 8,
+  },
+  quickAction: { alignItems: 'center', gap: 6, flex: 1 },
+  quickActionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  quickActionLabel: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
+
   body: { flex: 1 },
 });
