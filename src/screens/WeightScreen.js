@@ -106,7 +106,7 @@ async function deleteWeightLog(id) {
 }
 
 // ─── Weight Heatmap — ports _renderWeightHeatmap (quartile-relative-to-month) ─
-function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true, onLockedPress, cardWidth }) {
+function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true, onLockedPress, onDayPress, cardWidth }) {
   const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
@@ -172,9 +172,12 @@ function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true
               </TouchableOpacity>
             );
           }
+          const CellWrapper = onDayPress ? TouchableOpacity : View;
           return (
-            <View
+            <CellWrapper
               key={cell.key}
+              activeOpacity={onDayPress ? 0.7 : undefined}
+              onPress={onDayPress ? () => onDayPress(cell.key, cell.w) : undefined}
               style={[
                 { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
                 { width: cellSize, height: cellSize, backgroundColor: LVL_COLOR[cell.lvl] },
@@ -185,7 +188,7 @@ function WeightHeatmap({ year, month, logsByDate, colors, unit, hasAccess = true
               <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, marginTop: 1, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: cell.lvl === 0 ? 0.5 : 1 }}>
                 {cell.w !== undefined ? toDisp(cell.w, unit).toFixed(1) : '—'}
               </Text>
-            </View>
+            </CellWrapper>
           );
         })}
       </View>
@@ -931,6 +934,15 @@ export default function WeightScreen() {
     setShowLogSheet(true);
   };
 
+  const openLogSheetForDate = (dateStr) => {
+    if (dateStr > localDateStr(new Date())) return;
+    const existing = logs.find(l => l.logged_at === dateStr);
+    setLogDate(dateStr);
+    setWeightInput(existing ? toDisp(existing.weight, unit).toFixed(1) : '');
+    setNote(existing?.notes ?? '');
+    setShowLogSheet(true);
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* App header */}
@@ -1147,7 +1159,7 @@ export default function WeightScreen() {
                 ))}
                 <Text style={styles.hmLegendLabel}>{t('weight.highLegendLabel')}</Text>
               </View>
-              <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={hasAccess} onLockedPress={() => setShowPaywall(true)} />
+              <WeightHeatmap year={year} month={month} logsByDate={logsByDate} colors={colors} unit={unit} hasAccess={hasAccess} onLockedPress={() => setShowPaywall(true)} onDayPress={openLogSheetForDate} />
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
