@@ -79,7 +79,7 @@ async function leaveChallenge(challengeId, userId) {
   if (error) throw error;
 }
 
-export default function ChallengesScreen({ navigation }) {
+export default function ChallengesScreen({ navigation, embedded = false }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -110,18 +110,29 @@ export default function ChallengesScreen({ navigation }) {
     onError: (e) => Alert.alert(t('challenges.errorTitle'), e.message),
   });
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScreenHeader
-        title={t('challenges.title')}
-        colors={colors}
-        onBack={() => navigation.goBack()}
-        right={
-          <TouchableOpacity onPress={() => setShowCreate(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="add-circle-outline" size={22} color={colors.accent} />
+    <Wrap style={styles.safe}>
+      {embedded ? (
+        <View style={styles.embeddedHeaderRow}>
+          <TouchableOpacity style={styles.embeddedCreateBtn} onPress={() => setShowCreate(true)} activeOpacity={0.8}>
+            <Ionicons name="add" size={16} color={colors.bg} />
+            <Text style={styles.embeddedCreateBtnText}>{t('challenges.title')}</Text>
           </TouchableOpacity>
-        }
-      />
+        </View>
+      ) : (
+        <ScreenHeader
+          title={t('challenges.title')}
+          colors={colors}
+          onBack={() => navigation.goBack()}
+          right={
+            <TouchableOpacity onPress={() => setShowCreate(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="add-circle-outline" size={22} color={colors.accent} />
+            </TouchableOpacity>
+          }
+        />
+      )}
       <ScrollView contentContainerStyle={styles.content}>
         {isLoading ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />
@@ -212,7 +223,7 @@ export default function ChallengesScreen({ navigation }) {
         colors={colors}
         t={t}
       />
-    </SafeAreaView>
+    </Wrap>
   );
 }
 
@@ -314,6 +325,12 @@ function CreateChallengeModal({ visible, onClose, onCreate, creating, colors, t 
 
 const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+  embeddedHeaderRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 10 },
+  embeddedCreateBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent,
+    borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7,
+  },
+  embeddedCreateBtnText: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.bg },
   content: { paddingHorizontal: 16, paddingBottom: 40, paddingTop: 8 },
 
   emptyWrap: { alignItems: 'center', paddingVertical: 60, gap: 8 },

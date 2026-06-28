@@ -25,6 +25,7 @@ import SubscriptionScreen from '../screens/SubscriptionScreen';
 import FriendsScreen from '../screens/FriendsScreen';
 import ActivityFeedScreen from '../screens/ActivityFeedScreen';
 import ChallengesScreen from '../screens/ChallengesScreen';
+import SocialScreen from '../screens/SocialScreen';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -55,6 +56,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Settings" component={SettingsScreen} />
       <HomeStack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
       <HomeStack.Screen name="Subscription" component={SubscriptionScreen} />
+      <HomeStack.Screen name="Social" component={SocialScreen} />
       <HomeStack.Screen name="Friends" component={FriendsScreen} />
       <HomeStack.Screen name="ActivityFeed" component={ActivityFeedScreen} />
       <HomeStack.Screen name="Challenges" component={ChallengesScreen} />
