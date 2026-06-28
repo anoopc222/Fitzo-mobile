@@ -258,7 +258,7 @@ export default function FoodLogScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300);
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 150);
     return () => clearTimeout(t);
   }, [searchQuery]);
 
