@@ -1180,17 +1180,37 @@ export default function StepsScreen() {
                   ))}
                 </View>
               ) : (
-                <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
-                  <View style={{ marginTop: 12, gap: 8 }}>
-                    {[['📈', 0.92], ['😴', 0.68], ['🌍', 0.8]].map(([icon, w], i) => (
-                      <View key={i} style={styles.tipRow}>
-                        <Text style={styles.tipEmoji}>{icon}</Text>
-                        <View style={[styles.skeletonBar, { width: `${w * 100}%` }]} />
-                      </View>
-                    ))}
-                  </View>
-                  <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>{t('steps.unlockInsightsPro')}</Text>
-                </TouchableOpacity>
+                <View style={{ marginTop: 12, gap: 8 }}>
+                  {goalSuggestion ? (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>📈</Text>
+                      <Text style={styles.tipText}>{t('steps.tipRaiseGoal', { avg: goalSuggestion.avg.toLocaleString(), hitRate: goalSuggestion.hitRate, suggested: goalSuggestion.suggested.toLocaleString() })}</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>📈</Text>
+                      <View style={[styles.skeletonBar, { width: '92%' }]} />
+                    </View>
+                  )}
+                  {sleepCorrelation && sleepCorrelation.diff > 200 ? (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>😴</Text>
+                      <Text style={styles.tipText}>{t('steps.tipSleepCorrelation', { diff: sleepCorrelation.diff.toLocaleString(), avgLow: sleepCorrelation.avgLow.toLocaleString(), avgNormal: sleepCorrelation.avgNormal.toLocaleString() })}</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>😴</Text>
+                      <View style={[styles.skeletonBar, { width: '68%' }]} />
+                    </View>
+                  )}
+                  <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>🌍</Text>
+                      <View style={[styles.skeletonBar, { width: '80%' }]} />
+                    </View>
+                    <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>{t('steps.unlockInsightsPro')}</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 

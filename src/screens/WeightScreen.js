@@ -1191,10 +1191,21 @@ export default function WeightScreen() {
                     </View>
                   </View>
                   <View style={styles.insightsList}>
-                    {[['📈', 0.92], ['📅', 0.68], ['⚡', 0.8]].map(([icon, w], i) => (
-                      <View key={i} style={styles.insightRow}>
-                        <Text style={styles.insightIcon}>{icon}</Text>
-                        <View style={[styles.skeletonBar, { width: `${w * 100}%` }]} />
+                    {weightInsights.slice(0, 2).map((ins, i) => (
+                      <View key={`real-${i}`} style={styles.insightRow}>
+                        <Text style={styles.insightIcon}>{ins.icon}</Text>
+                        <Text style={styles.insightText}>
+                          {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
+                        </Text>
+                      </View>
+                    ))}
+                    {(weightInsights.length > 2
+                      ? weightInsights.slice(2)
+                      : [['📈', 0.92], ['📅', 0.68], ['⚡', 0.8]].slice(weightInsights.length)
+                    ).map((ins, i) => (
+                      <View key={`locked-${i}`} style={styles.insightRow}>
+                        <Text style={styles.insightIcon}>{Array.isArray(ins) ? ins[0] : ins.icon}</Text>
+                        <View style={[styles.skeletonBar, { width: `${Array.isArray(ins) ? ins[1] * 100 : 80}%` }]} />
                       </View>
                     ))}
                   </View>
