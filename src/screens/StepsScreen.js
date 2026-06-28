@@ -11,6 +11,7 @@ import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect } from 'react
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
+import { logActivity } from '../lib/activity';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import DatePickerField from '../components/ui/DatePickerField';
@@ -128,6 +129,7 @@ async function logSteps(userId, { date, steps, goal, activityType, note }) {
       ...fields, user_id: userId, logged_at: date,
     });
     if (error) throw error;
+    logActivity(userId, 'steps', 'Steps logged', `${steps.toLocaleString()} steps`);
   }
 }
 

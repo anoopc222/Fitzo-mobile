@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
+import { logActivity } from '../lib/activity';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import DatePickerField from '../components/ui/DatePickerField';
@@ -92,6 +93,7 @@ async function logWeight(userId, { date, weight: weightKg, note }) {
   } else {
     const { error } = await supabase.from('weight_logs').insert({ ...fields, user_id: userId, logged_at: date });
     if (error) throw error;
+    logActivity(userId, 'weight', 'Weight logged', `${weightKg} kg`);
   }
 }
 
