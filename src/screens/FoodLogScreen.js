@@ -756,8 +756,8 @@ export default function FoodLogScreen() {
                   <ScaledMacro label={t('foodLog.fats')} value={scaled.fats} unit="g" color={colors.warning} />
                 </View>
 
-                <TouchableOpacity style={styles.saveBtn} onPress={handleLogSelected} disabled={addMut.isPending}>
-                  {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('foodLog.addToMeal', { meal: t(MEAL_TYPE_I18N_KEYS[selectedMeal]) })}</Text>}
+                <TouchableOpacity style={styles.saveBtn} onPress={handleLogSelected}>
+                  <Text style={styles.saveBtnText}>{t('foodLog.addToMeal', { meal: t(MEAL_TYPE_I18N_KEYS[selectedMeal]) })}</Text>
                 </TouchableOpacity>
               </ScrollView>
             )}
@@ -775,8 +775,8 @@ export default function FoodLogScreen() {
                   <MacroInput label={t('foodLog.fats')} value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
                 </View>
 
-                <TouchableOpacity style={styles.saveBtn} onPress={handleAddManual} disabled={addMut.isPending}>
-                  {addMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('foodLog.saveFood')}</Text>}
+                <TouchableOpacity style={styles.saveBtn} onPress={handleAddManual}>
+                  <Text style={styles.saveBtnText}>{t('foodLog.saveFood')}</Text>
                 </TouchableOpacity>
               </ScrollView>
             )}
@@ -808,8 +808,8 @@ export default function FoodLogScreen() {
           <TextInput style={styles.sheetInput} value={fatsInput} onChangeText={setFatsInput} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.textDim} />
         </View>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveTargets} disabled={targetsMut.isPending}>
-          {targetsMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('foodLog.saveTargets')}</Text>}
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveTargets}>
+          <Text style={styles.saveBtnText}>{t('foodLog.saveTargets')}</Text>
         </TouchableOpacity>
       </BottomSheet>
 
