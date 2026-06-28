@@ -554,9 +554,11 @@ function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded, hasAc
 }
 
 // ─── History slider bar row — ports renderBody()'s history list ────────────
-function WeightHistoryBar({ value, goalVal, barMax, colors }) {
-  const fillPct = Math.min(97, Math.max(2, (value / barMax) * 100));
-  const goalPct = goalVal != null ? Math.min(99, Math.max(1, (goalVal / barMax) * 100)) : null;
+function WeightHistoryBar({ value, goalVal, barMin, barMax, colors }) {
+  const span = barMax - barMin || 1;
+  const toPct = v => Math.min(98, Math.max(2, ((v - barMin) / span) * 100));
+  const fillPct = toPct(value);
+  const goalPct = goalVal != null ? toPct(goalVal) : null;
 
   return (
     <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, position: 'relative' }}>
@@ -746,7 +748,18 @@ export default function WeightScreen() {
     return { pct, curKg, startKg, toGo, etaText, rateText };
   }, [goalKg, sortedAsc, sortedDesc, unit, t]);
 
-  const allTimeMaxKg = useMemo(() => (logs.length ? Math.max(...logs.map(w => w.weight)) : 1), [logs]);
+  // Body weight always sits close to its own all-time max, so scaling the
+  // history bar from 0..max clamps almost every dot to the same spot. Scale
+  // from the actual min/max range (plus padding) instead, so day-to-day
+  // differences are visible.
+  const historyBarRange = useMemo(() => {
+    if (!logs.length) return { min: 0, max: 1 };
+    const vals = logs.map(w => w.weight);
+    if (goalKg) vals.push(goalKg);
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const pad = Math.max((max - min) * 0.15, 0.5);
+    return { min: min - pad, max: max + pad };
+  }, [logs, goalKg]);
 
   const trendData = useMemo(() => {
     if (trendRangeDays === 0) return sortedAsc;
@@ -1309,7 +1322,7 @@ export default function WeightScreen() {
                     <View key={log.id} style={[styles.logRowWrap, i === week.items.length - 1 && { borderBottomWidth: 0 }]}>
                       <View style={styles.logRow}>
                         <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
-                        <WeightHistoryBar value={toDisp(log.weight, unit)} goalVal={goalKg ? toDisp(goalKg, unit) : null} barMax={toDisp(allTimeMaxKg, unit)} colors={colors} />
+                        <WeightHistoryBar value={toDisp(log.weight, unit)} goalVal={goalKg ? toDisp(goalKg, unit) : null} barMin={toDisp(historyBarRange.min, unit)} barMax={toDisp(historyBarRange.max, unit)} colors={colors} />
                         <Text style={styles.logVal}>{toDisp(log.weight, unit).toFixed(1)}</Text>
                         {delta != null && (
                           <Text style={[styles.logDelta, { color: delta > 0 ? colors.danger : colors.good }]}>
