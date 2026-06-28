@@ -51,7 +51,7 @@ export default function ChallengesCard({ home }) {
 const createStyles = (colors) => StyleSheet.create({
   wrap: { marginTop: 14, marginBottom: 10, paddingHorizontal: 16 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  title: { fontSize: typography.xs, fontWeight: weight.bold, fontFamily: fontFamily.bodyBold, color: colors.textMuted, letterSpacing: 0.6 },
+  title: { fontSize: typography.xs, fontWeight: weight.bold, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase' },
   count: { fontSize: typography.xs, fontFamily: fontFamily.bodySemibold, color: colors.textDim },
   card: {
     backgroundColor: colors.bgCard, borderRadius: 16,

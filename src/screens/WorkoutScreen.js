@@ -714,14 +714,17 @@ function calcPlates(totalKg, barKg = 20) {
   return plates;
 }
 
-function getPrevSetSummary(allSessions, exerciseName, beforeDate) {
+// Top set from each of the most recent `count` prior sessions (different days) that logged this exercise.
+function getPrevSetSummaries(allSessions, exerciseName, beforeDate, count = 2) {
   const name = (exerciseName ?? '').trim().toLowerCase();
-  if (!name) return null;
+  if (!name) return [];
   const candidates = (allSessions ?? [])
     .filter(s => !beforeDate || s.date < beforeDate)
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date));
+  const out = [];
   for (const sess of candidates) {
+    if (out.length >= count) break;
     const ex = (sess.workout_exercises ?? []).find(
       e => (e.exercise_name ?? '').trim().toLowerCase() === name
     );
@@ -729,10 +732,14 @@ function getPrevSetSummary(allSessions, exerciseName, beforeDate) {
       const best = ex.sets.slice().sort(
         (a, b) => (b.weight_kg ?? 0) * (b.reps ?? 0) - (a.weight_kg ?? 0) * (a.reps ?? 0)
       )[0];
-      if (best.weight_kg) return { weight: best.weight_kg, reps: best.reps, rpe: best.rpe, date: sess.date };
+      if (best.weight_kg) out.push({ weight: best.weight_kg, reps: best.reps, rpe: best.rpe, date: sess.date });
     }
   }
-  return null;
+  return out;
+}
+
+function getPrevSetSummary(allSessions, exerciseName, beforeDate) {
+  return getPrevSetSummaries(allSessions, exerciseName, beforeDate, 1)[0] ?? null;
 }
 
 function suggestProgressiveOverload(prev, t) {
@@ -1843,7 +1850,8 @@ function EditSessionModal({
                         })()}
 
                         {!isCardio && !!ex.name.trim() && (() => {
-                          const prev = getPrevSetSummary(allSessions, ex.name, date || undefined);
+                          const prevSets = getPrevSetSummaries(allSessions, ex.name, date || undefined, 2);
+                          const prev = prevSets[0];
                           if (!prev) return null;
                           const suggestion = suggestProgressiveOverload(prev, t);
                           const warmups = getWarmupSets(suggestion?.weight ?? prev.weight);
@@ -1852,6 +1860,12 @@ function EditSessionModal({
                               <Text style={eS.prevPerfText}>
                                 {t('workout.lastPrefix')} <Text style={eS.prevPerfBold}>{prev.weight}kg × {prev.reps}</Text>
                                 {prev.rpe ? ` @ RPE ${prev.rpe}` : ''}
+                                {prevSets[1] && (
+                                  <Text style={eS.prevPerfPrior}>
+                                    {'  ·  '}<Text style={eS.prevPerfBold}>{prevSets[1].weight}kg × {prevSets[1].reps}</Text>
+                                    {prevSets[1].rpe ? ` @ RPE ${prevSets[1].rpe}` : ''}
+                                  </Text>
+                                )}
                               </Text>
                               {hasAccess ? (
                                 suggestion && (
@@ -3659,6 +3673,7 @@ const createES = (colors) => StyleSheet.create({
   },
   prevPerfText: { fontSize: typography.xs, color: colors.textMuted },
   prevPerfBold: { fontWeight: weight.bold, color: colors.text },
+  prevPerfPrior: { color: colors.textDim },
   suggestText: { fontSize: typography.xs, color: colors.accent },
   suggestTextLocked: { fontSize: typography.xs, color: colors.purple, fontWeight: weight.semibold },
   warmupRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' },

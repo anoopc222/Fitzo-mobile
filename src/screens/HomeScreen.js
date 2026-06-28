@@ -40,7 +40,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
-const C_STEPS  = '#f59e0b'; // amber gold
+const C_STEPS  = '#fbbf24'; // bright amber (was duller #f59e0b, low contrast on dark bg)
 const C_KCAL   = '#fb7185'; // rose
 const C_SLEEP  = '#c4b5fd'; // soft violet
 const C_GREEN  = '#34d399';
