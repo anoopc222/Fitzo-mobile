@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
+import { logActivity } from '../lib/activity';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
@@ -159,6 +160,7 @@ function buildOptimisticSession(sessionId, { date, name, exercises, duration_min
 
 async function saveSession(userId, { sessionId, date, name, exercises, duration_min }) {
   let sid = sessionId;
+  const isNewSession = !sid;
   const durPatch = duration_min != null ? { duration_min } : {};
   if (!sid) {
     const { data, error } = await supabase
@@ -218,6 +220,10 @@ async function saveSession(userId, { sessionId, date, name, exercises, duration_
   }
   await supabase.from('workout_sessions')
     .update({ total_volume: Math.round(totalVol) }).eq('id', sid);
+
+  if (isNewSession && totalVol > 0) {
+    logActivity(userId, 'workout', name || 'Workout', `${Math.round(totalVol).toLocaleString()} kg total volume`);
+  }
 }
 
 async function deleteFullSession(sessionId) {
