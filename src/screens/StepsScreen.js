@@ -426,7 +426,7 @@ function DailyLogBar({ steps, goal, barMax, colors }) {
 }
 
 // ─── Monthly Heatmap — ports _renderStepsHeatmap bucket logic ───────────────
-function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress, cardWidth }) {
+function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress, onDayPress, cardWidth }) {
   const SCREEN_W = cardWidth ?? Dimensions.get('window').width;
   const cellSize = Math.floor((SCREEN_W - (cardWidth ? 12 : 92)) / 7);
   const firstDay = new Date(year, month, 1).getDay();
@@ -484,9 +484,12 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true,
               </TouchableOpacity>
             );
           }
+          const CellWrapper = onDayPress ? TouchableOpacity : View;
           return (
-            <View
+            <CellWrapper
               key={cell.key}
+              activeOpacity={onDayPress ? 0.7 : undefined}
+              onPress={onDayPress ? () => onDayPress(cell.key, cell.steps) : undefined}
               style={[
                 { margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
                 { width: cellSize, height: cellSize, backgroundColor: LVL_COLOR[cell.lvl] },
@@ -497,7 +500,7 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true,
               <Text style={{ fontSize: 8, fontWeight: '700', fontFamily: fontFamily.mono, marginTop: 1, color: cell.lvl === 0 ? colors.textDim : colors.text, opacity: cell.lvl === 0 ? 0.5 : 1 }}>
                 {cell.steps > 0 ? fmtK(cell.steps) : '—'}
               </Text>
-            </View>
+            </CellWrapper>
           );
         })}
       </View>
@@ -792,6 +795,16 @@ export default function StepsScreen() {
     setShowLogSheet(true);
   };
 
+  const openLogSheetForDate = (dateStr) => {
+    if (dateStr > localDateStr(new Date())) return;
+    const existing = logs.find(l => l.logged_at === dateStr);
+    setLogDate(dateStr);
+    setStepsInput(existing ? String(existing.steps) : '');
+    setActType(existing?.activity_type || 'walk');
+    setNote(existing?.note ?? '');
+    setShowLogSheet(true);
+  };
+
   const repeatYesterday = () => {
     if (!yesterdayLog) return;
     setStepsInput(String(yesterdayLog.steps));
@@ -1066,7 +1079,7 @@ export default function StepsScreen() {
                 ))}
                 <Text style={styles.hmLegendLabel}>{t('steps.legendMore')}</Text>
               </View>
-              <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={hasAccess} onLockedPress={() => heroExport.setShowPaywall(true)} />
+              <StepsHeatmap year={year} month={month} logsByDate={logsByDate} goal={defaultGoal} colors={colors} hasAccess={hasAccess} onLockedPress={() => heroExport.setShowPaywall(true)} onDayPress={openLogSheetForDate} />
             </View>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
