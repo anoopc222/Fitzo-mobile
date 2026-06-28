@@ -36,6 +36,14 @@ const getSections = (t, colors, isAdmin, isPro, subReady) => [
     ],
   },
   {
+    title: t('more.sectionSocial'),
+    items: [
+      { label: t('more.friends'),       icon: 'people',          target: ['Home', 'Friends'],      color: colors.blue },
+      { label: t('more.activityFeed'),  icon: 'newspaper',       target: ['Home', 'ActivityFeed'], color: colors.accent },
+      { label: t('more.challenges'),    icon: 'trophy',          target: ['Home', 'Challenges'],   color: colors.warning },
+    ],
+  },
+  {
     title: t('more.sectionAccount'),
     items: [
       ...(subReady && !isPro ? [

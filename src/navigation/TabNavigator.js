@@ -22,6 +22,10 @@ import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
+import FriendsScreen from '../screens/FriendsScreen';
+import ActivityFeedScreen from '../screens/ActivityFeedScreen';
+import ChallengesScreen from '../screens/ChallengesScreen';
+import PublicProfileScreen from '../screens/PublicProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -51,6 +55,10 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Settings" component={SettingsScreen} />
       <HomeStack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
       <HomeStack.Screen name="Subscription" component={SubscriptionScreen} />
+      <HomeStack.Screen name="Friends" component={FriendsScreen} />
+      <HomeStack.Screen name="ActivityFeed" component={ActivityFeedScreen} />
+      <HomeStack.Screen name="Challenges" component={ChallengesScreen} />
+      <HomeStack.Screen name="PublicProfile" component={PublicProfileScreen} />
     </HomeStack.Navigator>
   );
 }

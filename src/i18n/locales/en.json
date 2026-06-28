@@ -332,7 +332,11 @@
     "profile": "Profile",
     "settings": "Settings",
     "sectionAdmin": "ADMIN",
-    "adminDashboard": "Admin Dashboard"
+    "adminDashboard": "Admin Dashboard",
+    "sectionSocial": "SOCIAL",
+    "friends": "Friends",
+    "activityFeed": "Activity Feed",
+    "challenges": "Challenges"
   },
   "subscription": {
     "goPro": "GO PRO",
@@ -1363,5 +1367,66 @@
     "challengeFoodDescription": "Log food 5 days this week",
     "challengeRestLabel": "Rested Week",
     "challengeRestDescription": "End the week with no sleep debt"
+  },
+  "friends": {
+    "title": "Friends",
+    "searchPlaceholder": "Search by name...",
+    "results": "Results",
+    "noResults": "No users found",
+    "unnamed": "Unnamed user",
+    "pending": "Pending",
+    "add": "Add",
+    "requests": "Friend Requests",
+    "yourFriends": "Your Friends ({{count}})",
+    "noFriendsYet": "No friends yet — search above to add some.",
+    "sentRequests": "Sent Requests"
+  },
+  "activity": {
+    "title": "Activity Feed",
+    "empty": "No activity yet",
+    "emptySub": "Add friends and start logging workouts, weight, and steps to see activity here.",
+    "like": "Like",
+    "comment": "Comment",
+    "commentPlaceholder": "Write a comment...",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
+  },
+  "challenges": {
+    "title": "Challenges",
+    "empty": "No challenges yet",
+    "emptySub": "Create a challenge or wait for a friend to invite you to one.",
+    "errorTitle": "Challenge Error",
+    "validationError": "Please enter a name and a valid positive target value.",
+    "byCreator": "by {{name}}",
+    "participants": "participants",
+    "public": "PUBLIC",
+    "goalLine": "Goal: {{value}} {{unit}}",
+    "steps": "steps",
+    "days": "days",
+    "join": "Join",
+    "leave": "Leave",
+    "leaderboard": "Leaderboard",
+    "createTitle": "Create Challenge",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. 10K Steps Challenge",
+    "typeLabel": "Type",
+    "typeSteps": "Step Count",
+    "typeWorkoutStreak": "Workout Streak",
+    "targetLabel": "Target",
+    "targetStepsPlaceholder": "e.g. 70000",
+    "targetDaysPlaceholder": "e.g. 7",
+    "startLabel": "Start Date",
+    "endLabel": "End Date",
+    "makePublic": "Make this challenge public",
+    "createButton": "Create Challenge"
+  },
+  "publicProfile": {
+    "title": "Profile",
+    "notAvailable": "This profile isn't available to you.",
+    "workoutsThisWeek": "Workouts (7d)",
+    "weeklyVolume": "Volume (7d)",
+    "dayStreak": "Day Streak"
   }
 }
