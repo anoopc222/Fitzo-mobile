@@ -19,6 +19,7 @@ const TYPE_ICON = {
   weight: 'scale',
   steps: 'footsteps',
   sleep: 'moon',
+  food: 'restaurant',
 };
 
 export async function fetchActivityFeed(userId) {

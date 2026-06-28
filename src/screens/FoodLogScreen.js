@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
+import { logActivity } from '../lib/activity';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
@@ -177,8 +178,21 @@ function loggedAtFor(dateStr) {
 }
 
 async function addFood(userId, food, dateStr) {
+  const existing = await supabase
+    .from('food_logs')
+    .select('id')
+    .eq('user_id', userId)
+    .gte('logged_at', `${dateStr}T00:00:00`)
+    .lte('logged_at', `${dateStr}T23:59:59`)
+    .limit(1);
+  if (existing.error) throw existing.error;
+
   const { error } = await supabase.from('food_logs').insert({ user_id: userId, ...food, logged_at: loggedAtFor(dateStr) });
   if (error) throw error;
+
+  if ((existing.data ?? []).length === 0) {
+    logActivity(userId, 'food', 'Meal logged', food.food_name || 'Food entry');
+  }
 }
 
 async function deleteFoodLog(id) {
