@@ -409,21 +409,45 @@ function WeeklyBarChart({ days, goal, colors, width }) {
   );
 }
 
-// ─── Daily Log slider row — ports the track-bar / track-bar-marker markup ──
-function DailyLogBar({ steps, goal, barMax, colors }) {
-  const fillPct = Math.min(97, Math.max(2, (steps / barMax) * 100));
-  const goalPct = Math.max(1, Math.min(99, (goal / barMax) * 100));
-  const met = steps >= goal;
-  const curColor = met ? '#34d399' : '#fbbf24';
+// ─── Daily Log row — ports the Sleep screen's log-row design (colored side
+// bar + status pill) so step entries are as readable as sleep entries, while
+// keeping the per-entry activity-type icon (walk/run/hike/...). ────────────
+function StepsLogRow({ log, goal, colors, onDelete, isLast }) {
+  const { t } = useTranslation();
+  const diff = log.steps - goal;
+  const hitGoal = log.steps >= goal;
+  const pct = Math.min(100, Math.round((log.steps / goal) * 100));
+
+  let statusLabel, statusBg, statusTxt, barColor;
+  if (hitGoal) {
+    statusLabel = t('steps.goalHit'); statusBg = 'rgba(52,211,153,0.10)'; statusTxt = '#34d399'; barColor = '#34d399';
+  } else if (diff >= -goal * 0.1) {
+    statusLabel = t('steps.almost'); statusBg = 'rgba(251,191,36,0.10)'; statusTxt = '#fbbf24'; barColor = '#fbbf24';
+  } else if (diff >= -goal * 0.3) {
+    statusLabel = t('steps.stepsShortWarn', { value: fmtK(Math.abs(diff)) }); statusBg = 'rgba(251,191,36,0.10)'; statusTxt = '#fbbf24'; barColor = '#fbbf24';
+  } else {
+    statusLabel = t('steps.stepsShortDanger', { value: fmtK(Math.abs(diff)) }); statusBg = 'rgba(248,113,113,0.10)'; statusTxt = '#f87171'; barColor = '#f87171';
+  }
 
   return (
-    <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, position: 'relative' }}>
-      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2, backgroundColor: 'rgba(251,191,36,0.22)', width: `${fillPct}%` }} />
-      <View style={{ position: 'absolute', top: -1, width: 6, height: 6, borderRadius: 3, marginLeft: -3, left: `${goalPct}%`, backgroundColor: '#f97316' }} />
-      <View style={{ position: 'absolute', top: -1, width: 6, height: 6, borderRadius: 3, marginLeft: -3, left: `${fillPct}%`, backgroundColor: curColor }} />
+    <View style={[styles_logRow, { borderBottomWidth: isLast ? 0 : 1, borderBottomColor: colors.border }]}>
+      <View style={{ width: 3, height: 30, borderRadius: 2, backgroundColor: barColor }} />
+      <Text style={{ fontSize: 13, width: 16, textAlign: 'center' }}>{ACT_ICON[log.activity_type] || ACT_ICON.walk}</Text>
+      <Text style={{ width: 70, fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.mono, fontWeight: '700' }}>{fmtDateShort(log.logged_at)}</Text>
+      <Text style={{ fontSize: typography.base, fontWeight: '800', fontFamily: fontFamily.monoBold, color: barColor }}>{fmtK(log.steps)}</Text>
+      <View style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.dim, overflow: 'hidden' }}>
+        <View style={{ height: '100%', borderRadius: 3, width: `${pct}%`, backgroundColor: barColor }} />
+      </View>
+      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: statusBg }}>
+        <Text style={{ fontSize: 9, fontWeight: '700', fontFamily: fontFamily.mono, letterSpacing: 0.2, color: statusTxt }}>{statusLabel}</Text>
+      </View>
+      <TouchableOpacity onPress={onDelete} style={{ padding: 3 }}>
+        <Ionicons name="close" size={14} color={colors.textDim} />
+      </TouchableOpacity>
     </View>
   );
 }
+const styles_logRow = { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 10 };
 
 // ─── Monthly Heatmap — ports _renderStepsHeatmap bucket logic ───────────────
 function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true, onLockedPress, onDayPress, cardWidth }) {
@@ -649,11 +673,6 @@ export default function StepsScreen() {
   const allMonthSorted = useMemo(() =>
     [...logMonthData].sort((a, b) => b.logged_at.localeCompare(a.logged_at)),
   [logMonthData]);
-
-  const allTimeMaxSteps = useMemo(() => {
-    const vals = logs.filter(l => l.steps).map(l => l.steps);
-    return Math.max(...vals, defaultGoal, 1);
-  }, [logs, defaultGoal]);
 
   // ── Trend chart (range-based, mirrors WeightScreen pattern) ─────────────
   const [trendRangeDays, setTrendRangeDays] = useState(30); // 30 | 60 | 90 | 0(all)
@@ -1220,25 +1239,20 @@ export default function StepsScreen() {
               {groupByWeek(allMonthSorted, l => l.logged_at).map(week => (
                 <View key={week.key} style={styles.weekGroupBox}>
                   {week.items.map((log, i) => (
-                    <View key={log.id} style={[styles.logRowWrap, i === week.items.length - 1 && { borderBottomWidth: 0 }]}>
-                      <View style={styles.logRow}>
-                        <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
-                        <Text style={styles.logActEmoji}>{ACT_ICON[log.activity_type] || ACT_ICON.walk}</Text>
-                        <DailyLogBar steps={log.steps} goal={log.goal ?? defaultGoal} barMax={allTimeMaxSteps} colors={colors} />
-                        <Text style={[styles.logSteps, { color: log.steps >= (log.goal ?? defaultGoal) ? colors.good : colors.warn }]}>
-                          {fmtK(log.steps)}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => Alert.alert(t('steps.deleteEntryTitle'), t('steps.removeEntryConfirm', { date: fmtDateShort(log.logged_at) }), [
-                            { text: t('steps.cancel'), style: 'cancel' },
-                            { text: t('steps.delete'), style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
-                          ])}
-                          style={styles.logDelBtn}
-                        >
-                          <Ionicons name="close" size={14} color={colors.textDim} />
-                        </TouchableOpacity>
-                      </View>
-                      {log.note ? <Text style={styles.logNote}>{log.note}</Text> : null}
+                    <View key={log.id}>
+                      <StepsLogRow
+                        log={log}
+                        goal={log.goal ?? defaultGoal}
+                        colors={colors}
+                        isLast={i === week.items.length - 1 && !log.note}
+                        onDelete={() => Alert.alert(t('steps.deleteEntryTitle'), t('steps.removeEntryConfirm', { date: fmtDateShort(log.logged_at) }), [
+                          { text: t('steps.cancel'), style: 'cancel' },
+                          { text: t('steps.delete'), style: 'destructive', onPress: () => deleteMut.mutate(log.id) },
+                        ])}
+                      />
+                      {log.note ? (
+                        <Text style={[styles.logNote, { paddingLeft: 100, borderBottomWidth: i === week.items.length - 1 ? 0 : 1, borderBottomColor: colors.border, paddingBottom: 8 }]}>{log.note}</Text>
+                      ) : null}
                     </View>
                   ))}
                 </View>
@@ -1450,13 +1464,7 @@ const createStyles = (colors) => StyleSheet.create({
 
   emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
 
-  logRowWrap: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 9 },
-  logRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  logDate: { width: 76, fontSize: 10, color: colors.text, fontFamily: fontFamily.bodyMedium },
-  logActEmoji: { fontSize: 13, width: 18, textAlign: 'center' },
-  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingLeft: 70, paddingTop: 4 },
-  logSteps: { fontSize: 12, fontWeight: weight.bold, minWidth: 54, textAlign: 'right', fontFamily: fontFamily.monoBold },
-  logDelBtn: { padding: 3 },
+  logNote: { fontSize: typography.xs, color: colors.textMuted, paddingTop: 4 },
   weekGroupBox: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 8, marginBottom: 10 },
 
   hmLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
