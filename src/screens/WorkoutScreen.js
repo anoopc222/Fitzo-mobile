@@ -2414,6 +2414,18 @@ export default function WorkoutScreen() {
     };
   }, [sessions, today]);
 
+  const weekVolumeStats = useMemo(() => {
+    const trainedDays = weekDays.filter(d => d.vol > 0);
+    const totalVol = trainedDays.reduce((sum, d) => sum + d.vol, 0);
+    const avgPerSession = trainedDays.length ? Math.round(totalVol / trainedDays.length) : 0;
+    const restDays = weekDays.filter(d => !d.isFuture && d.vol === 0).length;
+    const peak = trainedDays.length
+      ? trainedDays.reduce((best, d) => (d.vol > best.vol ? d : best), trainedDays[0])
+      : null;
+    const peakLabel = peak ? DOW_LABELS[weekDays.findIndex(d => d.date === peak.date)] : null;
+    return { totalVol: Math.round(totalVol), avgPerSession, restDays, peakLabel, peakVol: peak ? Math.round(peak.vol) : null };
+  }, [weekDays]);
+
   // Active (non-rest) session dates — used for weekly consistency (cardio still counts)
   const activeDateSet = useMemo(
     () => new Set(sessions.filter(s => getSessionType(s.notes) !== 'rest').map(s => s.date)),
@@ -2871,6 +2883,15 @@ export default function WorkoutScreen() {
                   <View style={s.legendItem}><View style={[s.legendSwatch, { backgroundColor: colors.good }]} /><Text style={s.legendLabel}>{t('workout.rest')}</Text></View>
                 </View>
                 <WorkoutWeekBarChart days={weekDays} colors={colors} width={chartWidth} />
+                <View style={s.trendStatsRow}>
+                  <WeekStatCell value={weekVolumeStats.totalVol.toLocaleString()} label={t('workout.totalVolUpper')} color={colors.accent} colors={colors} />
+                  <View style={s.statDividerInline} />
+                  <WeekStatCell value={weekVolumeStats.avgPerSession.toLocaleString()} label={t('workout.avgPerSessionUpper')} color={colors.good} colors={colors} />
+                  <View style={s.statDividerInline} />
+                  <WeekStatCell value={weekVolumeStats.peakLabel ?? '—'} label={t('workout.peakDayUpper')} color="#22d3ee" colors={colors} />
+                  <View style={s.statDividerInline} />
+                  <WeekStatCell value={String(weekVolumeStats.restDays)} label={t('workout.restDaysUpper')} color={colors.textMuted} colors={colors} />
+                </View>
               </View>
             )}
 
