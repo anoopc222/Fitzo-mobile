@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabase';
 import { logActivity } from '../lib/activity';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
+import ShareToFeedToggle from '../components/ui/ShareToFeedToggle';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import DatePickerField from '../components/ui/DatePickerField';
 import Sparkline from '../components/Sparkline';
@@ -158,7 +159,7 @@ function buildOptimisticSession(sessionId, { date, name, exercises, duration_min
   };
 }
 
-async function saveSession(userId, { sessionId, date, name, exercises, duration_min }) {
+async function saveSession(userId, { sessionId, date, name, exercises, duration_min, shareFeed = true }) {
   let sid = sessionId;
   const isNewSession = !sid;
   const durPatch = duration_min != null ? { duration_min } : {};
@@ -221,8 +222,9 @@ async function saveSession(userId, { sessionId, date, name, exercises, duration_
   await supabase.from('workout_sessions')
     .update({ total_volume: Math.round(totalVol) }).eq('id', sid);
 
-  if (isNewSession && totalVol > 0) {
-    logActivity(userId, 'workout', name || 'Workout', `${Math.round(totalVol).toLocaleString()} kg total volume`);
+  if (isNewSession && totalVol > 0 && shareFeed) {
+    const exCount = validExercises.length;
+    logActivity(userId, 'workout', name || 'Workout', `${exCount} exercise${exCount === 1 ? '' : 's'} • ${Math.round(totalVol).toLocaleString()} kg volume`);
   }
 }
 
@@ -1427,6 +1429,7 @@ function EditSessionModal({
     }, 100);
   }, []);
   const [programWeeks, setProgramWeeks] = useState(4);
+  const [shareFeed, setShareFeed] = useState(true);
 
   useEffect(() => {
     if (!restTimer) return;
@@ -1634,6 +1637,7 @@ function EditSessionModal({
     onSave({
       date: date.trim(), name: name.trim() || t('workout.workout'), exercises: isRest ? [] : exercises,
       ...(duration_min != null ? { duration_min } : {}),
+      shareFeed,
     });
   };
 
@@ -2180,6 +2184,12 @@ function EditSessionModal({
             </View>
           )}
           </ScrollView>
+
+          {!isRestDay && (
+            <View style={{ paddingHorizontal: 16 }}>
+              <ShareToFeedToggle value={shareFeed} onChange={setShareFeed} colors={colors} />
+            </View>
+          )}
 
           {/* Bottom buttons */}
           <View style={eS.bottomRow}>

@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { logActivity } from '../lib/activity';
+import ShareToFeedToggle from '../components/ui/ShareToFeedToggle';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import DatePickerField from '../components/ui/DatePickerField';
@@ -98,7 +99,7 @@ async function fetchSteps(userId) {
   return { logs: normLogs, profile: profile.data };
 }
 
-async function logSteps(userId, { date, steps, goal, activityType, note }) {
+async function logSteps(userId, { date, steps, goal, activityType, note, shareFeed = true }) {
   const distance_km = +(steps * KM_PER_STEP).toFixed(3);
   const calories_burned = Math.round(steps * KCAL_PER_STEP);
   // No unique constraint on (user_id, logged_at) in the real schema, so we
@@ -129,7 +130,10 @@ async function logSteps(userId, { date, steps, goal, activityType, note }) {
       ...fields, user_id: userId, logged_at: date,
     });
     if (error) throw error;
-    logActivity(userId, 'steps', 'Steps logged', `${steps.toLocaleString()} steps`);
+    if (shareFeed) {
+      const goalHit = steps >= (goal ?? 12000);
+      logActivity(userId, 'steps', 'Logged steps', `${steps.toLocaleString()} steps${goalHit ? ' — goal reached!' : ''}`);
+    }
   }
 }
 
@@ -551,6 +555,7 @@ export default function StepsScreen() {
   const [stepsInput, setStepsInput] = useState('');
   const [actType, setActType] = useState('walk');
   const [note, setNote] = useState('');
+  const [shareFeed, setShareFeed] = useState(true);
   const [goalInput, setGoalInput] = useState('');
   const [showGoalSheet, setShowGoalSheet] = useState(false);
   const [distUnit, setDistUnit] = useState('km');
@@ -591,8 +596,8 @@ export default function StepsScreen() {
   }, [isLoading, notifPrefs.stepsReminder, logs, reminderTime.hour, reminderTime.minute]);
 
   const logMut = useMutation({
-    mutationFn: ({ date, steps, activityType, note: logNote }) =>
-      logSteps(user.id, { date, steps, goal: defaultGoal, activityType, note: logNote }),
+    mutationFn: ({ date, steps, activityType, note: logNote, shareFeed: share }) =>
+      logSteps(user.id, { date, steps, goal: defaultGoal, activityType, note: logNote, shareFeed: share }),
     onMutate: async ({ date, steps, activityType, note: logNote }) => {
       await qc.cancelQueries(['steps', user.id]);
       const previous = qc.getQueryData(['steps', user.id]);
@@ -1550,9 +1555,11 @@ export default function StepsScreen() {
           multiline
         />
 
+        <ShareToFeedToggle value={shareFeed} onChange={setShareFeed} colors={colors} />
+
         <TouchableOpacity
           style={styles.saveBtn}
-          onPress={() => { if (stepsInput) logMut.mutate({ date: logDate, steps: parseInt(stepsInput, 10), activityType: actType, note }); }}
+          onPress={() => { if (stepsInput) logMut.mutate({ date: logDate, steps: parseInt(stepsInput, 10), activityType: actType, note, shareFeed }); }}
           disabled={logMut.isPending}
         >
           {logMut.isPending ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveBtnText}>{t('steps.saveStepsButton')}</Text>}
