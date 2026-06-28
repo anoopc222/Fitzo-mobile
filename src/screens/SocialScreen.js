@@ -15,6 +15,7 @@ import ChallengesScreen from './ChallengesScreen';
 
 const TABS = [
   { key: 'feed', icon: 'home', activeIcon: 'home' },
+  { key: 'log', icon: 'add-circle-outline', activeIcon: 'add-circle' },
   { key: 'friends', icon: 'people-outline', activeIcon: 'people' },
   { key: 'challenges', icon: 'trophy-outline', activeIcon: 'trophy' },
 ];
@@ -25,6 +26,13 @@ const QUICK_ACTIONS = [
   { label: 'Sleep', icon: 'moon', target: 'Sleep', type: 'sleep', color: 'purple' },
   { label: 'Food', icon: 'restaurant', target: 'Log', type: 'food', color: 'accent2' },
   { label: 'Workout', icon: 'barbell', target: 'Workout', type: 'workout', color: 'danger' },
+];
+
+const LOG_OPTIONS = [
+  { label: 'Workout', icon: 'barbell', target: 'Workout', type: 'workout', color: 'danger' },
+  { label: 'Steps', icon: 'footsteps', target: 'Steps', type: 'steps', color: 'good' },
+  { label: 'Weight', icon: 'scale', target: 'Weight', type: 'weight', color: 'blue' },
+  { label: 'Sleep', icon: 'moon', target: 'Sleep', type: 'sleep', color: 'purple' },
 ];
 
 function localDateStr(d) {
@@ -88,6 +96,15 @@ export default function SocialScreen({ navigation }) {
   });
   const incomingCount = friendsData?.incoming?.length ?? 0;
 
+  const { data: todayLogs } = useQuery({
+    queryKey: ['todayLogs', user?.id, localDateStr(new Date())],
+    queryFn: async () => {
+      const entries = await Promise.all(LOG_OPTIONS.map(o => fetchTodaySummary(user.id, o.type).then(s => [o.type, s])));
+      return Object.fromEntries(entries);
+    },
+    enabled: !!user?.id && tab === 'log',
+  });
+
   const goQuickAction = async (qa) => {
     setComposerOpen(false);
     if (!user?.id) { navigation.navigate(qa.target); return; }
@@ -112,9 +129,7 @@ export default function SocialScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <View style={styles.backBtn} />
         <Text style={styles.logo}>Fitzo<Text style={styles.logoDot}>•</Text></Text>
         <View style={styles.topBarRight}>
           <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={() => setTab('friends')}>
@@ -179,6 +194,40 @@ export default function SocialScreen({ navigation }) {
 
       <View style={styles.body}>
         {tab === 'feed' && <ActivityFeedScreen navigation={navigation} embedded />}
+        {tab === 'log' && (
+          <View style={styles.logBody}>
+            <Text style={styles.logHeading}>Log today's activity</Text>
+            <Text style={styles.logSubheading}>Tap a card to log it and share your progress with friends.</Text>
+            <View style={styles.logGrid}>
+              {LOG_OPTIONS.map(opt => {
+                const logged = !!todayLogs?.[opt.type];
+                return (
+                  <TouchableOpacity
+                    key={opt.label}
+                    style={styles.logCard}
+                    onPress={() => goQuickAction(opt)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={[styles.logCardIcon, { backgroundColor: colors[opt.color] + '20' }]}>
+                      <Ionicons name={opt.icon} size={26} color={colors[opt.color]} />
+                    </View>
+                    <Text style={styles.logCardLabel}>{opt.label}</Text>
+                    <View style={styles.logCardStatusRow}>
+                      <Ionicons
+                        name={logged ? 'checkmark-circle' : 'add-circle-outline'}
+                        size={13}
+                        color={logged ? colors.success : colors.textDim}
+                      />
+                      <Text style={[styles.logCardStatus, logged && { color: colors.success }]}>
+                        {logged ? 'Logged today' : 'Log now'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
         {tab === 'friends' && <FriendsScreen navigation={navigation} embedded />}
         {tab === 'challenges' && <ChallengesScreen navigation={navigation} embedded />}
       </View>
@@ -258,6 +307,19 @@ const createStyles = (colors) => StyleSheet.create({
   quickActionLabel: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.semibold },
 
   body: { flex: 1 },
+
+  logBody: { flex: 1, paddingHorizontal: 16, paddingTop: 18 },
+  logHeading: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
+  logSubheading: { fontSize: typography.sm, color: colors.textMuted, marginTop: 4, marginBottom: 18 },
+  logGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  logCard: {
+    width: '47%', backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: colors.border,
+    paddingVertical: 18, paddingHorizontal: 14, alignItems: 'flex-start', gap: 4,
+  },
+  logCardIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  logCardLabel: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text },
+  logCardStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  logCardStatus: { fontSize: typography.xs, color: colors.textDim, fontWeight: weight.semibold },
 
   shareBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   shareSheet: {

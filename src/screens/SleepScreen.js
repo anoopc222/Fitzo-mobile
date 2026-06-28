@@ -357,7 +357,7 @@ function SleepLogRow({ log, goal, colors, onDelete, isLast, locked, onLockedPres
 }
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
-export default function SleepScreen() {
+export default function SleepScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -791,10 +791,11 @@ export default function SleepScreen() {
     setShowLogSheet(true);
   };
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* App header */}
-      <ScreenHeader title={t('sleep.headerTitle')} colors={colors} />
+    <Wrap style={styles.safe}>
+      {!embedded && <ScreenHeader title={t('sleep.headerTitle')} colors={colors} />}
 
       {/* Month nav */}
       <View style={styles.topRow}>
@@ -1136,7 +1137,7 @@ export default function SleepScreen() {
 
       <PaywallModal visible={recoveryExport.showPaywall} onClose={() => recoveryExport.setShowPaywall(false)} />
       <PaywallModal visible={showRangePaywall} onClose={() => setShowRangePaywall(false)} />
-    </SafeAreaView>
+    </Wrap>
   );
 }
 

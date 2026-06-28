@@ -540,7 +540,7 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true,
 }
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
-export default function StepsScreen() {
+export default function StepsScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -1003,10 +1003,11 @@ export default function StepsScreen() {
     setNote(yesterdayLog.note || '');
   };
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* App header */}
-      <ScreenHeader title={t('steps.screenTitle')} colors={colors} />
+    <Wrap style={styles.safe}>
+      {!embedded && <ScreenHeader title={t('steps.screenTitle')} colors={colors} />}
 
       {/* Month nav + unit toggle */}
       <View style={styles.topRow}>
@@ -1612,7 +1613,7 @@ export default function StepsScreen() {
       <PaywallModal visible={heroExport.showPaywall} onClose={() => heroExport.setShowPaywall(false)} />
       <PaywallModal visible={showTrendPaywall} onClose={() => setShowTrendPaywall(false)} />
       <PaywallModal visible={showInsightsPaywall} onClose={() => setShowInsightsPaywall(false)} />
-    </SafeAreaView>
+    </Wrap>
   );
 }
 
