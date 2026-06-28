@@ -1191,7 +1191,7 @@ export default function StepsScreen() {
                       node: (<>{ins.text}<Text style={{ fontWeight: '800' }}>{ins.bold}</Text>{ins.rest}</>),
                     }));
                     const real = tips[0];
-                    const maskedIcons = tips.slice(1).map(tp => tp.icon);
+                    const maskedIcons = tips.slice(1, 3).map(tp => tp.icon);
                     const fallbackIcons = ['😴', '🌍'];
                     while (maskedIcons.length < 2) maskedIcons.push(fallbackIcons[maskedIcons.length] ?? '⚡');
                     const maskedWidths = [68, 80];
