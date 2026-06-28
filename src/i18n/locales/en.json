@@ -1386,6 +1386,7 @@
   },
   "activity": {
     "title": "Activity Feed",
+    "whatsOnYourMind": "What's on your mind?",
     "empty": "No activity yet",
     "emptySub": "Add friends and start logging workouts, weight, and steps to see activity here.",
     "like": "Like",
