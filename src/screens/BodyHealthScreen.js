@@ -6,29 +6,25 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
-import WorkoutScreen from './WorkoutScreen';
-import StepsScreen from './StepsScreen';
-import SleepScreen from './SleepScreen';
-import WeightScreen from './WeightScreen';
-import FoodLogScreen from './FoodLogScreen';
+import DietScreen from './DietScreen';
+import ProgressScreen from './ProgressScreen';
+import MeasurementsScreen from './MeasurementsScreen';
 
 const TABS = [
-  { key: 'workout', icon: 'barbell-outline', activeIcon: 'barbell' },
-  { key: 'steps', icon: 'footsteps-outline', activeIcon: 'footsteps' },
-  { key: 'sleep', icon: 'moon-outline', activeIcon: 'moon' },
-  { key: 'weight', icon: 'scale-outline', activeIcon: 'scale' },
-  { key: 'food', icon: 'restaurant-outline', activeIcon: 'restaurant' },
+  { key: 'diet', icon: 'restaurant-outline', activeIcon: 'restaurant' },
+  { key: 'progress', icon: 'trending-up-outline', activeIcon: 'trending-up' },
+  { key: 'measurements', icon: 'body-outline', activeIcon: 'body' },
 ];
 
-export default function ActivityScreen() {
+export default function BodyHealthScreen() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [tab, setTab] = useState('workout');
+  const [tab, setTab] = useState('diet');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title={t('tabs.activity').toUpperCase()} colors={colors} />
+      <ScreenHeader title={t('tabs.bodyHealth').toUpperCase()} colors={colors} />
 
       <View style={styles.tabBar}>
         {TABS.map(tb => {
@@ -49,11 +45,9 @@ export default function ActivityScreen() {
       </View>
 
       <View style={styles.body}>
-        {tab === 'workout' && <WorkoutScreen embedded />}
-        {tab === 'steps' && <StepsScreen embedded />}
-        {tab === 'sleep' && <SleepScreen embedded />}
-        {tab === 'weight' && <WeightScreen embedded />}
-        {tab === 'food' && <FoodLogScreen embedded />}
+        {tab === 'diet' && <DietScreen embedded />}
+        {tab === 'progress' && <ProgressScreen embedded />}
+        {tab === 'measurements' && <MeasurementsScreen embedded />}
       </View>
     </SafeAreaView>
   );

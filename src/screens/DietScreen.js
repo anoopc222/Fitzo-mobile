@@ -47,7 +47,7 @@ async function deleteDietWeek(userId, weekNumber) {
   if (error) throw error;
 }
 
-export default function DietScreen({ navigation }) {
+export default function DietScreen({ navigation, embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -240,9 +240,11 @@ export default function DietScreen({ navigation }) {
     ]);
   };
 
+  const Wrap = embedded ? View : SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title={t('diet.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />
+    <Wrap style={styles.safe} {...(embedded ? {} : { edges: ['top'] })}>
+      {!embedded && <ScreenHeader title={t('diet.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />}
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -463,7 +465,7 @@ export default function DietScreen({ navigation }) {
           )}
         </ScrollView>
       </BottomSheet>
-    </SafeAreaView>
+    </Wrap>
   );
 }
 

@@ -3,10 +3,16 @@
     "home": "Home",
     "activity": "Activity",
     "social": "Social",
+    "bodyHealth": "Body & Health",
+    "settingsTab": "Settings",
     "workout": "Workout",
     "steps": "Steps",
     "weight": "Weight",
     "sleep": "Sleep",
+    "food": "Food",
+    "diet": "Diet",
+    "progress": "Progress",
+    "measurements": "Measurements",
     "more": "More"
   },
   "home": {

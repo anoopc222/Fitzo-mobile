@@ -3,10 +3,16 @@
     "home": "होम",
     "activity": "एक्टिविटी",
     "social": "सोशल",
+    "bodyHealth": "बॉडी & हेल्थ",
+    "settingsTab": "सेटिंग्स",
     "workout": "वर्कआउट",
     "steps": "कदम",
     "weight": "वज़न",
     "sleep": "नींद",
+    "food": "खाना",
+    "diet": "डाइट",
+    "progress": "प्रोग्रेस",
+    "measurements": "मेज़रमेंट्स",
     "more": "अधिक"
   },
   "home": {

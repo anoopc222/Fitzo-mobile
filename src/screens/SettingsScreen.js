@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import PaywallModal from '../components/ui/PaywallModal';
+import { navigate } from '../navigation/navigationRef';
 import { useTranslation } from 'react-i18next';
 import { setAppLanguage, ALL_LANGUAGES } from '../i18n';
 
@@ -24,7 +25,7 @@ function formatTime(hour, minute) {
   return `${h12}:${String(minute).padStart(2, '0')} ${ampm}`;
 }
 
-export default function SettingsScreen({ navigation }) {
+export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
   const { isPro, isInTrial, manageSubscriptions, ready: subReady } = useSubscription() ?? {};
@@ -104,7 +105,7 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenHeader title={t('settings.screenTitle')} colors={colors} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('settings.screenTitle')} colors={colors} />
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* ── Account ─────────────────────────────────────────────── */}
@@ -113,7 +114,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow icon="mail-outline" label={t('settings.email')} value={user?.email} />
           <SettingRow icon="key-outline" label={t('settings.changePassword')} chevron onPress={handlePasswordReset} />
           <SettingRow icon="person-outline" label={t('settings.editProfile')} chevron last
-            onPress={() => navigation.navigate('Profile')} />
+            onPress={() => navigate('Home', { screen: 'Profile' })} />
         </View>
 
         {/* ── Subscription ───────────────────────────────────────── */}
@@ -122,7 +123,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow icon="card-outline" label={t('settings.status')} value={isPro ? t('settings.pro') : isInTrial ? t('settings.freeTrial') : t('settings.free')} />
           {subReady && !isPro && (
             <SettingRow icon="rocket-outline" label={t('settings.upgradeToPro')} chevron
-              onPress={() => navigation.navigate('Subscription')} />
+              onPress={() => navigate('Home', { screen: 'Subscription' })} />
           )}
           <SettingRow icon="settings-outline" label={t('settings.manageCancelSubscription')} chevron last
             onPress={handleManageSubscription} />

@@ -242,7 +242,7 @@ function MacroBar({ label, value, target, color }) {
   );
 }
 
-export default function FoodLogScreen() {
+export default function FoodLogScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -493,10 +493,11 @@ export default function FoodLogScreen() {
 
   // Calorie ring percentage
   const calPct = Math.min(100, Math.round((totals.calories / targets.calories) * 100));
+  const Wrap = embedded ? View : SafeAreaView;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScreenHeader title="LOG" colors={colors} />
+    <Wrap style={styles.safe}>
+      {!embedded && <ScreenHeader title="LOG" colors={colors} />}
       {/* Date nav */}
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={prevDay} style={styles.dateArrow}>
@@ -896,7 +897,7 @@ export default function FoodLogScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </Wrap>
   );
 }
 

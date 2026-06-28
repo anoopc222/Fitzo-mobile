@@ -9,24 +9,13 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { useMoreMenu } from '../context/MoreMenuContext';
 import { typography, weight } from '../theme/typography';
 import { navigate } from '../navigation/navigationRef';
-import { fetchProgress } from '../screens/ProgressScreen';
-import { fetchMeasurements, fetchBodyStats } from '../screens/MeasurementsScreen';
 import { fetchProfile } from '../screens/ProfileScreen';
-import { fetchDietPlans } from '../screens/DietScreen';
 
 const getSections = (t, colors, isAdmin, isPro, subReady) => [
   {
     title: t('more.sectionLog'),
     items: [
       { label: t('more.foodLog'), icon: 'clipboard', target: ['Log'], color: colors.accent },
-    ],
-  },
-  {
-    title: t('more.sectionBodyHealth'),
-    items: [
-      { label: t('more.dietPlan'),     icon: 'restaurant',  target: ['Home', 'Diet'],         color: colors.warning },
-      { label: t('more.progress'),     icon: 'trending-up', target: ['Home', 'Progress'],     color: colors.success },
-      { label: t('more.measurements'), icon: 'body',        target: ['Home', 'Measurements'], color: colors.accent },
     ],
   },
   {
@@ -42,7 +31,6 @@ const getSections = (t, colors, isAdmin, isPro, subReady) => [
         { label: t('more.goPro'), icon: 'rocket', target: ['Home', 'Subscription'], color: colors.accent },
       ] : []),
       { label: t('more.profile'),  icon: 'person',      target: ['Home', 'Profile'],      color: colors.blue },
-      { label: t('more.settings'), icon: 'settings',    target: ['Home', 'Settings'],      color: colors.textMuted },
     ],
   },
   ...(isAdmin ? [{
@@ -69,11 +57,7 @@ export default function MoreSheetModal() {
   // the cached data for that key is still within staleTime.
   useEffect(() => {
     if (!visible || !user?.id) return;
-    qc.prefetchQuery({ queryKey: ['progress', user.id], queryFn: () => fetchProgress(user.id) });
-    qc.prefetchQuery({ queryKey: ['measurements', user.id], queryFn: () => fetchMeasurements(user.id) });
-    qc.prefetchQuery({ queryKey: ['measurements-bodystats', user.id], queryFn: () => fetchBodyStats(user.id) });
     qc.prefetchQuery({ queryKey: ['profile', user.id], queryFn: () => fetchProfile(user.id) });
-    qc.prefetchQuery({ queryKey: ['dietPlans', user.id], queryFn: () => fetchDietPlans(user.id) });
   }, [visible, user?.id, qc]);
 
   const onPressItem = (target) => {
