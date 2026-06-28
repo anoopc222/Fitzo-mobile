@@ -2807,19 +2807,36 @@ export default function WorkoutScreen() {
                   </View>
                 )
               ) : (
-                <TouchableOpacity activeOpacity={0.85} onPress={() => setShowInsightsPaywall(true)}>
-                  <View style={s.insightsList}>
-                    {[['📈', 0.92], ['🔥', 0.68], ['📅', 0.8]].map(([icon, w], i) => (
-                      <View key={i} style={s.insightRow}>
-                        <Text style={s.insightIcon}>{icon}</Text>
-                        <View style={[s.skeletonBar, { width: `${w * 100}%` }]} />
-                      </View>
-                    ))}
-                  </View>
-                  <Text style={s.lockedHint}>
-                    🔒 {t('workout.unlockStreakConsistencyInsights')}
-                  </Text>
-                </TouchableOpacity>
+                <>
+                  {insights.length > 0 && (
+                    <View style={s.insightsList}>
+                      {insights.slice(0, 2).map((ins, i) => (
+                        <View key={`real-${i}`} style={s.insightRow}>
+                          <Text style={s.insightIcon}>{ins.icon}</Text>
+                          <Text style={s.insightText}>
+                            {ins.text}<Text style={s.insightBold}>{ins.bold}</Text>{ins.rest}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  <TouchableOpacity activeOpacity={0.85} onPress={() => setShowInsightsPaywall(true)}>
+                    <View style={s.insightsList}>
+                      {(insights.length > 2
+                        ? insights.slice(2)
+                        : [['📈', 0.92], ['🔥', 0.68], ['📅', 0.8]].slice(insights.length)
+                      ).map((ins, i) => (
+                        <View key={`locked-${i}`} style={s.insightRow}>
+                          <Text style={s.insightIcon}>{Array.isArray(ins) ? ins[0] : ins.icon}</Text>
+                          <View style={[s.skeletonBar, { width: `${Array.isArray(ins) ? ins[1] * 100 : 80}%` }]} />
+                        </View>
+                      ))}
+                    </View>
+                    <Text style={s.lockedHint}>
+                      🔒 {t('workout.unlockStreakConsistencyInsights')}
+                    </Text>
+                  </TouchableOpacity>
+                </>
               )}
             </View>
 

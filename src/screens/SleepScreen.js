@@ -899,15 +899,27 @@ export default function SleepScreen() {
                     </View>
                   ))
                 ) : (
-                  <TouchableOpacity onPress={() => setShowRangePaywall(true)}>
-                    {insights.map((ins, i) => (
+                  <>
+                    {insights.slice(0, 2).map((ins, i) => (
                       <View key={i} style={styles.insightRow}>
                         <Text style={styles.insightIcon}>{ins.icon}</Text>
-                        <View style={[styles.skeletonBar, { width: `${[92, 68, 80, 75][i % 4]}%` }]} />
+                        <Text style={styles.insightText}>
+                          {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
+                        </Text>
                       </View>
                     ))}
-                    <Text style={styles.emptyText}>{t('sleep.unlockInsightsCta')}</Text>
-                  </TouchableOpacity>
+                    {insights.length > 2 && (
+                      <TouchableOpacity onPress={() => setShowRangePaywall(true)}>
+                        {insights.slice(2).map((ins, i) => (
+                          <View key={i} style={styles.insightRow}>
+                            <Text style={styles.insightIcon}>{ins.icon}</Text>
+                            <View style={[styles.skeletonBar, { width: `${[92, 68, 80, 75][i % 4]}%` }]} />
+                          </View>
+                        ))}
+                        <Text style={styles.emptyText}>{t('sleep.unlockInsightsCta')}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
             )}
