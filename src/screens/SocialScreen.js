@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -42,7 +41,6 @@ export default function SocialScreen({ navigation }) {
     queryFn: () => fetchFriendsData(user.id),
     enabled: !!user?.id,
   });
-  const friends = friendsData?.friends ?? [];
   const incomingCount = friendsData?.incoming?.length ?? 0;
 
   const goQuickAction = (target) => {
@@ -90,38 +88,6 @@ export default function SocialScreen({ navigation }) {
           );
         })}
       </View>
-
-      {tab === 'feed' && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storiesRail} contentContainerStyle={styles.storiesContent}>
-          <TouchableOpacity style={styles.storyItem} onPress={() => setTab('friends')} activeOpacity={0.8}>
-            <View style={styles.storyAddRing}>
-              <View style={styles.storyAvatarInner}>
-                <Text style={styles.storyAvatarText}>{initial}</Text>
-              </View>
-              <View style={styles.storyAddBadge}>
-                <Ionicons name="add" size={12} color={colors.bg} />
-              </View>
-            </View>
-            <Text style={styles.storyLabel} numberOfLines={1}>{t('friends.add')}</Text>
-          </TouchableOpacity>
-
-          {friends.map(f => (
-            <TouchableOpacity
-              key={f.friendshipId}
-              style={styles.storyItem}
-              onPress={() => navigation.navigate('PublicProfile', { userId: f.id, name: f.full_name })}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={[colors.accent, colors.purple]} style={styles.storyRing}>
-                <View style={styles.storyAvatarInner}>
-                  <Text style={styles.storyAvatarText}>{(f.full_name?.[0] ?? '?').toUpperCase()}</Text>
-                </View>
-              </LinearGradient>
-              <Text style={styles.storyLabel} numberOfLines={1}>{(f.full_name ?? t('friends.unnamed')).split(' ')[0]}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
 
       {tab === 'feed' && (
         <View style={styles.composerWrap}>
@@ -182,31 +148,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   tabBadgeText: { color: '#fff', fontSize: 9, fontWeight: weight.bold },
 
-  storiesRail: {
-    height: 96, flexGrow: 0, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  storiesContent: { paddingHorizontal: 16, gap: 14 },
-  storyItem: { alignItems: 'center', width: 60 },
-  storyRing: {
-    width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', padding: 2,
-  },
-  storyAddRing: {
-    width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', padding: 2,
-    borderWidth: 2, borderColor: colors.border,
-  },
-  storyAvatarInner: {
-    width: 52, height: 52, borderRadius: 26, backgroundColor: colors.bgCard,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  storyAvatarText: { color: colors.text, fontWeight: weight.bold, fontSize: typography.base },
-  storyAddBadge: {
-    position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: 9,
-    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: colors.bg,
-  },
-  storyLabel: { fontSize: typography.xs, color: colors.textMuted, marginTop: 6, fontWeight: weight.medium },
-
-  composerWrap: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
+  composerWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6 },
   composerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bgCard,
     borderRadius: 22, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 8,
