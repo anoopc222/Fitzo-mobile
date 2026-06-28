@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
-  Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle, UIManager,
+  Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle, UIManager, AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -1435,6 +1435,11 @@ function EditSessionModal({
   const cancelRestTimer = () => setRestTimer(null);
 
   // Session auto-timer — starts the moment a brand-new session modal opens.
+  // Tracks a real wall-clock start timestamp (not a tick counter) so the
+  // elapsed time stays correct even if the app is backgrounded — a plain
+  // setInterval counter pauses while JS execution is suspended in the
+  // background and undercounts real session length.
+  const [sessionStartedAt, setSessionStartedAt] = useState(null);
   const [sessionElapsedSec, setSessionElapsedSec] = useState(0);
   const [sessionTimerRunning, setSessionTimerRunning] = useState(false);
   const [durationManuallySet, setDurationManuallySet] = useState(false);
@@ -1442,20 +1447,30 @@ function EditSessionModal({
 
   useEffect(() => {
     if (visible && isNew) {
+      setSessionStartedAt(Date.now());
       setSessionElapsedSec(0);
       setSessionTimerRunning(true);
       setDurationManuallySet(false);
       setManualDuration('');
     } else if (!visible) {
       setSessionTimerRunning(false);
+      setSessionStartedAt(null);
     }
   }, [visible, isNew]);
 
   useEffect(() => {
-    if (!sessionTimerRunning) return;
-    const t = setInterval(() => setSessionElapsedSec(s => s + 1), 1000);
-    return () => clearInterval(t);
-  }, [sessionTimerRunning]);
+    if (!sessionTimerRunning || !sessionStartedAt) return;
+    const recompute = () => setSessionElapsedSec(Math.floor((Date.now() - sessionStartedAt) / 1000));
+    recompute();
+    const t = setInterval(recompute, 1000);
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') recompute();
+    });
+    return () => {
+      clearInterval(t);
+      sub.remove();
+    };
+  }, [sessionTimerRunning, sessionStartedAt]);
 
   const fmtElapsed = (totalSec) => {
     const m = Math.floor(totalSec / 60);
