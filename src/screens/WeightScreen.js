@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Text as SvgText, Polygon } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -219,7 +219,7 @@ function smoothPath(pts) {
 function WeightTrendChart({ data, unit, goalKg, colors, width }) {
   const { t } = useTranslation();
   const H = 170;
-  const P = { t: 18, r: 8, b: 22, l: 8 };
+  const P = { t: 18, r: 8, b: 22, l: 30 };
   const pw = width - P.l - P.r;
   const ph = H - P.t - P.b;
 
@@ -240,9 +240,16 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
   const rangeAvgVal = rawVals.reduce((s, v) => s + v, 0) / rawVals.length;
   const goalDisp = goalKg ? toDisp(goalKg, unit) : null;
 
-  const allVals = [...rawVals, ...avgVals, rangeAvgVal, ...(goalDisp ? [goalDisp] : [])];
-  const minV = Math.min(...allVals) * 0.98;
-  const maxV = Math.max(...allVals) * 1.02;
+  // Scale the Y-axis from the actual readings only — pulling the goal weight
+  // into this range (when it's far from current weight) would compress real
+  // day-to-day variation into an unreadable sliver. The goal line is instead
+  // clamped into view with an off-screen indicator below.
+  const dataVals = [...rawVals, ...avgVals, rangeAvgVal];
+  const dataMin = Math.min(...dataVals);
+  const dataMax = Math.max(...dataVals);
+  const dataPad = Math.max((dataMax - dataMin) * 0.12, 0.3);
+  const minV = dataMin - dataPad;
+  const maxV = dataMax + dataPad;
   const range = maxV - minV || 1;
   const n = data.length;
   const xs = pw / Math.max(n - 1, 1);
@@ -254,8 +261,10 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
   const avgPts = avgVals.map((v, i) => ({ x: toX(i), y: toY(v) }));
   const avgLine = smoothPath(avgPts);
   const rangeAvgY = toY(rangeAvgVal);
-  const goalY = goalDisp != null ? toY(goalDisp) : null;
+  const goalOffScreen = goalDisp != null && (goalDisp < minV || goalDisp > maxV);
+  const goalY = goalDisp != null ? Math.min(Math.max(toY(goalDisp), P.t), P.t + ph) : null;
   const lastAvg = avgPts[avgPts.length - 1];
+  const yLabelFmt = v => v.toFixed(v % 1 === 0 ? 0 : 1);
 
   return (
     <Svg width={width} height={H}>
@@ -268,11 +277,29 @@ function WeightTrendChart({ data, unit, goalKg, colors, width }) {
 
       {[0, 1, 2, 3].map(i => {
         const y = P.t + (ph / 3) * i;
-        return <Line key={i} x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />;
+        const v = maxV - (range / 3) * i;
+        return (
+          <React.Fragment key={i}>
+            <Line x1={P.l} y1={y} x2={width - P.r} y2={y} stroke={colors.border} strokeWidth={1} />
+            <SvgText x={P.l - 4} y={y + 3} fontSize={9} fill={colors.textDim} textAnchor="end">{yLabelFmt(v)}</SvgText>
+          </React.Fragment>
+        );
       })}
 
       {goalY != null && (
-        <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#34d399" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="4,4" />
+        <>
+          <Line x1={P.l} y1={goalY} x2={width - P.r} y2={goalY} stroke="#34d399" strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="4,4" />
+          {goalOffScreen && (
+            <Polygon
+              points={
+                goalDisp < minV
+                  ? `${width - P.r - 5},${goalY - 5} ${width - P.r + 5},${goalY - 5} ${width - P.r},${goalY + 4}`
+                  : `${width - P.r - 5},${goalY + 5} ${width - P.r + 5},${goalY + 5} ${width - P.r},${goalY - 4}`
+              }
+              fill="#34d399"
+            />
+          )}
+        </>
       )}
 
       <Line x1={P.l} y1={rangeAvgY} x2={width - P.r} y2={rangeAvgY} stroke="#c4b5fd" strokeOpacity={0.7} strokeWidth={1.5} strokeDasharray="2,3" />
@@ -527,9 +554,11 @@ function AvgWeightSection({ logs, viewMode, unit, colors, width, expanded, hasAc
 }
 
 // ─── History slider bar row — ports renderBody()'s history list ────────────
-function WeightHistoryBar({ value, goalVal, barMax, colors }) {
-  const fillPct = Math.min(97, Math.max(2, (value / barMax) * 100));
-  const goalPct = goalVal != null ? Math.min(99, Math.max(1, (goalVal / barMax) * 100)) : null;
+function WeightHistoryBar({ value, goalVal, barMin, barMax, colors }) {
+  const span = barMax - barMin || 1;
+  const toPct = v => Math.min(98, Math.max(2, ((v - barMin) / span) * 100));
+  const fillPct = toPct(value);
+  const goalPct = goalVal != null ? toPct(goalVal) : null;
 
   return (
     <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.dim, position: 'relative' }}>
@@ -719,7 +748,18 @@ export default function WeightScreen() {
     return { pct, curKg, startKg, toGo, etaText, rateText };
   }, [goalKg, sortedAsc, sortedDesc, unit, t]);
 
-  const allTimeMaxKg = useMemo(() => (logs.length ? Math.max(...logs.map(w => w.weight)) : 1), [logs]);
+  // Body weight always sits close to its own all-time max, so scaling the
+  // history bar from 0..max clamps almost every dot to the same spot. Scale
+  // from the actual min/max range (plus padding) instead, so day-to-day
+  // differences are visible.
+  const historyBarRange = useMemo(() => {
+    if (!logs.length) return { min: 0, max: 1 };
+    const vals = logs.map(w => w.weight);
+    if (goalKg) vals.push(goalKg);
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const pad = Math.max((max - min) * 0.15, 0.5);
+    return { min: min - pad, max: max + pad };
+  }, [logs, goalKg]);
 
   const trendData = useMemo(() => {
     if (trendRangeDays === 0) return sortedAsc;
@@ -1282,7 +1322,7 @@ export default function WeightScreen() {
                     <View key={log.id} style={[styles.logRowWrap, i === week.items.length - 1 && { borderBottomWidth: 0 }]}>
                       <View style={styles.logRow}>
                         <Text style={styles.logDate}>{fmtDateShort(log.logged_at)}</Text>
-                        <WeightHistoryBar value={toDisp(log.weight, unit)} goalVal={goalKg ? toDisp(goalKg, unit) : null} barMax={toDisp(allTimeMaxKg, unit)} colors={colors} />
+                        <WeightHistoryBar value={toDisp(log.weight, unit)} goalVal={goalKg ? toDisp(goalKg, unit) : null} barMin={toDisp(historyBarRange.min, unit)} barMax={toDisp(historyBarRange.max, unit)} colors={colors} />
                         <Text style={styles.logVal}>{toDisp(log.weight, unit).toFixed(1)}</Text>
                         {delta != null && (
                           <Text style={[styles.logDelta, { color: delta > 0 ? colors.danger : colors.good }]}>
