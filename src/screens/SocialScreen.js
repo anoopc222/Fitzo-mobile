@@ -182,7 +182,9 @@ const createStyles = (colors) => StyleSheet.create({
   },
   tabBadgeText: { color: '#fff', fontSize: 9, fontWeight: weight.bold },
 
-  storiesRail: { paddingTop: 12 },
+  storiesRail: {
+    height: 96, flexGrow: 0, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
   storiesContent: { paddingHorizontal: 16, gap: 14 },
   storyItem: { alignItems: 'center', width: 60 },
   storyRing: {
@@ -193,7 +195,7 @@ const createStyles = (colors) => StyleSheet.create({
     borderWidth: 2, borderColor: colors.border,
   },
   storyAvatarInner: {
-    flex: 1, width: '100%', borderRadius: 24, backgroundColor: colors.bgCard,
+    width: 52, height: 52, borderRadius: 26, backgroundColor: colors.bgCard,
     alignItems: 'center', justifyContent: 'center',
   },
   storyAvatarText: { color: colors.text, fontWeight: weight.bold, fontSize: typography.base },
@@ -204,7 +206,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   storyLabel: { fontSize: typography.xs, color: colors.textMuted, marginTop: 6, fontWeight: weight.medium },
 
-  composerWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  composerWrap: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
   composerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bgCard,
     borderRadius: 22, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 8,
