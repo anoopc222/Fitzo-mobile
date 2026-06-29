@@ -157,7 +157,9 @@ export default function ChallengesScreen({ navigation, embedded = false }) {
 
         <View style={styles.cardMetaRow}>
           <Text style={styles.cardGoal}>
-            {t('challenges.goalLine', { value: c.goal_value, unit })} · {c.start_date} → {c.end_date}
+            {c.type === 'steps'
+              ? t('challenges.goalLine', { value: c.goal_value, unit })
+              : t('challenges.goalLineStreak', { value: c.goal_value })} · {c.start_date} → {c.end_date}
           </Text>
           {ended ? (
             <View style={styles.endedBadge}><Text style={styles.endedBadgeText}>{t('challenges.endedLabel')}</Text></View>
@@ -322,7 +324,7 @@ function CreateChallengeModal({ visible, onClose, onCreate, creating, colors, t 
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
@@ -332,6 +334,7 @@ function CreateChallengeModal({ visible, onClose, onCreate, creating, colors, t 
             </TouchableOpacity>
           </View>
 
+          <ScrollView contentContainerStyle={styles.formContent} showsVerticalScrollIndicator={false}>
           <Text style={styles.label}>{t('challenges.nameLabel')}</Text>
           <TextInput
             style={styles.input}
@@ -385,6 +388,7 @@ function CreateChallengeModal({ visible, onClose, onCreate, creating, colors, t 
           <TouchableOpacity style={styles.submitBtn} onPress={submit} disabled={creating}>
             {creating ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.submitBtnText}>{t('challenges.createButton')}</Text>}
           </TouchableOpacity>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -459,11 +463,13 @@ const createStyles = (colors) => StyleSheet.create({
 });
 
 const createModalStyles = (colors) => StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   sheet: {
-    backgroundColor: colors.bgCard, borderTopLeftRadius: 22, borderTopRightRadius: 22,
-    borderTopWidth: 1, borderColor: colors.border, padding: 18, paddingBottom: 32,
+    width: '100%', maxWidth: 420, maxHeight: '85%',
+    backgroundColor: colors.bgCard, borderRadius: 22,
+    borderWidth: 1, borderColor: colors.border, padding: 18,
   },
+  formContent: { paddingBottom: 4 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   title: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
 

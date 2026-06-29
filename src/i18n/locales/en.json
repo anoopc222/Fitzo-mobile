@@ -1415,6 +1415,7 @@
     "participants": "participants",
     "public": "PUBLIC",
     "goalLine": "Goal: {{value}} {{unit}}",
+    "goalLineStreak": "Goal: {{value}}-day workout streak",
     "steps": "steps",
     "days": "days",
     "join": "Join",
