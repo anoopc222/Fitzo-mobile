@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
+import DatePickerField from '../components/ui/DatePickerField';
 
 function localDateStr(d) {
   const y = d.getFullYear();
@@ -375,11 +376,11 @@ function CreateChallengeModal({ visible, onClose, onCreate, creating, colors, t 
           <View style={styles.dateRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>{t('challenges.startLabel')}</Text>
-              <TextInput style={styles.input} value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" placeholderTextColor={colors.textDim} />
+              <DatePickerField value={startDate} onChange={setStartDate} colors={colors} maxDate={endDate || undefined} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>{t('challenges.endLabel')}</Text>
-              <TextInput style={styles.input} value={endDate} onChangeText={setEndDate} placeholder="YYYY-MM-DD" placeholderTextColor={colors.textDim} />
+              <DatePickerField value={endDate} onChange={setEndDate} colors={colors} minDate={startDate || undefined} />
             </View>
           </View>
 
