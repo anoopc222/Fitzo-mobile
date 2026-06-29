@@ -239,14 +239,7 @@ export default function ChallengesScreen({ navigation, embedded = false }) {
 
   return (
     <Wrap style={styles.safe}>
-      {embedded ? (
-        <View style={styles.embeddedHeaderRow}>
-          <TouchableOpacity style={styles.embeddedCreateBtn} onPress={() => setShowCreate(true)} activeOpacity={0.8}>
-            <Ionicons name="add" size={16} color={colors.bg} />
-            <Text style={styles.embeddedCreateBtnText}>{t('challenges.title')}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
+      {embedded ? null : (
         <ScreenHeader
           title={t('challenges.title')}
           colors={colors}
@@ -284,6 +277,16 @@ export default function ChallengesScreen({ navigation, embedded = false }) {
           </>
         )}
       </ScrollView>
+
+      {embedded && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => setShowCreate(true)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={26} color={colors.bg} />
+        </TouchableOpacity>
+      )}
 
       <CreateChallengeModal
         visible={showCreate}
@@ -397,12 +400,11 @@ function CreateChallengeModal({ visible, onClose, onCreate, creating, colors, t 
 
 const createStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  embeddedHeaderRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 10 },
-  embeddedCreateBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent,
-    borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7,
+  fab: {
+    position: 'absolute', right: 20, bottom: 24, width: 52, height: 52, borderRadius: 26,
+    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
-  embeddedCreateBtnText: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.bg },
   content: { paddingHorizontal: 16, paddingBottom: 40, paddingTop: 8 },
 
   emptyWrap: { alignItems: 'center', paddingVertical: 60, gap: 8 },
