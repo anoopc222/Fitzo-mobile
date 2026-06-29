@@ -11,7 +11,7 @@ import { typography, weight } from '../theme/typography';
 import { navigate } from '../navigation/navigationRef';
 import { fetchProfile } from '../screens/ProfileScreen';
 
-const getSections = (t, colors, isAdmin, isPro, subReady) => [
+const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
   {
     title: t('more.sectionBodyHealth'),
     items: [
@@ -48,7 +48,7 @@ const getSections = (t, colors, isAdmin, isPro, subReady) => [
       { label: t('more.settings'), icon: 'settings',    target: ['Home', 'Settings'],     color: colors.textDim },
     ],
   },
-  ...(isAdmin ? [{
+  ...(isSuperAdmin ? [{
     title: t('more.sectionAdmin'),
     items: [
       { label: t('more.adminDashboard'), icon: 'shield-checkmark', target: ['Home', 'AdminDashboard'], color: colors.purple },
@@ -60,10 +60,10 @@ export default function MoreSheetModal() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { t } = useTranslation();
-  const { isAdmin, isPro, ready: subReady } = useSubscription();
+  const { isSuperAdmin, isPro, ready: subReady } = useSubscription();
   const { visible, close } = useMoreMenu();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const SECTIONS = useMemo(() => getSections(t, colors, isAdmin, isPro, subReady), [t, colors, isAdmin, isPro, subReady]);
+  const SECTIONS = useMemo(() => getSections(t, colors, isSuperAdmin, isPro, subReady), [t, colors, isSuperAdmin, isPro, subReady]);
   const qc = useQueryClient();
 
   // Prefetch the screens reachable from this sheet as soon as it opens, so

@@ -581,6 +581,7 @@
   },
   "admin": {
     "headerTitle": "ADMIN",
+    "accessDenied": "You don't have permission to view this page.",
     "databaseUsage": "DATABASE USAGE",
     "showUsage": "Show Usage",
     "refresh": "Refresh",
