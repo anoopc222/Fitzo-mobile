@@ -76,7 +76,7 @@ async function updateProfile(userId, fields) {
 }
 
 export default function ProfileScreen({ navigation }) {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { isSuperAdmin, setUserAdmin } = useSubscription();
@@ -156,29 +156,6 @@ export default function ProfileScreen({ navigation }) {
       bio: form.bio || null,
     };
     updateMut.mutate(fields);
-  };
-
-  const handleSignOut = () => {
-    Alert.alert(t('profile.signOutTitle'), t('profile.signOutConfirm'), [
-      { text: t('profile.cancel'), style: 'cancel' },
-      { text: t('profile.signOut'), style: 'destructive', onPress: signOut },
-    ]);
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountConfirm'), [
-      { text: t('profile.cancel'), style: 'cancel' },
-      {
-        text: t('profile.deleteAccount'), style: 'destructive', onPress: async () => {
-          try {
-            await supabase.rpc('delete_user');
-            await signOut();
-          } catch (e) {
-            Alert.alert(t('profile.error'), e.message);
-          }
-        },
-      },
-    ]);
   };
 
   const profile = data?.profile;
@@ -347,17 +324,6 @@ export default function ProfileScreen({ navigation }) {
               </View>
             )}
 
-            {/* Sign out + Delete */}
-            <View style={styles.dangerSection}>
-              <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
-                <Ionicons name="log-out-outline" size={18} color={colors.text} />
-                <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount}>
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                <Text style={styles.deleteBtnText}>{t('profile.deleteAccount')}</Text>
-              </TouchableOpacity>
-            </View>
           </>
         )}
       </ScrollView>
@@ -436,7 +402,6 @@ const createStyles = (colors) => StyleSheet.create({
   sexOptActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   sexOptText: { fontSize: typography.xs, color: colors.text, fontWeight: weight.semibold },
 
-  dangerSection: { gap: 10, marginTop: 8 },
   signOutBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border },
   signOutText: { fontSize: typography.base, color: colors.text, fontWeight: weight.medium },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.danger + '18', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.danger + '44' },
