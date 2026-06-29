@@ -60,11 +60,6 @@ export function SubscriptionProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => {
-    if (!configured || !user?.id) return;
-    Purchases.logIn(user.id).catch(() => {});
-  }, [configured, user?.id]);
-
   const refresh = useCallback(async () => {
     if (!configured) return;
     try {
@@ -82,13 +77,28 @@ export function SubscriptionProvider({ children }) {
     }
   }, [configured]);
 
+  // Must log in to the correct RevenueCat App User ID *before* fetching
+  // customer info — otherwise, right after a fresh login (e.g. post-logout),
+  // getCustomerInfo() can race ahead of logIn() and briefly return the
+  // anonymous user's (unsubscribed) entitlements, flipping `ready` true with
+  // `isPro` false and triggering the one-time paywall for an already-Pro user.
   useEffect(() => {
     if (!configured) return;
-    refresh();
+    let cancelled = false;
+    setReady(false);
+    (async () => {
+      if (user?.id) {
+        try { await Purchases.logIn(user.id); } catch (e) {}
+      }
+      if (!cancelled) refresh();
+    })();
     const listener = (info) => setCustomerInfo(info);
     Purchases.addCustomerInfoUpdateListener(listener);
-    return () => Purchases.removeCustomerInfoUpdateListener(listener);
-  }, [configured, refresh]);
+    return () => {
+      cancelled = true;
+      Purchases.removeCustomerInfoUpdateListener(listener);
+    };
+  }, [configured, user?.id, refresh]);
 
   // App-side mirror of RevenueCat status into a queryable table, so the admin
   // dashboard has something to show. This only reflects what this device has
