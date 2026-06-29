@@ -1432,7 +1432,12 @@
     "startLabel": "Start Date",
     "endLabel": "End Date",
     "makePublic": "Make this challenge public",
-    "createButton": "Create Challenge"
+    "createButton": "Create Challenge",
+    "myChallenges": "My Challenges",
+    "discover": "Discover",
+    "daysLeftCount": "{{count}} days left",
+    "endedLabel": "ENDED",
+    "youSuffix": "(You)"
   },
   "publicProfile": {
     "title": "Profile",

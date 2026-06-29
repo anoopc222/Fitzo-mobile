@@ -20,6 +20,16 @@ function localDateStr(d) {
   return `${y}-${m}-${day}`;
 }
 
+function daysLeft(endDate) {
+  const today = new Date(localDateStr(new Date()));
+  const end = new Date(endDate);
+  return Math.ceil((end - today) / 86400000);
+}
+
+function initialsOf(name) {
+  return (name || '?').trim().charAt(0).toUpperCase();
+}
+
 export async function fetchChallenges(userId) {
   const { data, error } = await supabase
     .from('challenges')
@@ -112,6 +122,119 @@ export default function ChallengesScreen({ navigation, embedded = false }) {
 
   const Wrap = embedded ? View : SafeAreaView;
 
+  const all = data ?? [];
+  const myChallenges = all.filter(c => c.joined);
+  const discoverChallenges = all.filter(c => !c.joined);
+
+  const renderCard = (c) => {
+    const isExpanded = expandedId === c.id;
+    const unit = c.type === 'steps' ? t('challenges.steps') : t('challenges.days');
+    const pct = c.goal_value > 0 ? Math.min(100, Math.round((c.myProgress / c.goal_value) * 100)) : 0;
+    const left = daysLeft(c.end_date);
+    const ended = left < 0;
+    const avatarNames = c.participants.slice(0, 4).map(p => p.profiles?.full_name);
+    const extraCount = Math.max(0, c.participants.length - avatarNames.length);
+
+    return (
+      <TouchableOpacity
+        key={c.id}
+        style={styles.card}
+        onPress={() => setExpandedId(isExpanded ? null : c.id)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.cardHeaderRow}>
+          <View style={[styles.typeIconWrap, { backgroundColor: colors.accent + '18' }]}>
+            <Ionicons name={c.type === 'steps' ? 'footsteps' : 'flame'} size={15} color={colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardName}>{c.name}</Text>
+            <Text style={styles.cardSub}>
+              {t('challenges.byCreator', { name: c.creator?.full_name || t('friends.unnamed') })} · {c.participants.length} {t('challenges.participants')}
+            </Text>
+          </View>
+          {c.is_public && <View style={styles.publicBadge}><Text style={styles.publicBadgeText}>{t('challenges.public')}</Text></View>}
+        </View>
+
+        <View style={styles.cardMetaRow}>
+          <Text style={styles.cardGoal}>
+            {t('challenges.goalLine', { value: c.goal_value, unit })} · {c.start_date} → {c.end_date}
+          </Text>
+          {ended ? (
+            <View style={styles.endedBadge}><Text style={styles.endedBadgeText}>{t('challenges.endedLabel')}</Text></View>
+          ) : (
+            <View style={styles.daysLeftBadge}>
+              <Ionicons name="time-outline" size={11} color={colors.warning} />
+              <Text style={styles.daysLeftBadgeText}>{t('challenges.daysLeftCount', { count: left })}</Text>
+            </View>
+          )}
+        </View>
+
+        {c.participants.length > 0 && (
+          <View style={styles.avatarStackRow}>
+            {avatarNames.map((name, idx) => (
+              <View key={idx} style={[styles.avatarChip, { marginLeft: idx === 0 ? 0 : -8, zIndex: avatarNames.length - idx }]}>
+                <Text style={styles.avatarChipText}>{initialsOf(name)}</Text>
+              </View>
+            ))}
+            {extraCount > 0 && (
+              <View style={[styles.avatarChip, styles.avatarChipExtra, { marginLeft: -8 }]}>
+                <Text style={styles.avatarChipText}>+{extraCount}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {c.joined && (
+          <View style={styles.progressBarOuter}>
+            <View style={[styles.progressBarInner, { width: `${pct}%`, backgroundColor: colors.accent }]} />
+          </View>
+        )}
+
+        <View style={styles.actionsRow}>
+          {c.joined ? (
+            <TouchableOpacity
+              style={styles.leaveBtn}
+              onPress={() => leaveMut.mutate(c.id)}
+              disabled={leaveMut.isPending}
+            >
+              <Text style={styles.leaveBtnText}>{t('challenges.leave')}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.joinBtn}
+              onPress={() => joinMut.mutate(c.id)}
+              disabled={joinMut.isPending}
+            >
+              <Text style={styles.joinBtnText}>{t('challenges.join')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {isExpanded && (
+          <View style={styles.leaderboard}>
+            <Text style={styles.leaderboardTitle}>{t('challenges.leaderboard')}</Text>
+            {c.participants.map((p, idx) => {
+              const isMe = p.user_id === user.id;
+              return (
+                <View key={p.id} style={[styles.leaderRow, isMe && styles.leaderRowMe]}>
+                  {idx === 0 ? (
+                    <Ionicons name="trophy" size={14} color={colors.warning} style={{ width: 24 }} />
+                  ) : (
+                    <Text style={styles.leaderRank}>#{idx + 1}</Text>
+                  )}
+                  <Text style={styles.leaderName}>
+                    {p.profiles?.full_name || t('friends.unnamed')}{isMe ? ` ${t('challenges.youSuffix')}` : ''}
+                  </Text>
+                  <Text style={styles.leaderProgress}>{p.progress} {unit}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <Wrap style={styles.safe}>
       {embedded ? (
@@ -136,82 +259,27 @@ export default function ChallengesScreen({ navigation, embedded = false }) {
       <ScrollView contentContainerStyle={styles.content}>
         {isLoading ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />
-        ) : (data ?? []).length === 0 ? (
+        ) : all.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Ionicons name="trophy-outline" size={32} color={colors.textDim} />
             <Text style={styles.emptyText}>{t('challenges.empty')}</Text>
             <Text style={styles.emptySub}>{t('challenges.emptySub')}</Text>
           </View>
         ) : (
-          data.map(c => {
-            const isExpanded = expandedId === c.id;
-            const unit = c.type === 'steps' ? t('challenges.steps') : t('challenges.days');
-            const pct = c.goal_value > 0 ? Math.min(100, Math.round((c.myProgress / c.goal_value) * 100)) : 0;
-            return (
-              <TouchableOpacity
-                key={c.id}
-                style={styles.card}
-                onPress={() => setExpandedId(isExpanded ? null : c.id)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.cardHeaderRow}>
-                  <View style={[styles.typeIconWrap, { backgroundColor: colors.accent + '18' }]}>
-                    <Ionicons name={c.type === 'steps' ? 'footsteps' : 'flame'} size={15} color={colors.accent} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardName}>{c.name}</Text>
-                    <Text style={styles.cardSub}>
-                      {t('challenges.byCreator', { name: c.creator?.full_name || t('friends.unnamed') })} · {c.participants.length} {t('challenges.participants')}
-                    </Text>
-                  </View>
-                  {c.is_public && <View style={styles.publicBadge}><Text style={styles.publicBadgeText}>{t('challenges.public')}</Text></View>}
-                </View>
-
-                <Text style={styles.cardGoal}>
-                  {t('challenges.goalLine', { value: c.goal_value, unit })} · {c.start_date} → {c.end_date}
-                </Text>
-
-                {c.joined && (
-                  <View style={styles.progressBarOuter}>
-                    <View style={[styles.progressBarInner, { width: `${pct}%`, backgroundColor: colors.accent }]} />
-                  </View>
-                )}
-
-                <View style={styles.actionsRow}>
-                  {c.joined ? (
-                    <TouchableOpacity
-                      style={styles.leaveBtn}
-                      onPress={() => leaveMut.mutate(c.id)}
-                      disabled={leaveMut.isPending}
-                    >
-                      <Text style={styles.leaveBtnText}>{t('challenges.leave')}</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.joinBtn}
-                      onPress={() => joinMut.mutate(c.id)}
-                      disabled={joinMut.isPending}
-                    >
-                      <Text style={styles.joinBtnText}>{t('challenges.join')}</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {isExpanded && (
-                  <View style={styles.leaderboard}>
-                    <Text style={styles.leaderboardTitle}>{t('challenges.leaderboard')}</Text>
-                    {c.participants.map((p, idx) => (
-                      <View key={p.id} style={styles.leaderRow}>
-                        <Text style={styles.leaderRank}>#{idx + 1}</Text>
-                        <Text style={styles.leaderName}>{p.profiles?.full_name || t('friends.unnamed')}</Text>
-                        <Text style={styles.leaderProgress}>{p.progress} {unit}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })
+          <>
+            {myChallenges.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('challenges.myChallenges')}</Text>
+                {myChallenges.map(renderCard)}
+              </View>
+            )}
+            {discoverChallenges.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('challenges.discover')}</Text>
+                {discoverChallenges.map(renderCard)}
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -337,6 +405,12 @@ const createStyles = (colors) => StyleSheet.create({
   emptyText: { fontSize: typography.base, color: colors.text, fontWeight: weight.semibold },
   emptySub: { fontSize: typography.sm, color: colors.textDim, textAlign: 'center', paddingHorizontal: 20 },
 
+  section: { marginBottom: 8 },
+  sectionTitle: {
+    fontSize: typography.xs, fontWeight: weight.bold, color: colors.textDim,
+    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10, marginLeft: 2,
+  },
+
   card: {
     backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border,
     padding: 14, marginBottom: 12,
@@ -348,7 +422,23 @@ const createStyles = (colors) => StyleSheet.create({
   publicBadge: { backgroundColor: colors.good + '18', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   publicBadgeText: { fontSize: 10, fontWeight: weight.bold, color: colors.good },
 
-  cardGoal: { fontSize: typography.sm, color: colors.textMuted, marginBottom: 10 },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 8 },
+  cardGoal: { flex: 1, fontSize: typography.sm, color: colors.textMuted },
+  endedBadge: { backgroundColor: colors.textDim + '18', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  endedBadgeText: { fontSize: 10, fontWeight: weight.bold, color: colors.textDim },
+  daysLeftBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.warning + '18',
+    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
+  },
+  daysLeftBadgeText: { fontSize: 10, fontWeight: weight.bold, color: colors.warning },
+
+  avatarStackRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  avatarChip: {
+    width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.bgCard,
+  },
+  avatarChipExtra: { backgroundColor: colors.border },
+  avatarChipText: { fontSize: 10, fontWeight: weight.bold, color: colors.bg },
 
   progressBarOuter: { height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden', marginBottom: 10 },
   progressBarInner: { height: 6, borderRadius: 3 },
@@ -361,7 +451,8 @@ const createStyles = (colors) => StyleSheet.create({
 
   leaderboard: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, gap: 6 },
   leaderboardTitle: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 },
-  leaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  leaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 8, paddingHorizontal: 4, paddingVertical: 2 },
+  leaderRowMe: { backgroundColor: colors.accent + '12' },
   leaderRank: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.textDim, width: 24 },
   leaderName: { flex: 1, fontSize: typography.sm, color: colors.text },
   leaderProgress: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent },
