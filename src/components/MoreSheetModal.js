@@ -13,6 +13,26 @@ import { fetchProfile } from '../screens/ProfileScreen';
 
 const getSections = (t, colors, isAdmin, isPro, subReady) => [
   {
+    title: t('more.sectionBodyHealth'),
+    items: [
+      { label: t('more.progress'),     icon: 'trending-up', target: ['Home', 'Progress'],     color: colors.good },
+      { label: t('more.measurements'), icon: 'body',         target: ['Home', 'Measurements'], color: colors.purple },
+      { label: t('more.dietPlan'),     icon: 'restaurant',   target: ['Home', 'Diet'],         color: colors.accent2 },
+    ],
+  },
+  {
+    title: t('more.sectionLog'),
+    items: [
+      { label: t('more.foodLog'), icon: 'clipboard', target: ['Log'], color: colors.accent },
+    ],
+  },
+  {
+    title: t('more.sectionSocial'),
+    items: [
+      { label: t('tabs.social'), icon: 'people', target: ['Social'], color: colors.danger },
+    ],
+  },
+  {
     title: t('more.sectionTools'),
     items: [
       { label: t('more.calculators'),  icon: 'calculator',  target: ['Home', 'Calculators'],  color: colors.warning },
@@ -25,6 +45,7 @@ const getSections = (t, colors, isAdmin, isPro, subReady) => [
         { label: t('more.goPro'), icon: 'rocket', target: ['Home', 'Subscription'], color: colors.accent },
       ] : []),
       { label: t('more.profile'),  icon: 'person',      target: ['Home', 'Profile'],      color: colors.blue },
+      { label: t('more.settings'), icon: 'settings',    target: ['Home', 'Settings'],     color: colors.textDim },
     ],
   },
   ...(isAdmin ? [{

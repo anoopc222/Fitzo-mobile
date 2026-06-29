@@ -116,11 +116,23 @@ export default function SocialScreen({ navigation }) {
 
   const closeShareSheet = () => setShareSheet(null);
 
-  const postShare = () => {
+  const postShare = async () => {
     if (!shareSheet?.summary || !user?.id) return;
     setPosting(true);
-    logActivity(user.id, shareSheet.qa.type, shareSheet.summary.title, shareSheet.summary.detail);
-    qc.invalidateQueries(['activityFeed', user.id]);
+    const today = localDateStr(new Date());
+    const { data: already } = await supabase
+      .from('activity_feed')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('type', shareSheet.qa.type)
+      .gte('created_at', `${today}T00:00:00`)
+      .lte('created_at', `${today}T23:59:59`)
+      .limit(1)
+      .maybeSingle();
+    if (!already) {
+      logActivity(user.id, shareSheet.qa.type, shareSheet.summary.title, shareSheet.summary.detail);
+      qc.invalidateQueries(['activityFeed', user.id]);
+    }
     setPosting(false);
     setShareSheet(null);
     setTab('feed');
