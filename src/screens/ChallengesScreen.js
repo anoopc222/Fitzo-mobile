@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, Modal, Alert,
+  TextInput, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import DatePickerField from '../components/ui/DatePickerField';
+import BottomSheet from '../components/ui/BottomSheet';
 
 function localDateStr(d) {
   const y = d.getFullYear();
@@ -328,17 +329,15 @@ function CreateChallengeModal({ visible, onClose, onCreate, creating, colors, t 
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{t('challenges.createTitle')}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={22} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={styles.header}>
+        <Text style={styles.title}>{t('challenges.createTitle')}</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Ionicons name="close" size={22} color={colors.text} />
+        </TouchableOpacity>
+      </View>
 
-          <ScrollView contentContainerStyle={styles.formContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.formContent} showsVerticalScrollIndicator={false}>
           <Text style={styles.label}>{t('challenges.nameLabel')}</Text>
           <TextInput
             style={styles.input}
@@ -392,10 +391,8 @@ function CreateChallengeModal({ visible, onClose, onCreate, creating, colors, t 
           <TouchableOpacity style={styles.submitBtn} onPress={submit} disabled={creating}>
             {creating ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.submitBtnText}>{t('challenges.createButton')}</Text>}
           </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
@@ -466,12 +463,6 @@ const createStyles = (colors) => StyleSheet.create({
 });
 
 const createModalStyles = (colors) => StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  sheet: {
-    width: '100%', maxWidth: 420, maxHeight: '85%',
-    backgroundColor: colors.bgCard, borderRadius: 22,
-    borderWidth: 1, borderColor: colors.border, padding: 18,
-  },
   formContent: { paddingBottom: 4 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   title: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text },
