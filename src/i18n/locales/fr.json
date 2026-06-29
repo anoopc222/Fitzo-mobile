@@ -574,6 +574,7 @@
   },
   "admin": {
     "headerTitle": "ADMIN",
+    "accessDenied": "Vous n'avez pas la permission de voir cette page.",
     "databaseUsage": "UTILISATION DE LA BASE DE DONNÉES",
     "showUsage": "Afficher l'utilisation",
     "refresh": "Actualiser",

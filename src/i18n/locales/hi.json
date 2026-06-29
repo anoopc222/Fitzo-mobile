@@ -574,6 +574,7 @@
   },
   "admin": {
     "headerTitle": "एडमिन",
+    "accessDenied": "आपको इस पेज को देखने की अनुमति नहीं है।",
     "databaseUsage": "डेटाबेस उपयोग",
     "showUsage": "उपयोग दिखाएं",
     "refresh": "रीफ़्रेश करें",

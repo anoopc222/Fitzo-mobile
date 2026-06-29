@@ -9,7 +9,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
@@ -76,37 +75,14 @@ async function updateProfile(userId, fields) {
 }
 
 export default function ProfileScreen({ navigation }) {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const { isSuperAdmin, setUserAdmin } = useSubscription();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [showGoalPicker, setShowGoalPicker] = useState(false);
-  const [grantEmail, setGrantEmail] = useState('');
-  const [grantBusy, setGrantBusy] = useState(false);
-
-  const handleSetAdmin = async (makeAdmin) => {
-    const email = grantEmail.trim();
-    if (!email) return;
-    setGrantBusy(true);
-    try {
-      await setUserAdmin(email, makeAdmin);
-      Alert.alert(
-        t('profile.done'),
-        makeAdmin
-          ? t('profile.nowAdmin', { email })
-          : t('profile.noLongerAdmin', { email })
-      );
-      setGrantEmail('');
-    } catch (e) {
-      Alert.alert(t('profile.error'), e.message);
-    } finally {
-      setGrantBusy(false);
-    }
-  };
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['profile', user?.id],
@@ -156,29 +132,6 @@ export default function ProfileScreen({ navigation }) {
       bio: form.bio || null,
     };
     updateMut.mutate(fields);
-  };
-
-  const handleSignOut = () => {
-    Alert.alert(t('profile.signOutTitle'), t('profile.signOutConfirm'), [
-      { text: t('profile.cancel'), style: 'cancel' },
-      { text: t('profile.signOut'), style: 'destructive', onPress: signOut },
-    ]);
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountConfirm'), [
-      { text: t('profile.cancel'), style: 'cancel' },
-      {
-        text: t('profile.deleteAccount'), style: 'destructive', onPress: async () => {
-          try {
-            await supabase.rpc('delete_user');
-            await signOut();
-          } catch (e) {
-            Alert.alert(t('profile.error'), e.message);
-          }
-        },
-      },
-    ]);
   };
 
   const profile = data?.profile;
@@ -305,59 +258,6 @@ export default function ProfileScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Super admin: grant admin access */}
-            {isSuperAdmin && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t('profile.superAdmin')}</Text>
-                <Text style={[styles.bodyFieldLabel, { marginBottom: 10 }]}>{t('profile.grantRevokeAdmin')}</Text>
-                <TextInput
-                  style={[styles.bodyFieldInput, { marginBottom: 10 }]}
-                  placeholder={t('profile.emailPlaceholder')}
-                  placeholderTextColor={colors.textDim}
-                  value={grantEmail}
-                  onChangeText={setGrantEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TouchableOpacity
-                    style={[styles.signOutBtn, { flex: 1, justifyContent: 'center', backgroundColor: colors.accent }]}
-                    onPress={() => handleSetAdmin(true)}
-                    disabled={grantBusy}
-                  >
-                    {grantBusy
-                      ? <ActivityIndicator color={colors.bg} />
-                      : <Text style={[styles.signOutText, { color: colors.bg }]}>{t('profile.grant')}</Text>}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.deleteBtn, { flex: 1, justifyContent: 'center' }]}
-                    onPress={() => handleSetAdmin(false)}
-                    disabled={grantBusy}
-                  >
-                    {grantBusy
-                      ? <ActivityIndicator color={colors.danger} />
-                      : <Text style={styles.deleteBtnText}>{t('profile.revoke')}</Text>}
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity style={{ marginTop: 12 }} onPress={() => navigation.navigate('AdminDashboard')}>
-                  <Text style={{ color: colors.accent, fontSize: typography.sm, fontWeight: weight.semibold }}>
-                    {t('profile.openAdminDashboard')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Sign out + Delete */}
-            <View style={styles.dangerSection}>
-              <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
-                <Ionicons name="log-out-outline" size={18} color={colors.text} />
-                <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount}>
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                <Text style={styles.deleteBtnText}>{t('profile.deleteAccount')}</Text>
-              </TouchableOpacity>
-            </View>
           </>
         )}
       </ScrollView>
@@ -436,9 +336,4 @@ const createStyles = (colors) => StyleSheet.create({
   sexOptActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   sexOptText: { fontSize: typography.xs, color: colors.text, fontWeight: weight.semibold },
 
-  dangerSection: { gap: 10, marginTop: 8 },
-  signOutBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border },
-  signOutText: { fontSize: typography.base, color: colors.text, fontWeight: weight.medium },
-  deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.danger + '18', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.danger + '44' },
-  deleteBtnText: { fontSize: typography.base, color: colors.danger, fontWeight: weight.medium },
 });

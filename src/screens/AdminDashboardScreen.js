@@ -72,9 +72,11 @@ export default function AdminDashboardScreen({ navigation }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { isSuperAdmin } = useSubscription();
+  const { isSuperAdmin, setUserAdmin } = useSubscription();
   const [search, setSearch] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [grantEmail, setGrantEmail] = useState('');
+  const [grantBusy, setGrantBusy] = useState(false);
 
   const { data: users, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['admin-users'],
@@ -113,6 +115,27 @@ export default function AdminDashboardScreen({ navigation }) {
     };
   }, [users]);
 
+  const handleSetAdmin = async (makeAdmin) => {
+    const email = grantEmail.trim();
+    if (!email) return;
+    setGrantBusy(true);
+    try {
+      await setUserAdmin(email, makeAdmin);
+      Alert.alert(
+        t('profile.done'),
+        makeAdmin
+          ? t('profile.nowAdmin', { email })
+          : t('profile.noLongerAdmin', { email })
+      );
+      setGrantEmail('');
+      refetch();
+    } catch (e) {
+      Alert.alert(t('profile.error'), e.message);
+    } finally {
+      setGrantBusy(false);
+    }
+  };
+
   const handleExport = async () => {
     if (!users?.length) return;
     setExporting(true);
@@ -143,6 +166,15 @@ export default function AdminDashboardScreen({ navigation }) {
     }
   };
 
+  if (!isSuperAdmin) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScreenHeader title={t('admin.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />
+        <Text style={styles.emptyText}>{t('admin.accessDenied')}</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenHeader
@@ -166,6 +198,42 @@ export default function AdminDashboardScreen({ navigation }) {
           <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
         ) : (
           <>
+            {isSuperAdmin && (
+              <View style={styles.grantTile}>
+                <Text style={styles.sectionTitle}>{t('profile.superAdmin')}</Text>
+                <Text style={[styles.grantLabel, { marginBottom: 10 }]}>{t('profile.grantRevokeAdmin')}</Text>
+                <TextInput
+                  style={[styles.grantInput, { marginBottom: 10 }]}
+                  placeholder={t('profile.emailPlaceholder')}
+                  placeholderTextColor={colors.textDim}
+                  value={grantEmail}
+                  onChangeText={setGrantEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.grantBtn, { flex: 1, justifyContent: 'center', backgroundColor: colors.accent }]}
+                    onPress={() => handleSetAdmin(true)}
+                    disabled={grantBusy}
+                  >
+                    {grantBusy
+                      ? <ActivityIndicator color={colors.bg} />
+                      : <Text style={[styles.grantBtnText, { color: colors.bg }]}>{t('profile.grant')}</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.revokeBtn, { flex: 1, justifyContent: 'center' }]}
+                    onPress={() => handleSetAdmin(false)}
+                    disabled={grantBusy}
+                  >
+                    {grantBusy
+                      ? <ActivityIndicator color={colors.danger} />
+                      : <Text style={styles.revokeBtnText}>{t('profile.revoke')}</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
             <View style={styles.dbUsageTile}>
               <Text style={styles.sectionTitle}>{t('admin.databaseUsage')}</Text>
               {!showDbUsage ? (
@@ -400,4 +468,12 @@ const createStyles = (colors) => StyleSheet.create({
   showUsageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: colors.bgCard, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: colors.border },
   showUsageBtnText: { fontSize: typography.sm, fontWeight: weight.semibold, color: colors.accent },
   dbUsageTile: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 18, borderWidth: 1, borderColor: colors.border, gap: 10 },
+
+  grantTile: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 18, borderWidth: 1, borderColor: colors.border },
+  grantLabel: { fontSize: typography.sm, color: colors.textMuted },
+  grantInput: { backgroundColor: colors.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: typography.sm, color: colors.text, borderWidth: 1, borderColor: colors.border },
+  grantBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16 },
+  grantBtnText: { fontSize: typography.sm, fontWeight: weight.semibold },
+  revokeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: colors.danger },
+  revokeBtnText: { fontSize: typography.sm, fontWeight: weight.semibold, color: colors.danger },
 });
