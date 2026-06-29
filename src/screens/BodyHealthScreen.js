@@ -37,7 +37,7 @@ export default function BodyHealthScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name={active ? tb.activeIcon : tb.icon} size={20} color={active ? colors.accent : colors.textDim} />
-              <Text style={[styles.tabLabel, active && { color: colors.accent }]}>{t(`tabs.${tb.key}`)}</Text>
+              <Text style={[styles.tabLabel, active && { color: colors.accent }]} numberOfLines={1}>{t(`tabs.${tb.key}`)}</Text>
               <View style={[styles.tabUnderline, active && { backgroundColor: colors.accent }]} />
             </TouchableOpacity>
           );

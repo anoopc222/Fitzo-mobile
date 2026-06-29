@@ -171,6 +171,36 @@ async function searchFoods(query) {
   return data ?? [];
 }
 
+// ─── Tiny dot-grid preview of the last 28 days, shown in the heatmap entry row ──
+function HeatmapPreview({ caloriesByDate, target, colors }) {
+  const LVL_COLOR = {
+    0: colors.dim ?? colors.surface,
+    1: 'rgba(52,211,153,0.25)',
+    2: 'rgba(52,211,153,0.5)',
+    3: 'rgba(251,191,36,0.55)',
+    4: 'rgba(248,113,113,0.7)',
+  };
+  const days = [];
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    const ds = localDateStr(d);
+    const c = caloriesByDate[ds];
+    let lvl = 0;
+    if (c && target > 0) {
+      const ratio = c / target;
+      if (ratio < 0.5) lvl = 1; else if (ratio < 0.85) lvl = 2; else if (ratio < 1.15) lvl = 3; else lvl = 4;
+    }
+    days.push({ key: ds, lvl });
+  }
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: 4 * 7 + 3 * 7 }}>
+      {days.map(d => (
+        <View key={d.key} style={{ width: 4, height: 4, borderRadius: 1, margin: 1.5, backgroundColor: LVL_COLOR[d.lvl] }} />
+      ))}
+    </View>
+  );
+}
+
 function loggedAtFor(dateStr) {
   const now = new Date();
   const d = new Date(`${dateStr}T00:00:00`);
@@ -596,7 +626,8 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                 <Text style={styles.cardTitle}>{t('foodLog.monthlyCalorieHeatmap')}</Text>
                 <Text style={styles.hmTabSub}>{t('foodLog.tapToViewHeatmap')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              <HeatmapPreview caloriesByDate={caloriesByDate} target={targets.calories} colors={colors} />
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 10 }} />
             </TouchableOpacity>
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
@@ -941,7 +972,7 @@ const createStyles = (colors) => StyleSheet.create({
   dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   dateArrow: { padding: 10 },
   dateLabel: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text },
-  content: { paddingHorizontal: 16, paddingBottom: 100, paddingTop: 12 },
+  content: { paddingHorizontal: 16, paddingBottom: 140, paddingTop: 12 },
 
   summaryCard: { backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
   targetsPillRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
