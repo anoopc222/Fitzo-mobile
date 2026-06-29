@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { logActivity } from '../lib/activity';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import DatePickerField from '../components/ui/DatePickerField';
@@ -25,7 +24,6 @@ import CircularGauge from '../components/CircularGauge';
 import ScreenHeader from '../components/ScreenHeader';
 import { useExportCard } from '../hooks/useExportCard';
 import { SkeletonCard } from '../components/Skeleton';
-import ShareToFeedToggle from '../components/ui/ShareToFeedToggle';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const KG_TO_LBS = 2.20462;
@@ -76,7 +74,7 @@ async function fetchWeightData(userId) {
   return { logs: normLogs, profile: profile.data };
 }
 
-async function logWeight(userId, { date, weight: weightKg, note, shareFeed = true }) {
+async function logWeight(userId, { date, weight: weightKg, note }) {
   const existing = await supabase
     .from('weight_logs')
     .select('id')
@@ -94,9 +92,6 @@ async function logWeight(userId, { date, weight: weightKg, note, shareFeed = tru
   } else {
     const { error } = await supabase.from('weight_logs').insert({ ...fields, user_id: userId, logged_at: date });
     if (error) throw error;
-    if (shareFeed) {
-      logActivity(userId, 'weight', 'Logged weight', note ? `${weightKg} kg — ${note}` : `${weightKg} kg`);
-    }
   }
 }
 
@@ -624,7 +619,6 @@ export default function WeightScreen({ embedded = false } = {}) {
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
   const [weightInput, setWeightInput] = useState('');
   const [note, setNote] = useState('');
-  const [shareFeed, setShareFeed] = useState(true);
   const [goalInput, setGoalInput] = useState('');
   const [showGoalSheet, setShowGoalSheet] = useState(false);
 
@@ -667,7 +661,7 @@ export default function WeightScreen({ embedded = false } = {}) {
   const sortedAsc = useMemo(() => [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at)), [logs]);
 
   const logMut = useMutation({
-    mutationFn: ({ date, weight: w, note: logNote, shareFeed: share }) => logWeight(user.id, { date, weight: w, note: logNote, shareFeed: share }),
+    mutationFn: ({ date, weight: w, note: logNote }) => logWeight(user.id, { date, weight: w, note: logNote }),
     onMutate: async ({ date, weight: w, note: logNote }) => {
       await qc.cancelQueries(['weight', user.id]);
       const previous = qc.getQueryData(['weight', user.id]);
@@ -1450,14 +1444,12 @@ export default function WeightScreen({ embedded = false } = {}) {
           multiline
         />
 
-        <ShareToFeedToggle value={shareFeed} onChange={setShareFeed} colors={colors} />
-
         <TouchableOpacity
           style={styles.saveBtn}
           onPress={() => {
             if (weightInput) {
               const kg = fromDisp(parseFloat(weightInput), unit);
-              logMut.mutate({ date: logDate, weight: kg, note, shareFeed });
+              logMut.mutate({ date: logDate, weight: kg, note });
             }
           }}
           disabled={logMut.isPending}

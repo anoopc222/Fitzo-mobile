@@ -12,8 +12,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { logActivity } from '../lib/activity';
-import ShareToFeedToggle from '../components/ui/ShareToFeedToggle';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
@@ -208,7 +206,7 @@ function loggedAtFor(dateStr) {
   return d.toISOString();
 }
 
-async function addFood(userId, food, dateStr, shareFeed = true) {
+async function addFood(userId, food, dateStr) {
   const existing = await supabase
     .from('food_logs')
     .select('id')
@@ -220,10 +218,6 @@ async function addFood(userId, food, dateStr, shareFeed = true) {
 
   const { error } = await supabase.from('food_logs').insert({ user_id: userId, ...food, logged_at: loggedAtFor(dateStr) });
   if (error) throw error;
-
-  if (shareFeed && (existing.data ?? []).length === 0) {
-    logActivity(userId, 'food', 'Logged a meal', `${food.food_name || 'Food entry'} — ${Math.round(food.calories || 0)} kcal`);
-  }
 }
 
 async function deleteFoodLog(id) {
@@ -298,7 +292,6 @@ export default function FoodLogScreen({ embedded = false } = {}) {
   const [sheetStep, setSheetStep] = useState('search'); // 'search' | 'detail' | 'manual'
   const [selectedMeal, setSelectedMeal] = useState('Breakfast');
   const [form, setForm] = useState(EMPTY_FORM);
-  const [shareFeed, setShareFeed] = useState(true);
 
   // Search step state
   const [searchQuery, setSearchQuery] = useState('');
@@ -348,7 +341,7 @@ export default function FoodLogScreen({ embedded = false } = {}) {
   });
 
   const addMut = useMutation({
-    mutationFn: (food) => addFood(user.id, food, today, shareFeed),
+    mutationFn: (food) => addFood(user.id, food, today),
     onMutate: async (food) => {
       await qc.cancelQueries(['food', user.id, today]);
       const previous = qc.getQueryData(['food', user.id, today]);
@@ -804,8 +797,6 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                   <ScaledMacro label={t('foodLog.fats')} value={scaled.fats} unit="g" color={colors.warning} />
                 </View>
 
-                <ShareToFeedToggle value={shareFeed} onChange={setShareFeed} colors={colors} />
-
                 <TouchableOpacity style={styles.saveBtn} onPress={handleLogSelected}>
                   <Text style={styles.saveBtnText}>{t('foodLog.addToMeal', { meal: t(MEAL_TYPE_I18N_KEYS[selectedMeal]) })}</Text>
                 </TouchableOpacity>
@@ -824,8 +815,6 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                   <MacroInput label={t('foodLog.carbs')} value={form.carbs} onChange={v => setForm(p => ({ ...p, carbs: v }))} color="#fb923c" />
                   <MacroInput label={t('foodLog.fats')} value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
                 </View>
-
-                <ShareToFeedToggle value={shareFeed} onChange={setShareFeed} colors={colors} />
 
                 <TouchableOpacity style={styles.saveBtn} onPress={handleAddManual}>
                   <Text style={styles.saveBtnText}>{t('foodLog.saveFood')}</Text>

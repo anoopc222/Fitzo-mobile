@@ -13,10 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { logActivity } from '../lib/activity';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
-import ShareToFeedToggle from '../components/ui/ShareToFeedToggle';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import DatePickerField from '../components/ui/DatePickerField';
 import Sparkline from '../components/Sparkline';
@@ -159,9 +157,8 @@ function buildOptimisticSession(sessionId, { date, name, exercises, duration_min
   };
 }
 
-async function saveSession(userId, { sessionId, date, name, exercises, duration_min, shareFeed = true }) {
+async function saveSession(userId, { sessionId, date, name, exercises, duration_min }) {
   let sid = sessionId;
-  const isNewSession = !sid;
   const durPatch = duration_min != null ? { duration_min } : {};
   if (!sid) {
     const { data, error } = await supabase
@@ -204,7 +201,6 @@ async function saveSession(userId, { sessionId, date, name, exercises, duration_
     const idByOrder = new Map(newExs.map(row => [row.order_index, row.id]));
 
     const setRows = [];
-    let bestSet = null;
     for (const { ex, order_index } of validExercises) {
       const exerciseId = idByOrder.get(order_index);
       (ex.sets ?? []).forEach((s, j) => {
@@ -212,9 +208,6 @@ async function saveSession(userId, { sessionId, date, name, exercises, duration_
         if (!row.hasAny) return;
         if (row.weight_kg && row.reps) {
           totalVol += row.weight_kg * row.reps;
-          if (!bestSet || row.weight_kg > bestSet.weight_kg) {
-            bestSet = { weight_kg: row.weight_kg, reps: row.reps, name: ex.name.trim() };
-          }
         }
         const { hasAny, ...dbRow } = row;
         setRows.push({ exercise_id: exerciseId, set_number: j + 1, ...dbRow });
@@ -223,19 +216,6 @@ async function saveSession(userId, { sessionId, date, name, exercises, duration_
     if (setRows.length > 0) {
       const { error: setErr } = await supabase.from('sets').insert(setRows);
       if (setErr) throw setErr;
-    }
-    if (isNewSession && totalVol > 0 && shareFeed) {
-      const names = validExercises.map(({ ex }) => ex.name.trim());
-      const exCount = names.length;
-      const namesPreview = names.length > 3
-        ? `${names.slice(0, 3).join(', ')} +${names.length - 3} more`
-        : names.join(', ');
-      const parts = [
-        `${exCount} exercise${exCount === 1 ? '' : 's'}: ${namesPreview}`,
-        bestSet ? `Top set ${bestSet.name} ${bestSet.weight_kg}kg×${bestSet.reps}` : null,
-        `${Math.round(totalVol).toLocaleString()} kg volume`,
-      ].filter(Boolean);
-      logActivity(userId, 'workout', name || 'Workout', parts.join(' • '));
     }
   }
   await supabase.from('workout_sessions')
@@ -1443,7 +1423,6 @@ function EditSessionModal({
     }, 100);
   }, []);
   const [programWeeks, setProgramWeeks] = useState(4);
-  const [shareFeed, setShareFeed] = useState(true);
 
   useEffect(() => {
     if (!restTimer) return;
@@ -1651,7 +1630,6 @@ function EditSessionModal({
     onSave({
       date: date.trim(), name: name.trim() || t('workout.workout'), exercises: isRest ? [] : exercises,
       ...(duration_min != null ? { duration_min } : {}),
-      shareFeed,
     });
   };
 
@@ -2199,11 +2177,6 @@ function EditSessionModal({
           )}
           </ScrollView>
 
-          {!isRestDay && (
-            <View style={{ paddingHorizontal: 16 }}>
-              <ShareToFeedToggle value={shareFeed} onChange={setShareFeed} colors={colors} />
-            </View>
-          )}
 
           {/* Bottom buttons */}
           <View style={eS.bottomRow}>

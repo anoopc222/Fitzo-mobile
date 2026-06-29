@@ -11,8 +11,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { logActivity } from '../lib/activity';
-import ShareToFeedToggle from '../components/ui/ShareToFeedToggle';
 import { typography, weight, fontFamily } from '../theme/typography';
 import BottomSheet from '../components/ui/BottomSheet';
 import DatePickerField from '../components/ui/DatePickerField';
@@ -76,7 +74,7 @@ async function fetchSleep(userId) {
   return { logs: normLogs, profile: profile.data, sessions: sessions.data ?? [], steps: normSteps };
 }
 
-async function logSleep(userId, { date, hours, shareFeed = true }) {
+async function logSleep(userId, { date, hours }) {
   const existing = await supabase
     .from('sleep_logs')
     .select('id')
@@ -94,9 +92,6 @@ async function logSleep(userId, { date, hours, shareFeed = true }) {
   } else {
     const { error } = await supabase.from('sleep_logs').insert({ ...fields, user_id: userId, logged_at: date });
     if (error) throw error;
-    if (shareFeed) {
-      logActivity(userId, 'sleep', 'Logged sleep', `${hours} hrs`);
-    }
   }
 }
 
@@ -372,7 +367,6 @@ export default function SleepScreen({ embedded = false } = {}) {
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [logDate, setLogDate] = useState(localDateStr(new Date()));
   const [hoursInput, setHoursInput] = useState('');
-  const [shareFeed, setShareFeed] = useState(true);
   const [goalInput, setGoalInput] = useState('');
   const [showGoalSheet, setShowGoalSheet] = useState(false);
 
@@ -418,7 +412,7 @@ export default function SleepScreen({ embedded = false } = {}) {
   const sortedAsc = useMemo(() => [...logs].sort((a, b) => a.logged_at.localeCompare(b.logged_at)), [logs]);
 
   const logMut = useMutation({
-    mutationFn: ({ date, hours, shareFeed: share }) => logSleep(user.id, { date, hours, shareFeed: share }),
+    mutationFn: ({ date, hours }) => logSleep(user.id, { date, hours }),
     onMutate: async ({ date, hours }) => {
       await qc.cancelQueries(['sleep', user.id]);
       const previous = qc.getQueryData(['sleep', user.id]);
@@ -1077,14 +1071,12 @@ export default function SleepScreen({ embedded = false } = {}) {
           </View>
         </View>
 
-        <ShareToFeedToggle value={shareFeed} onChange={setShareFeed} colors={colors} />
-
         <TouchableOpacity
           style={styles.saveBtn}
           onPress={() => {
             const hours = parseFloat(hoursInput);
             if (!Number.isFinite(hours)) return Alert.alert(t('sleep.requiredTitle'), t('sleep.enterValidHours'));
-            logMut.mutate({ date: logDate, hours, shareFeed });
+            logMut.mutate({ date: logDate, hours });
           }}
           disabled={logMut.isPending}
         >
