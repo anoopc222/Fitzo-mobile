@@ -68,6 +68,40 @@ function calcTrend(sessions) {
   return 'flat';
 }
 
+const TREND_SCORE = { up: 2, flat: 1, down: 0 };
+
+const SORT_OPTIONS = [
+  { key: 'recent', labelKey: 'progress.sortRecent' },
+  { key: 'name', labelKey: 'progress.sortName' },
+  { key: 'sessions', labelKey: 'progress.sortSessions' },
+  { key: 'trend', labelKey: 'progress.sortTrend' },
+];
+
+// Epley formula — standard estimated-1RM approximation from a sub-max set.
+function epley1RM(weightKg, reps) {
+  if (!weightKg || !reps) return 0;
+  return Math.round(weightKg * (1 + reps / 30) * 10) / 10;
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const ms = Date.now() - new Date(dateStr).getTime();
+  return Math.max(0, Math.floor(ms / 86400000));
+}
+
+function enrichExercise(ex) {
+  const pr = ex.sessions.reduce((best, s) => {
+    const topSet = s.sets.reduce((b, st) => (st.weight_kg ?? 0) > (b.weight_kg ?? 0) ? st : b, { weight_kg: 0 });
+    return (topSet.weight_kg ?? 0) > (best.kg ?? 0) ? { kg: topSet.weight_kg, date: s.date } : best;
+  }, { kg: 0, date: null });
+  const trend = calcTrend(ex.sessions);
+  const [latest, prev] = ex.sessions;
+  const volumeDelta = latest && prev ? latest.volume - prev.volume : null;
+  const weightDelta = latest && prev ? (latest.bestSet?.weight_kg ?? 0) - (prev.bestSet?.weight_kg ?? 0) : null;
+  const e1rm = latest?.bestSet ? epley1RM(latest.bestSet.weight_kg, latest.bestSet.reps) : 0;
+  return { ...ex, pr, trend, daysSinceLast: daysSince(latest?.date), volumeDelta, weightDelta, e1rm };
+}
+
 function TrendIcon({ trend }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -96,6 +130,7 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
   const [search, setSearch] = useState('');
   const [expandedEx, setExpandedEx] = useState(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [sortBy, setSortBy] = useState('recent');
 
   const { data: rawData = [], isLoading, refetch } = useQuery({
     queryKey: ['progress', user?.id],
@@ -111,12 +146,39 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
   };
 
   const grouped = useMemo(() => groupByExercise(rawData), [rawData]);
+  const enriched = useMemo(() => grouped.map(enrichExercise), [grouped]);
+
+  const overview = useMemo(() => {
+    const monthKey = new Date().toISOString().slice(0, 7);
+    let totalVolumeThisMonth = 0;
+    let prsThisMonth = 0;
+    let mostImproved = null;
+    for (const ex of enriched) {
+      for (const s of ex.sessions) {
+        if (s.date?.slice(0, 7) === monthKey) totalVolumeThisMonth += s.volume;
+      }
+      if (ex.pr.date?.slice(0, 7) === monthKey) prsThisMonth += 1;
+      if (ex.weightDelta > 0 && (!mostImproved || ex.weightDelta > mostImproved.delta)) {
+        mostImproved = { name: ex.name, delta: ex.weightDelta };
+      }
+    }
+    return { totalVolumeThisMonth, prsThisMonth, mostImproved };
+  }, [enriched]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return grouped;
+    if (!search.trim()) return enriched;
     const q = search.toLowerCase();
-    return grouped.filter(ex => ex.name.toLowerCase().includes(q));
-  }, [grouped, search]);
+    return enriched.filter(ex => ex.name.toLowerCase().includes(q));
+  }, [enriched, search]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    if (sortBy === 'name') arr.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortBy === 'sessions') arr.sort((a, b) => b.sessions.length - a.sessions.length);
+    else if (sortBy === 'trend') arr.sort((a, b) => (TREND_SCORE[b.trend] ?? -1) - (TREND_SCORE[a.trend] ?? -1));
+    else arr.sort((a, b) => new Date(b.sessions[0]?.date ?? 0) - new Date(a.sessions[0]?.date ?? 0));
+    return arr;
+  }, [filtered, sortBy]);
 
   const toggleExpand = (name) => setExpandedEx(prev => prev === name ? null : name);
 
@@ -126,6 +188,25 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
     <Wrap style={styles.safe}>
       {!embedded && <ScreenHeader title={t('progress.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />}
       <Text style={styles.subtitle}>{t('progress.exercisesTracked', { count: grouped.length })}</Text>
+
+      {grouped.length > 0 && (
+        <View style={styles.overviewRow}>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewValue}>{overview.totalVolumeThisMonth.toLocaleString()}</Text>
+            <Text style={styles.overviewLabel}>{t('progress.volumeThisMonth')}</Text>
+          </View>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewValue}>{overview.prsThisMonth}</Text>
+            <Text style={styles.overviewLabel}>{t('progress.prsThisMonth')}</Text>
+          </View>
+          <View style={styles.overviewCard}>
+            <Text style={[styles.overviewValue, styles.overviewValueSmall]} numberOfLines={1}>
+              {overview.mostImproved ? overview.mostImproved.name : '—'}
+            </Text>
+            <Text style={styles.overviewLabel}>{t('progress.mostImproved')}</Text>
+          </View>
+        </View>
+      )}
 
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={16} color={colors.textDim} />
@@ -142,6 +223,20 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
           </TouchableOpacity>
         )}
       </View>
+
+      {grouped.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortRow} contentContainerStyle={styles.sortRowContent}>
+          {SORT_OPTIONS.map(opt => (
+            <TouchableOpacity
+              key={opt.key}
+              style={[styles.sortChip, sortBy === opt.key && styles.sortChipActive]}
+              onPress={() => setSortBy(opt.key)}
+            >
+              <Text style={[styles.sortChipText, sortBy === opt.key && styles.sortChipTextActive]}>{t(opt.labelKey)}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -160,14 +255,10 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
           <Text style={styles.noResults}>{t('progress.noResults', { search })}</Text>
         )}
 
-        {filtered.map((ex, exIndex) => {
+        {sorted.map((ex, exIndex) => {
           const isExpanded = expandedEx === ex.name;
           const last3 = ex.sessions.slice(0, 3);
-          const pr = ex.sessions.reduce((best, s) => {
-            const topSet = s.sets.reduce((b, st) => (st.weight_kg ?? 0) > (b.weight_kg ?? 0) ? st : b, { weight_kg: 0 });
-            return (topSet.weight_kg ?? 0) > (best.kg ?? 0) ? { kg: topSet.weight_kg, date: s.date } : best;
-          }, { kg: 0, date: null });
-          const trend = calcTrend(ex.sessions);
+          const { pr, trend, daysSinceLast, volumeDelta, e1rm } = ex;
 
           const unlocked = hasAccess || exIndex < 2;
           const onHeaderPress = () => unlocked ? toggleExpand(ex.name) : setShowPaywall(true);
@@ -179,6 +270,11 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
                   <Text style={styles.exName}>{ex.name}</Text>
                   <View style={styles.exMeta}>
                     <Text style={styles.exSessions}>{t('progress.sessionsCount', { count: ex.sessions.length })}</Text>
+                    {unlocked && daysSinceLast != null && (
+                      <Text style={styles.daysSinceText}>
+                        {daysSinceLast === 0 ? t('progress.trainedToday') : t('progress.daysSinceLast', { count: daysSinceLast })}
+                      </Text>
+                    )}
                     {unlocked && <TrendIcon trend={trend} />}
                   </View>
                 </View>
@@ -189,9 +285,12 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
                       <Text style={styles.proBadgeText}>{t('progress.proBadge')}</Text>
                     </View>
                   ) : pr.kg > 0 ? (
-                    <View style={styles.prBadge}>
-                      <Ionicons name="trophy" size={11} color={colors.warning} />
-                      <Text style={styles.prText}>{t('progress.prBadge', { kg: pr.kg })}</Text>
+                    <View style={styles.prBadgeStack}>
+                      <View style={styles.prBadge}>
+                        <Ionicons name="trophy" size={11} color={colors.warning} />
+                        <Text style={styles.prText}>{t('progress.prBadge', { kg: pr.kg })}</Text>
+                      </View>
+                      {e1rm > 0 && <Text style={styles.e1rmText}>{t('progress.e1rm', { kg: e1rm })}</Text>}
                     </View>
                   ) : null}
                   {unlocked && (
@@ -215,6 +314,11 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
                         {unlocked ? `${s.bestSet?.weight_kg ?? '--'} kg × ${s.bestSet?.reps ?? '--'}` : '●● kg × ●●'}
                       </Text>
                       <Text style={styles.previewVol}>{unlocked ? t('progress.kgVolLabel', { value: s.volume.toLocaleString() }) : t('progress.kgVolMasked')}</Text>
+                      {unlocked && i === 0 && volumeDelta != null && volumeDelta !== 0 && (
+                        <Text style={[styles.deltaText, { color: volumeDelta > 0 ? colors.success : colors.danger }]}>
+                          {volumeDelta > 0 ? '+' : ''}{Math.round(volumeDelta).toLocaleString()}
+                        </Text>
+                      )}
                       {unlocked && i === 0 && <View style={[styles.statusDot, { backgroundColor: colors.success }]} />}
                       {unlocked && i === 1 && <View style={[styles.statusDot, { backgroundColor: colors.warning }]} />}
                       {unlocked && i === 2 && <View style={[styles.statusDot, { backgroundColor: colors.textDim }]} />}
@@ -272,6 +376,25 @@ const createStyles = (colors) => StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   title: { fontSize: typography.xl, fontWeight: weight.bold, color: colors.text },
   subtitle: { fontSize: typography.lg, fontWeight: weight.bold, color: colors.text, marginTop: 4, paddingHorizontal: 20 },
+  overviewRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginTop: 10, marginBottom: 4 },
+  overviewCard: {
+    flex: 1, backgroundColor: colors.bgCard, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+    paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center',
+  },
+  overviewValue: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text },
+  overviewValueSmall: { fontSize: typography.xs },
+  overviewLabel: { fontSize: 9, color: colors.textDim, marginTop: 2, textAlign: 'center' },
+
+  sortRow: { flexGrow: 0, marginTop: 10, marginBottom: 4 },
+  sortRowContent: { paddingHorizontal: 16, gap: 8 },
+  sortChip: {
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14,
+    backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border,
+  },
+  sortChipActive: { backgroundColor: colors.accent + '20', borderColor: colors.accent },
+  sortChipText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.medium },
+  sortChipTextActive: { color: colors.accent, fontWeight: weight.bold },
+
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginBottom: 12,
@@ -297,6 +420,7 @@ const createStyles = (colors) => StyleSheet.create({
   exName: { fontSize: typography.base, fontWeight: weight.bold, color: colors.text, marginBottom: 4 },
   exMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   exSessions: { fontSize: 10, color: colors.textDim },
+  daysSinceText: { fontSize: 10, color: colors.textDim },
   trendBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
   trendText: { fontSize: 9, fontWeight: weight.bold },
   exHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -306,6 +430,9 @@ const createStyles = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.warning + '44',
   },
   prText: { fontSize: 10, color: colors.warning, fontWeight: weight.bold },
+  prBadgeStack: { alignItems: 'flex-end', gap: 3 },
+  e1rmText: { fontSize: 9, color: colors.textDim },
+  deltaText: { fontSize: 10, fontWeight: weight.bold },
   proBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     backgroundColor: colors.bgElevated, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
