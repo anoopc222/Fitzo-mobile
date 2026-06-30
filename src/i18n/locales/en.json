@@ -278,7 +278,17 @@
     "lastSessions": "LAST {{count}} SESSIONS",
     "moreSets": "+{{count}} more",
     "kgVolLabel": "{{value}} kg vol",
-    "kgVolMasked": "●●● kg vol"
+    "kgVolMasked": "●●● kg vol",
+    "volumeThisMonth": "Volume this month",
+    "prsThisMonth": "PRs this month",
+    "mostImproved": "Most improved",
+    "sortRecent": "Recent",
+    "sortName": "Name",
+    "sortSessions": "Sessions",
+    "sortTrend": "Improving",
+    "trainedToday": "Trained today",
+    "daysSinceLast": "{{count}}d ago",
+    "e1rm": "~{{kg}}kg e1RM"
   },
   "profile": {
     "title": "PROFILE",
