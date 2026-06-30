@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, FlatList,
+  TextInput, ActivityIndicator, FlatList, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -75,6 +75,14 @@ export default function FriendsScreen({ navigation, embedded = false }) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce the search term so we don't fire a query on every keystroke —
+  // waits for typing to pause before hitting search_profiles.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(id);
+  }, [search]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['friends', user?.id],
@@ -83,24 +91,75 @@ export default function FriendsScreen({ navigation, embedded = false }) {
   });
 
   const { data: results, isFetching: searching } = useQuery({
-    queryKey: ['friendSearch', search],
-    queryFn: () => searchProfiles(search),
-    enabled: search.trim().length >= 2,
+    queryKey: ['friendSearch', debouncedSearch],
+    queryFn: () => searchProfiles(debouncedSearch),
+    enabled: debouncedSearch.trim().length >= 2,
+    staleTime: 30_000,
   });
 
-  const invalidate = () => qc.invalidateQueries(['friends', user.id]);
+  const friendsKey = ['friends', user?.id];
+  const invalidate = () => qc.invalidateQueries(friendsKey);
+
+  const snapshot = () => qc.getQueryData(friendsKey);
+  const rollback = (prev) => { if (prev) qc.setQueryData(friendsKey, prev); };
 
   const sendMut = useMutation({
-    mutationFn: (addresseeId) => sendRequest(user.id, addresseeId),
-    onSuccess: invalidate,
+    mutationFn: (target) => sendRequest(user.id, target.id),
+    onMutate: async (target) => {
+      await qc.cancelQueries(friendsKey);
+      const prev = snapshot();
+      qc.setQueryData(friendsKey, (old) => old ? {
+        ...old,
+        outgoing: [...old.outgoing, { friendshipId: `pending-${target.id}`, id: target.id, full_name: target.full_name }],
+      } : old);
+      return { prev };
+    },
+    onError: (e, _vars, ctx) => {
+      rollback(ctx?.prev);
+      Alert.alert(t('friends.error'), e.message);
+    },
+    onSettled: invalidate,
   });
+
   const respondMut = useMutation({
     mutationFn: ({ id, status }) => respondToRequest(id, status),
-    onSuccess: invalidate,
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries(friendsKey);
+      const prev = snapshot();
+      qc.setQueryData(friendsKey, (old) => {
+        if (!old) return old;
+        const req = old.incoming.find(r => r.friendshipId === id);
+        const incoming = old.incoming.filter(r => r.friendshipId !== id);
+        const friends = status === 'accepted' && req
+          ? [...old.friends, { friendshipId: id, id: req.id, full_name: req.full_name }]
+          : old.friends;
+        return { ...old, incoming, friends };
+      });
+      return { prev };
+    },
+    onError: (e, _vars, ctx) => {
+      rollback(ctx?.prev);
+      Alert.alert(t('friends.error'), e.message);
+    },
+    onSettled: invalidate,
   });
+
   const removeMut = useMutation({
     mutationFn: (id) => removeFriendship(id),
-    onSuccess: invalidate,
+    onMutate: async (id) => {
+      await qc.cancelQueries(friendsKey);
+      const prev = snapshot();
+      qc.setQueryData(friendsKey, (old) => old ? {
+        ...old,
+        friends: old.friends.filter(f => f.friendshipId !== id),
+      } : old);
+      return { prev };
+    },
+    onError: (e, _vars, ctx) => {
+      rollback(ctx?.prev);
+      Alert.alert(t('friends.error'), e.message);
+    },
+    onSettled: invalidate,
   });
 
   const existingIds = useMemo(() => {
@@ -130,7 +189,7 @@ export default function FriendsScreen({ navigation, embedded = false }) {
           {searching && <ActivityIndicator size="small" color={colors.accent} />}
         </View>
 
-        {search.trim().length >= 2 && (
+        {debouncedSearch.trim().length >= 2 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('friends.results')}</Text>
             {(results ?? []).length === 0 && !searching ? (
@@ -143,7 +202,7 @@ export default function FriendsScreen({ navigation, embedded = false }) {
                   {existingIds.has(p.id) ? (
                     <Text style={styles.pendingLabel}>{t('friends.pending')}</Text>
                   ) : (
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => sendMut.mutate(p.id)} disabled={sendMut.isPending}>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => sendMut.mutate(p)} disabled={sendMut.isPending}>
                       <Text style={styles.actionBtnText}>{t('friends.add')}</Text>
                     </TouchableOpacity>
                   )}
@@ -164,10 +223,10 @@ export default function FriendsScreen({ navigation, embedded = false }) {
                   <View key={req.friendshipId} style={styles.row}>
                     <Avatar name={req.full_name} colors={colors} />
                     <Text style={styles.rowName}>{req.full_name || t('friends.unnamed')}</Text>
-                    <TouchableOpacity style={styles.iconBtnGood} onPress={() => respondMut.mutate({ id: req.friendshipId, status: 'accepted' })}>
+                    <TouchableOpacity style={styles.iconBtnGood} onPress={() => respondMut.mutate({ id: req.friendshipId, status: 'accepted' })} disabled={respondMut.isPending}>
                       <Ionicons name="checkmark" size={16} color={colors.good} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconBtnBad} onPress={() => respondMut.mutate({ id: req.friendshipId, status: 'declined' })}>
+                    <TouchableOpacity style={styles.iconBtnBad} onPress={() => respondMut.mutate({ id: req.friendshipId, status: 'declined' })} disabled={respondMut.isPending}>
                       <Ionicons name="close" size={16} color={colors.danger} />
                     </TouchableOpacity>
                   </View>
@@ -188,7 +247,7 @@ export default function FriendsScreen({ navigation, embedded = false }) {
                   >
                     <Avatar name={f.full_name} colors={colors} />
                     <Text style={styles.rowName}>{f.full_name || t('friends.unnamed')}</Text>
-                    <TouchableOpacity style={styles.iconBtnBad} onPress={() => removeMut.mutate(f.friendshipId)}>
+                    <TouchableOpacity style={styles.iconBtnBad} onPress={() => removeMut.mutate(f.friendshipId)} disabled={removeMut.isPending}>
                       <Ionicons name="person-remove-outline" size={16} color={colors.danger} />
                     </TouchableOpacity>
                   </TouchableOpacity>

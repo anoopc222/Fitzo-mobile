@@ -1391,7 +1391,8 @@
     "requests": "Friend Requests",
     "yourFriends": "Your Friends ({{count}})",
     "noFriendsYet": "No friends yet — search above to add some.",
-    "sentRequests": "Sent Requests"
+    "sentRequests": "Sent Requests",
+    "error": "Error"
   },
   "activity": {
     "title": "Activity Feed",
