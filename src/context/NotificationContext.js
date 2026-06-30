@@ -80,9 +80,19 @@ export function NotificationProvider({ children }) {
   // user actually grants permission — otherwise stay off until they opt in
   // from Settings. Once a choice is stored, always respect it as-is.
   useEffect(() => {
-    AsyncStorage.getItem(PREFS_KEY).then(async raw => {
-      if (raw) {
-        setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
+    (async () => {
+      // Load both keys before flipping `loaded` — otherwise the scheduling
+      // effect below fires once with DEFAULT_TIMES (as soon as prefs resolve)
+      // and again moments later once the real saved times load, and the two
+      // back-to-back schedule calls can race with expo-notifications' own
+      // cancel-then-write, leaving two daily reminders registered instead of one.
+      const [prefsRaw, timesRaw] = await Promise.all([
+        AsyncStorage.getItem(PREFS_KEY),
+        AsyncStorage.getItem(TIMES_KEY),
+      ]);
+      if (timesRaw) setTimes({ ...DEFAULT_TIMES, ...JSON.parse(timesRaw) });
+      if (prefsRaw) {
+        setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(prefsRaw) });
       } else {
         const granted = await requestNotificationPermissions();
         const initial = granted ? DEFAULT_PREFS : ALL_OFF_PREFS;
@@ -90,10 +100,7 @@ export function NotificationProvider({ children }) {
         AsyncStorage.setItem(PREFS_KEY, JSON.stringify(initial));
       }
       setLoaded(true);
-    });
-    AsyncStorage.getItem(TIMES_KEY).then(raw => {
-      if (raw) setTimes({ ...DEFAULT_TIMES, ...JSON.parse(raw) });
-    });
+    })();
   }, []);
 
   // Re-apply repeating reminders whose schedule doesn't depend on app data,
@@ -106,7 +113,7 @@ export function NotificationProvider({ children }) {
     } else {
       cancelNotificationsByTag('dailyLog');
     }
-  }, [loaded, prefs.dailyLogReminder, times.dailyLogReminder]);
+  }, [loaded, prefs.dailyLogReminder, times.dailyLogReminder.hour, times.dailyLogReminder.minute]);
 
   // Centrally (re)sync the data-dependent reminders — these need a fresh
   // one-shot trigger scheduled each day, which previously only happened if
