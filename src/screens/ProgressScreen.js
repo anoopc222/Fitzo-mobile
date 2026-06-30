@@ -89,6 +89,40 @@ function daysSince(dateStr) {
   return Math.max(0, Math.floor(ms / 86400000));
 }
 
+function calcVolumePR(sessions) {
+  return sessions.reduce((best, s) => (s.volume > (best.volume ?? 0) ? { volume: s.volume, date: s.date } : best), { volume: 0, date: null });
+}
+
+function calcRepPR(sessions) {
+  let best = { reps: 0, weight_kg: 0, date: null };
+  for (const s of sessions) {
+    for (const st of s.sets) {
+      if ((st.reps ?? 0) > best.reps) best = { reps: st.reps, weight_kg: st.weight_kg ?? 0, date: s.date };
+    }
+  }
+  return best;
+}
+
+function calcRpeTrend(sessions) {
+  const rpesOf = (arr) => arr.flatMap(s => s.sets.map(st => st.rpe).filter(Boolean));
+  const recent = rpesOf(sessions.slice(0, 3));
+  const older = rpesOf(sessions.slice(3, 6));
+  const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  if (!older.length) return { trend: null, avgRecent: recent.length ? Math.round(avg(recent) * 10) / 10 : null };
+  const diff = avg(recent) - avg(older);
+  const trend = diff > 0.3 ? 'up' : diff < -0.3 ? 'down' : 'flat';
+  return { trend, avgRecent: recent.length ? Math.round(avg(recent) * 10) / 10 : null };
+}
+
+function avgDaysBetweenSessions(sessions) {
+  if (sessions.length < 2) return null;
+  let totalDays = 0;
+  for (let i = 0; i < sessions.length - 1; i++) {
+    totalDays += Math.abs(new Date(sessions[i].date) - new Date(sessions[i + 1].date)) / 86400000;
+  }
+  return Math.round(totalDays / (sessions.length - 1));
+}
+
 function enrichExercise(ex) {
   const pr = ex.sessions.reduce((best, s) => {
     const topSet = s.sets.reduce((b, st) => (st.weight_kg ?? 0) > (b.weight_kg ?? 0) ? st : b, { weight_kg: 0 });
@@ -99,7 +133,14 @@ function enrichExercise(ex) {
   const volumeDelta = latest && prev ? latest.volume - prev.volume : null;
   const weightDelta = latest && prev ? (latest.bestSet?.weight_kg ?? 0) - (prev.bestSet?.weight_kg ?? 0) : null;
   const e1rm = latest?.bestSet ? epley1RM(latest.bestSet.weight_kg, latest.bestSet.reps) : 0;
-  return { ...ex, pr, trend, daysSinceLast: daysSince(latest?.date), volumeDelta, weightDelta, e1rm };
+  const volumePR = calcVolumePR(ex.sessions);
+  const repPR = calcRepPR(ex.sessions);
+  const { trend: rpeTrend, avgRecent: avgRecentRpe } = calcRpeTrend(ex.sessions);
+  const avgDaysBetween = avgDaysBetweenSessions(ex.sessions);
+  return {
+    ...ex, pr, trend, daysSinceLast: daysSince(latest?.date), volumeDelta, weightDelta, e1rm,
+    volumePR, repPR, rpeTrend, avgRecentRpe, avgDaysBetween,
+  };
 }
 
 function TrendIcon({ trend }) {
@@ -150,9 +191,11 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
 
   const overview = useMemo(() => {
     const monthKey = new Date().toISOString().slice(0, 7);
+    const cutoff30 = Date.now() - 30 * 86400000;
     let totalVolumeThisMonth = 0;
     let prsThisMonth = 0;
     let mostImproved = null;
+    const recentPRs = [];
     for (const ex of enriched) {
       for (const s of ex.sessions) {
         if (s.date?.slice(0, 7) === monthKey) totalVolumeThisMonth += s.volume;
@@ -161,8 +204,15 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
       if (ex.weightDelta > 0 && (!mostImproved || ex.weightDelta > mostImproved.delta)) {
         mostImproved = { name: ex.name, delta: ex.weightDelta };
       }
+      if (ex.pr.date && new Date(ex.pr.date).getTime() >= cutoff30) {
+        recentPRs.push({ name: ex.name, type: 'weight', value: ex.pr.kg, date: ex.pr.date });
+      }
+      if (ex.volumePR.date && new Date(ex.volumePR.date).getTime() >= cutoff30) {
+        recentPRs.push({ name: ex.name, type: 'volume', value: ex.volumePR.volume, date: ex.volumePR.date });
+      }
     }
-    return { totalVolumeThisMonth, prsThisMonth, mostImproved };
+    recentPRs.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return { totalVolumeThisMonth, prsThisMonth, mostImproved, recentPRs: recentPRs.slice(0, 8) };
   }, [enriched]);
 
   const filtered = useMemo(() => {
@@ -205,6 +255,24 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
             </Text>
             <Text style={styles.overviewLabel}>{t('progress.mostImproved')}</Text>
           </View>
+        </View>
+      )}
+
+      {overview.recentPRs.length > 0 && (
+        <View style={styles.recentPrsSection}>
+          <Text style={styles.recentPrsTitle}>{t('progress.recentPrs')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentPrsContent}>
+            {overview.recentPRs.map((p, i) => (
+              <View key={i} style={styles.recentPrCard}>
+                <Ionicons name="trophy" size={12} color={colors.warning} />
+                <Text style={styles.recentPrName} numberOfLines={1}>{p.name}</Text>
+                <Text style={styles.recentPrValue}>
+                  {p.type === 'weight' ? t('progress.prBadge', { kg: p.value }) : t('progress.kgVolLabel', { value: p.value.toLocaleString() })}
+                </Text>
+                <Text style={styles.recentPrDate}>{new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
+              </View>
+            ))}
+          </ScrollView>
         </View>
       )}
 
@@ -342,6 +410,43 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
                       {pr.date && <Text style={styles.prDate}>{new Date(pr.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>}
                     </View>
                   )}
+
+                  <View style={styles.statsGrid}>
+                    {ex.volumePR.volume > 0 && (
+                      <View style={styles.statChip}>
+                        <Text style={styles.statChipLabel}>{t('progress.volumePr')}</Text>
+                        <Text style={styles.statChipValue}>{t('progress.kgVolLabel', { value: ex.volumePR.volume.toLocaleString() })}</Text>
+                      </View>
+                    )}
+                    {ex.repPR.reps > 0 && (
+                      <View style={styles.statChip}>
+                        <Text style={styles.statChipLabel}>{t('progress.repPr')}</Text>
+                        <Text style={styles.statChipValue}>{t('progress.repPrValue', { reps: ex.repPR.reps, kg: ex.repPR.weight_kg })}</Text>
+                      </View>
+                    )}
+                    {ex.avgDaysBetween != null && (
+                      <View style={styles.statChip}>
+                        <Text style={styles.statChipLabel}>{t('progress.frequency')}</Text>
+                        <Text style={styles.statChipValue}>{t('progress.frequencyValue', { count: ex.avgDaysBetween })}</Text>
+                      </View>
+                    )}
+                    {ex.avgRecentRpe != null && (
+                      <View style={styles.statChip}>
+                        <Text style={styles.statChipLabel}>{t('progress.avgRpe')}</Text>
+                        <View style={styles.statChipValueRow}>
+                          <Text style={styles.statChipValue}>{ex.avgRecentRpe}</Text>
+                          {ex.rpeTrend && (
+                            <Ionicons
+                              name={ex.rpeTrend === 'up' ? 'trending-up' : ex.rpeTrend === 'down' ? 'trending-down' : 'remove'}
+                              size={11}
+                              color={ex.rpeTrend === 'up' ? colors.danger : ex.rpeTrend === 'down' ? colors.success : colors.textMuted}
+                            />
+                          )}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
                   <Text style={styles.histSectionLabel}>{t('progress.lastSessions', { count: Math.min(ex.sessions.length, 10) })}</Text>
                   {ex.sessions.slice(0, 10).map((s, i) => (
                     <View key={i} style={styles.histSessionRow}>
@@ -384,6 +489,17 @@ const createStyles = (colors) => StyleSheet.create({
   overviewValue: { fontSize: typography.md, fontWeight: weight.bold, color: colors.text },
   overviewValueSmall: { fontSize: typography.xs },
   overviewLabel: { fontSize: 9, color: colors.textDim, marginTop: 2, textAlign: 'center' },
+
+  recentPrsSection: { marginTop: 10, marginBottom: 4 },
+  recentPrsTitle: { fontSize: 10, color: colors.textDim, fontWeight: weight.bold, letterSpacing: 0.6, paddingHorizontal: 16, marginBottom: 6, textTransform: 'uppercase' },
+  recentPrsContent: { paddingHorizontal: 16, gap: 8 },
+  recentPrCard: {
+    backgroundColor: colors.bgCard, borderRadius: 12, borderWidth: 1, borderColor: colors.warning + '33',
+    paddingVertical: 8, paddingHorizontal: 10, width: 110, gap: 2,
+  },
+  recentPrName: { fontSize: 10, color: colors.text, fontWeight: weight.semibold, marginTop: 2 },
+  recentPrValue: { fontSize: 11, color: colors.warning, fontWeight: weight.bold },
+  recentPrDate: { fontSize: 9, color: colors.textDim },
 
   sortRow: { flexGrow: 0, marginTop: 10, marginBottom: 4 },
   sortRowContent: { paddingHorizontal: 16, gap: 8 },
@@ -458,6 +574,14 @@ const createStyles = (colors) => StyleSheet.create({
   },
   prRowText: { fontSize: typography.sm, color: colors.warning, fontWeight: weight.semibold, flex: 1 },
   prDate: { fontSize: 10, color: colors.textDim },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  statChip: {
+    backgroundColor: colors.bgElevated, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
+    minWidth: '47%', flexGrow: 1,
+  },
+  statChipLabel: { fontSize: 9, color: colors.textDim, marginBottom: 1 },
+  statChipValue: { fontSize: 11, color: colors.text, fontWeight: weight.semibold },
+  statChipValueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   histSectionLabel: { fontSize: 9, color: colors.textDim, fontWeight: weight.bold, letterSpacing: 0.8, marginBottom: 6, marginTop: 4 },
   histSessionRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
