@@ -1164,12 +1164,12 @@
     "restSeconds": "{{seconds}}s Rest",
     "loadTemplate": "LOAD TEMPLATE",
     "pro": "PRO",
-    "longPressTemplateHint": "Long-press a template to build a multi-week program",
+    "longPressTemplateHint": "Tap a template to use it once. Long-press it to auto-create the same workout every week.",
     "saveSessionToBuildTemplate": "Save a session below to build your first template.",
     "unlockSavedTemplates": "Unlock saved templates",
     "repeatTemplateWeekly": "Repeat \"{{name}}\" weekly",
     "creatingEllipsis": "Creating…",
-    "createSessionsCount": "Create {{count}} sessions",
+    "createSessionsCount": "Create {{count}} weekly sessions",
     "addActivity": "Add Activity",
     "addExercise": "Add Exercise",
     "saveAsTemplate": "Save as Template",
@@ -1325,7 +1325,8 @@
     "suggestedPrefix": "Suggested:",
     "trackYourWorkout": "Track your workout",
     "type": "Type",
-    "weightXReps": "Weight × Reps"
+    "weightXReps": "Weight × Reps",
+    "programExplainer": "This will add {{count}} new sessions to your calendar, one per week, already filled in with {{name}}'s exercises. You just log your weights/reps each week — nothing happens automatically beyond that."
   },
   "gamification": {
     "achievementsTitle": "ACHIEVEMENTS",
