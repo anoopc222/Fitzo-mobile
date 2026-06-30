@@ -288,7 +288,14 @@
     "sortTrend": "Improving",
     "trainedToday": "Trained today",
     "daysSinceLast": "{{count}}d ago",
-    "e1rm": "~{{kg}}kg e1RM"
+    "e1rm": "~{{kg}}kg e1RM",
+    "recentPrs": "Recent PRs (30d)",
+    "volumePr": "Volume PR",
+    "repPr": "Rep PR",
+    "repPrValue": "{{reps}} reps @ {{kg}}kg",
+    "frequency": "Frequency",
+    "frequencyValue": "every {{count}}d",
+    "avgRpe": "Avg RPE"
   },
   "profile": {
     "title": "PROFILE",
