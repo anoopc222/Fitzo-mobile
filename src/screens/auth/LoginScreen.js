@@ -9,7 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { typography, weight } from '../../theme/typography';
 
 export default function LoginScreen({ navigation }) {
-  const { signIn } = useAuth();
+  const { signIn, forgotPassword } = useAuth();
   const { colors } = useTheme();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -55,6 +55,30 @@ export default function LoginScreen({ navigation }) {
           onChangeText={setPassword}
           secureTextEntry
         />
+
+        <TouchableOpacity
+          style={styles.forgotBtn}
+          onPress={() => {
+            Alert.prompt(
+              t('auth.forgotPassword'),
+              t('auth.forgotPasswordSub'),
+              async (email) => {
+                if (!email?.trim()) return;
+                try {
+                  await forgotPassword(email);
+                  Alert.alert(t('auth.resetSent'), t('auth.resetSentSub'));
+                } catch (e) {
+                  Alert.alert(t('auth.error'), e.message);
+                }
+              },
+              'plain-text',
+              email,
+              'email-address'
+            );
+          }}
+        >
+          <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={loading}>
           {loading ? (
@@ -117,6 +141,8 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: typography.base,
     fontWeight: weight.bold,
   },
+  forgotBtn: { alignSelf: 'flex-end', marginBottom: 14, marginTop: -6 },
+  forgotText: { fontSize: typography.sm, color: colors.accent },
   link: {
     color: colors.textMuted,
     textAlign: 'center',

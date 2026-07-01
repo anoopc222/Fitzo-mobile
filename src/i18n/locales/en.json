@@ -255,10 +255,20 @@
     "emailPasswordRequired": "Enter email and password",
     "loginFailed": "Login failed",
     "allFieldsRequired": "All fields are required",
-    "passwordTooShort": "Password must be at least 6 characters",
+    "passwordTooShort": "Password must be at least 6 characters.",
     "success": "Success",
     "checkEmailConfirm": "Check your email to confirm your account.",
-    "signUpFailed": "Sign up failed"
+    "signUpFailed": "Sign up failed",
+    "setNewPassword": "Set a new password",
+    "setNewPasswordSub": "Enter a new password for your account. Make it at least 6 characters.",
+    "newPasswordPlaceholder": "New password",
+    "confirmPasswordPlaceholder": "Confirm new password",
+    "updatePassword": "Update Password",
+    "passwordMismatch": "Passwords do not match.",
+    "forgotPassword": "Forgot Password?",
+    "forgotPasswordSub": "Enter your email address and we will send you a reset link.",
+    "resetSent": "Check your email",
+    "resetSentSub": "A password reset link has been sent to your email address."
   },
   "progress": {
     "trendImproving": "Improving",

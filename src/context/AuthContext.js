@@ -17,13 +17,15 @@ function parseSessionFromUrl(url) {
   const params = new URLSearchParams(url.slice(hashIndex + 1));
   const access_token = params.get('access_token');
   const refresh_token = params.get('refresh_token');
+  const type = params.get('type');
   if (!access_token || !refresh_token) return null;
-  return { access_token, refresh_token };
+  return { access_token, refresh_token, type };
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isRecovering, setIsRecovering] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -36,8 +38,10 @@ export function AuthProvider({ children }) {
     });
 
     const handleDeepLink = ({ url }) => {
-      const tokens = parseSessionFromUrl(url);
-      if (tokens) supabase.auth.setSession(tokens);
+      const result = parseSessionFromUrl(url);
+      if (!result) return;
+      supabase.auth.setSession({ access_token: result.access_token, refresh_token: result.refresh_token });
+      if (result.type === 'recovery') setIsRecovering(true);
     };
 
     Linking.getInitialURL().then((url) => url && handleDeepLink({ url }));
@@ -68,8 +72,21 @@ export function AuthProvider({ children }) {
     queryClient.clear();
   };
 
+  const forgotPassword = async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: EMAIL_REDIRECT_TO,
+    });
+    if (error) throw error;
+  };
+
+  const updatePassword = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    setIsRecovering(false);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isRecovering, signIn, signUp, signOut, forgotPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

@@ -7,12 +7,13 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import AuthNavigator from './AuthNavigator';
 import TabNavigator from './TabNavigator';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import { navigationRef } from './navigationRef';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const { user, loading } = useAuth();
+  const { user, loading, isRecovering } = useAuth();
   const { colors, isDark } = useTheme();
   const posthog = usePostHog();
   const routeNameRef = useRef(null);
@@ -55,7 +56,9 @@ export default function AppNavigator() {
       }}
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
+        {isRecovering ? (
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+        ) : user ? (
           <Stack.Screen name="App" component={TabNavigator} />
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />
