@@ -2109,6 +2109,9 @@ function EditSessionModal({
                   {hasAccess && programTemplate && (
                     <View style={eS.programBox}>
                       <Text style={eS.programBoxTitle}>📅 {t('workout.repeatTemplateWeekly', { name: programTemplate.name })}</Text>
+                      <Text style={eS.programExplainerText}>
+                        {t('workout.programExplainer', { count: programWeeks, name: programTemplate.name })}
+                      </Text>
                       <View style={eS.programWeekRow}>
                         {[2, 4, 6, 8, 12].map(w => (
                           <TouchableOpacity
@@ -3745,7 +3748,8 @@ const createES = (colors) => StyleSheet.create({
     backgroundColor: colors.purple + '10', borderWidth: 1, borderColor: colors.purple + '40',
     borderRadius: 12, padding: 12, marginTop: 10,
   },
-  programBoxTitle: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.text, marginBottom: 10 },
+  programBoxTitle: { fontSize: typography.xs, fontWeight: weight.bold, color: colors.text, marginBottom: 6 },
+  programExplainerText: { fontSize: 11, color: colors.textMuted, lineHeight: 16, marginBottom: 10 },
   programWeekRow: { flexDirection: 'row', gap: 6 },
   programWeekChip: {
     flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 8, backgroundColor: colors.dim,
