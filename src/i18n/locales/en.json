@@ -268,7 +268,9 @@
     "forgotPassword": "Forgot Password?",
     "forgotPasswordSub": "Enter your email address and we will send you a reset link.",
     "resetSent": "Check your email",
-    "resetSentSub": "A password reset link has been sent to your email address."
+    "resetSentSub": "A password reset link has been sent to your email address.",
+    "confirmEmailPlaceholder": "Confirm email address",
+    "emailMismatch": "Email addresses do not match."
   },
   "progress": {
     "trendImproving": "Improving",
