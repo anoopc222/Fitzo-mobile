@@ -1501,7 +1501,13 @@ export default function StepsScreen({ embedded = false } = {}) {
             {/* ── Daily Log ── */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>{t('steps.dailyLogTitle')}</Text>
-              {allMonthSorted.length === 0 && <Text style={styles.emptyText}>{t('steps.noStepEntriesThisMonth')}</Text>}
+              {allMonthSorted.length === 0 && (
+                <EmptyState
+                  emoji="👟"
+                  title={t('steps.noStepEntriesThisMonth')}
+                  subtitle="Tap + to log your steps for today"
+                />
+              )}
               {groupByWeek(allMonthSorted, l => l.logged_at).map(week => (
                 <View key={week.key} style={styles.weekGroupBox}>
                   {week.items.map((log, i) => (
