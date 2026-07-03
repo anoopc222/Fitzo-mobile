@@ -14,7 +14,6 @@ import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import DatePickerField from '../components/ui/DatePickerField';
 import SkeletonScreen from '../components/Skeleton';
-import ProgressPhotos from '../components/ProgressPhotos';
 
 function localDateStr(d) {
   const y = d.getFullYear();
@@ -194,7 +193,7 @@ export default function ProfileScreen({ navigation }) {
                 <>
                   <TouchableOpacity style={styles.goalSelector} onPress={() => setShowGoalPicker(!showGoalPicker)}>
                     <Text style={[styles.goalSelectorText, !form.goal && { color: colors.textDim }]}>
-                      {form.goal ? t(`profile.${GOAL_KEYS[form.goal]}`) : t('profile.selectYourGoal')}
+                      {form.goal ? GOAL_KEYS[form.goal] ? t(`profile.${GOAL_KEYS[form.goal]}`) : form.goal : t('profile.selectYourGoal')}
                     </Text>
                     <Ionicons name={showGoalPicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
                   </TouchableOpacity>
@@ -212,13 +211,10 @@ export default function ProfileScreen({ navigation }) {
               ) : (
                 <View style={styles.goalDisplay}>
                   <Ionicons name="trophy" size={16} color={colors.accent} />
-                  <Text style={styles.goalDisplayText}>{form.goal ? t(`profile.${GOAL_KEYS[form.goal]}`) : t('profile.notSet')}</Text>
+                  <Text style={styles.goalDisplayText}>{form.goal ? GOAL_KEYS[form.goal] ? t(`profile.${GOAL_KEYS[form.goal]}`) : form.goal : t('profile.notSet')}</Text>
                 </View>
               )}
             </View>
-
-            {/* Progress Photos */}
-            <ProgressPhotos userId={user?.id} />
 
             {/* Body stats */}
             <View style={styles.section}>
