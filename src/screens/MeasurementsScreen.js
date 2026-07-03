@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Svg, { Path, Line, Circle } from 'react-native-svg';
+import Svg, { Path, Line, Circle, Polyline, Text as SvgText } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
@@ -88,6 +88,54 @@ async function logMeasurements(userId, values, date) {
 async function deleteMeasurement(id) {
   const { error } = await supabase.from('body_measurements').delete().eq('id', id);
   if (error) throw error;
+}
+
+function calcBodyFat(waist, neck, hips, heightCm, sex) {
+  if (!waist || !neck || !heightCm) return null;
+  const h = heightCm;
+  try {
+    if (sex === 'female') {
+      if (!hips) return null;
+      return 495 / (1.29579 - 0.35004 * Math.log10(waist + hips - neck) + 0.22100 * Math.log10(h)) - 450;
+    }
+    return 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(h)) - 450;
+  } catch { return null; }
+}
+
+function bodyFatLabel(pct, sex) {
+  if (pct == null) return null;
+  if (sex === 'female') {
+    if (pct < 14) return 'Lean';
+    if (pct < 21) return 'Fit';
+    if (pct < 25) return 'Average';
+    return 'High';
+  }
+  if (pct < 8) return 'Lean';
+  if (pct < 15) return 'Fit';
+  if (pct < 20) return 'Average';
+  return 'High';
+}
+
+function BodyFatSparkline({ data, colors, width = 120, height = 36 }) {
+  if (data.length < 2) return null;
+  const vals = data.map(d => d.bf);
+  const minV = Math.min(...vals);
+  const maxV = Math.max(...vals);
+  const range = (maxV - minV) || 1;
+  const P = 4;
+  const pw = width - P * 2;
+  const ph = height - P * 2;
+  const pts = data.map((d, i) => {
+    const x = P + (i * pw) / Math.max(data.length - 1, 1);
+    const y = P + ph - ((d.bf - minV) / range) * ph;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return (
+    <Svg width={width} height={height}>
+      <Polyline points={pts} fill="none" stroke={colors.purple} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx={parseFloat(pts.split(' ').pop().split(',')[0])} cy={parseFloat(pts.split(' ').pop().split(',')[1])} r={3} fill={colors.purple} />
+    </Svg>
+  );
 }
 
 function fmt(v) {
@@ -481,6 +529,47 @@ export default function MeasurementsScreen({ navigation, embedded = false } = {}
                 </View>
               )}
             </View>
+
+            {/* Body Fat % Card */}
+            {(() => {
+              const currentBf = calcBodyFat(latest?.waist, latest?.neck, latest?.hips, bodyStats?.heightCm, bodyStats?.sex);
+              const bfLabel = bodyFatLabel(currentBf, bodyStats?.sex);
+              const bfLabelColor = bfLabel === 'Lean' || bfLabel === 'Fit' ? colors.good : bfLabel === 'Average' ? colors.warn : colors.danger;
+              const bfHistory = logsAsc
+                .map(l => {
+                  const bf = calcBodyFat(l.waist, l.neck, l.hips, bodyStats?.heightCm, bodyStats?.sex);
+                  return bf != null ? { date: l.logged_at, bf: +bf.toFixed(1) } : null;
+                })
+                .filter(Boolean)
+                .slice(-10);
+              if (currentBf == null) return null;
+              return (
+                <View style={styles.card}>
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.cardTitleCaps}>🔬 {t('measurements.bodyFatTitle', 'BODY FAT %')}</Text>
+                    {bfLabel && (
+                      <View style={[styles.whrBadge, { backgroundColor: bfLabelColor + '22' }]}>
+                        <Text style={[styles.whrBadgeText, { color: bfLabelColor }]}>{bfLabel}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 4 }}>
+                    <View>
+                      <Text style={{ fontSize: 32, fontWeight: '900', color: bfLabelColor }}>{currentBf.toFixed(1)}%</Text>
+                      <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>{t('measurements.bodyFatMethod', 'US Navy formula')}</Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                      {bfHistory.length >= 2 && <BodyFatSparkline data={bfHistory} colors={colors} width={120} height={36} />}
+                      {bfHistory.length >= 2 && (
+                        <Text style={{ fontSize: 9, color: colors.textDim, marginTop: 4 }}>
+                          {bfHistory[0].bf.toFixed(1)}% → {bfHistory[bfHistory.length - 1].bf.toFixed(1)}% ({bfHistory.length} logs)
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
 
             {/* Progress Chart */}
             <View style={styles.card}>

@@ -9,6 +9,7 @@ import { BlurView } from 'expo-blur';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Svg, { Circle as SvgCircle, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -200,6 +201,74 @@ function HeatmapPreview({ caloriesByDate, target, colors }) {
   );
 }
 
+// ─── Macro Donut Chart ────────────────────────────────────────────────────────
+function MacroDonutChart({ protein, carbs, fats, calories }) {
+  const SIZE = 100, STROKE = 18, R = (SIZE - STROKE) / 2;
+  const CIRC = 2 * Math.PI * R;
+  const total = protein * 4 + carbs * 4 + fats * 9;
+  if (total <= 0) return null;
+  const proteinDash = (protein * 4 / total) * CIRC;
+  const carbsDash = (carbs * 4 / total) * CIRC;
+  const fatsDash = (fats * 9 / total) * CIRC;
+  const cx = SIZE / 2, cy = SIZE / 2;
+  let offset = 0;
+  const segments = [
+    { color: '#45b7d1', dash: proteinDash, label: 'P' },
+    { color: '#f59e0b', dash: carbsDash, label: 'C' },
+    { color: '#ff6b6b', dash: fatsDash, label: 'F' },
+  ];
+  return (
+    <Svg width={SIZE} height={SIZE}>
+      {segments.map((seg, i) => {
+        const dashOffset = CIRC - seg.dash;
+        const rotateOffset = (offset / CIRC) * 360 - 90;
+        offset += seg.dash;
+        if (seg.dash <= 0) return null;
+        return (
+          <SvgCircle
+            key={i}
+            cx={cx} cy={cy} r={R}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth={STROKE}
+            strokeDasharray={`${seg.dash} ${CIRC - seg.dash}`}
+            strokeDashoffset={dashOffset}
+            rotation={rotateOffset}
+            origin={`${cx}, ${cy}`}
+            strokeLinecap="butt"
+          />
+        );
+      })}
+      <SvgText x={cx} y={cy - 6} textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="800">{Math.round(calories)}</SvgText>
+      <SvgText x={cx} y={cy + 8} textAnchor="middle" fill="#888" fontSize="9">kcal</SvgText>
+    </Svg>
+  );
+}
+
+// ─── Custom Foods DB ──────────────────────────────────────────────────────────
+async function fetchCustomFoods(userId) {
+  const { data, error } = await supabase
+    .from('custom_foods')
+    .select('id, food_name, calories, protein, carbs, fats, serving_size')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function saveCustomFood(userId, food) {
+  const { error } = await supabase.from('custom_foods').insert({
+    user_id: userId,
+    food_name: food.food_name,
+    calories: Math.round(food.calories),
+    protein: food.protein ?? 0,
+    carbs: food.carbs ?? 0,
+    fats: food.fats ?? 0,
+    serving_size: food.serving_size ?? '100g',
+  });
+  if (error) throw error;
+}
+
 function loggedAtFor(dateStr) {
   const now = new Date();
   const d = new Date(`${dateStr}T00:00:00`);
@@ -361,6 +430,7 @@ export default function FoodLogScreen({ embedded = false } = {}) {
   const [sheetStep, setSheetStep] = useState('search'); // 'search' | 'detail' | 'manual'
   const [selectedMeal, setSelectedMeal] = useState('Breakfast');
   const [form, setForm] = useState(EMPTY_FORM);
+  const [saveToMyFoods, setSaveToMyFoods] = useState(false);
 
   // Search step state
   const [searchQuery, setSearchQuery] = useState('');
@@ -529,6 +599,17 @@ export default function FoodLogScreen({ embedded = false } = {}) {
     },
   });
 
+  const { data: customFoods = [] } = useQuery({
+    queryKey: ['customFoods', user?.id],
+    queryFn: () => fetchCustomFoods(user.id),
+    enabled: !!user?.id,
+  });
+
+  const saveCustomFoodMut = useMutation({
+    mutationFn: (food) => saveCustomFood(user.id, food),
+    onSuccess: () => qc.invalidateQueries(['customFoods', user.id]),
+  });
+
   const logs = data?.logs ?? [];
   const profile = data?.profile;
   const targets = {
@@ -586,6 +667,7 @@ export default function FoodLogScreen({ embedded = false } = {}) {
   const closeSheet = () => {
     Keyboard.dismiss();
     setShowSheet(false);
+    setSaveToMyFoods(false);
   };
 
   const pickFood = (food) => {
@@ -618,14 +700,18 @@ export default function FoodLogScreen({ embedded = false } = {}) {
 
   const handleAddManual = () => {
     if (!form.food_name.trim() || !form.calories) return Alert.alert(t('foodLog.requiredTitle'), t('foodLog.requiredFoodMessage'));
-    addMut.mutate({
+    const foodData = {
       food_name: form.food_name.trim(),
       calories: parseFloat(form.calories) || 0,
       protein: parseFloat(form.protein) || 0,
       carbs: parseFloat(form.carbs) || 0,
       fats: parseFloat(form.fats) || 0,
       meal_type: selectedMeal,
-    });
+    };
+    if (saveToMyFoods) {
+      saveCustomFoodMut.mutate({ ...foodData, serving_size: '100g' });
+    }
+    addMut.mutate(foodData);
   };
 
   // Calorie ring percentage
