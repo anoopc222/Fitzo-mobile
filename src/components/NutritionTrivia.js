@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
-import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
+import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
+import { recordGamePlay } from './GameStreak';
 import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
@@ -120,6 +121,8 @@ export default function NutritionTrivia({ userId }) {
         }
         play('win');
         upsertGameScore(userId, 'nutritionTrivia', newScore);
+        recordGameHistory(userId, 'nutritionTrivia', newScore);
+        recordGamePlay(userId);
       } else {
         setScore(newScore);
         setAnswered(newAnswered);

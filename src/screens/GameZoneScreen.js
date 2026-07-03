@@ -13,6 +13,8 @@ import MemoryMatch from '../components/MemoryMatch';
 import ReactionTap from '../components/ReactionTap';
 import CalorieGuesser from '../components/CalorieGuesser';
 import HigherOrLower from '../components/HigherOrLower';
+import MacroMatch from '../components/MacroMatch';
+import { useGameStreak } from '../components/GameStreak';
 
 const { width: W } = Dimensions.get('window');
 
@@ -59,6 +61,13 @@ const GAMES = [
     desc: 'Tap the target as fast as you can',
     color: '#d4ff00',
   },
+  {
+    key: 'macro',
+    emoji: '🥗',
+    name: 'Macro Match',
+    desc: 'Pick the food with the most (or least) of a macro',
+    color: '#34d399',
+  },
 ];
 
 const BG = '#080812';
@@ -69,6 +78,7 @@ export default function GameZoneScreen({ navigation }) {
   const { user } = useAuth();
   const scrollRef = useRef(null);
   const gameRefs = useRef({});
+  const { streak } = useGameStreak(user?.id);
 
   function scrollToGame(key) {
     const ref = gameRefs.current[key];
@@ -105,7 +115,12 @@ export default function GameZoneScreen({ navigation }) {
           <View style={s.hero}>
             <Text style={s.heroEmoji}>🎮</Text>
             <Text style={s.heroHeading}>Play & Earn</Text>
-            <Text style={s.heroSub}>6 fitness mini-games · win XP & badges</Text>
+            <Text style={s.heroSub}>7 fitness mini-games · win XP & badges</Text>
+            {streak > 0 && (
+              <View style={s.streakBadge}>
+                <Text style={s.streakText}>🔥 {streak} day streak</Text>
+              </View>
+            )}
           </View>
 
           {/* Game picker cards */}
@@ -166,6 +181,9 @@ export default function GameZoneScreen({ navigation }) {
           <View ref={r => { gameRefs.current['reaction'] = r; }}>
             <ReactionTap userId={user?.id} />
           </View>
+          <View ref={r => { gameRefs.current['macro'] = r; }}>
+            <MacroMatch userId={user?.id} />
+          </View>
 
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -201,6 +219,11 @@ const s = StyleSheet.create({
   heroSub: {
     fontSize: 13, color: '#ffffff55', marginTop: 4, letterSpacing: 0.2,
   },
+  streakBadge: {
+    marginTop: 10, paddingHorizontal: 14, paddingVertical: 5,
+    backgroundColor: '#ff6b3520', borderRadius: 20, borderWidth: 1, borderColor: '#ff6b3540',
+  },
+  streakText: { fontSize: 13, color: '#ff9944', fontWeight: '700' },
 
   sectionLabel: {
     fontSize: 10, fontWeight: '800', color: '#ffffff30',

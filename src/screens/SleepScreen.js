@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Line, Circle, Path, Defs, LinearGradient, Stop, Rect, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -348,6 +348,75 @@ function SleepLogRow({ log, goal, colors, onDelete, isLast, locked, onLockedPres
       <TouchableOpacity onPress={onDelete} style={{ padding: 3 }}>
         <Ionicons name="close" size={14} color={colors.textDim} />
       </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Sleep → Workout Volume Comparison Chart ─────────────────────────────────
+function SleepWorkoutInsightsCard({ logs, sessions, goal, colors }) {
+  const { t } = useTranslation();
+
+  const { goodVol, poorVol, matchCount } = useMemo(() => {
+    const last14 = [...logs].sort((a, b) => b.logged_at.localeCompare(a.logged_at)).slice(0, 14);
+    let goodSum = 0, goodN = 0, poorSum = 0, poorN = 0;
+    for (const log of last14) {
+      const nextDay = localDateStr(new Date(new Date(log.logged_at + 'T00:00:00').getTime() + 86400000));
+      const daySessions = sessions.filter(s => s.date === nextDay);
+      if (!daySessions.length) continue;
+      const vol = daySessions.reduce((s, x) => s + (x.total_volume || 0), 0);
+      if (log.hours >= goal) { goodSum += vol; goodN++; } else { poorSum += vol; poorN++; }
+    }
+    return {
+      goodVol: goodN ? Math.round(goodSum / goodN) : null,
+      poorVol: poorN ? Math.round(poorSum / poorN) : null,
+      matchCount: goodN + poorN,
+    };
+  }, [logs, sessions, goal]);
+
+  if (matchCount < 5 || goodVol == null || poorVol == null) {
+    return (
+      <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 }}>
+        <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textMuted, letterSpacing: 1.5, marginBottom: 8 }}>
+          💪 SLEEP → WORKOUT VOLUME
+        </Text>
+        <Text style={{ fontSize: 13, color: colors.textDim, textAlign: 'center', paddingVertical: 12 }}>
+          Log more data to see insights
+        </Text>
+      </View>
+    );
+  }
+
+  const maxVol = Math.max(goodVol, poorVol, 1);
+  const BAR_W = 60, BAR_MAX_H = 80, GAP = 40, PAD = 24;
+  const SVG_W = PAD * 2 + BAR_W * 2 + GAP;
+  const SVG_H = BAR_MAX_H + 36;
+  const goodH = Math.max(4, Math.round((goodVol / maxVol) * BAR_MAX_H));
+  const poorH = Math.max(4, Math.round((poorVol / maxVol) * BAR_MAX_H));
+  const goodX = PAD;
+  const poorX = PAD + BAR_W + GAP;
+
+  return (
+    <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 }}>
+      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textMuted, letterSpacing: 1.5, marginBottom: 12 }}>
+        💪 SLEEP → WORKOUT VOLUME
+      </Text>
+      <Svg width={SVG_W} height={SVG_H} style={{ alignSelf: 'center' }}>
+        <Rect x={goodX} y={BAR_MAX_H - goodH} width={BAR_W} height={goodH} fill="#34d399" rx={6} />
+        <Rect x={poorX} y={BAR_MAX_H - poorH} width={BAR_W} height={poorH} fill="#f87171" rx={6} />
+        <SvgText x={goodX + BAR_W / 2} y={BAR_MAX_H - goodH - 5} textAnchor="middle" fill={colors.text} fontSize="11" fontWeight="700">
+          {goodVol >= 1000 ? `${(goodVol / 1000).toFixed(1)}k` : goodVol}
+        </SvgText>
+        <SvgText x={poorX + BAR_W / 2} y={BAR_MAX_H - poorH - 5} textAnchor="middle" fill={colors.text} fontSize="11" fontWeight="700">
+          {poorVol >= 1000 ? `${(poorVol / 1000).toFixed(1)}k` : poorVol}
+        </SvgText>
+        <SvgText x={goodX + BAR_W / 2} y={BAR_MAX_H + 16} textAnchor="middle" fill="#34d399" fontSize="10" fontWeight="600">After good</SvgText>
+        <SvgText x={goodX + BAR_W / 2} y={BAR_MAX_H + 28} textAnchor="middle" fill="#34d399" fontSize="10">{`(≥${goal}h)`}</SvgText>
+        <SvgText x={poorX + BAR_W / 2} y={BAR_MAX_H + 16} textAnchor="middle" fill="#f87171" fontSize="10" fontWeight="600">After poor</SvgText>
+        <SvgText x={poorX + BAR_W / 2} y={BAR_MAX_H + 28} textAnchor="middle" fill="#f87171" fontSize="10">{`(<${goal}h)`}</SvgText>
+      </Svg>
+      <Text style={{ fontSize: 10, color: colors.textDim, textAlign: 'center', marginTop: 8 }}>
+        Avg workout volume (kg) the day after sleep · last 14 nights
+      </Text>
     </View>
   );
 }
@@ -933,6 +1002,9 @@ export default function SleepScreen({ embedded = false } = {}) {
                 )}
               </View>
             )}
+
+            {/* ── Sleep → Workout Volume Insights ── */}
+            <SleepWorkoutInsightsCard logs={logs} sessions={sessions} goal={goal} colors={colors} />
 
             {/* ── Monthly Heatmap ── */}
             <View style={styles.card}>

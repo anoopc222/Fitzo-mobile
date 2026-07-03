@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, StyleSheet,
-  ActivityIndicator, FlatList, Pressable,
+  FlatList, Pressable,
 } from 'react-native';
+import Svg, { Polyline } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+import { SkeletonBlock } from './Skeleton';
 
 const GAME_LABELS = {
   memoryMatch:    { name: 'Memory Match',     unit: 's',   lowerIsBetter: true,  emoji: '🃏' },
@@ -14,6 +17,7 @@ const GAME_LABELS = {
   higherOrLower:  { name: 'Higher or Lower',  unit: ' streak', lowerIsBetter: false, emoji: '⬆️' },
   nutritionTrivia:{ name: 'Nutrition Trivia', unit: '/3',  lowerIsBetter: false, emoji: '🧠' },
   dailySpin:      { name: 'Daily Spin',       unit: ' done', lowerIsBetter: false, emoji: '🎯' },
+  macroMatch:     { name: 'Macro Match',      unit: ' pts', lowerIsBetter: false, emoji: '🥗' },
 };
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -36,14 +40,35 @@ export async function upsertGameScore(userId, game, score) {
   );
 }
 
+const historyKey = (userId, game) => `fitzo:gameHistory:${userId}:${game}`;
+
+export async function recordGameHistory(userId, game, score) {
+  if (!userId) return;
+  const key = historyKey(userId, game);
+  const raw = await AsyncStorage.getItem(key);
+  let arr = [];
+  try { arr = raw ? JSON.parse(raw) : []; } catch {}
+  arr.push(score);
+  if (arr.length > 10) arr = arr.slice(arr.length - 10);
+  await AsyncStorage.setItem(key, JSON.stringify(arr));
+}
+
 export default function GameLeaderboard({ game, userId, visible, onClose }) {
   const { colors } = useTheme();
   const s = styles(colors);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [myRank, setMyRank] = useState(null);
+  const [scoreHistory, setScoreHistory] = useState([]);
 
   const meta = GAME_LABELS[game] ?? { name: game, unit: '', lowerIsBetter: false, emoji: '🎮' };
+
+  useEffect(() => {
+    if (!visible || !userId) return;
+    AsyncStorage.getItem(historyKey(userId, game)).then(raw => {
+      try { setScoreHistory(raw ? JSON.parse(raw) : []); } catch { setScoreHistory([]); }
+    });
+  }, [visible, game, userId]);
 
   useEffect(() => {
     if (!visible) return;
@@ -100,6 +125,23 @@ export default function GameLeaderboard({ game, userId, visible, onClose }) {
       .catch(() => setLoading(false));
   }, [visible, game, userId]);
 
+  function HistorySparkline({ data, color }) {
+    const W = 200, H = 48, pad = 4;
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    const points = data.map((v, i) => {
+      const x = pad + (i / (data.length - 1)) * (W - pad * 2);
+      const y = pad + (1 - (v - min) / range) * (H - pad * 2);
+      return `${x},${y}`;
+    }).join(' ');
+    return (
+      <Svg width={W} height={H}>
+        <Polyline points={points} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      </Svg>
+    );
+  }
+
   function formatScore(score) {
     if (meta.lowerIsBetter && meta.unit === 's') return `${(score / 1000).toFixed(2)}s`;
     return `${score}${meta.unit}`;
@@ -116,7 +158,15 @@ export default function GameLeaderboard({ game, userId, visible, onClose }) {
           <Text style={s.subtitle}>Top 10 Leaderboard</Text>
 
           {loading ? (
-            <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />
+            <View style={s.skeletonList}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <View key={i} style={s.skeletonRow}>
+                  <SkeletonBlock width={28} height={14} radius={4} />
+                  <SkeletonBlock height={14} radius={4} style={{ flex: 1 }} />
+                  <SkeletonBlock width={50} height={14} radius={4} />
+                </View>
+              ))}
+            </View>
           ) : rows.length === 0 ? (
             <View style={s.emptyBox}>
               <Text style={s.emptyEmoji}>🏁</Text>
@@ -146,6 +196,13 @@ export default function GameLeaderboard({ game, userId, visible, onClose }) {
 
           {myRank && myRank > 10 && (
             <Text style={s.myRankNote}>Your rank: #{myRank}</Text>
+          )}
+
+          {scoreHistory.length >= 3 && (
+            <View style={s.historyBox}>
+              <Text style={s.historyLabel}>Your recent scores</Text>
+              <HistorySparkline data={scoreHistory} color={colors.accent} />
+            </View>
           )}
 
           <TouchableOpacity style={s.closeBtn} onPress={onClose}>
@@ -188,6 +245,10 @@ const styles = (colors) => StyleSheet.create({
   emptyText: { fontSize: typography.sm, color: colors.textDim },
 
   myRankNote: { fontSize: typography.xs, color: colors.textDim, marginBottom: 8 },
+  historyBox: { width: '100%', alignItems: 'center', paddingTop: 12, paddingBottom: 4 },
+  historyLabel: { fontSize: typography.xs, color: colors.textDim, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },
+  skeletonList: { width: '100%', marginTop: 16, gap: 12, marginBottom: 8 },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   closeBtn: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 48, marginTop: 10 },
   closeBtnText: { fontSize: typography.base, fontWeight: weight.bold, color: colors.bg },
 });

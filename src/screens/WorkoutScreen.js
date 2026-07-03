@@ -29,6 +29,7 @@ import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useNotificationPrefs } from '../context/NotificationContext';
 import { syncConditionalReminder } from '../lib/notifications';
+import { haptics } from '../lib/haptics';
 
 // ─── Data Layer ───────────────────────────────────────────────────────────────
 async function fetchSessions(userId) {
@@ -1407,6 +1408,9 @@ function EditSessionModal({
   const [acOpenIdx, setAcOpenIdx] = useState(null);
   const [subOpenIdx, setSubOpenIdx] = useState(null);
   const [restTimer, setRestTimer] = useState(null); // { exIdx, secondsLeft, total }
+  const REST_CYCLE = [60, 90, 120, 180];
+  const [restSeconds, setRestSeconds] = useState(90);
+  const [restRemaining, setRestRemaining] = useState(null);
   const [programTemplate, setProgramTemplate] = useState(null);
   const scrollRef = useRef(null);
   const cardRefs = useRef({});
@@ -1433,6 +1437,27 @@ function EditSessionModal({
     }, 1000);
     return () => clearTimeout(t);
   }, [restTimer]);
+
+  // Auto rest timer countdown
+  useEffect(() => {
+    if (restRemaining === null) return;
+    if (restRemaining <= 0) {
+      haptics.medium();
+      setRestRemaining(null);
+      return;
+    }
+    const id = setTimeout(() => setRestRemaining(r => r - 1), 1000);
+    return () => clearTimeout(id);
+  }, [restRemaining]);
+
+  const cycleRestSeconds = () => {
+    setRestSeconds(prev => {
+      const idx = REST_CYCLE.indexOf(prev);
+      const next = REST_CYCLE[(idx + 1) % REST_CYCLE.length];
+      setRestRemaining(next);
+      return next;
+    });
+  };
 
   const startRestTimer = (exIdx, seconds = 90) => setRestTimer({ exIdx, secondsLeft: seconds, total: seconds });
   const cancelRestTimer = () => setRestTimer(null);
@@ -1578,10 +1603,12 @@ function EditSessionModal({
   const updateExName = (idx, val) =>
     setExercises(prev => prev.map((ex, i) => i === idx ? { ...ex, name: val } : ex));
 
-  const addSet = (exIdx) =>
+  const addSet = (exIdx) => {
     setExercises(prev => prev.map((ex, i) => i !== exIdx ? ex : {
       ...ex, sets: [...(ex.sets ?? []), blankSet()],
     }));
+    setRestRemaining(restSeconds);
+  };
 
   const insertWarmupSet = (exIdx, weightKg) =>
     setExercises(prev => prev.map((ex, i) => i !== exIdx ? ex : {
@@ -2181,6 +2208,22 @@ function EditSessionModal({
           )}
           </ScrollView>
 
+          {/* Auto rest timer bar */}
+          {restRemaining > 0 && (
+            <View style={eS.autoRestBar}>
+              <View style={eS.autoRestProgressTrack}>
+                <View style={[eS.autoRestProgressFill, { width: `${Math.round((restRemaining / restSeconds) * 100)}%` }]} />
+              </View>
+              <View style={eS.autoRestRow}>
+                <TouchableOpacity onPress={cycleRestSeconds} style={{ flex: 1 }}>
+                  <Text style={eS.autoRestText}>⏱ Rest: {restRemaining}s  <Text style={eS.autoRestCycleTip}>tap → {REST_CYCLE[(REST_CYCLE.indexOf(restSeconds) + 1) % REST_CYCLE.length]}s</Text></Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setRestRemaining(null)} style={eS.autoRestSkip}>
+                  <Text style={eS.autoRestSkipText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {/* Bottom buttons */}
           <View style={eS.bottomRow}>
@@ -2290,7 +2333,44 @@ export default function WorkoutScreen({ embedded = false } = {}) {
       setShowEdit(false);
       return { previous };
     },
-    onSuccess: () => { qc.invalidateQueries(['sessions', user.id]); },
+    onSuccess: (_, params) => {
+      qc.invalidateQueries(['sessions', user.id]);
+      // Auto-log calories burned to food_logs
+      const sessionName = params.name || 'Session';
+      const isRest = (params.name ?? '').toLowerCase().replace(/\s/g, '') === 'restday'
+        || (params.name ?? '').toLowerCase().trim() === 'rest';
+      if (!isRest) {
+        const isCardioSession = ['cardio','run','stair','hiit','bike','swim','walk','cycle','elliptical','row']
+          .some(k => (params.name ?? '').toLowerCase().includes(k));
+        let burned = 0;
+        if (isCardioSession) {
+          burned = (params.exercises ?? []).reduce((sum, ex) =>
+            sum + (ex.sets ?? []).reduce((s, st) => s + calcCardioEntryKcal(ex.name, {
+              duration_min: parseFloat(st.duration_min) || 0,
+              speed_kmh: parseFloat(st.speed_kmh) || 0,
+              incline_pct: parseFloat(st.incline_pct) || 0,
+              avg_rpm: parseFloat(st.avg_rpm) || 0,
+            }), 0), 0);
+        } else if (params.duration_min && params.duration_min > 0) {
+          // Rough gym estimate: ~6 kcal/min for moderate resistance training
+          burned = Math.round(params.duration_min * 6);
+        }
+        if (burned > 0) {
+          supabase.from('food_logs').insert({
+            user_id: user.id,
+            food_name: `🏋️ Workout (${sessionName})`,
+            calories: -Math.abs(burned),
+            protein: 0, carbs: 0, fats: 0,
+            serving_size: 'session',
+            meal_type: 'other',
+            logged_at: new Date().toISOString(),
+          }).then(() => {
+            qc.invalidateQueries(['food', user.id]);
+            qc.invalidateQueries(['home', user.id]);
+          });
+        }
+      }
+    },
     onError: (e, params, context) => {
       if (context?.previous) qc.setQueryData(['sessions', user.id], context.previous);
       Alert.alert(t('workout.errorSaving'), e.message);
@@ -3787,5 +3867,50 @@ const createES = (colors) => StyleSheet.create({
   cardioFieldCol: { flex: 1 },
   cardioFieldLabel: { fontFamily: fontFamily.bodyBold, fontSize: 9, color: colors.textDim, letterSpacing: 0.4, marginBottom: 4 },
   cardioAutoValue: { fontFamily: fontFamily.monoBold, fontSize: typography.sm, color: colors.pink, paddingVertical: 6 },
+
+  autoRestBar: {
+    backgroundColor: colors.bg,
+    borderTopWidth: 1,
+    borderTopColor: colors.accent + '44',
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 4,
+  },
+  autoRestProgressTrack: {
+    height: 3,
+    backgroundColor: colors.dim,
+    borderRadius: 2,
+    marginBottom: 6,
+    overflow: 'hidden',
+  },
+  autoRestProgressFill: {
+    height: '100%',
+    backgroundColor: colors.accent,
+    borderRadius: 2,
+  },
+  autoRestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 4,
+  },
+  autoRestText: {
+    fontSize: typography.sm,
+    fontFamily: fontFamily.bodyBold,
+    color: colors.accent,
+  },
+  autoRestCycleTip: {
+    fontSize: typography.xs,
+    color: colors.textDim,
+    fontFamily: fontFamily.body,
+  },
+  autoRestSkip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  autoRestSkipText: {
+    fontSize: typography.sm,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
 });
 

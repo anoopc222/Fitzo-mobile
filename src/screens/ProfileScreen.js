@@ -14,6 +14,7 @@ import { typography, weight } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import DatePickerField from '../components/ui/DatePickerField';
 import SkeletonScreen from '../components/Skeleton';
+import ProgressPhotos from '../components/ProgressPhotos';
 
 function localDateStr(d) {
   const y = d.getFullYear();
@@ -215,6 +216,9 @@ export default function ProfileScreen({ navigation }) {
                 </View>
               )}
             </View>
+
+            {/* Progress Photos */}
+            <ProgressPhotos userId={user?.id} />
 
             {/* Body stats */}
             <View style={styles.section}>
