@@ -2333,7 +2333,44 @@ export default function WorkoutScreen({ embedded = false } = {}) {
       setShowEdit(false);
       return { previous };
     },
-    onSuccess: () => { qc.invalidateQueries(['sessions', user.id]); },
+    onSuccess: (_, params) => {
+      qc.invalidateQueries(['sessions', user.id]);
+      // Auto-log calories burned to food_logs
+      const sessionName = params.name || 'Session';
+      const isRest = (params.name ?? '').toLowerCase().replace(/\s/g, '') === 'restday'
+        || (params.name ?? '').toLowerCase().trim() === 'rest';
+      if (!isRest) {
+        const isCardioSession = ['cardio','run','stair','hiit','bike','swim','walk','cycle','elliptical','row']
+          .some(k => (params.name ?? '').toLowerCase().includes(k));
+        let burned = 0;
+        if (isCardioSession) {
+          burned = (params.exercises ?? []).reduce((sum, ex) =>
+            sum + (ex.sets ?? []).reduce((s, st) => s + calcCardioEntryKcal(ex.name, {
+              duration_min: parseFloat(st.duration_min) || 0,
+              speed_kmh: parseFloat(st.speed_kmh) || 0,
+              incline_pct: parseFloat(st.incline_pct) || 0,
+              avg_rpm: parseFloat(st.avg_rpm) || 0,
+            }), 0), 0);
+        } else if (params.duration_min && params.duration_min > 0) {
+          // Rough gym estimate: ~6 kcal/min for moderate resistance training
+          burned = Math.round(params.duration_min * 6);
+        }
+        if (burned > 0) {
+          supabase.from('food_logs').insert({
+            user_id: user.id,
+            food_name: `🏋️ Workout (${sessionName})`,
+            calories: -Math.abs(burned),
+            protein: 0, carbs: 0, fats: 0,
+            serving_size: 'session',
+            meal_type: 'other',
+            logged_at: new Date().toISOString(),
+          }).then(() => {
+            qc.invalidateQueries(['food', user.id]);
+            qc.invalidateQueries(['home', user.id]);
+          });
+        }
+      }
+    },
     onError: (e, params, context) => {
       if (context?.previous) qc.setQueryData(['sessions', user.id], context.previous);
       Alert.alert(t('workout.errorSaving'), e.message);

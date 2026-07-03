@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from '
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
-import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
+import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
 import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
@@ -137,6 +137,7 @@ export default function MemoryMatch({ userId }) {
           setBestTime(finalTime);
           AsyncStorage.setItem(storageKey(userId), String(finalTime));
           upsertGameScore(userId, 'memoryMatch', finalTime);
+          recordGameHistory(userId, 'memoryMatch', finalTime);
         }
         Animated.spring(winAnim, { toValue: 1, useNativeDriver: true, bounciness: 14 }).start();
       }

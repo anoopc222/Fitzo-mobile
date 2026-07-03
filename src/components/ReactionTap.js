@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
-import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
+import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
 import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
@@ -122,6 +122,7 @@ export default function ReactionTap({ userId }) {
         setBest(newBest);
         AsyncStorage.setItem(BEST_KEY(userId), String(newBest));
         upsertGameScore(userId, 'reactionTap', ms);
+        recordGameHistory(userId, 'reactionTap', ms);
       }
       setPhase('result');
       return;

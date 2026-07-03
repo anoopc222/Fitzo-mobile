@@ -789,6 +789,27 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                   <MacroBar label={t('foodLog.carbs')} value={Math.round(totals.carbs)} target={targets.carbs} color="#fb923c" />
                   <MacroBar label={t('foodLog.fats')} value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
                 </View>
+
+                {/* Macro Donut Chart */}
+                {(totals.protein > 0 || totals.carbs > 0 || totals.fats > 0) && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, gap: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.border }}>
+                    <MacroDonutChart protein={totals.protein} carbs={totals.carbs} fats={totals.fats} calories={totals.calories} />
+                    <View style={{ flex: 1, gap: 6 }}>
+                      {[
+                        { label: t('foodLog.protein'), pct: Math.round((totals.protein * 4) / Math.max(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9, 1) * 100), color: '#45b7d1', val: Math.round(totals.protein) },
+                        { label: t('foodLog.carbs'), pct: Math.round((totals.carbs * 4) / Math.max(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9, 1) * 100), color: '#f59e0b', val: Math.round(totals.carbs) },
+                        { label: t('foodLog.fats'), pct: Math.round((totals.fats * 9) / Math.max(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9, 1) * 100), color: '#ff6b6b', val: Math.round(totals.fats) },
+                      ].map(m => (
+                        <View key={m.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: m.color }} />
+                          <Text style={{ fontSize: 10, color: colors.textMuted, flex: 1 }}>{m.label}</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: m.color }}>{m.val}g</Text>
+                          <Text style={{ fontSize: 10, color: colors.textDim, width: 32, textAlign: 'right' }}>{m.pct}%</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
 
