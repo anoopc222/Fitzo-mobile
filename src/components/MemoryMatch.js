@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from '
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 
 const EMOJIS = ['💪', '🔥', '🏆', '🧘', '⚡', '💧', '🥗', '🏃'];
 const CARD_COUNT = 16; // 8 pairs
@@ -44,6 +45,7 @@ export default function MemoryMatch({ userId }) {
   const [bestTime, setBestTime] = useState(null);
   const [won, setWon] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [showBoard, setShowBoard] = useState(false);
 
   // Per-card scale animations for match pop
   const scaleAnims = useRef(cards.map(() => new Animated.Value(1))).current;
@@ -126,6 +128,7 @@ export default function MemoryMatch({ userId }) {
         if (!bestTime || finalTime < bestTime) {
           setBestTime(finalTime);
           AsyncStorage.setItem(storageKey(userId), String(finalTime));
+          upsertGameScore(userId, 'memoryMatch', finalTime);
         }
         Animated.spring(winAnim, { toValue: 1, useNativeDriver: true, bounciness: 14 }).start();
       }
@@ -170,6 +173,9 @@ export default function MemoryMatch({ userId }) {
         <Text style={s.title}>🃏 Memory Match</Text>
         <View style={s.headerRight}>
           {bestTime && <Text style={s.bestBadge}>🏅 {fmtTime(bestTime)}</Text>}
+          <TouchableOpacity onPress={() => setShowBoard(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={s.lbBtn}>🏆</Text>
+          </TouchableOpacity>
           <Text style={s.chevron}>{collapsed ? '▸' : '▾'}</Text>
         </View>
       </TouchableOpacity>
@@ -239,6 +245,7 @@ export default function MemoryMatch({ userId }) {
           )}
         </>
       )}
+      <GameLeaderboard game="memoryMatch" userId={userId} visible={showBoard} onClose={() => setShowBoard(false)} />
     </View>
   );
 }
@@ -282,4 +289,5 @@ const styles = (colors) => StyleSheet.create({
 
   resetBtn: { marginTop: 10, alignSelf: 'center' },
   resetText: { fontSize: typography.xs, color: colors.textDim },
+  lbBtn: { fontSize: 16 },
 });

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 
 const TARGETS = [
   { emoji: '💪', label: 'Tap the flex!' },
@@ -27,6 +28,7 @@ export default function ReactionTap({ userId }) {
   const [history, setHistory] = useState([]); // last 5 times
   const [target, setTarget] = useState(TARGETS[0]);
   const [collapsed, setCollapsed] = useState(false);
+  const [showBoard, setShowBoard] = useState(false);
 
   const startedAt = useRef(null);
   const waitTimer = useRef(null);
@@ -103,6 +105,7 @@ export default function ReactionTap({ userId }) {
       if (newBest !== best) {
         setBest(newBest);
         AsyncStorage.setItem(BEST_KEY(userId), String(newBest));
+        upsertGameScore(userId, 'reactionTap', ms);
       }
       setPhase('result');
       return;
@@ -134,6 +137,9 @@ export default function ReactionTap({ userId }) {
         <View style={s.headerRight}>
           {best && <Text style={s.bestBadge}>🏅 {best}ms</Text>}
           {avg && <Text style={s.avgBadge}>Avg: {avg}ms</Text>}
+          <TouchableOpacity onPress={() => setShowBoard(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={{ fontSize: 16 }}>🏆</Text>
+          </TouchableOpacity>
           <Text style={s.chevron}>{collapsed ? '▸' : '▾'}</Text>
         </View>
       </TouchableOpacity>
@@ -199,6 +205,7 @@ export default function ReactionTap({ userId }) {
           </Animated.View>
         </TouchableOpacity>
       )}
+      <GameLeaderboard game="reactionTap" userId={userId} visible={showBoard} onClose={() => setShowBoard(false)} />
     </View>
   );
 }

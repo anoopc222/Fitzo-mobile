@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 
 // [name, calories per 100g, emoji]
 const FOODS = [
@@ -49,6 +50,7 @@ export default function HigherOrLower({ userId }) {
   const [best, setBest] = useState(0);
   const [result, setResult] = useState(null); // 'correct'|'wrong'
   const [collapsed, setCollapsed] = useState(false);
+  const [showBoard, setShowBoard] = useState(false);
   const [gameOver, setGameOver] = useState(false);
 
   const resultAnim = useRef(new Animated.Value(0)).current;
@@ -73,6 +75,7 @@ export default function HigherOrLower({ userId }) {
       if (newStreak > best) {
         setBest(newStreak);
         AsyncStorage.setItem(BEST_KEY(userId), String(newStreak));
+        upsertGameScore(userId, 'higherOrLower', newStreak);
       }
       setTimeout(() => {
         resultAnim.setValue(0);
@@ -119,6 +122,9 @@ export default function HigherOrLower({ userId }) {
         <View style={s.headerRight}>
           <Text style={s.streakText}>🔥 {streak}</Text>
           {best > 0 && <Text style={s.bestText}>Best: {best}</Text>}
+          <TouchableOpacity onPress={() => setShowBoard(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={{ fontSize: 16 }}>🏆</Text>
+          </TouchableOpacity>
           <Text style={s.chevron}>{collapsed ? '▸' : '▾'}</Text>
         </View>
       </TouchableOpacity>
@@ -166,6 +172,7 @@ export default function HigherOrLower({ userId }) {
           </>
         )
       )}
+      <GameLeaderboard game="higherOrLower" userId={userId} visible={showBoard} onClose={() => setShowBoard(false)} />
     </View>
   );
 }
