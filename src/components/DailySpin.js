@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import { useSound } from '../lib/useSound';
+import { haptics } from '../lib/haptics';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 
 const DARES = [
@@ -63,6 +64,7 @@ export default function DailySpin({ userId }) {
 
   function spin() {
     if (spinning || dareIndex !== null) return;
+    haptics.medium();
     setSpinning(true);
     let count = 0;
     const total = 22;
@@ -83,6 +85,7 @@ export default function DailySpin({ userId }) {
 
   function markDone() {
     if (done) return;
+    haptics.success();
     setDone(true);
     play('win');
     AsyncStorage.setItem(todayKey(userId), JSON.stringify({ dare: dareIndex, done: true }));

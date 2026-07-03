@@ -24,6 +24,7 @@ import CircularGauge from '../components/CircularGauge';
 import ScreenHeader from '../components/ScreenHeader';
 import { useExportCard } from '../hooks/useExportCard';
 import { SkeletonCard } from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const KG_TO_LBS = 2.20462;
@@ -36,6 +37,22 @@ const DOW_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
 function localDateStr(d) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function linearTrend(logs) {
+  // logs: array of {logged_at: string, weight: number}, sorted oldest first
+  if (logs.length < 3) return null;
+  const n = logs.length;
+  const xs = logs.map((_, i) => i);
+  const ys = logs.map(l => l.weight);
+  const xMean = xs.reduce((a,b) => a+b,0)/n;
+  const yMean = ys.reduce((a,b) => a+b,0)/n;
+  const slope = xs.reduce((s,x,i)=>s+(x-xMean)*(ys[i]-yMean),0)/xs.reduce((s,x)=>s+(x-xMean)**2,0);
+  // slope is kg per log entry — convert to per week using average days between logs
+  const days = (new Date(logs[n-1].logged_at) - new Date(logs[0].logged_at)) / 86400000;
+  const daysPerEntry = days / (n - 1) || 1;
+  const kgPerWeek = slope * (7 / daysPerEntry);
+  return { kgPerWeek: Math.round(kgPerWeek * 100) / 100, latest: ys[n-1] };
 }
 function weekKeyOf(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
@@ -816,6 +833,28 @@ export default function WeightScreen({ embedded = false } = {}) {
     return { first, lastV, change, ratePerWk, avg, best, loggedDays: trendData.length, totalDays };
   }, [trendData, unit, goalKg]);
 
+  const trendPrediction = useMemo(() => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = localDateStr(cutoff);
+    const last30Asc = sortedAsc.filter(l => l.logged_at >= cutoffStr);
+    const trend = linearTrend(last30Asc);
+    if (!trend || !goalKg) return null;
+    const { kgPerWeek, latest } = trend;
+    const toGo = latest - goalKg;
+    const rateDisp = toDisp(Math.abs(kgPerWeek), unit);
+    const dirLabel = kgPerWeek < 0 ? `-${rateDisp.toFixed(2)} ${unit}/week` : `+${rateDisp.toFixed(2)} ${unit}/week`;
+    let etaWeeks = null;
+    let awayFromGoal = false;
+    if (Math.abs(toGo) < 0.1) {
+      etaWeeks = 0;
+    } else if (kgPerWeek !== 0 && Math.sign(kgPerWeek) === -Math.sign(toGo)) {
+      etaWeeks = Math.round(Math.abs(toGo / kgPerWeek));
+    } else {
+      awayFromGoal = true;
+    }
+    return { dirLabel, etaWeeks, awayFromGoal };
+  }, [sortedAsc, goalKg, unit]);
+
   const logDateSet = useMemo(() => new Set(logs.map(l => l.logged_at)), [logs]);
 
   const weightConsistency = useMemo(() => {
@@ -1056,6 +1095,14 @@ export default function WeightScreen({ embedded = false } = {}) {
             <SkeletonCard lines={3} />
             <SkeletonCard lines={3} />
           </View>
+        ) : logs.length === 0 ? (
+          <EmptyState
+            emoji="⚖️"
+            title="No weight logged yet"
+            subtitle="Start tracking to see your progress here"
+            actionLabel="Log Weight"
+            onAction={() => setShowLogSheet(true)}
+          />
         ) : (
           <>
             {/* ── Hero + Goal Progress + Stats (merged) ── */}
@@ -1293,6 +1340,29 @@ export default function WeightScreen({ embedded = false } = {}) {
                 </View>
               )}
             </View>
+
+            {/* ── Trend Prediction ── */}
+            {trendPrediction && (
+              <View style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.accent + '22', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 18 }}>{trendPrediction.awayFromGoal ? '📉' : '🎯'}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, fontFamily: fontFamily.mono, marginBottom: 2 }}>30-DAY TREND PREDICTION</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: trendPrediction.awayFromGoal ? colors.danger : colors.accent }}>
+                    {trendPrediction.dirLabel}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
+                    {trendPrediction.awayFromGoal
+                      ? 'Trending away from goal'
+                      : trendPrediction.etaWeeks === 0
+                        ? 'You\'ve reached your goal!'
+                        : `At this rate you'll reach your goal in ~${trendPrediction.etaWeeks} week${trendPrediction.etaWeeks !== 1 ? 's' : ''}`
+                    }
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* ── Avg Weight (weekly/monthly) ── */}
             <View style={styles.card}>

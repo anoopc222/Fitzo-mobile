@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 import { useSound } from '../lib/useSound';
+import { haptics } from '../lib/haptics';
 
 const QUESTIONS = [
   { q: 'Which has more protein per 100g?', a: 'Chicken breast', b: 'Greek yogurt', correct: 'a', fact: 'Chicken breast has ~31g vs Greek yogurt ~10g protein.' },
@@ -90,6 +91,7 @@ export default function NutritionTrivia({ userId }) {
     setChosen(choice);
     const q = questions[qIdx];
     const correct = choice === q.correct;
+    if (correct) haptics.success(); else haptics.error();
     play(correct ? 'correct' : 'wrong');
     const newAnswered = [...answered, correct ? 'correct' : 'wrong'];
     const newScore = score + (correct ? 1 : 0);

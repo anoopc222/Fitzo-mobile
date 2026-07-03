@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 import { useSound } from '../lib/useSound';
+import { haptics } from '../lib/haptics';
 
 // [name, emoji, calories per 100g, hint]
 const FOODS = [
@@ -100,6 +101,7 @@ export default function CalorieGuesser({ userId }) {
     const pts = scorePoints(diff);
 
     setRevealed(true);
+    if (pts >= 75) haptics.success(); else if (pts < 25) haptics.error();
     play(pts >= 75 ? 'correct' : pts >= 25 ? 'reveal' : 'wrong');
     const newScore = totalScore + pts;
     setTotalScore(newScore);
