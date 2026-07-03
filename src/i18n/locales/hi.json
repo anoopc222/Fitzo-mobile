@@ -276,7 +276,17 @@
     "lastSessions": "पिछले {{count}} सत्र",
     "moreSets": "+{{count}} और",
     "kgVolLabel": "{{value}} किग्रा वॉल्यूम",
-    "kgVolMasked": "●●● किग्रा वॉल्यूम"
+    "kgVolMasked": "●●● किग्रा वॉल्यूम",
+    "sortRecent": "हालिया",
+    "sortName": "नाम",
+    "sortSessions": "सत्र",
+    "sortTrend": "सुधार",
+    "volumePr": "वॉल्यूम PR",
+    "repPr": "रेप PR",
+    "repPrValue": "{{reps}} रेप @ {{kg}}kg",
+    "frequency": "आवृत्ति",
+    "frequencyValue": "हर {{count}}दिन",
+    "avgRpe": "औसत RPE"
   },
   "profile": {
     "title": "प्रोफ़ाइल",

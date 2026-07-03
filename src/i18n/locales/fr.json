@@ -276,7 +276,17 @@
     "lastSessions": "{{count}} DERNIÈRES SÉANCES",
     "moreSets": "+{{count}} de plus",
     "kgVolLabel": "{{value}} kg vol",
-    "kgVolMasked": "●●● kg vol"
+    "kgVolMasked": "●●● kg vol",
+    "sortRecent": "Récent",
+    "sortName": "Nom",
+    "sortSessions": "Séances",
+    "sortTrend": "Progression",
+    "volumePr": "PR volume",
+    "repPr": "PR reps",
+    "repPrValue": "{{reps}} reps @ {{kg}}kg",
+    "frequency": "Fréquence",
+    "frequencyValue": "tous les {{count}}j",
+    "avgRpe": "RPE moy."
   },
   "profile": {
     "title": "PROFIL",
