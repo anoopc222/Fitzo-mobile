@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 import { useSound } from '../lib/useSound';
+import { haptics } from '../lib/haptics';
 
 const EMOJIS = ['💪', '🔥', '🏆', '🧘', '⚡', '💧', '🥗', '🏃'];
 const CARD_COUNT = 16; // 8 pairs
@@ -88,6 +89,7 @@ export default function MemoryMatch({ userId }) {
 
   const handlePress = useCallback((id) => {
     if (locked || matched.has(id) || revealed.has(id)) return;
+    haptics.light();
 
     if (!startTime) setStartTime(Date.now());
 
@@ -114,6 +116,7 @@ export default function MemoryMatch({ userId }) {
 
     if (emojiA === emojiB) {
       // Match!
+      haptics.success();
       const nextMatched = new Set(matched);
       nextMatched.add(a);
       nextMatched.add(b);
@@ -139,6 +142,7 @@ export default function MemoryMatch({ userId }) {
       }
     } else {
       // Mismatch — hide after 800ms
+      haptics.error();
       play('wrong');
       shake();
       setTimeout(() => {
