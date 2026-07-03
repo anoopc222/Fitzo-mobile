@@ -1362,12 +1362,19 @@ export default function HomeScreen() {
 
             {/* ── Game Zone banner ───────────────────────────── */}
             <TouchableOpacity
-              style={[styles.nudgeCard, { padding: 0, overflow: 'hidden', flexDirection: 'column', alignItems: 'stretch' }]}
+              style={{
+                backgroundColor: colors.bgCard,
+                marginHorizontal: 16,
+                marginBottom: 10,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+                overflow: 'hidden',
+              }}
               onPress={() => navigation.navigate('GameZone')}
               activeOpacity={0.88}
             >
-              {/* Top row */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, paddingBottom: 10, gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, gap: 10 }}>
                 <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ fontSize: 20 }}>🎮</Text>
                 </View>
@@ -1378,14 +1385,6 @@ export default function HomeScreen() {
                 <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 }}>
                   <Text style={{ fontSize: 11, fontWeight: '800', color: colors.bg, letterSpacing: 0.5 }}>Play →</Text>
                 </View>
-              </View>
-              {/* Game icon row */}
-              <View style={{ flexDirection: 'row', paddingHorizontal: 14, paddingBottom: 14, gap: 8 }}>
-                {[['🎯','#ff6b35'],['🧠','#a855f7'],['🃏','#06b6d4'],['🍎','#22c55e'],['⬆️','#f59e0b'],['⚡','#d4ff00']].map(([e, c], i) => (
-                  <View key={i} style={{ flex: 1, aspectRatio: 1, borderRadius: 10, backgroundColor: c + '15', borderWidth: 1, borderColor: c + '30', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 16 }}>{e}</Text>
-                  </View>
-                ))}
               </View>
             </TouchableOpacity>
 
