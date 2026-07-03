@@ -14,6 +14,18 @@ function yesterdayString() {
 
 const streakKey = (userId) => `fitzo:gameStreak:${userId}`;
 
+export async function recordGamePlay(userId) {
+  if (!userId) return;
+  const today = todayString();
+  const yesterday = yesterdayString();
+  const raw = await AsyncStorage.getItem(streakKey(userId));
+  let current = { lastDate: null, streak: 0 };
+  if (raw) { try { current = JSON.parse(raw); } catch {} }
+  if (current.lastDate === today) return;
+  const newStreak = current.lastDate === yesterday ? current.streak + 1 : 1;
+  await AsyncStorage.setItem(streakKey(userId), JSON.stringify({ lastDate: today, streak: newStreak }));
+}
+
 export function useGameStreak(userId) {
   const [streak, setStreak] = useState(0);
 

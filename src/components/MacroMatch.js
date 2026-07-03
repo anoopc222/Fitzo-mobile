@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
-import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
-import { recordGameHistory } from './GameLeaderboard';
+import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
+import { recordGamePlay } from './GameStreak';
 import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
@@ -122,6 +122,7 @@ export default function MacroMatch({ userId }) {
     play('win');
     setGameOver(true);
     recordGameHistory(userId, 'macroMatch', finalScore);
+    recordGamePlay(userId);
     if (finalScore > best) {
       setBest(finalScore);
       await AsyncStorage.setItem(BEST_KEY(userId), String(finalScore));

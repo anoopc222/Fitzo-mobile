@@ -979,6 +979,36 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                   </TouchableOpacity>
                 </View>
 
+                {/* My Foods section */}
+                {customFoods.length > 0 && debouncedQuery.length < 2 && (
+                  <View style={{ marginBottom: 8 }}>
+                    <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 6 }}>⭐ MY FOODS</Text>
+                    {customFoods.map(cf => (
+                      <TouchableOpacity
+                        key={cf.id}
+                        style={styles.resultRow}
+                        onPress={() => {
+                          setSheetStep('manual');
+                          setForm({
+                            food_name: cf.food_name,
+                            calories: String(cf.calories),
+                            protein: String(cf.protein ?? ''),
+                            carbs: String(cf.carbs ?? ''),
+                            fats: String(cf.fats ?? ''),
+                          });
+                        }}
+                      >
+                        <View style={styles.resultLeft}>
+                          <Text style={styles.resultName} numberOfLines={1}>{cf.food_name}</Text>
+                          <Text style={styles.resultMeta}>{cf.serving_size ?? '100g'} · My Foods</Text>
+                        </View>
+                        <Text style={styles.resultCals}>{cf.calories} kcal</Text>
+                      </TouchableOpacity>
+                    ))}
+                    <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8 }} />
+                  </View>
+                )}
+
                 <FlatList
                   data={searchResults ?? []}
                   keyExtractor={item => item.id}
@@ -1055,6 +1085,22 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                   <MacroInput label={t('foodLog.carbs')} value={form.carbs} onChange={v => setForm(p => ({ ...p, carbs: v }))} color="#fb923c" />
                   <MacroInput label={t('foodLog.fats')} value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
                 </View>
+
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 }}
+                  onPress={() => setSaveToMyFoods(v => !v)}
+                  activeOpacity={0.7}
+                >
+                  <View style={{
+                    width: 22, height: 22, borderRadius: 6, borderWidth: 2,
+                    borderColor: saveToMyFoods ? colors.accent : colors.border,
+                    backgroundColor: saveToMyFoods ? colors.accent : 'transparent',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {saveToMyFoods && <Ionicons name="checkmark" size={14} color={colors.bg} />}
+                  </View>
+                  <Text style={{ fontSize: typography.sm, color: colors.text }}>⭐ Save to My Foods</Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity style={styles.saveBtn} onPress={handleAddManual}>
                   <Text style={styles.saveBtnText}>{t('foodLog.saveFood')}</Text>
