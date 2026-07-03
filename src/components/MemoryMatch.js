@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
+import { recordGamePlay } from './GameStreak';
 import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
@@ -138,6 +139,7 @@ export default function MemoryMatch({ userId }) {
           AsyncStorage.setItem(storageKey(userId), String(finalTime));
           upsertGameScore(userId, 'memoryMatch', finalTime);
           recordGameHistory(userId, 'memoryMatch', finalTime);
+          recordGamePlay(userId);
         }
         Animated.spring(winAnim, { toValue: 1, useNativeDriver: true, bounciness: 14 }).start();
       }

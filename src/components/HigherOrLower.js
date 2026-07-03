@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
+import { recordGamePlay } from './GameStreak';
 import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
@@ -82,6 +83,7 @@ export default function HigherOrLower({ userId }) {
         AsyncStorage.setItem(BEST_KEY(userId), String(newStreak));
         upsertGameScore(userId, 'higherOrLower', newStreak);
         recordGameHistory(userId, 'higherOrLower', newStreak);
+        recordGamePlay(userId);
         if (newStreak >= 5) play('win');
       }
       setTimeout(() => {
