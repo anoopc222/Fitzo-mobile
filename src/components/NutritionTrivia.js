@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
+import { useSound } from '../lib/useSound';
 
 const QUESTIONS = [
   { q: 'Which has more protein per 100g?', a: 'Chicken breast', b: 'Greek yogurt', correct: 'a', fact: 'Chicken breast has ~31g vs Greek yogurt ~10g protein.' },
@@ -58,6 +59,7 @@ export default function NutritionTrivia({ userId }) {
   const [chosen, setChosen] = useState(null);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
+  const { play } = useSound();
   const [collapsed, setCollapsed] = useState(false);
   const [showBoard, setShowBoard] = useState(false);
   const [bestScore, setBestScore] = useState(null);
@@ -82,6 +84,7 @@ export default function NutritionTrivia({ userId }) {
     setChosen(choice);
     const q = questions[qIdx];
     const correct = choice === q.correct;
+    play(correct ? 'correct' : 'wrong');
     const newAnswered = [...answered, correct ? 'correct' : 'wrong'];
     const newScore = score + (correct ? 1 : 0);
 
@@ -104,6 +107,7 @@ export default function NutritionTrivia({ userId }) {
         setDone(true);
         AsyncStorage.setItem(todayKey(userId), JSON.stringify({ score: newScore, answered: newAnswered, done: true, bestScore: newBest }));
         setBestScore(newBest);
+        play('win');
         upsertGameScore(userId, 'nutritionTrivia', newScore);
       } else {
         setScore(newScore);

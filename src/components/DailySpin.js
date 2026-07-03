@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+import { useSound } from '../lib/useSound';
 
 const DARES = [
   { emoji: '💪', text: 'Do 10 squats right now' },
@@ -29,6 +30,7 @@ function todayKey(userId) {
 export default function DailySpin({ userId }) {
   const { colors } = useTheme();
   const s = styles(colors);
+  const { play } = useSound();
 
   const [dareIndex, setDareIndex] = useState(null);
   const [done, setDone] = useState(false);
@@ -69,6 +71,7 @@ export default function DailySpin({ userId }) {
         setDisplayIdx(final);
         setDareIndex(final);
         setSpinning(false);
+        play('reveal');
         AsyncStorage.setItem(todayKey(userId), JSON.stringify({ dare: final, done: false }));
       }
     }, 70);
@@ -77,6 +80,7 @@ export default function DailySpin({ userId }) {
   function markDone() {
     if (done) return;
     setDone(true);
+    play('win');
     AsyncStorage.setItem(todayKey(userId), JSON.stringify({ dare: dareIndex, done: true }));
     burst();
   }

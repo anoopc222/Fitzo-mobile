@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
+import { useSound } from '../lib/useSound';
 
 // [name, emoji, calories per 100g, hint]
 const FOODS = [
@@ -55,6 +56,7 @@ function scorePoints(diff) {
 export default function CalorieGuesser({ userId }) {
   const { colors } = useTheme();
   const s = styles(colors);
+  const { play } = useSound();
   const TRACK_W = Dimensions.get('window').width - 64;
 
   const [foodIdx, setFoodIdx] = useState(() => Math.floor(Math.random() * FOODS.length));
@@ -98,6 +100,7 @@ export default function CalorieGuesser({ userId }) {
     const pts = scorePoints(diff);
 
     setRevealed(true);
+    play(pts >= 75 ? 'correct' : pts >= 25 ? 'reveal' : 'wrong');
     const newScore = totalScore + pts;
     setTotalScore(newScore);
 
@@ -112,6 +115,7 @@ export default function CalorieGuesser({ userId }) {
 
   function nextRound() {
     if (round >= 5) {
+      play('win');
       // Game over — save best
       if (totalScore > best) {
         setBest(totalScore);

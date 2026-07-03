@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
+import { useSound } from '../lib/useSound';
 
 const TARGETS = [
   { emoji: '💪', label: 'Tap the flex!' },
@@ -19,6 +20,7 @@ const BEST_KEY = (userId) => `fitzo:reactionTap:${userId}:best`;
 export default function ReactionTap({ userId }) {
   const { colors } = useTheme();
   const s = styles(colors);
+  const { play } = useSound();
 
   const [phase, setPhase] = useState('idle'); // idle | countdown | waiting | active | result | toosoon
   const [countdown, setCountdown] = useState(3);
@@ -53,9 +55,11 @@ export default function ReactionTap({ userId }) {
       if (c <= 0) {
         clearInterval(countdownTimer.current);
         beginWait();
+      } else {
+        play('tick');
       }
     }, 800);
-  }, []);
+  }, [play]);
 
   function beginWait() {
     const t = TARGETS[Math.floor(Math.random() * TARGETS.length)];
@@ -68,6 +72,7 @@ export default function ReactionTap({ userId }) {
     const delay = 1500 + Math.random() * 2500;
     waitTimer.current = setTimeout(() => {
       startedAt.current = Date.now();
+      play('go');
       setPhase('active');
 
       // Animate target in
@@ -99,6 +104,7 @@ export default function ReactionTap({ userId }) {
       const newHistory = [...history, ms].slice(-5);
       setHistory(newHistory);
       setReactionMs(ms);
+      play(ms < 300 ? 'correct' : 'reveal');
       setRound(r => r + 1);
 
       const newBest = best === null || ms < best ? ms : best;
