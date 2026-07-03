@@ -508,7 +508,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border,
   },
   sortChipActive: { backgroundColor: colors.accent + '20', borderColor: colors.accent },
-  sortChipText: { fontSize: typography.xs, color: colors.textMuted, fontWeight: weight.medium },
+  sortChipText: { fontSize: typography.xs, color: colors.textDim, fontWeight: weight.medium },
   sortChipTextActive: { color: colors.accent, fontWeight: weight.bold },
 
   searchWrap: {
