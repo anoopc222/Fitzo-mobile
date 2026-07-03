@@ -39,6 +39,8 @@ import { useMoreMenu } from '../context/MoreMenuContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DailySpin from '../components/DailySpin';
 import MemoryMatch from '../components/MemoryMatch';
+import NutritionTrivia from '../components/NutritionTrivia';
+import ReactionTap from '../components/ReactionTap';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -1364,7 +1366,11 @@ export default function HomeScreen() {
 
             <DailySpin userId={user.id} />
 
+            <NutritionTrivia userId={user.id} />
+
             <MemoryMatch userId={user.id} />
+
+            <ReactionTap userId={user.id} />
 
             {/* ── Insight Cards (auto-rotating) ──────────────────── */}
             <ScrollView

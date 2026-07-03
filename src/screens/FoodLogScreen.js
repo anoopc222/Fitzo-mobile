@@ -22,6 +22,8 @@ import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import { useExportCard } from '../hooks/useExportCard';
+import CalorieGuesser from '../components/CalorieGuesser';
+import HigherOrLower from '../components/HigherOrLower';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -688,6 +690,10 @@ export default function FoodLogScreen({ embedded = false } = {}) {
             </View>
 
             <MacroSlotsCard show={showSlots} onDismiss={() => setShowSlots(false)} colors={colors} />
+
+            <CalorieGuesser userId={user.id} />
+
+            <HigherOrLower userId={user.id} />
 
             {/* ── Monthly Calorie Heatmap (opens in popup) ── */}
             <TouchableOpacity style={[styles.card, styles.hmTabRow]} onPress={() => setShowHeatmapModal(true)} activeOpacity={0.8}>
