@@ -1362,12 +1362,19 @@ export default function HomeScreen() {
 
             {/* ── Game Zone banner ───────────────────────────── */}
             <TouchableOpacity
-              style={[styles.nudgeCard, { padding: 0, overflow: 'hidden', flexDirection: 'column', alignItems: 'stretch' }]}
+              style={{
+                backgroundColor: colors.bgCard,
+                marginHorizontal: 16,
+                marginBottom: 10,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+                overflow: 'hidden',
+              }}
               onPress={() => navigation.navigate('GameZone')}
               activeOpacity={0.88}
             >
-              {/* Top row */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, gap: 10 }}>
                 <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ fontSize: 20 }}>🎮</Text>
                 </View>
