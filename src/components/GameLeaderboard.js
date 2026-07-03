@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, StyleSheet,
-  ActivityIndicator, FlatList, Pressable,
+  FlatList, Pressable,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+import { SkeletonBlock } from './Skeleton';
 
 const GAME_LABELS = {
   memoryMatch:    { name: 'Memory Match',     unit: 's',   lowerIsBetter: true,  emoji: '🃏' },
@@ -116,7 +117,15 @@ export default function GameLeaderboard({ game, userId, visible, onClose }) {
           <Text style={s.subtitle}>Top 10 Leaderboard</Text>
 
           {loading ? (
-            <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />
+            <View style={s.skeletonList}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <View key={i} style={s.skeletonRow}>
+                  <SkeletonBlock width={28} height={14} radius={4} />
+                  <SkeletonBlock height={14} radius={4} style={{ flex: 1 }} />
+                  <SkeletonBlock width={50} height={14} radius={4} />
+                </View>
+              ))}
+            </View>
           ) : rows.length === 0 ? (
             <View style={s.emptyBox}>
               <Text style={s.emptyEmoji}>🏁</Text>
@@ -188,6 +197,8 @@ const styles = (colors) => StyleSheet.create({
   emptyText: { fontSize: typography.sm, color: colors.textDim },
 
   myRankNote: { fontSize: typography.xs, color: colors.textDim, marginBottom: 8 },
+  skeletonList: { width: '100%', marginTop: 16, gap: 12, marginBottom: 8 },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   closeBtn: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 48, marginTop: 10 },
   closeBtnText: { fontSize: typography.base, fontWeight: weight.bold, color: colors.bg },
 });
