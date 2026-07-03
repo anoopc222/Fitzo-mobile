@@ -39,10 +39,15 @@ export default function ReactionTap({ userId }) {
   const bgAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseLoop = useRef(null);
 
   useEffect(() => {
     AsyncStorage.getItem(BEST_KEY(userId)).then(v => v && setBest(Number(v)));
-    return () => { clearTimeout(waitTimer.current); clearInterval(countdownTimer.current); };
+    return () => {
+      clearTimeout(waitTimer.current);
+      clearInterval(countdownTimer.current);
+      pulseLoop.current?.stop();
+    };
   }, [userId]);
 
   const startCountdown = useCallback(() => {
@@ -79,13 +84,14 @@ export default function ReactionTap({ userId }) {
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, bounciness: 16 }).start();
       Animated.timing(bgAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
 
-      // Pulse loop
-      Animated.loop(
+      // Pulse loop — stored in ref so it can be stopped on unmount / tap
+      pulseLoop.current = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.15, duration: 300, useNativeDriver: true }),
           Animated.timing(pulseAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
         ])
-      ).start();
+      );
+      pulseLoop.current.start();
     }, delay);
   }
 
@@ -98,7 +104,7 @@ export default function ReactionTap({ userId }) {
     }
     if (phase === 'active') {
       const ms = Date.now() - startedAt.current;
-      pulseAnim.stopAnimation();
+      pulseLoop.current?.stop();
       pulseAnim.setValue(1);
 
       const newHistory = [...history, ms].slice(-5);

@@ -148,14 +148,16 @@ export default function HigherOrLower({ userId }) {
             <Text style={s.sub}>Which has more calories per 100g?</Text>
             <Animated.View style={[s.pairRow, { transform: [{ translateX: shakeAnim }] }]}>
               {[a, b].map((food, idx) => {
-                const isCorrect = result === 'correct' && (idx === (a[1] >= b[1] ? 0 : 1));
-                const isWrong = result === 'wrong';
+                const higherIdx = a[1] >= b[1] ? 0 : 1;
+                const isHigher = idx === higherIdx;
                 return (
                   <TouchableOpacity
                     key={idx}
                     style={[
                       s.foodBtn,
-                      result && (food[1] >= (idx === 0 ? b[1] : a[1]) ? s.foodBtnCorrect : s.foodBtnWrong),
+                      result === 'correct' && s.foodBtnCorrect,
+                      result === 'wrong' && isHigher && s.foodBtnCorrect,
+                      result === 'wrong' && !isHigher && s.foodBtnWrong,
                     ]}
                     onPress={() => guess(idx)}
                     activeOpacity={0.75}

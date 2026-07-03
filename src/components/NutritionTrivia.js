@@ -33,6 +33,7 @@ function todayKey(userId) {
   const d = new Date();
   return `fitzo:trivia:${userId}:${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
+function bestKey(userId) { return `fitzo:trivia:${userId}:allTimeBest`; }
 
 function pickQuestions(seed) {
   // Deterministic daily pick of 3 using date as seed
@@ -68,14 +69,19 @@ export default function NutritionTrivia({ userId }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    if (!userId) return;
+    // Load all-time best from its own key (survives day rollover)
+    AsyncStorage.getItem(bestKey(userId)).then(v => v && setBestScore(Number(v)));
+    // Load today's progress
     AsyncStorage.getItem(todayKey(userId)).then(raw => {
       if (!raw) return;
-      const saved = JSON.parse(raw);
-      setScore(saved.score);
-      setAnswered(saved.answered);
-      setQIdx(saved.answered.length < 3 ? saved.answered.length : 2);
-      setDone(saved.done);
-      setBestScore(saved.bestScore ?? null);
+      try {
+        const saved = JSON.parse(raw);
+        setScore(saved.score);
+        setAnswered(saved.answered);
+        setQIdx(saved.answered.length < 3 ? saved.answered.length : 2);
+        setDone(saved.done);
+      } catch {}
     });
   }, [userId]);
 
@@ -105,15 +111,18 @@ export default function NutritionTrivia({ userId }) {
         setScore(newScore);
         setAnswered(newAnswered);
         setDone(true);
-        AsyncStorage.setItem(todayKey(userId), JSON.stringify({ score: newScore, answered: newAnswered, done: true, bestScore: newBest }));
-        setBestScore(newBest);
+        AsyncStorage.setItem(todayKey(userId), JSON.stringify({ score: newScore, answered: newAnswered, done: true }));
+        if (newBest !== bestScore) {
+          setBestScore(newBest);
+          AsyncStorage.setItem(bestKey(userId), String(newBest));
+        }
         play('win');
         upsertGameScore(userId, 'nutritionTrivia', newScore);
       } else {
         setScore(newScore);
         setAnswered(newAnswered);
         setQIdx(qIdx + 1);
-        AsyncStorage.setItem(todayKey(userId), JSON.stringify({ score: newScore, answered: newAnswered, done: false, bestScore }));
+        AsyncStorage.setItem(todayKey(userId), JSON.stringify({ score: newScore, answered: newAnswered, done: false }));
       }
     }, 1600);
   }

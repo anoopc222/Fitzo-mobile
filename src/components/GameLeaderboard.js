@@ -55,7 +55,8 @@ export default function GameLeaderboard({ game, userId, visible, onClose }) {
       .eq('game', game)
       .order('score', { ascending: meta.lowerIsBetter })
       .limit(10)
-      .then(async ({ data }) => {
+      .then(async ({ data, error }) => {
+        if (error) { setLoading(false); return; }
         const rows = data ?? [];
 
         // Fetch profile names for all user_ids in one query
@@ -76,10 +77,28 @@ export default function GameLeaderboard({ game, userId, visible, onClose }) {
           isMe: r.user_id === userId,
         }));
         setRows(results);
-        setMyRank(results.find(r => r.isMe)?.rank ?? null);
+
+        // If user not in top 10, fetch their rank separately
+        const myRow = results.find(r => r.isMe);
+        if (myRow) {
+          setMyRank(myRow.rank);
+        } else if (userId) {
+          const { count } = await supabase
+            .from('game_scores')
+            .select('*', { count: 'exact', head: true })
+            .eq('game', game)
+            .filter('score', meta.lowerIsBetter ? 'lt' : 'gt',
+              (await supabase.from('game_scores').select('score').eq('game', game).eq('user_id', userId).single()).data?.score ?? 0
+            );
+          setMyRank(count != null ? count + 1 : null);
+        } else {
+          setMyRank(null);
+        }
+
         setLoading(false);
-      });
-  }, [visible, game]);
+      })
+      .catch(() => setLoading(false));
+  }, [visible, game, userId]);
 
   function formatScore(score) {
     if (meta.lowerIsBetter && meta.unit === 's') return `${(score / 1000).toFixed(2)}s`;
