@@ -52,6 +52,24 @@ export async function syncConditionalReminder(tag, loggedToday, hour, minute, ti
   await scheduleDateReminder(tag, todayStr, hour, minute, title, body);
 }
 
+export async function scheduleWeeklySummary() {
+  await Notifications.cancelScheduledNotificationAsync('weeklySummary').catch(() => {});
+  await Notifications.scheduleNotificationAsync({
+    identifier: 'weeklySummary',
+    content: {
+      title: '📊 Your Weekly Fitzo Summary',
+      body: 'Check how your week went — weight, steps, workouts & sleep!',
+      sound: true,
+    },
+    trigger: {
+      weekday: 1, // Sunday (1=Sunday in Expo)
+      hour: 19,
+      minute: 0,
+      repeats: true,
+    },
+  });
+}
+
 export async function scheduleDateReminder(tag, date, hour, minute, title, body) {
   const fireDate = new Date(`${date}T00:00:00`);
   fireDate.setHours(hour, minute, 0, 0);

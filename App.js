@@ -18,7 +18,7 @@ import { useAppFonts } from './src/theme/useAppFonts';
 import AppNavigator from './src/navigation/AppNavigator';
 import MoreSheetModal from './src/components/MoreSheetModal';
 import { navigate } from './src/navigation/navigationRef';
-import { requestNotificationPermissions, scheduleDailyReminder } from './src/lib/notifications';
+import { requestNotificationPermissions, scheduleDailyReminder, scheduleWeeklySummary } from './src/lib/notifications';
 import { POSTHOG_API_KEY, POSTHOG_HOST } from './src/config/analytics';
 import './src/i18n';
 import { loadStoredLanguage } from './src/i18n';
@@ -90,6 +90,7 @@ function Root() {
         await scheduleDailyReminder('dailyLog', 20, 0, '📊 Log your day', "Don't forget to log weight, steps & food!");
         await scheduleDailyReminder('sleepReminder', 22, 0, '😴 Bedtime soon', 'Log your sleep goal for tonight!');
         await scheduleDailyReminder('weightReminder', 8, 0, '⚖️ Morning weigh-in', 'Start the day by logging your weight!');
+        await scheduleWeeklySummary();
       } catch (_e) {
         // never throw
       }
