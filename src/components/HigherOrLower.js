@@ -5,6 +5,7 @@ import { typography, weight } from '../theme/typography';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 import { useSound } from '../lib/useSound';
+import { haptics } from '../lib/haptics';
 
 // [name, calories per 100g, emoji]
 const FOODS = [
@@ -69,6 +70,7 @@ export default function HigherOrLower({ userId }) {
     const correct = higherIdx === actualHigherIdx;
 
     setResult(correct ? 'correct' : 'wrong');
+    if (correct) haptics.success(); else haptics.error();
     play(correct ? 'correct' : 'wrong');
     Animated.timing(resultAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
 

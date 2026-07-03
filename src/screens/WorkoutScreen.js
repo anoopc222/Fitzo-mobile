@@ -23,6 +23,7 @@ import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -3085,15 +3086,25 @@ export default function WorkoutScreen({ embedded = false } = {}) {
           </View>
 
         {!isLoading && visibleDayList.length === 0 && (
-          <View style={s.empty}>
-            <Ionicons name="barbell-outline" size={52} color={colors.textDim} />
-            <Text style={s.emptyTitle}>
-              {dayList.length === 0
+          sessions.length === 0 ? (
+            <EmptyState
+              emoji="🏋️"
+              title="No workouts logged yet"
+              subtitle="Start tracking to see your progress here"
+              actionLabel="Log Workout"
+              onAction={openNew}
+            />
+          ) : (
+            <EmptyState
+              emoji="📅"
+              title={dayList.length === 0
                 ? t('workout.noSessionsInMonth', { month: MONTH_NAMES[viewMonth - 1], year: viewYear })
                 : t('workout.allSessionsAreRestDays')}
-            </Text>
-            <Text style={s.emptySub}>{t('workout.tapPlusToLogWorkout')}</Text>
-          </View>
+              subtitle={t('workout.tapPlusToLogWorkout')}
+              actionLabel="Log Workout"
+              onAction={openNew}
+            />
+          )
         )}
 
         {visibleDayList.map(item => {

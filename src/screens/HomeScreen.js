@@ -28,6 +28,7 @@ import AchievementsRow from '../components/AchievementsRow';
 import LevelBadge from '../components/LevelBadge';
 import ChallengesCard from '../components/ChallengesCard';
 import StreakFreezeControl from '../components/StreakFreezeControl';
+import WaterTracker from '../components/WaterTracker';
 import { getFreezeState, syncFreezeAwards } from '../lib/streakFreeze';
 import { computeXP, computeLevel } from '../lib/levels';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
@@ -1388,6 +1389,9 @@ export default function HomeScreen() {
                 </View>
               </View>
             </TouchableOpacity>
+
+            {/* ── Water Tracker ─────────────────────────────────── */}
+            <WaterTracker userId={user?.id} />
 
             {/* ── Insight Cards (auto-rotating) ──────────────────── */}
             <ScrollView

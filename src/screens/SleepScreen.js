@@ -20,6 +20,7 @@ import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
+import EmptyState from '../components/EmptyState';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useNotificationPrefs } from '../context/NotificationContext';
 import { syncConditionalReminder } from '../lib/notifications';
@@ -813,6 +814,14 @@ export default function SleepScreen({ embedded = false } = {}) {
       >
         {isLoading ? (
           <SkeletonScreen cards={4} linesPerCard={3} />
+        ) : logs.length === 0 ? (
+          <EmptyState
+            emoji="😴"
+            title="No sleep logged yet"
+            subtitle="Start tracking to see your progress here"
+            actionLabel="Log Sleep"
+            onAction={() => setShowLogSheet(true)}
+          />
         ) : (
           <>
             {/* ── Recovery card ── */}

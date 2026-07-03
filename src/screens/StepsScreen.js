@@ -22,6 +22,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
+import EmptyState from '../components/EmptyState';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useNotificationPrefs } from '../context/NotificationContext';
 import { syncConditionalReminder } from '../lib/notifications';
@@ -1081,6 +1082,14 @@ export default function StepsScreen({ embedded = false } = {}) {
       >
         {isLoading ? (
           <SkeletonScreen cards={4} linesPerCard={3} />
+        ) : logs.length === 0 ? (
+          <EmptyState
+            emoji="👟"
+            title="No steps logged yet"
+            subtitle="Start tracking to see your progress here"
+            actionLabel="Log Steps"
+            onAction={() => setShowLogSheet(true)}
+          />
         ) : (
           <>
             {/* ── Hero ── */}

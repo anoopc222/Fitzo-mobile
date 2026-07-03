@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 import { useSound } from '../lib/useSound';
+import { haptics } from '../lib/haptics';
 
 const TARGETS = [
   { emoji: '💪', label: 'Tap the flex!' },
@@ -78,6 +79,7 @@ export default function ReactionTap({ userId }) {
     waitTimer.current = setTimeout(() => {
       startedAt.current = Date.now();
       play('go');
+      haptics.heavy();
       setPhase('active');
 
       // Animate target in
@@ -99,6 +101,7 @@ export default function ReactionTap({ userId }) {
     if (phase === 'waiting') {
       // Too soon
       clearTimeout(waitTimer.current);
+      haptics.error();
       setPhase('toosoon');
       return;
     }
@@ -110,6 +113,7 @@ export default function ReactionTap({ userId }) {
       const newHistory = [...history, ms].slice(-5);
       setHistory(newHistory);
       setReactionMs(ms);
+      if (ms < 300) haptics.success();
       play(ms < 300 ? 'correct' : 'reveal');
       setRound(r => r + 1);
 

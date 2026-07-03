@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, FlatList, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Keyboard, Modal,
@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -368,6 +369,51 @@ export default function FoodLogScreen({ embedded = false } = {}) {
     const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 150);
     return () => clearTimeout(t);
   }, [searchQuery]);
+
+  // Barcode scanner state
+  const [showScanner, setShowScanner] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const scanLockRef = useRef(false);
+
+  const handleBarcodeScanned = useCallback(async ({ data: barcode }) => {
+    if (scanLockRef.current) return;
+    scanLockRef.current = true;
+    setShowScanner(false);
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+      const json = await res.json();
+      if (!json.product) {
+        Alert.alert('Not Found', 'Product not found in Open Food Facts database.');
+        scanLockRef.current = false;
+        return;
+      }
+      const p = json.product;
+      const n = p.nutriments ?? {};
+      setSheetStep('manual');
+      setForm({
+        food_name: p.product_name ?? '',
+        calories: String(Math.round(n['energy-kcal_100g'] ?? 0)),
+        protein: String(Math.round((n['proteins_100g'] ?? 0) * 10) / 10),
+        carbs: String(Math.round((n['carbohydrates_100g'] ?? 0) * 10) / 10),
+        fats: String(Math.round((n['fat_100g'] ?? 0) * 10) / 10),
+      });
+    } catch (e) {
+      Alert.alert('Error', 'Failed to fetch product info. Please try again.');
+    }
+    scanLockRef.current = false;
+  }, []);
+
+  const openScanner = async () => {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert('Camera Permission', 'Camera access is needed to scan barcodes.');
+        return;
+      }
+    }
+    scanLockRef.current = false;
+    setShowScanner(true);
+  };
 
   // Detail step state
   const [selectedFood, setSelectedFood] = useState(null);
@@ -805,17 +851,25 @@ export default function FoodLogScreen({ embedded = false } = {}) {
 
             {sheetStep === 'search' && (
               <View style={[styles.searchStep, { paddingHorizontal: 16 }]}>
-                <View style={styles.searchBar}>
-                  <Ionicons name="search" size={16} color={colors.textDim} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder={t('foodLog.searchFoodsPlaceholder')}
-                    placeholderTextColor={colors.textDim}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    autoFocus
-                  />
-                  {searching && <ActivityIndicator size="small" color={colors.accent} />}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <View style={[styles.searchBar, { flex: 1, marginBottom: 0 }]}>
+                    <Ionicons name="search" size={16} color={colors.textDim} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder={t('foodLog.searchFoodsPlaceholder')}
+                      placeholderTextColor={colors.textDim}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      autoFocus
+                    />
+                    {searching && <ActivityIndicator size="small" color={colors.accent} />}
+                  </View>
+                  <TouchableOpacity
+                    onPress={openScanner}
+                    style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Ionicons name="camera" size={20} color={colors.accent} />
+                  </TouchableOpacity>
                 </View>
 
                 <FlatList
@@ -944,6 +998,28 @@ export default function FoodLogScreen({ embedded = false } = {}) {
         onSelect={(m, y) => { setMonth(m); setYear(y); }}
         onClose={() => setShowMonthPicker(false)}
       />
+
+      {/* Barcode Scanner Modal */}
+      <Modal visible={showScanner} animationType="slide" onRequestClose={() => setShowScanner(false)}>
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'qr'] }}
+            onBarcodeScanned={handleBarcodeScanned}
+          />
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <View style={{ width: 240, height: 160, borderWidth: 2, borderColor: 'rgba(212,255,0,0.7)', borderRadius: 16 }} />
+            <Text style={{ color: '#fff', marginTop: 16, fontSize: 13, fontWeight: '600', opacity: 0.85 }}>Point at a barcode</Text>
+          </View>
+          <TouchableOpacity
+            style={{ position: 'absolute', bottom: 48, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.75)', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}
+            onPress={() => setShowScanner(false)}
+          >
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       <Modal visible={showHeatmapModal} transparent animationType="fade" onRequestClose={() => setShowHeatmapModal(false)}>
         <View style={styles.hmOverlay}>
