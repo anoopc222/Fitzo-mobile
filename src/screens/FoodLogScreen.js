@@ -22,6 +22,8 @@ import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
 import MonthYearPicker from '../components/ui/MonthYearPicker';
 import { useExportCard } from '../hooks/useExportCard';
+import CalorieGuesser from '../components/CalorieGuesser';
+import HigherOrLower from '../components/HigherOrLower';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 const MEAL_ICONS = { Breakfast: 'sunny', Lunch: 'restaurant', Dinner: 'moon', Snack: 'cafe' };
@@ -252,6 +254,21 @@ function MacroBar({ label, value, target, color }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const pct = Math.min(100, Math.round((value / target) * 100));
+  const widthAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(widthAnim, {
+      toValue: pct,
+      duration: 800,
+      useNativeDriver: false,
+    }).start();
+  }, [pct]);
+
+  const animWidth = widthAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
+
   return (
     <View style={styles.macroBarWrap}>
       <View style={styles.macroBarHeader}>
@@ -259,7 +276,7 @@ function MacroBar({ label, value, target, color }) {
         <Text style={[styles.macroBarVal, { color }]}>{value}<Text style={styles.macroBarUnit}> / {target}</Text></Text>
       </View>
       <View style={styles.macroBarBg}>
-        <View style={[styles.macroBarFill, { width: `${pct}%`, backgroundColor: color }]} />
+        <Animated.View style={[styles.macroBarFill, { width: animWidth, backgroundColor: color }]} />
       </View>
       <Text style={styles.macroBarPct}>{pct}%</Text>
     </View>
@@ -673,6 +690,10 @@ export default function FoodLogScreen({ embedded = false } = {}) {
             </View>
 
             <MacroSlotsCard show={showSlots} onDismiss={() => setShowSlots(false)} colors={colors} />
+
+            <CalorieGuesser userId={user.id} />
+
+            <HigherOrLower userId={user.id} />
 
             {/* ── Monthly Calorie Heatmap (opens in popup) ── */}
             <TouchableOpacity style={[styles.card, styles.hmTabRow]} onPress={() => setShowHeatmapModal(true)} activeOpacity={0.8}>

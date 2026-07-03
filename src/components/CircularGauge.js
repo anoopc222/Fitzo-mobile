@@ -1,6 +1,9 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+
+// AnimatedCircle lets us drive SVG strokeDashoffset from Animated.Value
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export default function CircularGauge({
   percent = 0,
@@ -19,13 +22,41 @@ export default function CircularGauge({
   const cy = size / 2;
   const circumference = 2 * Math.PI * r;
   const progress = Math.min(100, Math.max(0, percent));
-  const dashOffset = circumference - (progress / 100) * circumference;
+
+  const animPct = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(animPct, {
+      toValue: progress,
+      duration: 900,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  const dashOffset = animPct.interpolate({
+    inputRange: [0, 100],
+    outputRange: [circumference, circumference - (progress / 100) * circumference],
+  });
+
+  // Count-up for the value text
+  const countAnim = useRef(new Animated.Value(0)).current;
+  const numericValue = typeof value === 'number' ? value : parseFloat(value);
+  const hasNumeric = !isNaN(numericValue);
+
+  useEffect(() => {
+    if (!hasNumeric) return;
+    Animated.timing(countAnim, {
+      toValue: numericValue,
+      duration: 900,
+      useNativeDriver: false,
+    }).start();
+  }, [numericValue]);
 
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Circle cx={cx} cy={cy} r={r} fill="none" stroke={bgColor} strokeWidth={strokeWidth} />
-        <Circle
+        <AnimatedCircle
           cx={cx}
           cy={cy}
           r={r}
@@ -40,14 +71,28 @@ export default function CircularGauge({
       </Svg>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         {value !== undefined && (
-          <Text
-            style={[
-              { color: '#ffffff', fontWeight: '800', fontSize: Math.round(size * 0.2) },
-              valueStyle,
-            ]}
-          >
-            {value}
-          </Text>
+          hasNumeric ? (
+            <Animated.Text
+              style={[
+                { color: '#ffffff', fontWeight: '800', fontSize: Math.round(size * 0.2) },
+                valueStyle,
+              ]}
+            >
+              {countAnim.interpolate({
+                inputRange: [0, numericValue || 1],
+                outputRange: ['0', String(value)],
+              })}
+            </Animated.Text>
+          ) : (
+            <Text
+              style={[
+                { color: '#ffffff', fontWeight: '800', fontSize: Math.round(size * 0.2) },
+                valueStyle,
+              ]}
+            >
+              {value}
+            </Text>
+          )
         )}
         {label && (
           <Text
