@@ -1365,6 +1365,7 @@ export default function HomeScreen() {
               style={{
                 backgroundColor: colors.bgCard,
                 marginHorizontal: 16,
+                marginTop: 10,
                 marginBottom: 10,
                 borderRadius: 16,
                 borderWidth: 1,
