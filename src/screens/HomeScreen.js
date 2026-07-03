@@ -37,6 +37,7 @@ import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useMoreMenu } from '../context/MoreMenuContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DailySpin from '../components/DailySpin';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -1338,6 +1339,8 @@ export default function HomeScreen() {
             )}
 
             <AchievementsRow home={data} />
+
+            <DailySpin userId={user.id} />
 
             {/* ── Insight Cards (auto-rotating) ──────────────────── */}
             <ScrollView

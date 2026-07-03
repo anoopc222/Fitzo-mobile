@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, FlatList, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Keyboard, Modal,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -266,6 +266,57 @@ function MacroBar({ label, value, target, color }) {
   );
 }
 
+const SLOT_COMBOS = ['🥗🥗🥗', '💪💪💪', '🔥🔥🔥', '⚡⚡⚡', '🏆🏆🏆'];
+const SLOT_SPIN = ['🥗', '💪', '🔥', '⚡', '🏆', '🥑', '🍎', '💧'];
+
+function MacroSlotsCard({ show, onDismiss, colors }) {
+  const col1 = useRef(new Animated.Value(0)).current;
+  const col2 = useRef(new Animated.Value(0)).current;
+  const col3 = useRef(new Animated.Value(0)).current;
+  const [settled, setSettled] = useState(false);
+  const [combo] = useState(() => SLOT_COMBOS[Math.floor(Math.random() * SLOT_COMBOS.length)]);
+  const [displayEmoji, setDisplayEmoji] = useState(['🎰', '🎰', '🎰']);
+
+  useEffect(() => {
+    if (!show) { setSettled(false); setDisplayEmoji(['🎰', '🎰', '🎰']); return; }
+    setSettled(false);
+    const emojis = combo.match(/\p{Emoji_Presentation}|\p{Emoji}️/gu) ?? ['🔥', '🔥', '🔥'];
+    let tick = 0;
+    const iv = setInterval(() => {
+      tick++;
+      setDisplayEmoji([
+        tick < 18 ? SLOT_SPIN[tick % SLOT_SPIN.length] : emojis[0],
+        tick < 22 ? SLOT_SPIN[(tick + 3) % SLOT_SPIN.length] : emojis[1],
+        tick < 26 ? SLOT_SPIN[(tick + 5) % SLOT_SPIN.length] : emojis[2],
+      ]);
+      if (tick >= 26) { clearInterval(iv); setSettled(true); }
+    }, 80);
+    return () => clearInterval(iv);
+  }, [show]);
+
+  if (!show) return null;
+  return (
+    <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.accent + '60', padding: 14, marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>🎰 Macro Jackpot!</Text>
+        <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={{ fontSize: 11, color: colors.textMuted }}>✕</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
+        {displayEmoji.map((e, i) => (
+          <View key={i} style={{ width: 52, height: 52, borderRadius: 10, backgroundColor: colors.bgElevated, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: settled ? colors.accent : colors.border }}>
+            <Text style={{ fontSize: 26 }}>{e}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={{ fontSize: 12, color: settled ? colors.success : colors.textDim, textAlign: 'center', fontWeight: settled ? '700' : '400' }}>
+        {settled ? '🏆 You nailed your calories today!' : 'Spinning…'}
+      </Text>
+    </View>
+  );
+}
+
 export default function FoodLogScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -285,6 +336,8 @@ export default function FoodLogScreen({ embedded = false } = {}) {
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showSlots, setShowSlots] = useState(false);
+  const prevCalPctRef = useRef(null);
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -516,6 +569,15 @@ export default function FoodLogScreen({ embedded = false } = {}) {
 
   // Calorie ring percentage
   const calPct = Math.min(100, Math.round((totals.calories / targets.calories) * 100));
+
+  useEffect(() => {
+    const prev = prevCalPctRef.current;
+    prevCalPctRef.current = calPct;
+    if (prev !== null && (prev < 95 || prev > 105) && calPct >= 95 && calPct <= 105) {
+      setShowSlots(true);
+    }
+  }, [calPct]);
+
   const Wrap = embedded ? View : SafeAreaView;
 
   return (
@@ -609,6 +671,8 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                 </View>
               </ExportCardTemplate>
             </View>
+
+            <MacroSlotsCard show={showSlots} onDismiss={() => setShowSlots(false)} colors={colors} />
 
             {/* ── Monthly Calorie Heatmap (opens in popup) ── */}
             <TouchableOpacity style={[styles.card, styles.hmTabRow]} onPress={() => setShowHeatmapModal(true)} activeOpacity={0.8}>

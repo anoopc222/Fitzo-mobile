@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions,
+  TextInput, Alert, ActivityIndicator, RefreshControl, Dimensions, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -534,6 +534,57 @@ function StepsHeatmap({ year, month, logsByDate, goal, colors, hasAccess = true,
 }
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
+function PacerCard({ todaySteps, goal, colors, t }) {
+  const now = new Date();
+  const minuteOfDay = now.getHours() * 60 + now.getMinutes();
+  const expectedNow = Math.round(goal * (minuteOfDay / 1440));
+  const delta = todaySteps - expectedNow;
+  const pct = Math.min(1, todaySteps / Math.max(goal, 1));
+  const expectedPct = Math.min(1, expectedNow / Math.max(goal, 1));
+  const ahead = delta >= 0;
+  const barWidth = Dimensions.get('window').width - 64;
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.18, duration: 600, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  return (
+    <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 14 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>🏃 Pacer</Text>
+        <Text style={{ fontSize: 11, color: ahead ? colors.success : colors.warn, fontWeight: '700' }}>
+          {ahead ? `+${delta.toLocaleString()} ahead` : `${Math.abs(delta).toLocaleString()} behind`}
+        </Text>
+      </View>
+
+      <View style={{ height: 8, backgroundColor: colors.bgElevated, borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
+        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: expectedPct * barWidth, backgroundColor: colors.border, borderRadius: 4 }} />
+        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: pct * barWidth, backgroundColor: ahead ? colors.success : colors.warn, borderRadius: 4, opacity: 0.9 }} />
+      </View>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+        <Text style={{ fontSize: 11, color: colors.textDim }}>{todaySteps.toLocaleString()} steps</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Animated.Text style={{ fontSize: 12, transform: [{ scale: ahead ? 1 : pulseAnim }] }}>
+            {ahead ? '🏆' : '⚡'}
+          </Animated.Text>
+          <Text style={{ fontSize: 11, color: colors.textDim }}>
+            {ahead ? `Goal: ${goal.toLocaleString()}` : `Need ${Math.abs(delta).toLocaleString()} to catch pace`}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function StepsScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -1116,6 +1167,8 @@ export default function StepsScreen({ embedded = false } = {}) {
                 )}
               </View>
             </View>
+
+            <PacerCard todaySteps={todaySteps} goal={defaultGoal} colors={colors} t={t} />
 
             <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
               <ExportCardTemplate ref={heroExport.ref} title={t('steps.exportTitle')} subtitle={`${MONTH_NAMES[month]} ${year}`} colors={colors} width={340}>
