@@ -48,25 +48,57 @@ export default function GameLeaderboard({ game, userId, visible, onClose }) {
   useEffect(() => {
     if (!visible) return;
     setLoading(true);
+
     supabase
       .from('game_scores')
-      .select('user_id, score, updated_at, profiles(full_name)')
+      .select('user_id, score, updated_at')
       .eq('game', game)
       .order('score', { ascending: meta.lowerIsBetter })
       .limit(10)
-      .then(({ data }) => {
-        const results = (data ?? []).map((r, i) => ({
+      .then(async ({ data, error }) => {
+        if (error) { setLoading(false); return; }
+        const rows = data ?? [];
+
+        // Fetch profile names for all user_ids in one query
+        let nameMap = {};
+        if (rows.length > 0) {
+          const ids = rows.map(r => r.user_id);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', ids);
+          (profiles ?? []).forEach(p => { nameMap[p.id] = p.full_name; });
+        }
+
+        const results = rows.map((r, i) => ({
           rank: i + 1,
-          name: r.profiles?.full_name ?? 'Anonymous',
+          name: nameMap[r.user_id] ?? 'Anonymous',
           score: r.score,
           isMe: r.user_id === userId,
         }));
         setRows(results);
+
+        // If user not in top 10, fetch their rank separately
         const myRow = results.find(r => r.isMe);
-        setMyRank(myRow?.rank ?? null);
+        if (myRow) {
+          setMyRank(myRow.rank);
+        } else if (userId) {
+          const { count } = await supabase
+            .from('game_scores')
+            .select('*', { count: 'exact', head: true })
+            .eq('game', game)
+            .filter('score', meta.lowerIsBetter ? 'lt' : 'gt',
+              (await supabase.from('game_scores').select('score').eq('game', game).eq('user_id', userId).single()).data?.score ?? 0
+            );
+          setMyRank(count != null ? count + 1 : null);
+        } else {
+          setMyRank(null);
+        }
+
         setLoading(false);
-      });
-  }, [visible, game]);
+      })
+      .catch(() => setLoading(false));
+  }, [visible, game, userId]);
 
   function formatScore(score) {
     if (meta.lowerIsBetter && meta.unit === 's') return `${(score / 1000).toFixed(2)}s`;

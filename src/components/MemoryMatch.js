@@ -35,7 +35,7 @@ function fmtTime(ms) {
 export default function MemoryMatch({ userId }) {
   const { colors } = useTheme();
 
-  const [cards] = useState(makeCards);
+  const [cards, setCards] = useState(makeCards);
   const [revealed, setRevealed] = useState(new Set());
   const [matched, setMatched] = useState(new Set());
   const [pending, setPending] = useState([]); // up to 2 card IDs awaiting check
@@ -153,6 +153,7 @@ export default function MemoryMatch({ userId }) {
 
   const reset = useCallback(() => {
     clearInterval(timerRef.current);
+    setCards(makeCards());
     setRevealed(new Set());
     setMatched(new Set());
     setPending([]);
@@ -162,9 +163,6 @@ export default function MemoryMatch({ userId }) {
     setElapsed(0);
     setWon(false);
     winAnim.setValue(0);
-    // Regen cards by navigating away isn't possible here; just reset state
-    // Cards array is stable from useState(makeCards) — reshuffle by key trick not available,
-    // so we keep same cards but reset all state (works fine for replay)
   }, [winAnim]);
 
   const CARD_W = Math.floor((Dimensions.get('window').width - 64) / 4);

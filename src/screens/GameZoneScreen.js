@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  StatusBar, Dimensions,
+  StatusBar, Dimensions, findNodeHandle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -72,9 +72,10 @@ export default function GameZoneScreen({ navigation }) {
 
   function scrollToGame(key) {
     const ref = gameRefs.current[key];
-    if (ref && scrollRef.current) {
+    const scrollNode = findNodeHandle(scrollRef.current);
+    if (ref && scrollNode) {
       ref.measureLayout(
-        scrollRef.current,
+        scrollNode,
         (_x, y) => scrollRef.current.scrollTo({ y: y - 16, animated: true }),
         () => {}
       );

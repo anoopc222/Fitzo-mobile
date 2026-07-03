@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import { useSound } from '../lib/useSound';
+import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 
 const DARES = [
   { emoji: '💪', text: 'Do 10 squats right now' },
@@ -48,12 +49,15 @@ export default function DailySpin({ userId }) {
   ).current;
 
   useEffect(() => {
+    if (!userId) return;
     AsyncStorage.getItem(todayKey(userId)).then(raw => {
       if (!raw) return;
-      const saved = JSON.parse(raw);
-      setDareIndex(saved.dare);
-      setDone(saved.done ?? false);
-      setDisplayIdx(saved.dare);
+      try {
+        const saved = JSON.parse(raw);
+        setDareIndex(saved.dare);
+        setDone(saved.done ?? false);
+        setDisplayIdx(saved.dare);
+      } catch {}
     });
   }, [userId]);
 
@@ -82,6 +86,7 @@ export default function DailySpin({ userId }) {
     setDone(true);
     play('win');
     AsyncStorage.setItem(todayKey(userId), JSON.stringify({ dare: dareIndex, done: true }));
+    upsertGameScore(userId, 'dailySpin', 1);
     burst();
   }
 

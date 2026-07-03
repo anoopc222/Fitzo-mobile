@@ -114,29 +114,28 @@ export default function CalorieGuesser({ userId }) {
   }
 
   function nextRound() {
-    if (round >= 5) {
+    const isGameOver = round >= 5;
+    if (isGameOver) {
       play('win');
-      // Game over — save best
       if (totalScore > best) {
         setBest(totalScore);
         AsyncStorage.setItem(BEST_KEY(userId), String(totalScore));
         upsertGameScore(userId, 'calorieGuesser', totalScore);
       }
-      // Reset
       setRound(1);
       setTotalScore(0);
-      seen.clear();
+      setSeen(new Set());
     } else {
       setRound(r => r + 1);
     }
 
-    // Pick new food
-    const available = FOODS.map((_, i) => i).filter(i => !seen.has(i) && i !== foodIdx);
+    // Build next seen set (don't mutate state directly)
+    const nextSeen = isGameOver ? new Set() : new Set([...seen, foodIdx]);
+    const available = FOODS.map((_, i) => i).filter(i => !nextSeen.has(i) && i !== foodIdx);
     const nextIdx = available.length > 0
       ? available[Math.floor(Math.random() * available.length)]
       : Math.floor(Math.random() * FOODS.length);
-    seen.add(foodIdx);
-    setSeen(new Set(seen));
+    if (!isGameOver) setSeen(nextSeen);
     setFoodIdx(nextIdx);
 
     const mid = TRACK_W / 2;
