@@ -9,7 +9,6 @@ import { BlurView } from 'expo-blur';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Svg, { Circle as SvgCircle, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -202,49 +201,6 @@ function HeatmapPreview({ caloriesByDate, target, colors }) {
   );
 }
 
-// ─── Macro Donut Chart ────────────────────────────────────────────────────────
-function MacroDonutChart({ protein, carbs, fats, calories }) {
-  const SIZE = 100, STROKE = 18, R = (SIZE - STROKE) / 2;
-  const CIRC = 2 * Math.PI * R;
-  const total = protein * 4 + carbs * 4 + fats * 9;
-  if (total <= 0) return null;
-  const proteinDash = (protein * 4 / total) * CIRC;
-  const carbsDash = (carbs * 4 / total) * CIRC;
-  const fatsDash = (fats * 9 / total) * CIRC;
-  const cx = SIZE / 2, cy = SIZE / 2;
-  let offset = 0;
-  const segments = [
-    { color: '#45b7d1', dash: proteinDash, label: 'P' },
-    { color: '#f59e0b', dash: carbsDash, label: 'C' },
-    { color: '#ff6b6b', dash: fatsDash, label: 'F' },
-  ];
-  return (
-    <Svg width={SIZE} height={SIZE}>
-      {segments.map((seg, i) => {
-        const dashOffset = CIRC - seg.dash;
-        const rotateOffset = (offset / CIRC) * 360 - 90;
-        offset += seg.dash;
-        if (seg.dash <= 0) return null;
-        return (
-          <SvgCircle
-            key={i}
-            cx={cx} cy={cy} r={R}
-            fill="none"
-            stroke={seg.color}
-            strokeWidth={STROKE}
-            strokeDasharray={`${seg.dash} ${CIRC - seg.dash}`}
-            strokeDashoffset={dashOffset}
-            rotation={rotateOffset}
-            origin={`${cx}, ${cy}`}
-            strokeLinecap="butt"
-          />
-        );
-      })}
-      <SvgText x={cx} y={cy - 6} textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="800">{Math.round(calories)}</SvgText>
-      <SvgText x={cx} y={cy + 8} textAnchor="middle" fill="#888" fontSize="9">kcal</SvgText>
-    </Svg>
-  );
-}
 
 // ─── Custom Foods DB ──────────────────────────────────────────────────────────
 async function fetchCustomFoods(userId) {
@@ -801,26 +757,6 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                   <MacroBar label={t('foodLog.fats')} value={Math.round(totals.fats)} target={targets.fats} color={colors.warning} />
                 </View>
 
-                {/* Macro Donut Chart */}
-                {(totals.protein > 0 || totals.carbs > 0 || totals.fats > 0) && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, gap: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.border }}>
-                    <MacroDonutChart protein={totals.protein} carbs={totals.carbs} fats={totals.fats} calories={totals.calories} />
-                    <View style={{ flex: 1, gap: 6 }}>
-                      {[
-                        { label: t('foodLog.protein'), pct: Math.round((totals.protein * 4) / Math.max(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9, 1) * 100), color: '#45b7d1', val: Math.round(totals.protein) },
-                        { label: t('foodLog.carbs'), pct: Math.round((totals.carbs * 4) / Math.max(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9, 1) * 100), color: '#f59e0b', val: Math.round(totals.carbs) },
-                        { label: t('foodLog.fats'), pct: Math.round((totals.fats * 9) / Math.max(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9, 1) * 100), color: '#ff6b6b', val: Math.round(totals.fats) },
-                      ].map(m => (
-                        <View key={m.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: m.color }} />
-                          <Text style={{ fontSize: 10, color: colors.textMuted, flex: 1 }}>{m.label}</Text>
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: m.color }}>{m.val}g</Text>
-                          <Text style={{ fontSize: 10, color: colors.textDim, width: 32, textAlign: 'right' }}>{m.pct}%</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
               </View>
             </View>
 
