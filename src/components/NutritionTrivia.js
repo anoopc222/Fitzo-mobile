@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 
 const QUESTIONS = [
   { q: 'Which has more protein per 100g?', a: 'Chicken breast', b: 'Greek yogurt', correct: 'a', fact: 'Chicken breast has ~31g vs Greek yogurt ~10g protein.' },
@@ -58,6 +59,7 @@ export default function NutritionTrivia({ userId }) {
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [showBoard, setShowBoard] = useState(false);
   const [bestScore, setBestScore] = useState(null);
 
   const feedbackAnim = useRef(new Animated.Value(0)).current;
@@ -102,6 +104,7 @@ export default function NutritionTrivia({ userId }) {
         setDone(true);
         AsyncStorage.setItem(todayKey(userId), JSON.stringify({ score: newScore, answered: newAnswered, done: true, bestScore: newBest }));
         setBestScore(newBest);
+        upsertGameScore(userId, 'nutritionTrivia', newScore);
       } else {
         setScore(newScore);
         setAnswered(newAnswered);
@@ -119,6 +122,9 @@ export default function NutritionTrivia({ userId }) {
         <Text style={s.title}>🧠 Daily Trivia</Text>
         <View style={s.headerRight}>
           {bestScore !== null && <Text style={s.bestBadge}>🏅 Best: {bestScore}/3</Text>}
+          <TouchableOpacity onPress={() => setShowBoard(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={{ fontSize: 16 }}>🏆</Text>
+          </TouchableOpacity>
           <View style={s.dotRow}>
             {[0,1,2].map(i => (
               <View key={i} style={[s.dot, answered[i] === 'correct' && s.dotCorrect, answered[i] === 'wrong' && s.dotWrong]} />
@@ -170,6 +176,7 @@ export default function NutritionTrivia({ userId }) {
           </Animated.View>
         )
       )}
+      <GameLeaderboard game="nutritionTrivia" userId={userId} visible={showBoard} onClose={() => setShowBoard(false)} />
     </View>
   );
 }

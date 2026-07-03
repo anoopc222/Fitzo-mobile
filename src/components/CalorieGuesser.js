@@ -6,6 +6,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
+import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 
 // [name, emoji, calories per 100g, hint]
 const FOODS = [
@@ -63,6 +64,7 @@ export default function CalorieGuesser({ userId }) {
   const [round, setRound] = useState(1);
   const [best, setBest] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
+  const [showBoard, setShowBoard] = useState(false);
   const [seen, setSeen] = useState(new Set());
 
   const sliderX = useRef(new Animated.Value((guess / SLIDER_MAX) * TRACK_W)).current;
@@ -114,6 +116,7 @@ export default function CalorieGuesser({ userId }) {
       if (totalScore > best) {
         setBest(totalScore);
         AsyncStorage.setItem(BEST_KEY(userId), String(totalScore));
+        upsertGameScore(userId, 'calorieGuesser', totalScore);
       }
       // Reset
       setRound(1);
@@ -151,6 +154,9 @@ export default function CalorieGuesser({ userId }) {
         <View style={s.headerRight}>
           {best > 0 && <Text style={s.bestBadge}>🏅 Best: {best}</Text>}
           <Text style={s.roundBadge}>Round {round}/5</Text>
+          <TouchableOpacity onPress={() => setShowBoard(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={{ fontSize: 16 }}>🏆</Text>
+          </TouchableOpacity>
           <Text style={s.chevron}>{collapsed ? '▸' : '▾'}</Text>
         </View>
       </TouchableOpacity>
@@ -213,6 +219,7 @@ export default function CalorieGuesser({ userId }) {
           )}
         </>
       )}
+      <GameLeaderboard game="calorieGuesser" userId={userId} visible={showBoard} onClose={() => setShowBoard(false)} />
     </View>
   );
 }
