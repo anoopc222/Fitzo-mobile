@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
+import { useSound } from '../lib/useSound';
 
 const EMOJIS = ['💪', '🔥', '🏆', '🧘', '⚡', '💧', '🥗', '🏃'];
 const CARD_COUNT = 16; // 8 pairs
@@ -38,6 +39,7 @@ export default function MemoryMatch({ userId }) {
   const [revealed, setRevealed] = useState(new Set());
   const [matched, setMatched] = useState(new Set());
   const [pending, setPending] = useState([]); // up to 2 card IDs awaiting check
+  const { play } = useSound();
   const [locked, setLocked] = useState(false);
   const [moves, setMoves] = useState(0);
   const [startTime, setStartTime] = useState(null);
@@ -92,6 +94,7 @@ export default function MemoryMatch({ userId }) {
     const nextRevealed = new Set(revealed);
     nextRevealed.add(id);
     setRevealed(nextRevealed);
+    play('flip');
 
     const nextPending = [...pending, id];
 
@@ -117,6 +120,7 @@ export default function MemoryMatch({ userId }) {
       setMatched(nextMatched);
       popCard(a);
       popCard(b);
+      play('match');
       setLocked(false);
 
       if (nextMatched.size === CARD_COUNT) {
@@ -125,6 +129,7 @@ export default function MemoryMatch({ userId }) {
         const finalTime = Date.now() - startTime;
         setElapsed(finalTime);
         setWon(true);
+        play('win');
         if (!bestTime || finalTime < bestTime) {
           setBestTime(finalTime);
           AsyncStorage.setItem(storageKey(userId), String(finalTime));
@@ -134,6 +139,7 @@ export default function MemoryMatch({ userId }) {
       }
     } else {
       // Mismatch — hide after 800ms
+      play('wrong');
       shake();
       setTimeout(() => {
         const reverted = new Set(nextRevealed);
@@ -143,7 +149,7 @@ export default function MemoryMatch({ userId }) {
         setLocked(false);
       }, 800);
     }
-  }, [locked, matched, revealed, pending, startTime, cards, popCard, shake, bestTime, userId, winAnim]);
+  }, [locked, matched, revealed, pending, startTime, cards, popCard, shake, bestTime, userId, winAnim, play]);
 
   const reset = useCallback(() => {
     clearInterval(timerRef.current);

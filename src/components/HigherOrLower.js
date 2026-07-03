@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
+import { useSound } from '../lib/useSound';
 
 // [name, calories per 100g, emoji]
 const FOODS = [
@@ -40,6 +41,7 @@ const BEST_KEY = (userId) => `fitzo:higherLower:${userId}:best`;
 export default function HigherOrLower({ userId }) {
   const { colors } = useTheme();
   const s = styles(colors);
+  const { play } = useSound();
 
   const [pair, setPair] = useState(() => {
     const s2 = shuffle(FOODS);
@@ -67,6 +69,7 @@ export default function HigherOrLower({ userId }) {
     const correct = higherIdx === actualHigherIdx;
 
     setResult(correct ? 'correct' : 'wrong');
+    play(correct ? 'correct' : 'wrong');
     Animated.timing(resultAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
 
     if (correct) {
@@ -76,6 +79,7 @@ export default function HigherOrLower({ userId }) {
         setBest(newStreak);
         AsyncStorage.setItem(BEST_KEY(userId), String(newStreak));
         upsertGameScore(userId, 'higherOrLower', newStreak);
+        if (newStreak >= 5) play('win');
       }
       setTimeout(() => {
         resultAnim.setValue(0);
