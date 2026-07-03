@@ -539,15 +539,26 @@ async function fetchHome(userId) {
 
 // ─── quick nav ──────────────────────────────────────────────────────────────
 // ─── Day Detail Modal ────────────────────────────────────────────────────────
-function DayStat({ icon, value, label, color }) {
+function DayStat({ icon, value, label, color, index = 0 }) {
   const { colors } = useTheme();
   const ddS = useMemo(() => createDdS(colors), [colors]);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(14)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, delay: index * 80, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 350, delay: index * 80, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   return (
-    <View style={ddS.dayStat}>
+    <Animated.View style={[ddS.dayStat, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
       <Text style={ddS.dayStatIcon}>{icon}</Text>
       <Text style={[ddS.dayStatValue, { color }]}>{value}</Text>
       <Text style={ddS.dayStatLabel}>{label}</Text>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -622,10 +633,10 @@ function DayDetailModal({ visible, dateStr, session, userId, onClose }) {
 
           {/* Daily stat tiles */}
           <View style={ddS.dayStatsRow}>
-            <DayStat icon="⚖️" value={dd?.weight != null ? String(dd.weight) : '—'} label={t('home.weightLabel')} color={C_WEIGHT} />
-            <DayStat icon="👟" value={dd?.steps  != null ? fmtK(dd.steps)    : '—'} label={t('home.stepsLabel')}  color={C_STEPS}  />
-            <DayStat icon="🌙" value={dd?.sleep  != null ? `${dd.sleep}h`    : '—'} label={t('home.sleepLabel')}  color={C_SLEEP}  />
-            <DayStat icon="🔥" value={dd?.kcal   != null ? String(dd.kcal)   : '—'} label={t('home.kcalLabel')}   color={C_KCAL}   />
+            <DayStat index={0} icon="⚖️" value={dd?.weight != null ? String(dd.weight) : '—'} label={t('home.weightLabel')} color={C_WEIGHT} />
+            <DayStat index={1} icon="👟" value={dd?.steps  != null ? fmtK(dd.steps)    : '—'} label={t('home.stepsLabel')}  color={C_STEPS}  />
+            <DayStat index={2} icon="🌙" value={dd?.sleep  != null ? `${dd.sleep}h`    : '—'} label={t('home.sleepLabel')}  color={C_SLEEP}  />
+            <DayStat index={3} icon="🔥" value={dd?.kcal   != null ? String(dd.kcal)   : '—'} label={t('home.kcalLabel')}   color={C_KCAL}   />
           </View>
 
           {/* Workout section */}
@@ -1005,9 +1016,18 @@ function StepsTrendChart({ current, previous, goal, colors, width }) {
 }
 
 // ─── Actionable nudge card (e.g. "No weigh-in for 4 days" + Log) ───────────
-function NudgeCard({ icon, color, title, sub, styles, onPress, logLabel, logBadge }) {
+function NudgeCard({ icon, color, title, sub, styles, onPress, logLabel, logBadge, index = 0 }) {
   const { t } = useTranslation();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 380, delay: index * 70, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, delay: index * 70, useNativeDriver: true, tension: 80, friction: 10 }),
+    ]).start();
+  }, []);
   return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
     <TouchableOpacity style={styles.nudgeCard} onPress={onPress} activeOpacity={0.8}>
       <View style={[styles.nudgeIconWrap, { backgroundColor: color + '1f' }]}>
         <Ionicons name={icon} size={16} color={color} />
@@ -1028,6 +1048,7 @@ function NudgeCard({ icon, color, title, sub, styles, onPress, logLabel, logBadg
         </View>
       )}
     </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -1732,6 +1753,7 @@ export default function HomeScreen() {
             {/* ── Actionable nudge cards ────────────────────────── */}
             {(!data?.latestWeight || data.daysSinceWeight >= 2) && (
               <NudgeCard
+                index={0}
                 icon="scale-outline"
                 color={C_WEIGHT}
                 title={data?.latestWeight ? t('home.noWeighInForDays', { count: data.daysSinceWeight }) : t('home.noWeighInsYet')}
@@ -1744,6 +1766,7 @@ export default function HomeScreen() {
             )}
             {!data?.hasTodayWorkout && (
               <NudgeCard
+                index={1}
                 icon="trophy-outline"
                 color={colors.warning}
                 title={data?.lastWorkoutDate ? t('home.restDayNoSession') : t('home.noSessionToday')}
@@ -1759,6 +1782,7 @@ export default function HomeScreen() {
             )}
             {(!data?.latestSteps || data.daysSinceSteps >= 1) && (
               <NudgeCard
+                index={2}
                 icon="footsteps-outline"
                 color={C_STEPS}
                 title={data?.latestSteps ? t('home.noStepsLoggedForDays', { count: data.daysSinceSteps }) : t('home.noStepsLoggedYet')}
@@ -1771,6 +1795,7 @@ export default function HomeScreen() {
             )}
             {(!data?.latestSleep || data.daysSinceSleep >= 1) && (
               <NudgeCard
+                index={3}
                 icon="moon-outline"
                 color={C_SLEEP}
                 title={data?.latestSleep ? t('home.noSleepLoggedForDays', { count: data.daysSinceSleep }) : t('home.noSleepLoggedYet')}
@@ -1783,6 +1808,7 @@ export default function HomeScreen() {
             )}
             {sessionsLeft > 0 && thisWeekSessions > 0 && (
               <NudgeCard
+                index={4}
                 icon="trophy"
                 color={C_GREEN}
                 title={t('home.almostThereSessions', { count: sessionsLeft })}

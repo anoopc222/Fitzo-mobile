@@ -252,6 +252,21 @@ function MacroBar({ label, value, target, color }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const pct = Math.min(100, Math.round((value / target) * 100));
+  const widthAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(widthAnim, {
+      toValue: pct,
+      duration: 800,
+      useNativeDriver: false,
+    }).start();
+  }, [pct]);
+
+  const animWidth = widthAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
+
   return (
     <View style={styles.macroBarWrap}>
       <View style={styles.macroBarHeader}>
@@ -259,7 +274,7 @@ function MacroBar({ label, value, target, color }) {
         <Text style={[styles.macroBarVal, { color }]}>{value}<Text style={styles.macroBarUnit}> / {target}</Text></Text>
       </View>
       <View style={styles.macroBarBg}>
-        <View style={[styles.macroBarFill, { width: `${pct}%`, backgroundColor: color }]} />
+        <Animated.View style={[styles.macroBarFill, { width: animWidth, backgroundColor: color }]} />
       </View>
       <Text style={styles.macroBarPct}>{pct}%</Text>
     </View>

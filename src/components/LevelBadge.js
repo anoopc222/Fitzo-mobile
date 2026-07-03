@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView, Animated } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
@@ -14,12 +14,40 @@ export default function LevelBadge({ home }) {
   const breakdown = useMemo(() => computeXPBreakdown(home), [home]);
   const level = useMemo(() => computeLevel(xp), [xp]);
 
+  // Animate the XP bar fill
+  const fillAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    Animated.timing(fillAnim, {
+      toValue: level.progressPct,
+      duration: 1100,
+      delay: 300,
+      useNativeDriver: false,
+    }).start();
+
+    // Subtle glow pulse on the fill bar
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 1200, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0.6, duration: 1200, useNativeDriver: false }),
+      ])
+    ).start();
+  }, [level.progressPct]);
+
+  const animWidth = fillAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
+
+  const animOpacity = glowAnim;
+
   return (
     <>
       <TouchableOpacity style={styles.wrap} onPress={() => setShowDetail(true)} activeOpacity={0.8}>
         <Text style={styles.levelText}>LV {level.level} · {t(level.titleKey).toUpperCase()}</Text>
         <View style={styles.track}>
-          <View style={[styles.fill, { width: `${level.progressPct}%` }]} />
+          <Animated.View style={[styles.fill, { width: animWidth, opacity: animOpacity }]} />
         </View>
         <Text style={styles.xpText}>{level.xpIntoLevel}/{level.xpForNextLevel} XP</Text>
       </TouchableOpacity>
@@ -30,7 +58,7 @@ export default function LevelBadge({ home }) {
             <Text style={styles.sheetLevel}>{t('gamification.levelDetailTitle', { level: level.level })}</Text>
             <Text style={styles.sheetTitle}>{t(level.titleKey)}</Text>
             <View style={styles.sheetTrack}>
-              <View style={[styles.sheetFill, { width: `${level.progressPct}%` }]} />
+              <Animated.View style={[styles.sheetFill, { width: animWidth }]} />
             </View>
             <Text style={styles.sheetXp}>
               {t('gamification.xpToNextLevel', { xpIntoLevel: level.xpIntoLevel, xpForNextLevel: level.xpForNextLevel, nextLevel: level.level + 1 })}
