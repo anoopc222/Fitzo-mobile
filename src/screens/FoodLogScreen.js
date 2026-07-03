@@ -153,12 +153,13 @@ function CalorieHeatmap({ year, month, caloriesByDate, colors, hasAccess = true,
 }
 
 async function fetchFoodLog(userId, date) {
+  const tz = tzOffset();
   const [logs, profile] = await Promise.all([
     supabase.from('food_logs')
       .select('id, food_name, calories, protein, carbs, fats, serving_size, meal_type, logged_at')
       .eq('user_id', userId)
-      .gte('logged_at', `${date}T00:00:00`)
-      .lte('logged_at', `${date}T23:59:59`)
+      .gte('logged_at', `${date}T00:00:00${tz}`)
+      .lte('logged_at', `${date}T23:59:59${tz}`)
       .order('logged_at', { ascending: true }),
     supabase.from('profiles').select('calorie_target, protein_target, carbs_target, fats_target').eq('id', userId).single(),
   ]);
@@ -269,20 +270,30 @@ async function saveCustomFood(userId, food) {
   if (error) throw error;
 }
 
+// Returns local timezone offset as ±HH:MM string
+function tzOffset() {
+  const o = -new Date().getTimezoneOffset();
+  const sign = o >= 0 ? '+' : '-';
+  const h = String(Math.floor(Math.abs(o) / 60)).padStart(2, '0');
+  const m = String(Math.abs(o) % 60).padStart(2, '0');
+  return `${sign}${h}:${m}`;
+}
+
 function loggedAtFor(dateStr) {
   const now = new Date();
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
-  return d.toISOString();
+  const pad = (n) => String(n).padStart(2, '0');
+  const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  return `${dateStr}T${time}${tzOffset()}`;
 }
 
 async function addFood(userId, food, dateStr) {
+  const tz = tzOffset();
   const existing = await supabase
     .from('food_logs')
     .select('id')
     .eq('user_id', userId)
-    .gte('logged_at', `${dateStr}T00:00:00`)
-    .lte('logged_at', `${dateStr}T23:59:59`)
+    .gte('logged_at', `${dateStr}T00:00:00${tz}`)
+    .lte('logged_at', `${dateStr}T23:59:59${tz}`)
     .limit(1);
   if (existing.error) throw existing.error;
 
