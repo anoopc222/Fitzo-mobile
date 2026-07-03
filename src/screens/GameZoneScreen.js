@@ -17,13 +17,53 @@ import HigherOrLower from '../components/HigherOrLower';
 const { width: W } = Dimensions.get('window');
 
 const GAMES = [
-  { key: 'spin',    emoji: '🎯', name: 'Daily\nChallenge', color: '#ff6b35', glow: '#ff6b3540' },
-  { key: 'trivia',  emoji: '🧠', name: 'Nutrition\nTrivia',   color: '#a855f7', glow: '#a855f740' },
-  { key: 'memory',  emoji: '🃏', name: 'Memory\nMatch',      color: '#06b6d4', glow: '#06b6d440' },
-  { key: 'calorie', emoji: '🍎', name: 'Calorie\nGuesser',   color: '#22c55e', glow: '#22c55e40' },
-  { key: 'higher',  emoji: '⬆️', name: 'Higher or\nLower',   color: '#f59e0b', glow: '#f59e0b40' },
-  { key: 'reaction',emoji: '⚡', name: 'Reaction\nTap',      color: '#d4ff00', glow: '#d4ff0040' },
+  {
+    key: 'spin',
+    emoji: '🎯',
+    name: 'Daily Challenge',
+    desc: 'Spin for a fitness dare — complete it to earn points',
+    color: '#ff6b35',
+  },
+  {
+    key: 'trivia',
+    emoji: '🧠',
+    name: 'Nutrition Trivia',
+    desc: 'Test your food & nutrition knowledge',
+    color: '#a855f7',
+  },
+  {
+    key: 'memory',
+    emoji: '🃏',
+    name: 'Memory Match',
+    desc: 'Flip cards and match fitness pairs',
+    color: '#06b6d4',
+  },
+  {
+    key: 'calorie',
+    emoji: '🍎',
+    name: 'Calorie Guesser',
+    desc: 'Guess how many calories are in each food',
+    color: '#22c55e',
+  },
+  {
+    key: 'higher',
+    emoji: '⬆️',
+    name: 'Higher or Lower',
+    desc: 'Is the next food higher or lower in calories?',
+    color: '#f59e0b',
+  },
+  {
+    key: 'reaction',
+    emoji: '⚡',
+    name: 'Reaction Tap',
+    desc: 'Tap the target as fast as you can',
+    color: '#d4ff00',
+  },
 ];
+
+const BG = '#080812';
+const CARD_BG = '#0f0f1e';
+const BORDER = '#ffffff0e';
 
 export default function GameZoneScreen({ navigation }) {
   const { user } = useAuth();
@@ -35,7 +75,7 @@ export default function GameZoneScreen({ navigation }) {
     if (ref && scrollRef.current) {
       ref.measureLayout(
         scrollRef.current,
-        (_x, y) => scrollRef.current.scrollTo({ y: y - 12, animated: true }),
+        (_x, y) => scrollRef.current.scrollTo({ y: y - 16, animated: true }),
         () => {}
       );
     }
@@ -43,18 +83,15 @@ export default function GameZoneScreen({ navigation }) {
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#08081a" />
+      <StatusBar barStyle="light-content" backgroundColor={BG} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* ── Header ─────────────────────────────────────────── */}
+
+        {/* Header */}
         <View style={s.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-            <Ionicons name="chevron-back" size={22} color="#fff" />
+            <Ionicons name="chevron-back" size={20} color="#fff" />
           </TouchableOpacity>
-          <View style={s.headerCenter}>
-            <Text style={s.headerEmoji}>🎮</Text>
-            <Text style={s.headerTitle}>GAME ZONE</Text>
-            <Text style={s.headerSub}>6 fitness mini-games</Text>
-          </View>
+          <Text style={s.headerTitle}>Game Zone</Text>
           <View style={{ width: 36 }} />
         </View>
 
@@ -63,53 +100,73 @@ export default function GameZoneScreen({ navigation }) {
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Game Grid ──────────────────────────────────────── */}
+          {/* Hero */}
+          <View style={s.hero}>
+            <Text style={s.heroEmoji}>🎮</Text>
+            <Text style={s.heroHeading}>Play & Earn</Text>
+            <Text style={s.heroSub}>6 fitness mini-games · win XP & badges</Text>
+          </View>
+
+          {/* Game picker cards */}
           <Text style={s.sectionLabel}>CHOOSE A GAME</Text>
-          <View style={s.grid}>
-            {GAMES.map((g) => (
+          <View style={s.list}>
+            {GAMES.map((g, i) => (
               <TouchableOpacity
                 key={g.key}
-                style={[s.gridCard, { borderColor: g.color + '50', shadowColor: g.color }]}
+                style={s.gameCard}
                 onPress={() => scrollToGame(g.key)}
-                activeOpacity={0.75}
+                activeOpacity={0.7}
               >
-                <View style={[s.gridGlow, { backgroundColor: g.glow }]} />
-                <View style={[s.gridIconWrap, { backgroundColor: g.color + '20' }]}>
-                  <Text style={s.gridEmoji}>{g.emoji}</Text>
+                {/* left accent bar */}
+                <View style={[s.accentBar, { backgroundColor: g.color }]} />
+
+                {/* icon */}
+                <View style={[s.iconWrap, { backgroundColor: g.color + '18' }]}>
+                  <Text style={s.iconEmoji}>{g.emoji}</Text>
                 </View>
-                <Text style={[s.gridName, { color: g.color }]} numberOfLines={2}>{g.name}</Text>
+
+                {/* text */}
+                <View style={s.cardText}>
+                  <Text style={s.cardName}>{g.name}</Text>
+                  <Text style={s.cardDesc}>{g.desc}</Text>
+                </View>
+
+                {/* play arrow */}
+                <View style={[s.playBtn, { backgroundColor: g.color + '18' }]}>
+                  <Ionicons name="play" size={13} color={g.color} />
+                </View>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* ── Divider ──────────────────────────────────────── */}
-          <View style={s.dividerRow}>
-            <View style={s.dividerLine} />
-            <Text style={s.dividerText}>▼ PLAY</Text>
-            <View style={s.dividerLine} />
+          {/* Divider */}
+          <View style={s.divider}>
+            <View style={s.divLine} />
+            <Text style={s.divText}>PLAY BELOW</Text>
+            <View style={s.divLine} />
           </View>
 
-          {/* ── Games ──────────────────────────────────────────── */}
-          <View ref={r => gameRefs.current['spin'] = r}>
+          {/* Game components */}
+          <View ref={r => { gameRefs.current['spin'] = r; }}>
             <DailySpin userId={user?.id} />
           </View>
-          <View ref={r => gameRefs.current['trivia'] = r}>
+          <View ref={r => { gameRefs.current['trivia'] = r; }}>
             <NutritionTrivia userId={user?.id} />
           </View>
-          <View ref={r => gameRefs.current['memory'] = r}>
+          <View ref={r => { gameRefs.current['memory'] = r; }}>
             <MemoryMatch userId={user?.id} />
           </View>
-          <View ref={r => gameRefs.current['calorie'] = r}>
+          <View ref={r => { gameRefs.current['calorie'] = r; }}>
             <CalorieGuesser userId={user?.id} />
           </View>
-          <View ref={r => gameRefs.current['higher'] = r}>
+          <View ref={r => { gameRefs.current['higher'] = r; }}>
             <HigherOrLower userId={user?.id} />
           </View>
-          <View ref={r => gameRefs.current['reaction'] = r}>
+          <View ref={r => { gameRefs.current['reaction'] = r; }}>
             <ReactionTap userId={user?.id} />
           </View>
 
-          <View style={{ height: 30 }} />
+          <View style={{ height: 40 }} />
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -117,55 +174,70 @@ export default function GameZoneScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#08081a' },
+  root: { flex: 1, backgroundColor: BG },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#ffffff12',
+    paddingHorizontal: 16, paddingVertical: 14,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#ffffff12', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#ffffff10', alignItems: 'center', justifyContent: 'center',
   },
-  headerCenter: { alignItems: 'center' },
-  headerEmoji: { fontSize: 22 },
   headerTitle: {
-    fontSize: 20, fontWeight: '900', color: '#d4ff00',
-    letterSpacing: 4,
-    textShadowColor: '#d4ff00', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12,
+    fontSize: 17, fontWeight: '700', color: '#fff', letterSpacing: 0.3,
   },
-  headerSub: { fontSize: 10, color: '#ffffff60', letterSpacing: 2, marginTop: 1 },
 
-  scroll: { paddingHorizontal: 14, paddingTop: 18 },
+  scroll: { paddingHorizontal: 16, paddingTop: 4 },
+
+  hero: {
+    alignItems: 'center', paddingVertical: 28,
+  },
+  heroEmoji: { fontSize: 44, marginBottom: 10 },
+  heroHeading: {
+    fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: 0.5,
+  },
+  heroSub: {
+    fontSize: 13, color: '#ffffff55', marginTop: 4, letterSpacing: 0.2,
+  },
 
   sectionLabel: {
-    fontSize: 10, fontWeight: '800', color: '#ffffff40',
+    fontSize: 10, fontWeight: '800', color: '#ffffff30',
     letterSpacing: 3, marginBottom: 12,
   },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 20 },
-  gridCard: {
-    width: (W - 28 - 18) / 4,
-    backgroundColor: '#12122a',
-    borderRadius: 12, borderWidth: 1,
-    paddingHorizontal: 6, paddingVertical: 10,
-    alignItems: 'center', gap: 6,
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4,
+  list: { gap: 10, marginBottom: 28 },
+
+  gameCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: CARD_BG,
+    borderRadius: 14, borderWidth: 1, borderColor: BORDER,
+    overflow: 'hidden', gap: 12, paddingRight: 14,
   },
-  gridGlow: {
-    position: 'absolute', top: -12, right: -12,
-    width: 40, height: 40, borderRadius: 20,
+
+  accentBar: { width: 4, alignSelf: 'stretch' },
+
+  iconWrap: {
+    width: 46, height: 46, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+    marginVertical: 14,
   },
-  gridIconWrap: {
-    width: 36, height: 36, borderRadius: 10,
+  iconEmoji: { fontSize: 22 },
+
+  cardText: { flex: 1, paddingVertical: 14 },
+  cardName: { fontSize: 14, fontWeight: '700', color: '#fff', marginBottom: 3 },
+  cardDesc: { fontSize: 12, color: '#ffffff50', lineHeight: 16 },
+
+  playBtn: {
+    width: 28, height: 28, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
   },
-  gridEmoji: { fontSize: 18 },
-  gridName: { fontSize: 10, fontWeight: '800', letterSpacing: 0.1, textAlign: 'center' },
 
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#ffffff15' },
-  dividerText: { fontSize: 10, color: '#ffffff30', letterSpacing: 2, fontWeight: '700' },
+  divider: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20,
+  },
+  divLine: { flex: 1, height: 1, backgroundColor: '#ffffff0e' },
+  divText: {
+    fontSize: 10, color: '#ffffff25', letterSpacing: 2, fontWeight: '700',
+  },
 });
