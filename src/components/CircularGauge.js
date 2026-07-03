@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -42,14 +42,22 @@ export default function CircularGauge({
   const countAnim = useRef(new Animated.Value(0)).current;
   const numericValue = typeof value === 'number' ? value : parseFloat(value);
   const hasNumeric = !isNaN(numericValue);
+  const [displayVal, setDisplayVal] = useState('0');
 
   useEffect(() => {
     if (!hasNumeric) return;
+    // Use a listener to format the animated number safely — avoids the
+    // string outputRange interpolation bug where comma-formatted values
+    // (e.g. "8,432") are parsed as multiple numeric components.
+    const id = countAnim.addListener(({ value: v }) => {
+      setDisplayVal(Number.isInteger(numericValue) ? String(Math.round(v)) : v.toFixed(1));
+    });
     Animated.timing(countAnim, {
       toValue: numericValue,
       duration: 900,
       useNativeDriver: false,
     }).start();
+    return () => countAnim.removeListener(id);
   }, [numericValue]);
 
   return (
@@ -72,17 +80,14 @@ export default function CircularGauge({
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         {value !== undefined && (
           hasNumeric ? (
-            <Animated.Text
+            <Text
               style={[
                 { color: '#ffffff', fontWeight: '800', fontSize: Math.round(size * 0.2) },
                 valueStyle,
               ]}
             >
-              {countAnim.interpolate({
-                inputRange: [0, numericValue || 1],
-                outputRange: ['0', String(value)],
-              })}
-            </Animated.Text>
+              {displayVal}
+            </Text>
           ) : (
             <Text
               style={[
