@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
+import { recordGamePlay } from './GameStreak';
 import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
@@ -124,6 +125,7 @@ export default function CalorieGuesser({ userId }) {
         AsyncStorage.setItem(BEST_KEY(userId), String(totalScore));
         upsertGameScore(userId, 'calorieGuesser', totalScore);
         recordGameHistory(userId, 'calorieGuesser', totalScore);
+        recordGamePlay(userId);
       }
       setRound(1);
       setTotalScore(0);
