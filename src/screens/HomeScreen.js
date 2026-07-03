@@ -1362,28 +1362,30 @@ export default function HomeScreen() {
 
             {/* ── Game Zone banner ───────────────────────────── */}
             <TouchableOpacity
-              style={gzS.banner}
+              style={[styles.nudgeCard, { padding: 0, overflow: 'hidden', flexDirection: 'column', alignItems: 'stretch' }]}
               onPress={() => navigation.navigate('GameZone')}
-              activeOpacity={0.85}
+              activeOpacity={0.88}
             >
-              <View style={gzS.glowTL} />
-              <View style={gzS.glowBR} />
-              <View style={gzS.bannerLeft}>
-                <Text style={gzS.bannerEmoji}>🎮</Text>
-                <View>
-                  <Text style={gzS.bannerTitle}>GAME ZONE</Text>
-                  <Text style={gzS.bannerSub}>6 fitness mini-games</Text>
+              {/* Top row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, paddingBottom: 10, gap: 10 }}>
+                <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 20 }}>🎮</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text, letterSpacing: 0.5 }}>Game Zone</Text>
+                  <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>6 fitness mini-games</Text>
+                </View>
+                <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: colors.bg, letterSpacing: 0.5 }}>Play →</Text>
                 </View>
               </View>
-              <View style={gzS.gameIcons}>
-                {['🎯','🧠','🃏','🍎','⬆️','⚡'].map((e, i) => (
-                  <View key={i} style={gzS.iconBubble}>
-                    <Text style={{ fontSize: 13 }}>{e}</Text>
+              {/* Game icon row */}
+              <View style={{ flexDirection: 'row', paddingHorizontal: 14, paddingBottom: 14, gap: 8 }}>
+                {[['🎯','#ff6b35'],['🧠','#a855f7'],['🃏','#06b6d4'],['🍎','#22c55e'],['⬆️','#f59e0b'],['⚡','#d4ff00']].map(([e, c], i) => (
+                  <View key={i} style={{ flex: 1, aspectRatio: 1, borderRadius: 10, backgroundColor: c + '15', borderWidth: 1, borderColor: c + '30', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 16 }}>{e}</Text>
                   </View>
                 ))}
-              </View>
-              <View style={gzS.playBtn}>
-                <Text style={gzS.playText}>PLAY →</Text>
               </View>
             </TouchableOpacity>
 
@@ -2402,41 +2404,3 @@ const createDdS = (colors) => StyleSheet.create({
   noLogText: { fontSize: 14, color: colors.textDim },
 });
 
-// Game Zone banner — always dark, independent of app theme
-const gzS = StyleSheet.create({
-  banner: {
-    backgroundColor: '#0f0f24',
-    borderRadius: 18, borderWidth: 1, borderColor: '#d4ff0030',
-    padding: 16, marginBottom: 14, overflow: 'hidden',
-    shadowColor: '#d4ff00', shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25, shadowRadius: 16, elevation: 8,
-  },
-  glowTL: {
-    position: 'absolute', top: -30, left: -30,
-    width: 90, height: 90, borderRadius: 45,
-    backgroundColor: '#a855f730',
-  },
-  glowBR: {
-    position: 'absolute', bottom: -30, right: -30,
-    width: 90, height: 90, borderRadius: 45,
-    backgroundColor: '#06b6d430',
-  },
-  bannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  bannerEmoji: { fontSize: 28 },
-  bannerTitle: {
-    fontSize: 18, fontWeight: '900', color: '#d4ff00', letterSpacing: 3,
-    textShadowColor: '#d4ff00', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
-  },
-  bannerSub: { fontSize: 11, color: '#ffffff50', marginTop: 2, letterSpacing: 1 },
-  gameIcons: { flexDirection: 'row', gap: 6, marginBottom: 14 },
-  iconBubble: {
-    width: 34, height: 34, borderRadius: 10,
-    backgroundColor: '#ffffff10', borderWidth: 1, borderColor: '#ffffff20',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  playBtn: {
-    backgroundColor: '#d4ff00', borderRadius: 12,
-    paddingVertical: 10, alignItems: 'center',
-  },
-  playText: { fontSize: 13, fontWeight: '900', color: '#08081a', letterSpacing: 2 },
-});
