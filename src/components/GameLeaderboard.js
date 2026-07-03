@@ -48,22 +48,35 @@ export default function GameLeaderboard({ game, userId, visible, onClose }) {
   useEffect(() => {
     if (!visible) return;
     setLoading(true);
+
     supabase
       .from('game_scores')
-      .select('user_id, score, updated_at, profiles(full_name)')
+      .select('user_id, score, updated_at')
       .eq('game', game)
       .order('score', { ascending: meta.lowerIsBetter })
       .limit(10)
-      .then(({ data }) => {
-        const results = (data ?? []).map((r, i) => ({
+      .then(async ({ data }) => {
+        const rows = data ?? [];
+
+        // Fetch profile names for all user_ids in one query
+        let nameMap = {};
+        if (rows.length > 0) {
+          const ids = rows.map(r => r.user_id);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', ids);
+          (profiles ?? []).forEach(p => { nameMap[p.id] = p.full_name; });
+        }
+
+        const results = rows.map((r, i) => ({
           rank: i + 1,
-          name: r.profiles?.full_name ?? 'Anonymous',
+          name: nameMap[r.user_id] ?? 'Anonymous',
           score: r.score,
           isMe: r.user_id === userId,
         }));
         setRows(results);
-        const myRow = results.find(r => r.isMe);
-        setMyRank(myRow?.rank ?? null);
+        setMyRank(results.find(r => r.isMe)?.rank ?? null);
         setLoading(false);
       });
   }, [visible, game]);
