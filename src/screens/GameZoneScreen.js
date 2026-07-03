@@ -69,14 +69,15 @@ export default function GameZoneScreen({ navigation }) {
             {GAMES.map((g) => (
               <TouchableOpacity
                 key={g.key}
-                style={[s.gridCard, { borderColor: g.color + '60', shadowColor: g.color }]}
+                style={[s.gridCard, { borderColor: g.color + '50', shadowColor: g.color }]}
                 onPress={() => scrollToGame(g.key)}
                 activeOpacity={0.75}
               >
                 <View style={[s.gridGlow, { backgroundColor: g.glow }]} />
-                <Text style={s.gridEmoji}>{g.emoji}</Text>
-                <Text style={[s.gridName, { color: g.color }]}>{g.name}</Text>
-                <View style={[s.playDot, { backgroundColor: g.color }]} />
+                <View style={[s.gridIconWrap, { backgroundColor: g.color + '20' }]}>
+                  <Text style={s.gridEmoji}>{g.emoji}</Text>
+                </View>
+                <Text style={[s.gridName, { color: g.color }]} numberOfLines={1}>{g.name.replace('\n', ' ')}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -143,22 +144,26 @@ const s = StyleSheet.create({
     letterSpacing: 3, marginBottom: 12,
   },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   gridCard: {
-    width: (W - 28 - 10) / 2,
+    width: (W - 28 - 8) / 2,
     backgroundColor: '#12122a',
-    borderRadius: 16, borderWidth: 1,
-    padding: 14, alignItems: 'flex-start',
+    borderRadius: 12, borderWidth: 1,
+    paddingHorizontal: 12, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 12, elevation: 6,
+    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4,
   },
   gridGlow: {
-    position: 'absolute', top: -20, right: -20,
-    width: 80, height: 80, borderRadius: 40,
+    position: 'absolute', top: -16, right: -16,
+    width: 52, height: 52, borderRadius: 26,
   },
-  gridEmoji: { fontSize: 28, marginBottom: 8 },
-  gridName: { fontSize: 13, fontWeight: '800', lineHeight: 17, letterSpacing: 0.3 },
-  playDot: { width: 6, height: 6, borderRadius: 3, marginTop: 8 },
+  gridIconWrap: {
+    width: 34, height: 34, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  gridEmoji: { fontSize: 18 },
+  gridName: { fontSize: 12, fontWeight: '800', letterSpacing: 0.2, flex: 1 },
 
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#ffffff15' },
