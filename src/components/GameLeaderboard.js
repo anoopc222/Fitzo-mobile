@@ -220,7 +220,7 @@ const styles = (colors) => StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: '#111118', borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 24, paddingBottom: 36, alignItems: 'center',
     borderWidth: 1, borderColor: colors.border,
   },
@@ -250,5 +250,5 @@ const styles = (colors) => StyleSheet.create({
   skeletonList: { width: '100%', marginTop: 16, gap: 12, marginBottom: 8 },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   closeBtn: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 48, marginTop: 10 },
-  closeBtnText: { fontSize: typography.base, fontWeight: weight.bold, color: colors.bg },
+  closeBtnText: { fontSize: typography.base, fontWeight: weight.bold, color: '#000000' },
 });
