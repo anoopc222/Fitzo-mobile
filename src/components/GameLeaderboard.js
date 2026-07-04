@@ -17,7 +17,12 @@ const GAME_LABELS = {
   higherOrLower:  { name: 'Higher or Lower',  unit: ' streak', lowerIsBetter: false, emoji: '⬆️' },
   nutritionTrivia:{ name: 'Nutrition Trivia', unit: '/3',  lowerIsBetter: false, emoji: '🧠' },
   dailySpin:      { name: 'Daily Spin',       unit: ' done', lowerIsBetter: false, emoji: '🎯' },
-  macroMatch:     { name: 'Macro Match',      unit: ' pts', lowerIsBetter: false, emoji: '🥗' },
+  macroMatch:      { name: 'Macro Match',       unit: ' pts', lowerIsBetter: false, emoji: '🥗' },
+  foodSortingRush: { name: 'Food Sorting Rush', unit: ' pts', lowerIsBetter: false, emoji: '🍽️' },
+  calorieStack:    { name: 'Calorie Stack',     unit: ' pts', lowerIsBetter: false, emoji: '🍔' },
+  workoutBuilder:  { name: 'Workout Builder',   unit: ' pts', lowerIsBetter: false, emoji: '🏋️' },
+  macroSniper:     { name: 'Macro Sniper',      unit: ' pts', lowerIsBetter: false, emoji: '🎯' },
+  bodyClockQuiz:   { name: 'Body Clock Quiz',   unit: '/8',   lowerIsBetter: false, emoji: '⏰' },
 };
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -220,7 +225,7 @@ const styles = (colors) => StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#111118', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: '#111118', borderTopLeftRadius: 24, borderTopRightRadius: 24, /* hardcoded: must stay solid even inside game modal ThemeContext overrides */
     padding: 24, paddingBottom: 36, alignItems: 'center',
     borderWidth: 1, borderColor: colors.border,
   },
@@ -250,5 +255,5 @@ const styles = (colors) => StyleSheet.create({
   skeletonList: { width: '100%', marginTop: 16, gap: 12, marginBottom: 8 },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   closeBtn: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 48, marginTop: 10 },
-  closeBtnText: { fontSize: typography.base, fontWeight: weight.bold, color: '#000000' },
+  closeBtnText: { fontSize: typography.base, fontWeight: weight.bold, color: '#000' },
 });
