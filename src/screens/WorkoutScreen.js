@@ -3166,25 +3166,13 @@ export default function WorkoutScreen({ embedded = false } = {}) {
           </View>
 
         {!isLoading && visibleDayList.length === 0 && (
-          sessions.length === 0 ? (
-            <EmptyState
-              emoji="🏋️"
-              title="No workouts logged yet"
-              subtitle="Start tracking to see your progress here"
-              actionLabel="Log Workout"
-              onAction={openNew}
-            />
-          ) : (
-            <EmptyState
-              emoji="📅"
-              title={dayList.length === 0
+          <Text style={s.emptyText}>
+            {sessions.length === 0
+              ? t('workout.noSessionsInMonth', { month: MONTH_NAMES[viewMonth - 1], year: viewYear })
+              : dayList.length === 0
                 ? t('workout.noSessionsInMonth', { month: MONTH_NAMES[viewMonth - 1], year: viewYear })
                 : t('workout.allSessionsAreRestDays')}
-              subtitle={t('workout.tapPlusToLogWorkout')}
-              actionLabel="Log Workout"
-              onAction={openNew}
-            />
-          )
+          </Text>
         )}
 
         {visibleDayList.map(item => {
@@ -3349,6 +3337,7 @@ const createS = (colors) => StyleSheet.create({
   },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   cardTitle: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: colors.textMuted, fontWeight: weight.bold, flexShrink: 1, marginRight: 8 },
+  emptyText: { textAlign: 'center', color: colors.textDim, paddingVertical: 20, fontSize: typography.sm },
   collapseToggleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   collapseToggleText: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1 },
   toggleSwitch: {
