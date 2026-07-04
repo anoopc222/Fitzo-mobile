@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
-import { upsertGameScore, recordGameHistory, GameLeaderboard } from './GameLeaderboard';
+import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
 
 const QUESTIONS = [
   {
