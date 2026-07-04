@@ -174,7 +174,8 @@ export default function MemoryMatch({ userId }) {
 
   const COLS = 4;
   const GAP = 6;
-  const CARD_W = Math.floor((Dimensions.get('window').width - 28 - GAP * (COLS - 1)) / COLS);
+  // 16px screen padding each side + 14px card padding each side = 60px total horizontal inset
+  const CARD_W = Math.floor((Dimensions.get('window').width - 60 - GAP * (COLS - 1)) / COLS);
   const CARD_H = Math.round(CARD_W * 1.1);
 
   const s = styles(colors);
