@@ -41,6 +41,26 @@ const GOAL_KEYS = {
   'General Health': 'goalGeneralHealth',
 };
 
+// Normalize legacy snake_case DB values to current display values
+const GOAL_NORMALIZE = {
+  lose_weight: 'Weight Loss',
+  fat_loss: 'Fat Loss',
+  muscle_gain: 'Muscle Gain',
+  recomposition: 'Recomposition',
+  fat_loss_recomp: 'Fat Loss & Recomp',
+  maintain_tone: 'Maintain & Tone',
+  strength_power: 'Strength & Power',
+  athletic_performance: 'Athletic Performance',
+  endurance: 'Endurance',
+  general_health: 'General Health',
+};
+
+function normalizeGoal(raw) {
+  if (!raw) return '';
+  if (GOAL_KEYS[raw]) return raw; // already a valid display value
+  return GOAL_NORMALIZE[raw] ?? raw;
+}
+
 const SEX_OPTIONS = ['Male', 'Female', 'Other'];
 
 const SEX_KEYS = {
@@ -94,7 +114,7 @@ export default function ProfileScreen({ navigation }) {
     if (data?.profile && !editing) {
       setForm({
         full_name: data.profile.full_name ?? '',
-        goal: data.profile.goal ?? '',
+        goal: normalizeGoal(data.profile.goal),
         height_cm: data.profile.height_cm ? String(data.profile.height_cm) : '',
         date_of_birth: data.profile.date_of_birth ?? '',
         sex: data.profile.sex ?? '',
