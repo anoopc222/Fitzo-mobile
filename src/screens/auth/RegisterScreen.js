@@ -49,7 +49,8 @@ export default function RegisterScreen({ navigation }) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.logo}>FitZo</Text>
@@ -130,7 +131,7 @@ export default function RegisterScreen({ navigation }) {
 
 const createStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  scroll: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  scroll: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, paddingBottom: 40 },
   logo: { fontSize: typography.xxxl, fontWeight: weight.black, color: colors.accent, letterSpacing: 2 },
   tagline: { color: colors.textMuted, fontSize: typography.sm, marginTop: 6, marginBottom: 40, letterSpacing: 1 },
   form: { width: '100%' },
