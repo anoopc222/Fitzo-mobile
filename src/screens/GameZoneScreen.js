@@ -12,52 +12,62 @@ import MemoryMatch from '../components/MemoryMatch';
 import CalorieGuesser from '../components/CalorieGuesser';
 import HigherOrLower from '../components/HigherOrLower';
 import MacroMatch from '../components/MacroMatch';
-
 import { useGameStreak } from '../components/GameStreak';
 
 const { width: W } = Dimensions.get('window');
+const CARD_W = (W - 32 - 10) / 2; // 2 columns, 16px side padding, 10px gap
 
 const GAMES = [
   {
     key: 'trivia',
     emoji: '🧠',
-    name: 'Nutrition Trivia',
-    desc: 'Test your food & nutrition knowledge',
+    name: 'Nutrition\nTrivia',
+    desc: 'Test your knowledge',
     color: '#a855f7',
+    glow: '#a855f730',
+    bg: '#1a0d2e',
   },
   {
     key: 'memory',
     emoji: '🃏',
-    name: 'Memory Match',
-    desc: 'Flip cards and match fitness pairs',
+    name: 'Memory\nMatch',
+    desc: 'Flip & match pairs',
     color: '#06b6d4',
+    glow: '#06b6d430',
+    bg: '#061e24',
   },
   {
     key: 'calorie',
     emoji: '🍎',
-    name: 'Calorie Guesser',
-    desc: 'Guess how many calories are in each food',
+    name: 'Calorie\nGuesser',
+    desc: 'Guess the calories',
     color: '#22c55e',
+    glow: '#22c55e30',
+    bg: '#061a0e',
   },
   {
     key: 'higher',
     emoji: '⬆️',
-    name: 'Higher or Lower',
-    desc: 'Is the next food higher or lower in calories?',
+    name: 'Higher or\nLower',
+    desc: 'Compare calories',
     color: '#f59e0b',
+    glow: '#f59e0b30',
+    bg: '#1e1400',
   },
   {
     key: 'macro',
     emoji: '🥗',
-    name: 'Macro Match',
-    desc: 'Pick the food with the most (or least) of a macro',
+    name: 'Macro\nMatch',
+    desc: 'Pick the right macro',
     color: '#34d399',
+    glow: '#34d39930',
+    bg: '#061a12',
   },
 ];
 
-const BG = '#080812';
-const CARD_BG = '#0f0f1e';
-const BORDER = '#ffffff0e';
+// Always dark — never changes with theme
+const BG = '#06060f';
+const HEADER_BG = '#06060f';
 
 export default function GameZoneScreen({ navigation }) {
   const { user } = useAuth();
@@ -79,7 +89,7 @@ export default function GameZoneScreen({ navigation }) {
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor={BG} />
+      <StatusBar barStyle="light-content" backgroundColor={HEADER_BG} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
 
         {/* Header */}
@@ -98,46 +108,61 @@ export default function GameZoneScreen({ navigation }) {
         >
           {/* Hero */}
           <View style={s.hero}>
-            <Text style={s.heroEmoji}>🎮</Text>
-            <Text style={s.heroHeading}>Play & Earn</Text>
-            <Text style={s.heroSub}>5 fitness mini-games · win XP & badges</Text>
+            <View style={s.heroBadge}>
+              <Text style={s.heroBadgeText}>🎮  PLAY & EARN</Text>
+            </View>
+            <Text style={s.heroHeading}>Level Up Your{'\n'}Fitness IQ</Text>
+            <Text style={s.heroSub}>5 mini-games · XP · Leaderboards</Text>
             {streak > 0 && (
               <View style={s.streakBadge}>
-                <Text style={s.streakText}>🔥 {streak} day streak</Text>
+                <Text style={s.streakText}>🔥 {streak}-day streak</Text>
               </View>
             )}
           </View>
 
-          {/* Game picker cards */}
+          {/* Game grid */}
           <Text style={s.sectionLabel}>CHOOSE A GAME</Text>
-          <View style={s.list}>
-            {GAMES.map((g, i) => (
-              <TouchableOpacity
-                key={g.key}
-                style={s.gameCard}
-                onPress={() => scrollToGame(g.key)}
-                activeOpacity={0.7}
-              >
-                {/* left accent bar */}
-                <View style={[s.accentBar, { backgroundColor: g.color }]} />
+          <View style={s.grid}>
+            {GAMES.map((g, i) => {
+              const isLast = i === GAMES.length - 1;
+              const isOdd = GAMES.length % 2 !== 0;
+              const fullWidth = isLast && isOdd;
+              return (
+                <TouchableOpacity
+                  key={g.key}
+                  style={[
+                    s.gameCard,
+                    { backgroundColor: g.bg, borderColor: g.color + '40' },
+                    fullWidth && { width: '100%' },
+                  ]}
+                  onPress={() => scrollToGame(g.key)}
+                  activeOpacity={0.75}
+                >
+                  {/* glow blob */}
+                  <View style={[s.glowBlob, { backgroundColor: g.glow }]} />
 
-                {/* icon */}
-                <View style={[s.iconWrap, { backgroundColor: g.color + '18' }]}>
-                  <Text style={s.iconEmoji}>{g.emoji}</Text>
-                </View>
+                  {/* top row: emoji + play btn */}
+                  <View style={s.cardTop}>
+                    <View style={[s.emojiWrap, { backgroundColor: g.color + '20', borderColor: g.color + '40' }]}>
+                      <Text style={s.cardEmoji}>{g.emoji}</Text>
+                    </View>
+                    <View style={[s.playChip, { backgroundColor: g.color }]}>
+                      <Ionicons name="play" size={10} color="#000" />
+                      <Text style={s.playChipText}>PLAY</Text>
+                    </View>
+                  </View>
 
-                {/* text */}
-                <View style={s.cardText}>
-                  <Text style={s.cardName}>{g.name}</Text>
-                  <Text style={s.cardDesc}>{g.desc}</Text>
-                </View>
+                  {/* name */}
+                  <Text style={[s.cardName, { color: '#fff' }]}>{g.name}</Text>
 
-                {/* play arrow */}
-                <View style={[s.playBtn, { backgroundColor: g.color + '18' }]}>
-                  <Ionicons name="play" size={13} color={g.color} />
-                </View>
-              </TouchableOpacity>
-            ))}
+                  {/* desc */}
+                  <Text style={[s.cardDesc, { color: g.color + 'cc' }]}>{g.desc}</Text>
+
+                  {/* bottom accent line */}
+                  <View style={[s.bottomLine, { backgroundColor: g.color }]} />
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Divider */}
@@ -176,71 +201,84 @@ const s = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
+    paddingHorizontal: 16, paddingVertical: 14, backgroundColor: HEADER_BG,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#ffffff10', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#ffffff12', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#ffffff18',
   },
-  headerTitle: {
-    fontSize: 17, fontWeight: '700', color: '#fff', letterSpacing: 0.3,
-  },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
 
   scroll: { paddingHorizontal: 16, paddingTop: 4 },
 
-  hero: {
-    alignItems: 'center', paddingVertical: 28,
+  /* Hero */
+  hero: { alignItems: 'center', paddingVertical: 28 },
+  heroBadge: {
+    backgroundColor: '#d4ff0015', borderRadius: 20, borderWidth: 1,
+    borderColor: '#d4ff0040', paddingHorizontal: 14, paddingVertical: 5, marginBottom: 16,
   },
-  heroEmoji: { fontSize: 44, marginBottom: 10 },
+  heroBadgeText: { fontSize: 11, fontWeight: '800', color: '#d4ff00', letterSpacing: 2 },
   heroHeading: {
-    fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: 0.5,
+    fontSize: 30, fontWeight: '900', color: '#fff',
+    textAlign: 'center', lineHeight: 36, letterSpacing: 0.3,
   },
-  heroSub: {
-    fontSize: 13, color: '#ffffff55', marginTop: 4, letterSpacing: 0.2,
-  },
+  heroSub: { fontSize: 13, color: '#ffffff45', marginTop: 10, letterSpacing: 0.3 },
   streakBadge: {
-    marginTop: 10, paddingHorizontal: 14, paddingVertical: 5,
-    backgroundColor: '#ff6b3520', borderRadius: 20, borderWidth: 1, borderColor: '#ff6b3540',
+    marginTop: 14, paddingHorizontal: 16, paddingVertical: 6,
+    backgroundColor: '#ff6b3518', borderRadius: 20, borderWidth: 1, borderColor: '#ff6b3540',
   },
-  streakText: { fontSize: 13, color: '#ff9944', fontWeight: '700' },
+  streakText: { fontSize: 13, color: '#ff9944', fontWeight: '800' },
 
   sectionLabel: {
     fontSize: 10, fontWeight: '800', color: '#ffffff30',
-    letterSpacing: 3, marginBottom: 12,
+    letterSpacing: 3, marginBottom: 14,
   },
 
-  list: { gap: 10, marginBottom: 28 },
+  /* 2-column game grid */
+  grid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 28,
+  },
 
   gameCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: CARD_BG,
-    borderRadius: 14, borderWidth: 1, borderColor: BORDER,
-    overflow: 'hidden', gap: 12, paddingRight: 14,
+    width: CARD_W,
+    borderRadius: 18, borderWidth: 1,
+    padding: 16, overflow: 'hidden',
+    minHeight: 160,
   },
 
-  accentBar: { width: 4, alignSelf: 'stretch' },
-
-  iconWrap: {
-    width: 46, height: 46, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center',
-    marginVertical: 14,
+  glowBlob: {
+    position: 'absolute', width: 100, height: 100,
+    borderRadius: 50, top: -20, right: -20,
   },
-  iconEmoji: { fontSize: 22 },
 
-  cardText: { flex: 1, paddingVertical: 14 },
-  cardName: { fontSize: 14, fontWeight: '700', color: '#fff', marginBottom: 3 },
-  cardDesc: { fontSize: 12, color: '#ffffff50', lineHeight: 16 },
-
-  playBtn: {
-    width: 28, height: 28, borderRadius: 14,
+  cardTop: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    justifyContent: 'space-between', marginBottom: 14,
+  },
+  emojiWrap: {
+    width: 50, height: 50, borderRadius: 14, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
+  cardEmoji: { fontSize: 26 },
 
-  divider: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20,
+  playChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10,
   },
+  playChipText: { fontSize: 9, fontWeight: '900', color: '#000', letterSpacing: 1 },
+
+  cardName: {
+    fontSize: 16, fontWeight: '800', lineHeight: 20, marginBottom: 6, letterSpacing: 0.2,
+  },
+  cardDesc: { fontSize: 11, fontWeight: '500', lineHeight: 15 },
+
+  bottomLine: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, borderRadius: 2,
+  },
+
+  /* Divider */
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
   divLine: { flex: 1, height: 1, backgroundColor: '#ffffff0e' },
-  divText: {
-    fontSize: 10, color: '#ffffff25', letterSpacing: 2, fontWeight: '700',
-  },
+  divText: { fontSize: 10, color: '#ffffff25', letterSpacing: 2, fontWeight: '700' },
 });
