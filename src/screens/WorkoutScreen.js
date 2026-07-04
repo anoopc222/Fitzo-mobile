@@ -36,7 +36,7 @@ async function fetchSessions(userId) {
   const { data, error } = await supabase
     .from('workout_sessions')
     .select(`
-      id, date, notes, total_volume, duration_min, calories_burned,
+      id, date, notes, coach_notes, total_volume, duration_min, calories_burned,
       workout_exercises (
         id, exercise_name, order_index, group_id,
         sets ( id, set_number, weight_kg, reps, rpe, duration_min, distance_km, avg_rpm, speed_kmh, incline_pct, calories )
@@ -135,7 +135,7 @@ function computeSetRow(ex, s) {
 // Builds a client-side preview of a session in the same shape fetchSessions
 // returns, so the workout list can update instantly while the real save
 // (multiple sequential round trips server-side) is still in flight.
-function buildOptimisticSession(sessionId, { date, name, exercises, duration_min }, existing) {
+function buildOptimisticSession(sessionId, { date, name, exercises, duration_min, coachNotes }, existing) {
   let totalVol = 0;
   const workout_exercises = (exercises ?? [])
     .filter(ex => ex.name.trim())
@@ -152,6 +152,7 @@ function buildOptimisticSession(sessionId, { date, name, exercises, duration_min
   return {
     id: sessionId,
     date, notes: name || 'Workout',
+    coach_notes: coachNotes ?? existing?.coach_notes ?? null,
     total_volume: Math.round(totalVol),
     duration_min: duration_min != null ? duration_min : (existing?.duration_min ?? null),
     calories_burned: existing?.calories_burned ?? null,
@@ -159,20 +160,21 @@ function buildOptimisticSession(sessionId, { date, name, exercises, duration_min
   };
 }
 
-async function saveSession(userId, { sessionId, date, name, exercises, duration_min }) {
+async function saveSession(userId, { sessionId, date, name, exercises, duration_min, coachNotes }) {
   let sid = sessionId;
   const durPatch = duration_min != null ? { duration_min } : {};
+  const notesPatch = coachNotes != null ? { coach_notes: coachNotes } : {};
   if (!sid) {
     const { data, error } = await supabase
       .from('workout_sessions')
-      .insert({ user_id: userId, date, notes: name || 'Workout', ...durPatch })
+      .insert({ user_id: userId, date, notes: name || 'Workout', ...durPatch, ...notesPatch })
       .select().single();
     if (error) throw error;
     sid = data.id;
   } else {
     const { error } = await supabase
       .from('workout_sessions')
-      .update({ date, notes: name || 'Workout', ...durPatch })
+      .update({ date, notes: name || 'Workout', ...durPatch, ...notesPatch })
       .eq('id', sid);
     if (error) throw error;
   }
@@ -1159,6 +1161,16 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
           </ScrollView>
         )}
 
+        {/* Coach Notes */}
+        {!!session.coach_notes && (
+          <View style={dS.coachNotesCard}>
+            <View style={dS.coachNotesHeader}>
+              <Text style={dS.coachNotesTitle}>📋 COACH NOTES</Text>
+            </View>
+            <Text style={dS.coachNotesText}>{session.coach_notes}</Text>
+          </View>
+        )}
+
         <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
           <ExportCardTemplate ref={sessionExport.ref} title={session.notes || t('workout.workout')} subtitle={fmtDate(session.date)} colors={colors} width={340}>
             <View style={dS.statsRow}>
@@ -1457,6 +1469,7 @@ function EditSessionModal({
   const eS = useMemo(() => createES(colors), [colors]);
   const [date, setDate] = useState('');
   const [name, setName] = useState('');
+  const [coachNotes, setCoachNotes] = useState('');
   const [exercises, setExercises] = useState([]);
   const [activeExIdx, setActiveExIdx] = useState(null);
   const [acOpenIdx, setAcOpenIdx] = useState(null);
@@ -1634,6 +1647,7 @@ function EditSessionModal({
     if (visible && initialData) {
       setDate(initialData.date ?? '');
       setName(initialData.name ?? '');
+      setCoachNotes(initialData.coachNotes ?? '');
       setExercises(initialData.exercises ?? []);
       setActiveExIdx(null);
     }
@@ -1711,6 +1725,7 @@ function EditSessionModal({
       : (isNew && sessionElapsedSec > 0 ? Math.round(sessionElapsedSec / 60) : undefined);
     onSave({
       date: date.trim(), name: name.trim() || t('workout.workout'), exercises: isRest ? [] : exercises,
+      coachNotes: coachNotes.trim() || null,
       ...(duration_min != null ? { duration_min } : {}),
     });
   };
@@ -1785,6 +1800,21 @@ function EditSessionModal({
               <TextInput style={eS.fieldInput} value={name} onChangeText={setName}
                 placeholder={t('workout.egChestAndBack')} placeholderTextColor={colors.textDim} />
             </View>
+          </View>
+
+          {/* Coach Notes */}
+          <View style={eS.coachNotesWrap}>
+            <Text style={eS.fieldLabel}>📋 COACH NOTES</Text>
+            <TextInput
+              style={eS.coachNotesInput}
+              value={coachNotes}
+              onChangeText={setCoachNotes}
+              placeholder="How did it feel? Cues, adjustments, next session plans…"
+              placeholderTextColor={colors.textDim}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
           </View>
 
           {/* Content area — differs by type */}
@@ -2802,6 +2832,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
       sessionId: session.id,
       date: session.date,
       name: session.notes ?? '',
+      coachNotes: session.coach_notes ?? '',
       exercises: (session.workout_exercises ?? [])
         .slice().sort((a, b) => a.order_index - b.order_index)
         .map(ex => ({
@@ -3364,6 +3395,9 @@ export default function WorkoutScreen({ embedded = false } = {}) {
                   )}
                 </View>
                 <Text style={s.sessionSub} numberOfLines={1}>{subtitle}</Text>
+                {!!sess.coach_notes && (
+                  <Text style={s.sessionNoteSnippet} numberOfLines={1}>📋 {sess.coach_notes}</Text>
+                )}
               </View>
               <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
             </TouchableOpacity>
@@ -3610,6 +3644,7 @@ const createS = (colors) => StyleSheet.create({
   deltaBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 },
   deltaText: { fontSize: 10, fontWeight: weight.bold },
   sessionSub: { fontSize: 11, color: colors.textDim },
+  sessionNoteSnippet: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.body, marginTop: 2 },
 
   fab: {
     position: 'absolute', bottom: 24, right: 24,
@@ -3728,6 +3763,16 @@ const createDS = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.danger + '55',
   },
   deleteBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.danger },
+
+  coachNotesCard: {
+    marginHorizontal: 16, marginTop: 12,
+    backgroundColor: colors.accent + '0d',
+    borderRadius: 12, borderWidth: 1, borderColor: colors.accent + '30',
+    padding: 14,
+  },
+  coachNotesHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  coachNotesTitle: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
+  coachNotesText: { fontSize: 13, fontFamily: fontFamily.body, color: colors.text, lineHeight: 20 },
 });
 
 const createES = (colors) => StyleSheet.create({
@@ -4024,6 +4069,15 @@ const createES = (colors) => StyleSheet.create({
     fontSize: typography.sm,
     color: colors.textMuted,
     fontWeight: '600',
+  },
+
+  coachNotesWrap: { paddingHorizontal: 16, paddingBottom: 12 },
+  coachNotesInput: {
+    backgroundColor: colors.dim,
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: 12, padding: 12,
+    fontSize: typography.sm, color: colors.text, fontFamily: fontFamily.body,
+    minHeight: 80,
   },
 });
 
