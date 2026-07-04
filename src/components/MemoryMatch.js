@@ -8,8 +8,8 @@ import { recordGamePlay } from './GameStreak';
 import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
-const EMOJIS = ['💪', '🔥', '🏆', '🧘', '⚡', '💧', '🥗', '🏃'];
-const CARD_COUNT = 16; // 8 pairs
+const EMOJIS = ['💪', '🔥', '🏆', '🧘', '⚡', '💧', '🥗', '🏃', '🎯', '⭐'];
+const CARD_COUNT = 20; // 10 pairs
 
 function storageKey(userId) {
   return `fitzo:memoryMatch:${userId}:bestTime`;
@@ -172,8 +172,10 @@ export default function MemoryMatch({ userId }) {
     winAnim.setValue(0);
   }, [winAnim]);
 
-  const CARD_W = Math.floor((Dimensions.get('window').width - 64) / 4);
-  const CARD_H = Math.round(CARD_W * 1.15);
+  const COLS = 4;
+  const GAP = 6;
+  const CARD_W = Math.floor((Dimensions.get('window').width - 28 - GAP * (COLS - 1)) / COLS);
+  const CARD_H = Math.round(CARD_W * 1.1);
 
   const s = styles(colors);
 
@@ -200,7 +202,7 @@ export default function MemoryMatch({ userId }) {
               {won ? '✅ Done!' : startTime ? fmtTime(elapsed) : 'Tap to start'}
             </Text>
             <Text style={s.stat}>
-              {matched.size / 2}/{EMOJIS.length} pairs
+              {matched.size / 2}/{CARD_COUNT / 2} pairs
             </Text>
           </View>
 
@@ -276,7 +278,7 @@ const styles = (colors) => StyleSheet.create({
   stat: { fontSize: typography.xs, color: colors.textDim },
   statVal: { color: colors.text, fontWeight: weight.semibold },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-start' },
   cardTile: {
     borderRadius: 10, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1,
