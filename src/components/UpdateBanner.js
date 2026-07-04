@@ -3,8 +3,15 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Animated,
   Linking, Platform,
 } from 'react-native';
-import * as Updates from 'expo-updates';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// expo-updates only works in standalone EAS builds, not Expo Go.
+// We load it dynamically so the app doesn't crash in dev.
+let Updates = null;
+try {
+  Updates = require('expo-updates');
+} catch (_) {}
+
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -29,14 +36,15 @@ export default function UpdateBanner() {
 
   async function checkForUpdate() {
     try {
+      // expo-updates unavailable (Expo Go) or not in a standalone build — skip silently
+      if (!Updates || !Updates.isEnabled) return;
+
       // Check if banner was recently snoozed
       const snoozedAt = await AsyncStorage.getItem(SNOOZE_KEY);
       if (snoozedAt) {
         const hours = (Date.now() - Number(snoozedAt)) / 3_600_000;
         if (hours < SNOOZE_HOURS) return;
       }
-
-      if (!Updates.isEnabled) return; // dev / local — skip
 
       const result = await Updates.checkForUpdateAsync();
       if (result.isAvailable) {
@@ -66,12 +74,11 @@ export default function UpdateBanner() {
   }
 
   async function handleUpdate() {
-    if (isOTA) {
+    if (isOTA && Updates) {
       try {
         await Updates.fetchUpdateAsync();
         await Updates.reloadAsync();
       } catch (_) {
-        // fallback to store if OTA reload fails
         Linking.openURL(STORE_URL);
       }
     } else {
