@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  StatusBar, Dimensions, findNodeHandle,
+  StatusBar, Dimensions, Modal, SafeAreaView as RNSafeArea,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +15,7 @@ import MacroMatch from '../components/MacroMatch';
 import { useGameStreak } from '../components/GameStreak';
 
 const { width: W } = Dimensions.get('window');
-const CARD_W = (W - 32 - 10) / 2; // 2 columns, 16px side padding, 10px gap
+const CARD_W = (W - 32 - 10) / 2;
 
 const GAMES = [
   {
@@ -65,31 +65,27 @@ const GAMES = [
   },
 ];
 
-// Always dark — never changes with theme
+const GAME_COMPONENTS = {
+  trivia: NutritionTrivia,
+  memory: MemoryMatch,
+  calorie: CalorieGuesser,
+  higher: HigherOrLower,
+  macro: MacroMatch,
+};
+
 const BG = '#06060f';
-const HEADER_BG = '#06060f';
 
 export default function GameZoneScreen({ navigation }) {
   const { user } = useAuth();
-  const scrollRef = useRef(null);
-  const gameRefs = useRef({});
   const { streak } = useGameStreak(user?.id);
+  const [activeGame, setActiveGame] = useState(null); // game key or null
 
-  function scrollToGame(key) {
-    const ref = gameRefs.current[key];
-    const scrollNode = findNodeHandle(scrollRef.current);
-    if (ref && scrollNode) {
-      ref.measureLayout(
-        scrollNode,
-        (_x, y) => scrollRef.current.scrollTo({ y: y - 16, animated: true }),
-        () => {}
-      );
-    }
-  }
+  const game = GAMES.find(g => g.key === activeGame);
+  const GameComponent = activeGame ? GAME_COMPONENTS[activeGame] : null;
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor={HEADER_BG} />
+      <StatusBar barStyle="light-content" backgroundColor={BG} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
 
         {/* Header */}
@@ -101,11 +97,8 @@ export default function GameZoneScreen({ navigation }) {
           <View style={{ width: 36 }} />
         </View>
 
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={s.scroll}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
           {/* Hero */}
           <View style={s.hero}>
             <View style={s.heroBadge}>
@@ -132,16 +125,14 @@ export default function GameZoneScreen({ navigation }) {
                   key={g.key}
                   style={[
                     s.gameCard,
-                    { backgroundColor: g.bg, borderColor: g.color + '40' },
-                    fullWidth && { width: '100%' },
+                    { backgroundColor: g.bg, borderColor: g.color + '50' },
+                    fullWidth && s.gameCardFull,
                   ]}
-                  onPress={() => scrollToGame(g.key)}
-                  activeOpacity={0.75}
+                  onPress={() => setActiveGame(g.key)}
+                  activeOpacity={0.8}
                 >
-                  {/* glow blob */}
                   <View style={[s.glowBlob, { backgroundColor: g.glow }]} />
 
-                  {/* top row: emoji + play btn */}
                   <View style={s.cardTop}>
                     <View style={[s.emojiWrap, { backgroundColor: g.color + '20', borderColor: g.color + '40' }]}>
                       <Text style={s.cardEmoji}>{g.emoji}</Text>
@@ -152,46 +143,54 @@ export default function GameZoneScreen({ navigation }) {
                     </View>
                   </View>
 
-                  {/* name */}
-                  <Text style={[s.cardName, { color: '#fff' }]}>{g.name}</Text>
-
-                  {/* desc */}
-                  <Text style={[s.cardDesc, { color: g.color + 'cc' }]}>{g.desc}</Text>
-
-                  {/* bottom accent line */}
+                  <Text style={s.cardName}>{g.name}</Text>
+                  <Text style={[s.cardDesc, { color: g.color + 'bb' }]}>{g.desc}</Text>
                   <View style={[s.bottomLine, { backgroundColor: g.color }]} />
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          {/* Divider */}
-          <View style={s.divider}>
-            <View style={s.divLine} />
-            <Text style={s.divText}>PLAY BELOW</Text>
-            <View style={s.divLine} />
-          </View>
-
-          {/* Game components */}
-          <View ref={r => { gameRefs.current['trivia'] = r; }}>
-            <NutritionTrivia userId={user?.id} />
-          </View>
-          <View ref={r => { gameRefs.current['memory'] = r; }}>
-            <MemoryMatch userId={user?.id} />
-          </View>
-          <View ref={r => { gameRefs.current['calorie'] = r; }}>
-            <CalorieGuesser userId={user?.id} />
-          </View>
-          <View ref={r => { gameRefs.current['higher'] = r; }}>
-            <HigherOrLower userId={user?.id} />
-          </View>
-          <View ref={r => { gameRefs.current['macro'] = r; }}>
-            <MacroMatch userId={user?.id} />
-          </View>
-
-          <View style={{ height: 40 }} />
+          <View style={{ height: 20 }} />
         </ScrollView>
       </SafeAreaView>
+
+      {/* Full-screen game modal */}
+      <Modal
+        visible={!!activeGame}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setActiveGame(null)}
+      >
+        <View style={[s.modalRoot, game && { backgroundColor: game.bg }]}>
+          <StatusBar barStyle="light-content" backgroundColor={game?.bg ?? BG} />
+          <RNSafeArea style={{ flex: 1 }}>
+            {/* Modal header */}
+            <View style={[s.modalHeader, { borderBottomColor: game?.color + '30' }]}>
+              <TouchableOpacity onPress={() => setActiveGame(null)} style={[s.closeBtn, { backgroundColor: game?.color + '20', borderColor: game?.color + '40' }]}>
+                <Ionicons name="chevron-down" size={20} color={game?.color ?? '#fff'} />
+              </TouchableOpacity>
+              <View style={s.modalTitleRow}>
+                <Text style={s.modalEmoji}>{game?.emoji}</Text>
+                <Text style={[s.modalTitle, { color: game?.color ?? '#fff' }]}>
+                  {game?.name.replace('\n', ' ')}
+                </Text>
+              </View>
+              <View style={{ width: 36 }} />
+            </View>
+
+            {/* Game content */}
+            <ScrollView
+              contentContainerStyle={s.modalScroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {GameComponent && <GameComponent userId={user?.id} />}
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </RNSafeArea>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -201,7 +200,7 @@ const s = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14, backgroundColor: HEADER_BG,
+    paddingHorizontal: 16, paddingVertical: 14,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -212,7 +211,6 @@ const s = StyleSheet.create({
 
   scroll: { paddingHorizontal: 16, paddingTop: 4 },
 
-  /* Hero */
   hero: { alignItems: 'center', paddingVertical: 28 },
   heroBadge: {
     backgroundColor: '#d4ff0015', borderRadius: 20, borderWidth: 1,
@@ -235,21 +233,17 @@ const s = StyleSheet.create({
     letterSpacing: 3, marginBottom: 14,
   },
 
-  /* 2-column game grid */
-  grid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 28,
-  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
 
   gameCard: {
-    width: CARD_W,
-    borderRadius: 18, borderWidth: 1,
-    padding: 16, overflow: 'hidden',
-    minHeight: 160,
+    width: CARD_W, borderRadius: 18, borderWidth: 1,
+    padding: 16, overflow: 'hidden', minHeight: 160,
   },
+  gameCardFull: { width: '100%' },
 
   glowBlob: {
-    position: 'absolute', width: 100, height: 100,
-    borderRadius: 50, top: -20, right: -20,
+    position: 'absolute', width: 110, height: 110,
+    borderRadius: 55, top: -25, right: -25,
   },
 
   cardTop: {
@@ -268,17 +262,23 @@ const s = StyleSheet.create({
   },
   playChipText: { fontSize: 9, fontWeight: '900', color: '#000', letterSpacing: 1 },
 
-  cardName: {
-    fontSize: 16, fontWeight: '800', lineHeight: 20, marginBottom: 6, letterSpacing: 0.2,
-  },
+  cardName: { fontSize: 16, fontWeight: '800', lineHeight: 20, marginBottom: 6, color: '#fff', letterSpacing: 0.2 },
   cardDesc: { fontSize: 11, fontWeight: '500', lineHeight: 15 },
+  bottomLine: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 3 },
 
-  bottomLine: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, borderRadius: 2,
+  /* Modal */
+  modalRoot: { flex: 1 },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-
-  /* Divider */
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
-  divLine: { flex: 1, height: 1, backgroundColor: '#ffffff0e' },
-  divText: { fontSize: 10, color: '#ffffff25', letterSpacing: 2, fontWeight: '700' },
+  closeBtn: {
+    width: 36, height: 36, borderRadius: 18, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  modalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  modalEmoji: { fontSize: 20 },
+  modalTitle: { fontSize: 17, fontWeight: '800', letterSpacing: 0.3 },
+  modalScroll: { paddingHorizontal: 16, paddingTop: 12 },
 });
