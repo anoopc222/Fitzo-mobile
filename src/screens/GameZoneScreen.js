@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   StatusBar, Dimensions, Modal, SafeAreaView as RNSafeArea,
@@ -6,6 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { ThemeContext } from '../context/ThemeContext';
+import { darkColors } from '../theme/colors';
 
 import NutritionTrivia from '../components/NutritionTrivia';
 import MemoryMatch from '../components/MemoryMatch';
@@ -25,7 +27,7 @@ const GAMES = [
     desc: 'Test your knowledge',
     color: '#a855f7',
     glow: '#a855f730',
-    bg: '#1a0d2e',
+    bg: '#120820',
   },
   {
     key: 'memory',
@@ -34,7 +36,7 @@ const GAMES = [
     desc: 'Flip & match pairs',
     color: '#06b6d4',
     glow: '#06b6d430',
-    bg: '#061e24',
+    bg: '#041620',
   },
   {
     key: 'calorie',
@@ -43,7 +45,7 @@ const GAMES = [
     desc: 'Guess the calories',
     color: '#22c55e',
     glow: '#22c55e30',
-    bg: '#061a0e',
+    bg: '#041610',
   },
   {
     key: 'higher',
@@ -52,7 +54,7 @@ const GAMES = [
     desc: 'Compare calories',
     color: '#f59e0b',
     glow: '#f59e0b30',
-    bg: '#1e1400',
+    bg: '#1a1002',
   },
   {
     key: 'macro',
@@ -61,7 +63,7 @@ const GAMES = [
     desc: 'Pick the right macro',
     color: '#34d399',
     glow: '#34d39930',
-    bg: '#061a12',
+    bg: '#041610',
   },
 ];
 
@@ -73,15 +75,38 @@ const GAME_COMPONENTS = {
   macro: MacroMatch,
 };
 
+function makeGameTheme(g) {
+  return {
+    ...darkColors,
+    bg: g.bg,
+    bgCard: g.color + '14',
+    bgElevated: g.color + '0e',
+    surface: g.color + '10',
+    card: g.color + '14',
+    border: g.color + '35',
+    border2: g.color + '50',
+    accent: g.color,
+    accentDim: g.color,
+    accentText: '#000000',
+    dim: g.color + '12',
+    text: '#ffffff',
+    textMuted: 'rgba(255,255,255,0.65)',
+    textDim: 'rgba(255,255,255,0.35)',
+    success: g.color,
+    good: g.color,
+  };
+}
+
 const BG = '#06060f';
 
 export default function GameZoneScreen({ navigation }) {
   const { user } = useAuth();
   const { streak } = useGameStreak(user?.id);
-  const [activeGame, setActiveGame] = useState(null); // game key or null
+  const [activeGame, setActiveGame] = useState(null);
 
   const game = GAMES.find(g => g.key === activeGame);
   const GameComponent = activeGame ? GAME_COMPONENTS[activeGame] : null;
+  const gameTheme = game ? makeGameTheme(game) : null;
 
   return (
     <View style={s.root}>
@@ -118,8 +143,7 @@ export default function GameZoneScreen({ navigation }) {
           <View style={s.grid}>
             {GAMES.map((g, i) => {
               const isLast = i === GAMES.length - 1;
-              const isOdd = GAMES.length % 2 !== 0;
-              const fullWidth = isLast && isOdd;
+              const fullWidth = isLast && GAMES.length % 2 !== 0;
               return (
                 <TouchableOpacity
                   key={g.key}
@@ -132,7 +156,6 @@ export default function GameZoneScreen({ navigation }) {
                   activeOpacity={0.8}
                 >
                   <View style={[s.glowBlob, { backgroundColor: g.glow }]} />
-
                   <View style={s.cardTop}>
                     <View style={[s.emojiWrap, { backgroundColor: g.color + '20', borderColor: g.color + '40' }]}>
                       <Text style={s.cardEmoji}>{g.emoji}</Text>
@@ -142,7 +165,6 @@ export default function GameZoneScreen({ navigation }) {
                       <Text style={s.playChipText}>PLAY</Text>
                     </View>
                   </View>
-
                   <Text style={s.cardName}>{g.name}</Text>
                   <Text style={[s.cardDesc, { color: g.color + 'bb' }]}>{g.desc}</Text>
                   <View style={[s.bottomLine, { backgroundColor: g.color }]} />
@@ -155,41 +177,48 @@ export default function GameZoneScreen({ navigation }) {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Full-screen game modal */}
+      {/* Full-screen game modal with blended theme */}
       <Modal
         visible={!!activeGame}
         animationType="slide"
         transparent={false}
         onRequestClose={() => setActiveGame(null)}
       >
-        <View style={[s.modalRoot, game && { backgroundColor: game.bg }]}>
-          <StatusBar barStyle="light-content" backgroundColor={game?.bg ?? BG} />
-          <RNSafeArea style={{ flex: 1 }}>
-            {/* Modal header */}
-            <View style={[s.modalHeader, { borderBottomColor: game?.color + '30' }]}>
-              <TouchableOpacity onPress={() => setActiveGame(null)} style={[s.closeBtn, { backgroundColor: game?.color + '20', borderColor: game?.color + '40' }]}>
-                <Ionicons name="chevron-down" size={20} color={game?.color ?? '#fff'} />
-              </TouchableOpacity>
-              <View style={s.modalTitleRow}>
-                <Text style={s.modalEmoji}>{game?.emoji}</Text>
-                <Text style={[s.modalTitle, { color: game?.color ?? '#fff' }]}>
-                  {game?.name.replace('\n', ' ')}
-                </Text>
-              </View>
-              <View style={{ width: 36 }} />
-            </View>
+        {game && gameTheme && (
+          <ThemeContext.Provider value={{ colors: gameTheme, isDark: true, ready: true, toggleTheme: () => {}, setIsDark: () => {} }}>
+            <View style={[s.modalRoot, { backgroundColor: game.bg }]}>
+              <StatusBar barStyle="light-content" backgroundColor={game.bg} />
+              <RNSafeArea style={{ flex: 1 }}>
+                {/* Modal header */}
+                <View style={[s.modalHeader, { borderBottomColor: game.color + '25' }]}>
+                  <TouchableOpacity
+                    onPress={() => setActiveGame(null)}
+                    style={[s.closeBtn, { backgroundColor: game.color + '18', borderColor: game.color + '40' }]}
+                  >
+                    <Ionicons name="chevron-down" size={20} color={game.color} />
+                  </TouchableOpacity>
+                  <View style={s.modalTitleRow}>
+                    <Text style={s.modalEmoji}>{game.emoji}</Text>
+                    <Text style={[s.modalTitle, { color: game.color }]}>
+                      {game.name.replace('\n', ' ')}
+                    </Text>
+                  </View>
+                  <View style={{ width: 36 }} />
+                </View>
 
-            {/* Game content */}
-            <ScrollView
-              contentContainerStyle={s.modalScroll}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              {GameComponent && <GameComponent userId={user?.id} />}
-              <View style={{ height: 40 }} />
-            </ScrollView>
-          </RNSafeArea>
-        </View>
+                {/* Game content — inherits blended theme via context */}
+                <ScrollView
+                  contentContainerStyle={s.modalScroll}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {GameComponent && <GameComponent userId={user?.id} />}
+                  <View style={{ height: 40 }} />
+                </ScrollView>
+              </RNSafeArea>
+            </View>
+          </ThemeContext.Provider>
+        )}
       </Modal>
     </View>
   );
@@ -266,12 +295,10 @@ const s = StyleSheet.create({
   cardDesc: { fontSize: 11, fontWeight: '500', lineHeight: 15 },
   bottomLine: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 3 },
 
-  /* Modal */
   modalRoot: { flex: 1 },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
   },
   closeBtn: {
     width: 36, height: 36, borderRadius: 18, borderWidth: 1,
