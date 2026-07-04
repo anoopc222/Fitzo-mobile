@@ -4,7 +4,7 @@ import { darkColors, lightColors } from '../theme/colors';
 
 const STORAGE_KEY = 'fitzo:theme';
 
-const ThemeContext = createContext({
+export const ThemeContext = createContext({
   colors:      darkColors,
   isDark:      true,
   ready:       false,
