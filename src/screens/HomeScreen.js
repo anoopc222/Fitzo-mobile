@@ -22,7 +22,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight, fontFamily } from '../theme/typography';
-import Svg, { Polyline, Line } from 'react-native-svg';
+import Svg, { Polyline, Line, Circle } from 'react-native-svg';
 import Sparkline from '../components/Sparkline';
 import AchievementsRow from '../components/AchievementsRow';
 import LevelBadge from '../components/LevelBadge';
@@ -396,6 +396,34 @@ async function fetchHome(userId) {
     }
   }
 
+  // Readiness Score: blends sleep (40%), steps (35%), nutrition (25%)
+  let readinessScore = null;
+  let readinessSub = { sleepScore: null, stepsScore: null, nutritionScore: null };
+  {
+    const sleepLast = sleepHist.data?.[0];
+    const sleepSc = sleepLast && Number.isFinite(sleepLast.hours)
+      ? Math.min(100, Math.round((sleepLast.hours / sleepGoal) * 100)) : null;
+
+    const stepsSc = latestSteps && Number.isFinite(latestSteps.steps)
+      ? Math.min(100, Math.round((latestSteps.steps / stepGoal) * 100)) : null;
+
+    const calorieTarget = profile.data?.calorie_target ?? 2000;
+    const nutritionSc = todayKcal > 0
+      ? Math.min(100, Math.round(Math.max(0, 100 - Math.abs(todayKcal - calorieTarget) / calorieTarget * 100))) : null;
+
+    const weights = [];
+    let weighted = 0;
+    if (sleepSc !== null)     { weighted += sleepSc * 0.40;     weights.push(0.40); }
+    if (stepsSc !== null)     { weighted += stepsSc * 0.35;     weights.push(0.35); }
+    if (nutritionSc !== null) { weighted += nutritionSc * 0.25; weights.push(0.25); }
+
+    if (weights.length > 0) {
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      readinessScore = Math.min(100, Math.max(0, Math.round(weighted / totalWeight)));
+      readinessSub = { sleepScore: sleepSc, stepsScore: stepsSc, nutritionScore: nutritionSc };
+    }
+  }
+
   // Pro-only longest streak record: best-ever consecutive run of logged-step
   // days within the last 120 days, for comparison against the current streak.
   let longestStreak = 0;
@@ -527,6 +555,8 @@ async function fetchHome(userId) {
     goalForecast,
     prWatch,
     recoveryScore,
+    readinessScore,
+    readinessSub,
     longestStreak,
     calorieInsight,
     sleepDebt,
@@ -1508,6 +1538,67 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* ── Readiness Score Card ────────────────────────────── */}
+            {data?.readinessScore != null && (() => {
+              const rs = data.readinessScore;
+              const ringColor = rs >= 80 ? '#22c55e' : rs >= 50 ? '#f59e0b' : '#ef4444';
+              const label = rs >= 80 ? 'Great' : rs >= 50 ? 'Moderate' : 'Low';
+              const RADIUS = 28;
+              const CIRC = 2 * Math.PI * RADIUS;
+              const dash = (rs / 100) * CIRC;
+              const subs = [
+                { key: 'Sleep',     score: data.readinessSub?.sleepScore,     emoji: '😴' },
+                { key: 'Steps',     score: data.readinessSub?.stepsScore,     emoji: '👟' },
+                { key: 'Nutrition', score: data.readinessSub?.nutritionScore, emoji: '🥗' },
+              ];
+              return (
+                <View style={styles.readinessCard}>
+                  <View style={styles.readinessLeft}>
+                    <Svg width={70} height={70}>
+                      <Circle cx={35} cy={35} r={RADIUS} stroke={colors.border} strokeWidth={5} fill="none" />
+                      <Circle
+                        cx={35} cy={35} r={RADIUS}
+                        stroke={ringColor}
+                        strokeWidth={5}
+                        fill="none"
+                        strokeDasharray={`${dash} ${CIRC - dash}`}
+                        strokeLinecap="round"
+                        rotation={-90}
+                        originX={35}
+                        originY={35}
+                      />
+                    </Svg>
+                    <View style={styles.readinessOverlay}>
+                      <Text style={[styles.readinessNum, { color: ringColor }]}>{rs}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.readinessRight}>
+                    <View style={styles.readinessTitleRow}>
+                      <Text style={styles.readinessTitle}>Today's Readiness</Text>
+                      <View style={[styles.readinessBadge, { backgroundColor: ringColor + '22', borderColor: ringColor + '55' }]}>
+                        <Text style={[styles.readinessBadgeText, { color: ringColor }]}>{label}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.readinessSubs}>
+                      {subs.map(sub => sub.score !== null && (
+                        <View key={sub.key} style={styles.readinessSubRow}>
+                          <Text style={styles.readinessSubEmoji}>{sub.emoji}</Text>
+                          <Text style={styles.readinessSubLabel}>{sub.key}</Text>
+                          <View style={styles.readinessSubBar}>
+                            <View style={[styles.readinessSubFill, {
+                              width: `${sub.score}%`,
+                              backgroundColor: sub.score >= 80 ? '#22c55e' : sub.score >= 50 ? '#f59e0b' : '#ef4444',
+                            }]} />
+                          </View>
+                          <Text style={styles.readinessSubPct}>{sub.score}%</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
+
             <ChallengesCard home={data} />
 
             {/* ── Weekly Recap (share-able summary) ───────────────── */}
@@ -2326,6 +2417,22 @@ const createStyles = (colors) => StyleSheet.create({
   cutBreakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cutBreakdownLabel: { width: 64, fontSize: 12, color: colors.textMuted, fontFamily: fontFamily.body },
   cutBreakdownValue: { width: 28, fontSize: 12, color: colors.text, textAlign: 'right', fontFamily: fontFamily.monoBold },
+  readinessCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, borderColor: colors.border, padding: 14, marginBottom: 16, gap: 14 },
+  readinessLeft: { position: 'relative', width: 70, height: 70, alignItems: 'center', justifyContent: 'center' },
+  readinessOverlay: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  readinessNum: { fontSize: 18, fontFamily: fontFamily.monoBold },
+  readinessRight: { flex: 1, gap: 6 },
+  readinessTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  readinessTitle: { fontSize: 13, fontFamily: fontFamily.bodyExtraBold, color: colors.text },
+  readinessBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 2 },
+  readinessBadgeText: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5 },
+  readinessSubs: { gap: 4 },
+  readinessSubRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  readinessSubEmoji: { fontSize: 11, width: 16 },
+  readinessSubLabel: { fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.bodyBold, width: 52 },
+  readinessSubBar: { flex: 1, height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: 'hidden' },
+  readinessSubFill: { height: '100%', borderRadius: 2 },
+  readinessSubPct: { fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.mono, width: 28, textAlign: 'right' },
   restCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#001815', borderWidth: 1, borderColor: '#006650', borderRadius: 14, padding: 12, marginBottom: 8 },
   restIcon: { width: 44, height: 44, borderRadius: 11, backgroundColor: '#002820', borderWidth: 1, borderColor: '#006650', alignItems: 'center', justifyContent: 'center' },
   restTitle: { fontSize: typography.sm, fontWeight: weight.bold, color: '#00cc99' },
