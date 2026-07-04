@@ -190,6 +190,8 @@ async function fetchHome(userId) {
     monthWeight,
     prExercises,
     streakStepsHist,
+    past35Food,
+    past35Workouts,
   ] = await Promise.all([
     supabase.from('profiles')
       .select('full_name, goal, weight_goal_kg, step_goal, sleep_goal_hours, workout_weekly_goal')
@@ -205,7 +207,7 @@ async function fetchHome(userId) {
       .gte('logged_at', `${today}T00:00:00`).lte('logged_at', `${today}T23:59:59`),
     supabase.from('sleep_logs')
       .select('hours, quality, logged_at').eq('user_id', userId)
-      .order('logged_at', { ascending: false }).limit(8),
+      .order('logged_at', { ascending: false }).limit(35),
     supabase.from('workout_sessions')
       .select('id, notes, workout_exercises(id, exercise_name, sets(id))')
       .eq('user_id', userId).eq('date', today),
@@ -253,6 +255,14 @@ async function fetchHome(userId) {
     supabase.from('step_logs')
       .select('logged_at').eq('user_id', userId)
       .order('logged_at', { ascending: false }).limit(120),
+    supabase.from('food_logs')
+      .select('logged_at').eq('user_id', userId)
+      .gte('logged_at', localDateStr(new Date(Date.now() - 35 * 86400000)) + 'T00:00:00')
+      .order('logged_at', { ascending: false }),
+    supabase.from('workout_sessions')
+      .select('date').eq('user_id', userId)
+      .gte('date', localDateStr(new Date(Date.now() - 35 * 86400000)))
+      .order('date', { ascending: false }),
   ]);
 
   const weightArr = (weightHist.data ?? []).map(w => w.weight).reverse();
@@ -530,6 +540,27 @@ async function fetchHome(userId) {
     previous: buildWeekSeries(lastWeekStart, lastWeekStepsArr),
   };
 
+  // Check-in Calendar: last 35 days × 4 habits
+  const stepDates    = new Set((streakStepsHist.data ?? []).map(r => r.logged_at?.slice(0, 10)));
+  const sleepDates   = new Set((sleepHist.data ?? []).map(r => r.logged_at?.slice(0, 10)));
+  const foodDatesSet = new Set((past35Food.data ?? []).map(r => r.logged_at?.slice(0, 10)));
+  const workoutDatesSet = new Set((past35Workouts.data ?? []).map(r => r.date));
+  const habitCalendar = Array.from({ length: 35 }, (_, i) => {
+    const d = localDateStr(new Date(Date.now() - (34 - i) * 86400000));
+    return {
+      date: d,
+      steps: stepDates.has(d),
+      sleep: sleepDates.has(d),
+      food: foodDatesSet.has(d),
+      workout: workoutDatesSet.has(d),
+    };
+  });
+
+  // Consistency Score: % of last 30 days where 3+ habits were logged
+  const last30 = habitCalendar.slice(5);
+  const daysWithThreePlus = last30.filter(d => [d.steps, d.sleep, d.food, d.workout].filter(Boolean).length >= 3).length;
+  const consistencyScore = Math.round((daysWithThreePlus / 30) * 100);
+
   return {
     profile: profile.data,
     weightArr, stepsArr, sleepArr,
@@ -562,6 +593,8 @@ async function fetchHome(userId) {
     sleepDebt,
     freezesAvailable: freezeState.freezesAvailable,
     todayStepsLogged,
+    habitCalendar,
+    consistencyScore,
   };
 }
 
@@ -1420,6 +1453,28 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
 
+            {/* ── Quick Nav: Mood Log + Year in Review ──────────── */}
+            <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 16, marginBottom: 4 }}>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, alignItems: 'center', gap: 6 }}
+                onPress={() => navigation.navigate('MoodLog')}
+                activeOpacity={0.85}
+              >
+                <Text style={{ fontSize: 26 }}>😊</Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: colors.text }}>Mood Log</Text>
+                <Text style={{ fontSize: 9, color: colors.textDim, textAlign: 'center' }}>Track mood & energy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, alignItems: 'center', gap: 6 }}
+                onPress={() => navigation.navigate('YearInReview')}
+                activeOpacity={0.85}
+              >
+                <Text style={{ fontSize: 26 }}>📅</Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: colors.text }}>Year in Review</Text>
+                <Text style={{ fontSize: 9, color: colors.textDim, textAlign: 'center' }}>Your {new Date().getFullYear()} stats</Text>
+              </TouchableOpacity>
+            </View>
+
             {/* ── Insight Cards (auto-rotating) ──────────────────── */}
             <ScrollView
               ref={insightScrollRef}
@@ -1594,6 +1649,73 @@ export default function HomeScreen() {
                         </View>
                       ))}
                     </View>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* ── Consistency Score ───────────────────────────────── */}
+            {data?.consistencyScore != null && (() => {
+              const cs = data.consistencyScore;
+              const csColor = cs >= 70 ? '#22c55e' : cs >= 40 ? '#f59e0b' : '#ef4444';
+              const csLabel = cs >= 70 ? 'Consistent' : cs >= 40 ? 'Building' : 'Get Going';
+              return (
+                <View style={styles.consistCard}>
+                  <View style={styles.consistLeft}>
+                    <Text style={[styles.consistPct, { color: csColor }]}>{cs}%</Text>
+                    <View style={[styles.consistBadge, { backgroundColor: csColor + '22', borderColor: csColor + '55' }]}>
+                      <Text style={[styles.consistBadgeText, { color: csColor }]}>{csLabel}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.consistRight}>
+                    <Text style={styles.consistTitle}>Consistency Score</Text>
+                    <Text style={styles.consistSub}>Days with 3+ habits logged in the last 30 days</Text>
+                    <View style={styles.consistBarBg}>
+                      <View style={[styles.consistBarFill, { width: `${cs}%`, backgroundColor: csColor }]} />
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* ── Check-in Calendar ───────────────────────────────── */}
+            {data?.habitCalendar && (() => {
+              const CAL_HABITS = [
+                { key: 'steps',   emoji: '👟', color: '#fbbf24' },
+                { key: 'sleep',   emoji: '😴', color: '#c4b5fd' },
+                { key: 'food',    emoji: '🥗', color: '#34d399' },
+                { key: 'workout', emoji: '🏋️', color: colors.accent },
+              ];
+              const weeks = [];
+              for (let w = 0; w < 5; w++) weeks.push(data.habitCalendar.slice(w * 7, w * 7 + 7));
+              return (
+                <View style={styles.calCard}>
+                  <Text style={styles.calCardTitle}>HABIT CHECK-IN · LAST 5 WEEKS</Text>
+                  <View style={styles.calLegend}>
+                    {CAL_HABITS.map(h => (
+                      <View key={h.key} style={styles.calLegendItem}>
+                        <View style={[styles.calLegendDot, { backgroundColor: h.color }]} />
+                        <Text style={styles.calLegendText}>{h.emoji}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {weeks.map((week, wi) => (
+                    <View key={wi} style={styles.calWeekRow}>
+                      {week.map((day, di) => {
+                        const d = new Date(day.date + 'T00:00:00');
+                        const dow = ['S','M','T','W','T','F','S'][d.getDay()];
+                        const count = CAL_HABITS.filter(h => day[h.key]).length;
+                        const bgOpacity = count === 0 ? '10' : count === 1 ? '30' : count === 2 ? '55' : count === 3 ? '80' : 'ff';
+                        return (
+                          <View key={di} style={[styles.calCell, { backgroundColor: colors.accent + bgOpacity }]}>
+                            <Text style={styles.calCellText}>{dow}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ))}
+                  <View style={styles.calFooter}>
+                    <Text style={styles.calFooterText}>Darker = more habits completed that day</Text>
                   </View>
                 </View>
               );
@@ -2417,6 +2539,27 @@ const createStyles = (colors) => StyleSheet.create({
   cutBreakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cutBreakdownLabel: { width: 64, fontSize: 12, color: colors.textMuted, fontFamily: fontFamily.body },
   cutBreakdownValue: { width: 28, fontSize: 12, color: colors.text, textAlign: 'right', fontFamily: fontFamily.monoBold },
+  consistCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, borderColor: colors.border, padding: 14, marginBottom: 16, gap: 14 },
+  consistLeft: { alignItems: 'center', gap: 6, minWidth: 68 },
+  consistPct: { fontSize: 28, fontFamily: fontFamily.monoBold },
+  consistBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 2 },
+  consistBadgeText: { fontSize: 9, fontFamily: fontFamily.bodyBold, letterSpacing: 0.5 },
+  consistRight: { flex: 1, gap: 6 },
+  consistTitle: { fontSize: 13, fontFamily: fontFamily.bodyExtraBold, color: colors.text },
+  consistSub: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.body, lineHeight: 15 },
+  consistBarBg: { height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: 'hidden' },
+  consistBarFill: { height: '100%', borderRadius: 2 },
+  calCard: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, borderColor: colors.border, padding: 14, marginBottom: 16, gap: 10 },
+  calCardTitle: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
+  calLegend: { flexDirection: 'row', gap: 10 },
+  calLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  calLegendDot: { width: 8, height: 8, borderRadius: 4 },
+  calLegendText: { fontSize: 11 },
+  calWeekRow: { flexDirection: 'row', gap: 4 },
+  calCell: { flex: 1, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  calCellText: { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.text },
+  calFooter: { alignItems: 'center' },
+  calFooterText: { fontSize: 9, color: colors.textDim, fontFamily: fontFamily.body },
   readinessCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, borderColor: colors.border, padding: 14, marginBottom: 16, gap: 14 },
   readinessLeft: { position: 'relative', width: 70, height: 70, alignItems: 'center', justifyContent: 'center' },
   readinessOverlay: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },

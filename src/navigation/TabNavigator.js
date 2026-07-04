@@ -25,6 +25,8 @@ import SubscriptionScreen from '../screens/SubscriptionScreen';
 import SocialScreen from '../screens/SocialScreen';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
 import GameZoneScreen from '../screens/GameZoneScreen';
+import MoodLogScreen from '../screens/MoodLogScreen';
+import YearInReviewScreen from '../screens/YearInReviewScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -56,6 +58,8 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Subscription" component={SubscriptionScreen} />
       <HomeStack.Screen name="PublicProfile" component={PublicProfileScreen} />
       <HomeStack.Screen name="GameZone" component={GameZoneScreen} />
+      <HomeStack.Screen name="MoodLog" component={MoodLogScreen} />
+      <HomeStack.Screen name="YearInReview" component={YearInReviewScreen} />
     </HomeStack.Navigator>
   );
 }

@@ -389,6 +389,41 @@ const buildCalculators = (t, ACTIVITY) => [
     },
   },
   {
+    id: 'fitnessAge', label: 'Fitness Age', icon: 'heart-circle', color: '#34d399',
+    desc: 'Estimates your biological fitness age from activity, sleep, and resting heart rate.',
+    fields: [
+      { key: 'age', label: 'Chronological Age (yrs)', placeholder: '30' },
+      { key: 'stepsPerDay', label: 'Avg Daily Steps', placeholder: '8000' },
+      { key: 'sleepHours', label: 'Avg Sleep (hours)', placeholder: '7.5' },
+      { key: 'restingHR', label: 'Resting Heart Rate (bpm)', placeholder: '65' },
+      { key: 'workoutsPerWeek', label: 'Workouts per Week', placeholder: '3' },
+    ],
+    compute: ({ age, stepsPerDay, sleepHours, restingHR, workoutsPerWeek }) => {
+      const a = parseFloat(age), steps = parseFloat(stepsPerDay);
+      const sleep = parseFloat(sleepHours), hr = parseFloat(restingHR), wk = parseFloat(workoutsPerWeek);
+      if ([a, steps, sleep, hr, wk].some(v => isNaN(v))) return [{ label: 'Fill all fields', value: '' }];
+      // Step score: 10k = baseline 0, each 1k above = -0.3, each 1k below = +0.5
+      const stepAdj = steps >= 10000 ? -((steps - 10000) / 1000) * 0.3 : ((10000 - steps) / 1000) * 0.5;
+      // Sleep score: 7-9h = 0, outside = penalty
+      const sleepAdj = sleep >= 7 && sleep <= 9 ? 0 : sleep < 7 ? (7 - sleep) * 1.5 : (sleep - 9) * 0.5;
+      // HR score: 60 = -1, 70 = 0, each 5bpm above 70 = +1.5
+      const hrAdj = hr <= 60 ? -2 : hr <= 70 ? (hr - 60) * 0.2 - 2 : ((hr - 70) / 5) * 1.5;
+      // Workouts: 4+ = -2, 3 = -1, 2 = 0, 1 = +1, 0 = +3
+      const wkAdj = wk >= 4 ? -2 : wk >= 3 ? -1 : wk >= 2 ? 0 : wk >= 1 ? 1 : 3;
+      const fitnessAge = Math.round(a + stepAdj + sleepAdj + hrAdj + wkAdj);
+      const diff = fitnessAge - a;
+      const status = diff <= -3 ? '🏆 Excellent — well below your age!'
+        : diff <= 0 ? '✅ Good — at or below your age'
+        : diff <= 3 ? '⚠️ Fair — slightly above your age'
+        : '🔴 High — well above your age';
+      return [
+        { label: 'Fitness Age', value: `${Math.max(10, fitnessAge)} yrs` },
+        { label: 'vs Actual Age', value: `${diff > 0 ? '+' : ''}${diff} yrs` },
+        { label: 'Status', value: status },
+      ];
+    },
+  },
+  {
     id: 'plateCalc', label: t('calculators.labelPlateCalculator'), icon: 'barbell', color: 'accent',
     desc: t('calculators.plateCalcDesc'),
     fields: [
