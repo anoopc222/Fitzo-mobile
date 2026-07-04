@@ -270,7 +270,9 @@
     "resetSent": "Check your email",
     "resetSentSub": "A password reset link has been sent to your email address.",
     "confirmEmailPlaceholder": "Confirm email address",
-    "emailMismatch": "Email addresses do not match."
+    "emailMismatch": "Email addresses do not match.",
+    "sendReset": "Send Reset Link",
+    "backToSignIn": "Back to Sign In"
   },
   "progress": {
     "trendImproving": "Improving",
