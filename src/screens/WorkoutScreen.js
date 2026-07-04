@@ -36,7 +36,7 @@ async function fetchSessions(userId) {
   const { data, error } = await supabase
     .from('workout_sessions')
     .select(`
-      id, date, notes, total_volume, duration_min, calories_burned,
+      id, date, notes, coach_notes, total_volume, duration_min, calories_burned,
       workout_exercises (
         id, exercise_name, order_index, group_id,
         sets ( id, set_number, weight_kg, reps, rpe, duration_min, distance_km, avg_rpm, speed_kmh, incline_pct, calories )
@@ -135,7 +135,7 @@ function computeSetRow(ex, s) {
 // Builds a client-side preview of a session in the same shape fetchSessions
 // returns, so the workout list can update instantly while the real save
 // (multiple sequential round trips server-side) is still in flight.
-function buildOptimisticSession(sessionId, { date, name, exercises, duration_min }, existing) {
+function buildOptimisticSession(sessionId, { date, name, exercises, duration_min, coachNotes }, existing) {
   let totalVol = 0;
   const workout_exercises = (exercises ?? [])
     .filter(ex => ex.name.trim())
@@ -152,6 +152,7 @@ function buildOptimisticSession(sessionId, { date, name, exercises, duration_min
   return {
     id: sessionId,
     date, notes: name || 'Workout',
+    coach_notes: coachNotes ?? existing?.coach_notes ?? null,
     total_volume: Math.round(totalVol),
     duration_min: duration_min != null ? duration_min : (existing?.duration_min ?? null),
     calories_burned: existing?.calories_burned ?? null,
@@ -159,20 +160,21 @@ function buildOptimisticSession(sessionId, { date, name, exercises, duration_min
   };
 }
 
-async function saveSession(userId, { sessionId, date, name, exercises, duration_min }) {
+async function saveSession(userId, { sessionId, date, name, exercises, duration_min, coachNotes }) {
   let sid = sessionId;
   const durPatch = duration_min != null ? { duration_min } : {};
+  const notesPatch = coachNotes != null ? { coach_notes: coachNotes } : {};
   if (!sid) {
     const { data, error } = await supabase
       .from('workout_sessions')
-      .insert({ user_id: userId, date, notes: name || 'Workout', ...durPatch })
+      .insert({ user_id: userId, date, notes: name || 'Workout', ...durPatch, ...notesPatch })
       .select().single();
     if (error) throw error;
     sid = data.id;
   } else {
     const { error } = await supabase
       .from('workout_sessions')
-      .update({ date, notes: name || 'Workout', ...durPatch })
+      .update({ date, notes: name || 'Workout', ...durPatch, ...notesPatch })
       .eq('id', sid);
     if (error) throw error;
   }
@@ -783,6 +785,60 @@ function getSubstitutes(exerciseName) {
   return [];
 }
 
+// RPE Trend Alert: per-exercise, detect if avg RPE has risen ≥1 point
+// over the last 2 vs prior 2 sessions at the same exercise
+function detectRpeTrend(sessions) {
+  const byEx = {};
+  for (const s of sessions) {
+    for (const ex of s.workout_exercises ?? []) {
+      const name = (ex.exercise_name ?? '').trim();
+      if (!name) continue;
+      const rpes = (ex.sets ?? []).map(st => parseFloat(st.rpe)).filter(v => !isNaN(v));
+      if (!rpes.length) continue;
+      const avg = rpes.reduce((a, b) => a + b, 0) / rpes.length;
+      if (!byEx[name]) byEx[name] = [];
+      byEx[name].push({ date: s.date, avg });
+    }
+  }
+  const alerts = [];
+  for (const [name, entries] of Object.entries(byEx)) {
+    const sorted = entries.sort((a, b) => b.date.localeCompare(a.date));
+    if (sorted.length < 4) continue;
+    const recent = sorted.slice(0, 2).reduce((a, b) => a + b.avg, 0) / 2;
+    const prior  = sorted.slice(2, 4).reduce((a, b) => a + b.avg, 0) / 2;
+    if (recent - prior >= 1.0 && recent >= 8) {
+      alerts.push({ exercise: name, recentRpe: recent.toFixed(1), delta: (recent - prior).toFixed(1) });
+    }
+  }
+  return alerts.slice(0, 3);
+}
+
+// Muscle Group Balance: classify exercises into Push / Pull / Legs / Core
+function getMuscleBalance(sessions) {
+  const PUSH_KEYS  = ['press','fly','dip','push','chest','shoulder','tricep','overhead'];
+  const PULL_KEYS  = ['row','pull','curl','lat','bicep','chin','face pull','deadlift'];
+  const LEGS_KEYS  = ['squat','leg','lunge','calf','hip thrust','rdl','romanian','hack'];
+  const CORE_KEYS  = ['plank','crunch','ab','core','oblique','hanging leg','sit'];
+  const [start] = getWeekRange(new Date());
+  const totals = { Push: 0, Pull: 0, Legs: 0, Core: 0 };
+  for (const s of sessions) {
+    if (s.date < start) continue;
+    for (const ex of s.workout_exercises ?? []) {
+      const n = (ex.exercise_name ?? '').toLowerCase();
+      const vol = (ex.sets ?? []).reduce((sum, st) => sum + (st.weight_kg ?? 0) * (st.reps ?? 0), 0);
+      if (!vol) continue;
+      if (PUSH_KEYS.some(k => n.includes(k)))      totals.Push  += vol;
+      else if (PULL_KEYS.some(k => n.includes(k))) totals.Pull  += vol;
+      else if (LEGS_KEYS.some(k => n.includes(k))) totals.Legs  += vol;
+      else if (CORE_KEYS.some(k => n.includes(k))) totals.Core  += vol;
+    }
+  }
+  const total = Object.values(totals).reduce((a, b) => a + b, 0);
+  if (!total) return null;
+  return Object.entries(totals).map(([k, v]) => ({ group: k, vol: Math.round(v), pct: Math.round((v / total) * 100) }))
+    .sort((a, b) => b.vol - a.vol);
+}
+
 function detectDeload(sessions) {
   const gym = sessions
     .filter(s => getSessionType(s.notes) === 'gym')
@@ -1105,6 +1161,16 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
           </ScrollView>
         )}
 
+        {/* Coach Notes */}
+        {!!session.coach_notes && (
+          <View style={dS.coachNotesCard}>
+            <View style={dS.coachNotesHeader}>
+              <Text style={dS.coachNotesTitle}>📋 COACH NOTES</Text>
+            </View>
+            <Text style={dS.coachNotesText}>{session.coach_notes}</Text>
+          </View>
+        )}
+
         <View style={{ position: 'absolute', top: -9999, left: -9999 }} pointerEvents="none">
           <ExportCardTemplate ref={sessionExport.ref} title={session.notes || t('workout.workout')} subtitle={fmtDate(session.date)} colors={colors} width={340}>
             <View style={dS.statsRow}>
@@ -1403,6 +1469,7 @@ function EditSessionModal({
   const eS = useMemo(() => createES(colors), [colors]);
   const [date, setDate] = useState('');
   const [name, setName] = useState('');
+  const [coachNotes, setCoachNotes] = useState('');
   const [exercises, setExercises] = useState([]);
   const [activeExIdx, setActiveExIdx] = useState(null);
   const [acOpenIdx, setAcOpenIdx] = useState(null);
@@ -1580,6 +1647,7 @@ function EditSessionModal({
     if (visible && initialData) {
       setDate(initialData.date ?? '');
       setName(initialData.name ?? '');
+      setCoachNotes(initialData.coachNotes ?? '');
       setExercises(initialData.exercises ?? []);
       setActiveExIdx(null);
     }
@@ -1657,6 +1725,7 @@ function EditSessionModal({
       : (isNew && sessionElapsedSec > 0 ? Math.round(sessionElapsedSec / 60) : undefined);
     onSave({
       date: date.trim(), name: name.trim() || t('workout.workout'), exercises: isRest ? [] : exercises,
+      coachNotes: coachNotes.trim() || null,
       ...(duration_min != null ? { duration_min } : {}),
     });
   };
@@ -1731,6 +1800,21 @@ function EditSessionModal({
               <TextInput style={eS.fieldInput} value={name} onChangeText={setName}
                 placeholder={t('workout.egChestAndBack')} placeholderTextColor={colors.textDim} />
             </View>
+          </View>
+
+          {/* Coach Notes */}
+          <View style={eS.coachNotesWrap}>
+            <Text style={eS.fieldLabel}>📋 COACH NOTES</Text>
+            <TextInput
+              style={eS.coachNotesInput}
+              value={coachNotes}
+              onChangeText={setCoachNotes}
+              placeholder="How did it feel? Cues, adjustments, next session plans…"
+              placeholderTextColor={colors.textDim}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
           </View>
 
           {/* Content area — differs by type */}
@@ -2432,11 +2516,13 @@ export default function WorkoutScreen({ embedded = false } = {}) {
     onError: (e) => Alert.alert(t('common.error'), e.message),
   });
 
-  const pbMap       = useMemo(() => computePBMap(sessions), [sessions]);
-  const recentTypes = useMemo(() => getRecentTypes(sessions), [sessions]);
+  const pbMap        = useMemo(() => computePBMap(sessions), [sessions]);
+  const recentTypes  = useMemo(() => getRecentTypes(sessions), [sessions]);
   const deload       = useMemo(() => detectDeload(sessions), [sessions]);
   const overtraining = useMemo(() => detectOvertraining(sessions), [sessions]);
   const muscleVolume = useMemo(() => getMuscleVolumeThisWeek(sessions), [sessions]);
+  const rpeTrend     = useMemo(() => detectRpeTrend(sessions), [sessions]);
+  const muscleBalance = useMemo(() => getMuscleBalance(sessions), [sessions]);
 
   const TYPE_PRIORITY = { gym: 2, cardio: 1, rest: 0 };
   const heatmapByDate = useMemo(() => {
@@ -2746,6 +2832,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
       sessionId: session.id,
       date: session.date,
       name: session.notes ?? '',
+      coachNotes: session.coach_notes ?? '',
       exercises: (session.workout_exercises ?? [])
         .slice().sort((a, b) => a.order_index - b.order_index)
         .map(ex => ({
@@ -3075,6 +3162,62 @@ export default function WorkoutScreen({ embedded = false } = {}) {
               )}
             </View>
 
+            {/* RPE Trend Alert */}
+            {rpeTrend.length > 0 && (
+              <View style={s.card}>
+                <Text style={s.cardTitle}>RPE TREND ALERT</Text>
+                {rpeTrend.map((alert, i) => (
+                  <View key={i} style={s.rpeAlertRow}>
+                    <View style={s.rpeAlertIcon}>
+                      <Text style={{ fontSize: 16 }}>📈</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.rpeAlertName} numberOfLines={1}>{alert.exercise}</Text>
+                      <Text style={s.rpeAlertSub}>
+                        Avg RPE {alert.recentRpe} ({alert.delta > 0 ? '+' : ''}{alert.delta} vs prior 2 sessions) — consider a deload set or lighter week
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Muscle Group Balance (Push / Pull / Legs / Core) */}
+            {muscleBalance && muscleBalance.length > 0 && (
+              <View style={s.card}>
+                <Text style={s.cardTitle}>PUSH · PULL · LEGS BALANCE</Text>
+                <Text style={s.cardSubtitle}>This week's training distribution</Text>
+                {muscleBalance.map(({ group, vol, pct }) => {
+                  const balanceColor = group === 'Push' ? '#fb7185' : group === 'Pull' ? '#60a5fa' : group === 'Legs' ? '#fbbf24' : '#34d399';
+                  return (
+                    <View key={group} style={s.muscleBarRow}>
+                      <Text style={[s.muscleBarLabel, { color: balanceColor }]}>{group}</Text>
+                      <View style={s.muscleBarTrack}>
+                        <View style={[s.muscleBarFill, { width: `${Math.max(4, pct)}%`, backgroundColor: balanceColor }]} />
+                      </View>
+                      <Text style={s.muscleBarVal}>{pct}%</Text>
+                    </View>
+                  );
+                })}
+                {(() => {
+                  const push = muscleBalance.find(m => m.group === 'Push')?.pct ?? 0;
+                  const pull = muscleBalance.find(m => m.group === 'Pull')?.pct ?? 0;
+                  if (push > 0 && pull > 0) {
+                    const ratio = (push / Math.max(pull, 1)).toFixed(1);
+                    const isBalanced = ratio >= 0.8 && ratio <= 1.4;
+                    return (
+                      <View style={[s.deloadBanner, { backgroundColor: isBalanced ? '#22c55e18' : '#f59e0b18', borderColor: isBalanced ? '#22c55e40' : '#f59e0b40' }]}>
+                        <Text style={[s.deloadBannerText, { color: isBalanced ? '#22c55e' : '#f59e0b' }]}>
+                          {isBalanced ? `✅ Push:Pull ratio ${ratio}:1 — well balanced` : `⚠️ Push:Pull ratio ${ratio}:1 — aim for 1:1 to protect shoulders`}
+                        </Text>
+                      </View>
+                    );
+                  }
+                  return null;
+                })()}
+              </View>
+            )}
+
             {/* Muscle Group Volume + Auto-Deload — Pro */}
             <View style={s.card}>
               <View style={s.cardTitleRow}>
@@ -3252,6 +3395,9 @@ export default function WorkoutScreen({ embedded = false } = {}) {
                   )}
                 </View>
                 <Text style={s.sessionSub} numberOfLines={1}>{subtitle}</Text>
+                {!!sess.coach_notes && (
+                  <Text style={s.sessionNoteSnippet} numberOfLines={1}>📋 {sess.coach_notes}</Text>
+                )}
               </View>
               <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
             </TouchableOpacity>
@@ -3424,6 +3570,11 @@ const createS = (colors) => StyleSheet.create({
   proBadge: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
   proBadgeText: { fontSize: 9, fontWeight: weight.black, color: colors.accentText, letterSpacing: 0.5 },
   lockedHint: { fontSize: 12, color: colors.textMuted, marginTop: 12, lineHeight: 17 },
+  cardSubtitle: { fontSize: typography.xs, color: colors.textMuted, marginBottom: 8 },
+  rpeAlertRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.border },
+  rpeAlertIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#f59e0b18', alignItems: 'center', justifyContent: 'center' },
+  rpeAlertName: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.text },
+  rpeAlertSub: { fontSize: typography.xs, color: colors.textMuted, marginTop: 2, lineHeight: 16 },
 
   deloadBanner: {
     backgroundColor: colors.danger + '14', borderWidth: 1, borderColor: colors.danger + '55',
@@ -3493,6 +3644,7 @@ const createS = (colors) => StyleSheet.create({
   deltaBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 },
   deltaText: { fontSize: 10, fontWeight: weight.bold },
   sessionSub: { fontSize: 11, color: colors.textDim },
+  sessionNoteSnippet: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.body, marginTop: 2 },
 
   fab: {
     position: 'absolute', bottom: 24, right: 24,
@@ -3611,6 +3763,16 @@ const createDS = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: colors.danger + '55',
   },
   deleteBtnText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.danger },
+
+  coachNotesCard: {
+    marginHorizontal: 16, marginTop: 12,
+    backgroundColor: colors.accent + '0d',
+    borderRadius: 12, borderWidth: 1, borderColor: colors.accent + '30',
+    padding: 14,
+  },
+  coachNotesHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  coachNotesTitle: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
+  coachNotesText: { fontSize: 13, fontFamily: fontFamily.body, color: colors.text, lineHeight: 20 },
 });
 
 const createES = (colors) => StyleSheet.create({
@@ -3907,6 +4069,15 @@ const createES = (colors) => StyleSheet.create({
     fontSize: typography.sm,
     color: colors.textMuted,
     fontWeight: '600',
+  },
+
+  coachNotesWrap: { paddingHorizontal: 16, paddingBottom: 12 },
+  coachNotesInput: {
+    backgroundColor: colors.dim,
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: 12, padding: 12,
+    fontSize: typography.sm, color: colors.text, fontFamily: fontFamily.body,
+    minHeight: 80,
   },
 });
 
