@@ -17,6 +17,7 @@ import { NotificationProvider } from './src/context/NotificationContext';
 import { useAppFonts } from './src/theme/useAppFonts';
 import AppNavigator from './src/navigation/AppNavigator';
 import MoreSheetModal from './src/components/MoreSheetModal';
+import UpdateBanner from './src/components/UpdateBanner';
 import { navigate } from './src/navigation/navigationRef';
 import { requestNotificationPermissions, scheduleDailyReminder, scheduleWeeklySummary } from './src/lib/notifications';
 import { POSTHOG_API_KEY, POSTHOG_HOST } from './src/config/analytics';
@@ -102,6 +103,7 @@ function Root() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <AppNavigator />
       <MoreSheetModal />
+      <UpdateBanner />
     </>
   );
 }
