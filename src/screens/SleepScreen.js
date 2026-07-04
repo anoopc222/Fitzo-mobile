@@ -1081,7 +1081,9 @@ export default function SleepScreen({ embedded = false } = {}) {
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>{t('sleep.sleepLogTitle')}</Text>
               </View>
-              {monthLogs.length === 0 && <Text style={styles.emptyText}>{t('sleep.noEntriesThisMonth')}</Text>}
+              {monthLogs.length === 0 && (
+                <EmptyState emoji="😴" title={t('sleep.noEntriesThisMonth')} subtitle="Tap + to log your sleep for today" />
+              )}
               {groupByWeek(monthLogs, l => l.logged_at).map(week => (
                 <View key={week.key} style={styles.weekGroupBox}>
                   {week.items.map((log, i) => (
