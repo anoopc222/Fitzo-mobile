@@ -7,25 +7,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 
-import DailySpin from '../components/DailySpin';
 import NutritionTrivia from '../components/NutritionTrivia';
 import MemoryMatch from '../components/MemoryMatch';
-import ReactionTap from '../components/ReactionTap';
 import CalorieGuesser from '../components/CalorieGuesser';
 import HigherOrLower from '../components/HigherOrLower';
 import MacroMatch from '../components/MacroMatch';
+
 import { useGameStreak } from '../components/GameStreak';
 
 const { width: W } = Dimensions.get('window');
 
 const GAMES = [
-  {
-    key: 'spin',
-    emoji: '🎯',
-    name: 'Daily Challenge',
-    desc: 'Spin for a fitness dare — complete it to earn points',
-    color: '#ff6b35',
-  },
   {
     key: 'trivia',
     emoji: '🧠',
@@ -53,13 +45,6 @@ const GAMES = [
     name: 'Higher or Lower',
     desc: 'Is the next food higher or lower in calories?',
     color: '#f59e0b',
-  },
-  {
-    key: 'reaction',
-    emoji: '⚡',
-    name: 'Reaction Tap',
-    desc: 'Tap the target as fast as you can',
-    color: '#d4ff00',
   },
   {
     key: 'macro',
@@ -115,7 +100,7 @@ export default function GameZoneScreen({ navigation }) {
           <View style={s.hero}>
             <Text style={s.heroEmoji}>🎮</Text>
             <Text style={s.heroHeading}>Play & Earn</Text>
-            <Text style={s.heroSub}>7 fitness mini-games · win XP & badges</Text>
+            <Text style={s.heroSub}>5 fitness mini-games · win XP & badges</Text>
             {streak > 0 && (
               <View style={s.streakBadge}>
                 <Text style={s.streakText}>🔥 {streak} day streak</Text>
@@ -163,9 +148,6 @@ export default function GameZoneScreen({ navigation }) {
           </View>
 
           {/* Game components */}
-          <View ref={r => { gameRefs.current['spin'] = r; }}>
-            <DailySpin userId={user?.id} />
-          </View>
           <View ref={r => { gameRefs.current['trivia'] = r; }}>
             <NutritionTrivia userId={user?.id} />
           </View>
@@ -177,9 +159,6 @@ export default function GameZoneScreen({ navigation }) {
           </View>
           <View ref={r => { gameRefs.current['higher'] = r; }}>
             <HigherOrLower userId={user?.id} />
-          </View>
-          <View ref={r => { gameRefs.current['reaction'] = r; }}>
-            <ReactionTap userId={user?.id} />
           </View>
           <View ref={r => { gameRefs.current['macro'] = r; }}>
             <MacroMatch userId={user?.id} />

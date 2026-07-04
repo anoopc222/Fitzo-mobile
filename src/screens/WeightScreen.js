@@ -1420,7 +1420,9 @@ export default function WeightScreen({ embedded = false } = {}) {
             {/* ── History ── */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>{t('weight.historyTitle')}</Text>
-              {mWeights.length === 0 && <Text style={styles.emptyText}>{t('weight.noEntriesThisMonth')}</Text>}
+              {mWeights.length === 0 && (
+                <EmptyState emoji="⚖️" title={t('weight.noEntriesThisMonth')} subtitle="Tap + to log your weight for today" />
+              )}
               {groupByWeek(
                 mWeights.map((log, idx) => {
                   const nextLog = mWeights[idx + 1];

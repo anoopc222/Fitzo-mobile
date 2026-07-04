@@ -3171,8 +3171,6 @@ export default function WorkoutScreen({ embedded = false } = {}) {
               emoji="🏋️"
               title="No workouts logged yet"
               subtitle="Start tracking to see your progress here"
-              actionLabel="Log Workout"
-              onAction={openNew}
             />
           ) : (
             <EmptyState
@@ -3181,8 +3179,6 @@ export default function WorkoutScreen({ embedded = false } = {}) {
                 ? t('workout.noSessionsInMonth', { month: MONTH_NAMES[viewMonth - 1], year: viewYear })
                 : t('workout.allSessionsAreRestDays')}
               subtitle={t('workout.tapPlusToLogWorkout')}
-              actionLabel="Log Workout"
-              onAction={openNew}
             />
           )
         )}
