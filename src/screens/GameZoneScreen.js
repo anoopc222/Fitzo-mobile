@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  StatusBar, Dimensions, Modal, SafeAreaView as RNSafeArea,
+  StatusBar, Dimensions, Modal, SafeAreaView as RNSafeAreaView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,20 +14,37 @@ import MemoryMatch from '../components/MemoryMatch';
 import CalorieGuesser from '../components/CalorieGuesser';
 import HigherOrLower from '../components/HigherOrLower';
 import MacroMatch from '../components/MacroMatch';
+import MacroSniper from '../components/MacroSniper';
+import FoodSortingRush from '../components/FoodSortingRush';
+import CalorieStack from '../components/CalorieStack';
+import WorkoutBuilderPuzzle from '../components/WorkoutBuilderPuzzle';
+import BodyClockQuiz from '../components/BodyClockQuiz';
 import { useGameStreak } from '../components/GameStreak';
 
 const { width: W } = Dimensions.get('window');
 const CARD_W = (W - 32 - 10) / 2;
 
+// Ordered most addictive first
 const GAMES = [
   {
-    key: 'trivia',
-    emoji: '🧠',
-    name: 'Nutrition\nTrivia',
-    desc: 'Test your knowledge',
-    color: '#a855f7',
-    glow: '#a855f730',
-    bg: '#120820',
+    key: 'sniper',
+    emoji: '🎯',
+    name: 'Macro\nSniper',
+    desc: 'Tap the right macro',
+    color: '#ef4444',
+    glow: '#ef444430',
+    bg: '#1a0202',
+    hot: true,
+  },
+  {
+    key: 'sorting',
+    emoji: '🍽️',
+    name: 'Food\nSorting Rush',
+    desc: 'Sort before time runs out',
+    color: '#f97316',
+    glow: '#f9731630',
+    bg: '#1a0800',
+    hot: true,
   },
   {
     key: 'memory',
@@ -39,15 +56,6 @@ const GAMES = [
     bg: '#041620',
   },
   {
-    key: 'calorie',
-    emoji: '🍎',
-    name: 'Calorie\nGuesser',
-    desc: 'Guess the calories',
-    color: '#22c55e',
-    glow: '#22c55e30',
-    bg: '#041610',
-  },
-  {
     key: 'higher',
     emoji: '⬆️',
     name: 'Higher or\nLower',
@@ -55,6 +63,33 @@ const GAMES = [
     color: '#f59e0b',
     glow: '#f59e0b30',
     bg: '#1a1002',
+  },
+  {
+    key: 'cstack',
+    emoji: '🍔',
+    name: 'Calorie\nStack',
+    desc: 'Hit the calorie target',
+    color: '#fb923c',
+    glow: '#fb923c30',
+    bg: '#180a00',
+  },
+  {
+    key: 'workout',
+    emoji: '🏋️',
+    name: 'Workout\nBuilder',
+    desc: 'Pick the right exercises',
+    color: '#8b5cf6',
+    glow: '#8b5cf630',
+    bg: '#0e0620',
+  },
+  {
+    key: 'calorie',
+    emoji: '🍎',
+    name: 'Calorie\nGuesser',
+    desc: 'Guess the calories',
+    color: '#22c55e',
+    glow: '#22c55e30',
+    bg: '#041610',
   },
   {
     key: 'macro',
@@ -65,6 +100,24 @@ const GAMES = [
     glow: '#34d39930',
     bg: '#041610',
   },
+  {
+    key: 'bodyclock',
+    emoji: '⏰',
+    name: 'Body Clock\nQuiz',
+    desc: 'Timing science quiz',
+    color: '#a3e635',
+    glow: '#a3e63530',
+    bg: '#0a1200',
+  },
+  {
+    key: 'trivia',
+    emoji: '🧠',
+    name: 'Nutrition\nTrivia',
+    desc: 'Test your knowledge',
+    color: '#a855f7',
+    glow: '#a855f730',
+    bg: '#120820',
+  },
 ];
 
 const GAME_COMPONENTS = {
@@ -73,6 +126,11 @@ const GAME_COMPONENTS = {
   calorie: CalorieGuesser,
   higher: HigherOrLower,
   macro: MacroMatch,
+  sniper: MacroSniper,
+  sorting: FoodSortingRush,
+  cstack: CalorieStack,
+  workout: WorkoutBuilderPuzzle,
+  bodyclock: BodyClockQuiz,
 };
 
 function makeGameTheme(g) {
@@ -130,7 +188,7 @@ export default function GameZoneScreen({ navigation }) {
               <Text style={s.heroBadgeText}>🎮  PLAY & EARN</Text>
             </View>
             <Text style={s.heroHeading}>Level Up Your{'\n'}Fitness IQ</Text>
-            <Text style={s.heroSub}>5 mini-games · XP · Leaderboards</Text>
+            <Text style={s.heroSub}>10 mini-games · XP · Leaderboards</Text>
             {streak > 0 && (
               <View style={s.streakBadge}>
                 <Text style={s.streakText}>🔥 {streak}-day streak</Text>
@@ -160,13 +218,24 @@ export default function GameZoneScreen({ navigation }) {
                     <View style={[s.emojiWrap, { backgroundColor: g.color + '20', borderColor: g.color + '40' }]}>
                       <Text style={s.cardEmoji}>{g.emoji}</Text>
                     </View>
-                    <View style={[s.playChip, { backgroundColor: g.color }]}>
-                      <Ionicons name="play" size={10} color="#000" />
-                      <Text style={s.playChipText}>PLAY</Text>
-                    </View>
+                    {g.hot && (
+                      <View style={s.hotBadge}>
+                        <Text style={s.hotBadgeText}>🔥 HOT</Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={s.cardName}>{g.name}</Text>
                   <Text style={[s.cardDesc, { color: g.color + 'bb' }]}>{g.desc}</Text>
+                  <View style={s.cardFooter}>
+                    <TouchableOpacity
+                      style={[s.playBtn, { backgroundColor: g.color }]}
+                      onPress={() => setActiveGame(g.key)}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="play" size={12} color="#000" />
+                      <Text style={s.playBtnText}>PLAY</Text>
+                    </TouchableOpacity>
+                  </View>
                   <View style={[s.bottomLine, { backgroundColor: g.color }]} />
                 </TouchableOpacity>
               );
@@ -188,7 +257,7 @@ export default function GameZoneScreen({ navigation }) {
           <ThemeContext.Provider value={{ colors: gameTheme, isDark: true, ready: true, toggleTheme: () => {}, setIsDark: () => {} }}>
             <View style={[s.modalRoot, { backgroundColor: game.bg }]}>
               <StatusBar barStyle="light-content" backgroundColor={game.bg} />
-              <RNSafeArea style={{ flex: 1 }}>
+              <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
                 {/* Modal header */}
                 <View style={[s.modalHeader, { borderBottomColor: game.color + '25' }]}>
                   <TouchableOpacity
@@ -215,7 +284,7 @@ export default function GameZoneScreen({ navigation }) {
                   {GameComponent && <GameComponent userId={user?.id} />}
                   <View style={{ height: 40 }} />
                 </ScrollView>
-              </RNSafeArea>
+              </SafeAreaView>
             </View>
           </ThemeContext.Provider>
         )}
@@ -266,7 +335,7 @@ const s = StyleSheet.create({
 
   gameCard: {
     width: CARD_W, borderRadius: 18, borderWidth: 1,
-    padding: 16, overflow: 'hidden', minHeight: 160,
+    padding: 16, overflow: 'hidden', minHeight: 170,
   },
   gameCardFull: { width: '100%' },
 
@@ -285,14 +354,22 @@ const s = StyleSheet.create({
   },
   cardEmoji: { fontSize: 26 },
 
-  playChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10,
+  hotBadge: {
+    backgroundColor: '#ff4d0018', borderRadius: 8, borderWidth: 1,
+    borderColor: '#ff4d0050', paddingHorizontal: 7, paddingVertical: 3,
   },
-  playChipText: { fontSize: 9, fontWeight: '900', color: '#000', letterSpacing: 1 },
+  hotBadgeText: { fontSize: 9, fontWeight: '900', color: '#ff6a00', letterSpacing: 1 },
 
   cardName: { fontSize: 16, fontWeight: '800', lineHeight: 20, marginBottom: 6, color: '#fff', letterSpacing: 0.2 },
-  cardDesc: { fontSize: 11, fontWeight: '500', lineHeight: 15 },
+  cardDesc: { fontSize: 11, fontWeight: '500', lineHeight: 15, marginBottom: 10 },
+
+  cardFooter: { alignItems: 'flex-start' },
+  playBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+  },
+  playBtnText: { fontSize: 11, fontWeight: '900', color: '#000', letterSpacing: 1 },
+
   bottomLine: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 3 },
 
   modalRoot: { flex: 1 },
