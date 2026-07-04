@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
@@ -31,58 +31,70 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
     >
-      <Text style={styles.logo}>FitZo</Text>
-      <Text style={styles.tagline}>{t('auth.tagline')}</Text>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.logo}>FitZo</Text>
+        <Text style={styles.tagline}>{t('auth.tagline')}</Text>
 
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder={t('auth.emailPlaceholder')}
-          placeholderTextColor={colors.textDim}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={t('auth.passwordPlaceholder')}
-          placeholderTextColor={colors.textDim}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder={t('auth.emailPlaceholder')}
+            placeholderTextColor={colors.textDim}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder={t('auth.passwordPlaceholder')}
+            placeholderTextColor={colors.textDim}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
-        <TouchableOpacity style={styles.forgotBtn} onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.forgotBtn} onPress={() => navigation.navigate('ForgotPassword')}>
+            <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color={colors.bg} />
-          ) : (
-            <Text style={styles.btnText}>{t('auth.signIn')}</Text>
-          )}
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color={colors.bg} />
+            ) : (
+              <Text style={styles.btnText}>{t('auth.signIn')}</Text>
+            )}
+          </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.link}>{t('auth.noAccount')}<Text style={styles.linkAccent}>{t('auth.signUp')}</Text></Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.link}>{t('auth.noAccount')}<Text style={styles.linkAccent}>{t('auth.signUp')}</Text></Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
+    backgroundColor: colors.bg,
+  },
+  container: {
+    flexGrow: 1,
     backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+    paddingBottom: 40,
   },
   logo: {
     fontSize: typography.xxxl,

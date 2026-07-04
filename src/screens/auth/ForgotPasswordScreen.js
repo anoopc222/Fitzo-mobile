@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,9 +33,15 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
     >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
         <Ionicons name="chevron-back" size={20} color={colors.text} />
       </TouchableOpacity>
@@ -78,17 +84,23 @@ export default function ForgotPasswordScreen({ navigation }) {
           </>
         )}
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
+    backgroundColor: colors.bg,
+  },
+  container: {
+    flexGrow: 1,
     backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+    paddingBottom: 40,
   },
   backBtn: {
     position: 'absolute',
