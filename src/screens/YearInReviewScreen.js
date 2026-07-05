@@ -665,10 +665,10 @@ export default function YearInReviewScreen({ navigation }) {
         )}
 
         {/* ── 9. Nutrition summary (PRO) ── */}
-        {data.nutritionDays > 0 && (
-          <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-            <View style={s.card}>
-              <Text style={s.cardTitle}>NUTRITION SUMMARY</Text>
+        <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
+          <View style={s.card}>
+            <Text style={s.cardTitle}>NUTRITION SUMMARY</Text>
+            {data.nutritionDays > 0 ? (
               <View style={s.quickWinsRow}>
                 <View style={s.quickWinTile}>
                   <Text style={s.quickWinEmoji}>🔥</Text>
@@ -686,9 +686,11 @@ export default function YearInReviewScreen({ navigation }) {
                   <Text style={s.quickWinLabel}>DAYS TRACKED</Text>
                 </View>
               </View>
-            </View>
-          </ProLock>
-        )}
+            ) : (
+              <Text style={s.emptyText}>No food logged in {selectedYear} — start logging meals to see your nutrition summary.</Text>
+            )}
+          </View>
+        </ProLock>
 
         {/* ── 10. Top 5 exercises by volume (PRO) ── */}
         {data.topVolumeExercises.length > 0 && (
@@ -742,35 +744,39 @@ export default function YearInReviewScreen({ navigation }) {
         )}
 
         {/* ── 12. Mood year summary (PRO) ── */}
-        {data.moodDays > 0 && (
-          <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-            <View style={s.card}>
-              <Text style={s.cardTitle}>MOOD YEAR SUMMARY</Text>
-              <View style={s.moodRow}>
-                <View style={s.moodTile}>
-                  <Text style={s.moodEmoji}>{moodEmoji(data.avgMood)}</Text>
-                  <Text style={[s.quickWinVal, { color: colors.text }]}>{data.avgMood ?? '—'}</Text>
-                  <Text style={s.quickWinLabel}>AVG MOOD</Text>
+        <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
+          <View style={s.card}>
+            <Text style={s.cardTitle}>MOOD YEAR SUMMARY</Text>
+            {data.moodDays > 0 ? (
+              <>
+                <View style={s.moodRow}>
+                  <View style={s.moodTile}>
+                    <Text style={s.moodEmoji}>{moodEmoji(data.avgMood)}</Text>
+                    <Text style={[s.quickWinVal, { color: colors.text }]}>{data.avgMood ?? '—'}</Text>
+                    <Text style={s.quickWinLabel}>AVG MOOD</Text>
+                  </View>
+                  <View style={s.moodTile}>
+                    <Text style={s.moodEmoji}>{energyEmoji(data.avgEnergy)}</Text>
+                    <Text style={[s.quickWinVal, { color: '#fbbf24' }]}>{data.avgEnergy ?? '—'}</Text>
+                    <Text style={s.quickWinLabel}>AVG ENERGY</Text>
+                  </View>
+                  <View style={s.moodTile}>
+                    <Text style={s.moodEmoji}>📅</Text>
+                    <Text style={[s.quickWinVal, { color: '#c4b5fd' }]}>{data.moodDays}</Text>
+                    <Text style={s.quickWinLabel}>DAYS LOGGED</Text>
+                  </View>
                 </View>
-                <View style={s.moodTile}>
-                  <Text style={s.moodEmoji}>{energyEmoji(data.avgEnergy)}</Text>
-                  <Text style={[s.quickWinVal, { color: '#fbbf24' }]}>{data.avgEnergy ?? '—'}</Text>
-                  <Text style={s.quickWinLabel}>AVG ENERGY</Text>
-                </View>
-                <View style={s.moodTile}>
-                  <Text style={s.moodEmoji}>📅</Text>
-                  <Text style={[s.quickWinVal, { color: '#c4b5fd' }]}>{data.moodDays}</Text>
-                  <Text style={s.quickWinLabel}>DAYS LOGGED</Text>
-                </View>
-              </View>
-              {data.bestMoodMonth && (
-                <Text style={[s.cardSubtitle, { color: colors.textDim }]}>
-                  Best month: <Text style={{ color: colors.text }}>{data.bestMoodMonth}</Text>
-                </Text>
-              )}
-            </View>
-          </ProLock>
-        )}
+                {data.bestMoodMonth && (
+                  <Text style={[s.cardSubtitle, { color: colors.textDim }]}>
+                    Best month: <Text style={{ color: colors.text }}>{data.bestMoodMonth}</Text>
+                  </Text>
+                )}
+              </>
+            ) : (
+              <Text style={s.emptyText}>No mood logs in {selectedYear} — log your mood daily to see your year summary.</Text>
+            )}
+          </View>
+        </ProLock>
 
         {/* ── 13. Achievements (PRO) ── */}
         <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
