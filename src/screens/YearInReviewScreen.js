@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -19,10 +20,9 @@ function localDateStr(d) {
 
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-async function fetchYearData(userId) {
-  const now = new Date();
-  const yearStart = `${now.getFullYear()}-01-01`;
-  const yearEnd   = localDateStr(new Date(now.getFullYear(), 11, 31));
+async function fetchYearData(userId, year) {
+  const yearStart = `${year}-01-01`;
+  const yearEnd   = `${year}-12-31`;
 
   const [sessions, steps, sleep, weight] = await Promise.all([
     supabase.from('workout_sessions')
@@ -59,7 +59,6 @@ async function fetchYearData(userId) {
     return sum + vol;
   }, 0);
 
-  // Best PR per exercise (max single-set weight)
   const prMap = {};
   gym.forEach(s => {
     (s.workout_exercises ?? []).forEach(ex => {
@@ -74,7 +73,6 @@ async function fetchYearData(userId) {
     .slice(0, 5)
     .map(([name, kg]) => ({ name, kg }));
 
-  // Monthly breakdown
   const monthly = MONTHS_SHORT.map((label, mi) => {
     const mo = mi + 1;
     const mSessions = gym.filter(s => new Date(s.date + 'T00:00:00').getMonth() + 1 === mo);
@@ -96,10 +94,8 @@ async function fetchYearData(userId) {
   const weightDelta = weightArr.length >= 2
     ? +(weightArr[weightArr.length - 1].kg - weightArr[0].kg).toFixed(1) : null;
 
-  // Streak
-  const gymDates = new Set(gym.map(s => s.date));
-  let bestStreak = 0, run = 0;
   const allDays = gym.map(s => s.date).sort();
+  let bestStreak = 0, run = 0;
   allDays.forEach((d, i) => {
     if (i === 0) { run = 1; bestStreak = 1; return; }
     const prev = new Date(allDays[i - 1] + 'T00:00:00');
@@ -110,7 +106,7 @@ async function fetchYearData(userId) {
   });
 
   return {
-    year: now.getFullYear(),
+    year,
     totalWorkouts,
     totalVolKg: Math.round(totalVolKg),
     totalSteps,
@@ -120,7 +116,6 @@ async function fetchYearData(userId) {
     monthly,
     bestStreak,
     sleepDays: sleepArr.length,
-    foodDays: 0,
   };
 }
 
@@ -129,12 +124,17 @@ export default function YearInReviewScreen({ navigation }) {
   const { user } = useAuth();
   const s = useMemo(() => styles(colors), [colors]);
 
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['year-in-review', user?.id],
-    queryFn: () => fetchYearData(user?.id),
+    queryKey: ['year-in-review', user?.id, selectedYear],
+    queryFn: () => fetchYearData(user?.id, selectedYear),
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000,
   });
+
+  const canGoForward = selectedYear < currentYear;
 
   if (isLoading || !data) return (
     <SafeAreaView style={s.safe}>
@@ -150,52 +150,53 @@ export default function YearInReviewScreen({ navigation }) {
       <ScreenHeader title="Year in Review" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={s.scroll}>
 
-        {/* Hero */}
-        <View style={s.hero}>
-          <Text style={s.heroYear}>{data.year}</Text>
-          <Text style={s.heroSub}>Your fitness year, at a glance</Text>
+        {/* Year picker */}
+        <View style={s.yearPicker}>
+          <TouchableOpacity
+            style={s.yearArrow}
+            onPress={() => setSelectedYear(y => y - 1)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
+          </TouchableOpacity>
+
+          <View style={s.yearCenter}>
+            <Text style={s.yearText}>{selectedYear}</Text>
+            {selectedYear === currentYear && (
+              <View style={s.currentBadge}>
+                <Text style={s.currentBadgeText}>THIS YEAR</Text>
+              </View>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[s.yearArrow, !canGoForward && s.yearArrowDisabled]}
+            onPress={() => canGoForward && setSelectedYear(y => y + 1)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            disabled={!canGoForward}
+          >
+            <Ionicons name="chevron-forward" size={20} color={canGoForward ? colors.text : colors.textDim} />
+          </TouchableOpacity>
         </View>
 
-        {/* Big stats */}
-        <View style={s.bigStatsGrid}>
-          <View style={[s.bigStat, { borderColor: colors.accent + '50' }]}>
-            <Text style={s.bigStatEmoji}>🏋️</Text>
-            <Text style={[s.bigStatVal, { color: colors.accent }]}>{data.totalWorkouts}</Text>
-            <Text style={s.bigStatLabel}>WORKOUTS</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: '#fb7185' + '50' }]}>
-            <Text style={s.bigStatEmoji}>⚖️</Text>
-            <Text style={[s.bigStatVal, { color: '#fb7185' }]}>
-              {data.totalVolKg >= 1000 ? `${(data.totalVolKg / 1000).toFixed(1)}t` : `${data.totalVolKg}kg`}
-            </Text>
-            <Text style={s.bigStatLabel}>TOTAL LIFTED</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: '#fbbf24' + '50' }]}>
-            <Text style={s.bigStatEmoji}>👟</Text>
-            <Text style={[s.bigStatVal, { color: '#fbbf24' }]}>
-              {data.totalSteps >= 1000000
-                ? `${(data.totalSteps / 1000000).toFixed(1)}M`
-                : data.totalSteps >= 1000 ? `${(data.totalSteps / 1000).toFixed(0)}k` : String(data.totalSteps)}
-            </Text>
-            <Text style={s.bigStatLabel}>TOTAL STEPS</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: '#c4b5fd' + '50' }]}>
-            <Text style={s.bigStatEmoji}>😴</Text>
-            <Text style={[s.bigStatVal, { color: '#c4b5fd' }]}>{data.avgSleep ? `${data.avgSleep.toFixed(1)}h` : '—'}</Text>
-            <Text style={s.bigStatLabel}>AVG SLEEP</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: '#34d399' + '50' }]}>
-            <Text style={s.bigStatEmoji}>🔥</Text>
-            <Text style={[s.bigStatVal, { color: '#34d399' }]}>{data.bestStreak}</Text>
-            <Text style={s.bigStatLabel}>BEST STREAK</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: colors.border }]}>
-            <Text style={s.bigStatEmoji}>{data.weightDelta != null ? (data.weightDelta <= 0 ? '📉' : '📈') : '⚖️'}</Text>
-            <Text style={[s.bigStatVal, { color: colors.text }]}>
-              {data.weightDelta != null ? `${data.weightDelta > 0 ? '+' : ''}${data.weightDelta}kg` : '—'}
-            </Text>
-            <Text style={s.bigStatLabel}>WEIGHT CHANGE</Text>
-          </View>
+        {/* Stats grid — 2 per row, horizontal layout */}
+        <View style={s.statsGrid}>
+          {[
+            { emoji: '🏋️', val: String(data.totalWorkouts), label: 'WORKOUTS', color: colors.accent, border: colors.accent + '40' },
+            { emoji: '⚖️', val: data.totalVolKg >= 1000 ? `${(data.totalVolKg / 1000).toFixed(1)}t` : `${data.totalVolKg}kg`, label: 'TOTAL LIFTED', color: '#fb7185', border: '#fb718540' },
+            { emoji: '👟', val: data.totalSteps >= 1000000 ? `${(data.totalSteps / 1000000).toFixed(1)}M` : data.totalSteps >= 1000 ? `${(data.totalSteps / 1000).toFixed(0)}k` : String(data.totalSteps), label: 'TOTAL STEPS', color: '#fbbf24', border: '#fbbf2440' },
+            { emoji: '😴', val: data.avgSleep ? `${data.avgSleep.toFixed(1)}h` : '—', label: 'AVG SLEEP', color: '#c4b5fd', border: '#c4b5fd40' },
+            { emoji: '🔥', val: String(data.bestStreak), label: 'BEST STREAK', color: '#34d399', border: '#34d39940' },
+            { emoji: data.weightDelta != null ? (data.weightDelta <= 0 ? '📉' : '📈') : '⚖️', val: data.weightDelta != null ? `${data.weightDelta > 0 ? '+' : ''}${data.weightDelta}kg` : '—', label: 'WEIGHT CHANGE', color: colors.text, border: colors.border },
+          ].map((item, i) => (
+            <View key={i} style={[s.statCard, { borderColor: item.border }]}>
+              <Text style={s.statEmoji}>{item.emoji}</Text>
+              <View style={s.statBody}>
+                <Text style={[s.statVal, { color: item.color }]}>{item.val}</Text>
+                <Text style={s.statLabel}>{item.label}</Text>
+              </View>
+            </View>
+          ))}
         </View>
 
         {/* Monthly workouts bar chart */}
@@ -223,7 +224,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* Top PRs */}
         {data.topPRs.length > 0 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>BEST LIFTS THIS YEAR</Text>
+            <Text style={s.cardTitle}>BEST LIFTS · {selectedYear}</Text>
             {data.topPRs.map((pr, i) => (
               <View key={i} style={[s.prRow, i < data.topPRs.length - 1 && s.prRowBorder]}>
                 <Text style={s.prRank}>#{i + 1}</Text>
@@ -239,8 +240,15 @@ export default function YearInReviewScreen({ navigation }) {
           <View style={s.funFact}>
             <Text style={s.funFactEmoji}>🌍</Text>
             <Text style={s.funFactText}>
-              {`${data.totalSteps.toLocaleString()} steps ≈ ${(data.totalSteps * 0.762 / 1000).toFixed(0)} km walked this year`}
+              {`${data.totalSteps.toLocaleString()} steps ≈ ${(data.totalSteps * 0.762 / 1000).toFixed(0)} km walked in ${selectedYear}`}
             </Text>
+          </View>
+        )}
+
+        {data.totalWorkouts === 0 && (
+          <View style={s.emptyBox}>
+            <Text style={s.emptyIcon}>🗓️</Text>
+            <Text style={s.emptyText}>No workout data found for {selectedYear}</Text>
           </View>
         )}
       </ScrollView>
@@ -250,15 +258,20 @@ export default function YearInReviewScreen({ navigation }) {
 
 const styles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 16, paddingBottom: 40, gap: 16 },
-  hero: { alignItems: 'center', paddingVertical: 24, gap: 6 },
-  heroYear: { fontSize: 52, fontFamily: fontFamily.monoBold, color: colors.accent },
-  heroSub: { fontSize: 14, color: colors.textMuted, fontFamily: fontFamily.body },
-  bigStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  bigStat: { width: '47%', backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, padding: 14, alignItems: 'center', gap: 4 },
-  bigStatEmoji: { fontSize: 24 },
-  bigStatVal: { fontSize: 26, fontFamily: fontFamily.monoBold },
-  bigStatLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1 },
+  scroll: { padding: 14, paddingBottom: 40, gap: 12 },
+  yearPicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 10 },
+  yearArrow: { padding: 4 },
+  yearArrowDisabled: { opacity: 0.3 },
+  yearCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  yearText: { fontSize: 22, fontFamily: fontFamily.monoBold, color: colors.text },
+  currentBadge: { backgroundColor: colors.accent + '20', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  currentBadgeText: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statCard: { width: '48%', flexGrow: 1, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1.5, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  statEmoji: { fontSize: 22 },
+  statBody: { flex: 1, gap: 2 },
+  statVal: { fontSize: 20, fontFamily: fontFamily.monoBold },
+  statLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.8 },
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 14 },
   cardTitle: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
   barChart: { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 4 },
@@ -275,4 +288,7 @@ const styles = (colors) => StyleSheet.create({
   funFact: { backgroundColor: colors.accent + '12', borderRadius: 14, borderWidth: 1, borderColor: colors.accent + '30', padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   funFactEmoji: { fontSize: 28 },
   funFactText: { flex: 1, fontSize: 13, color: colors.text, fontFamily: fontFamily.body, lineHeight: 19 },
+  emptyBox: { alignItems: 'center', gap: 10, paddingVertical: 32 },
+  emptyIcon: { fontSize: 40 },
+  emptyText: { fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
 });
