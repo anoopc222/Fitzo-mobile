@@ -182,7 +182,8 @@
     "lastHintSteps": "↑ LAST: {{value}}",
     "saveSteps": "Save Steps",
     "errorTitle": "Error",
-    "homeTitle": "HOME"
+    "homeTitle": "HOME",
+    "moodLabel": "MOOD"
   },
   "common": {
     "save": "Save",
@@ -233,6 +234,7 @@
     "weightReminderLabel": "Remind me if weight isn't logged",
     "stepsReminderLabel": "Remind me if steps aren't logged",
     "sleepReminderLabel": "Remind me if sleep isn't logged",
+    "moodReminderLabel": "Daily mood check-in reminder",
     "dangerZone": "Danger Zone",
     "signOut": "Sign Out",
     "deleteAccountAllData": "Delete Account & All Data",

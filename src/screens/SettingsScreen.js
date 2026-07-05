@@ -184,6 +184,13 @@ export default function SettingsScreen() {
             onPressTime={() => handleEditTime('sleepReminder')}
             value={!!notifPrefs.sleepReminder}
             onValueChange={(v) => handleToggleNotif('sleepReminder', v)}
+          />
+          <SwitchRow
+            icon="happy-outline" label={t('settings.moodReminderLabel')}
+            time={notifTimes.moodReminder} isPro={isPro}
+            onPressTime={() => handleEditTime('moodReminder')}
+            value={!!notifPrefs.moodReminder}
+            onValueChange={(v) => handleToggleNotif('moodReminder', v)}
             last
           />
         </View>

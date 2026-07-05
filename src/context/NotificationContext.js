@@ -49,10 +49,12 @@ const TIMES_KEY = 'notificationTimes';
 const DEFAULT_PREFS = {
   dailyLogReminder: true, workoutReminder: true,
   weightReminder: true, stepsReminder: true, sleepReminder: true,
+  moodReminder: false,
 };
 const ALL_OFF_PREFS = {
   dailyLogReminder: false, workoutReminder: false,
   weightReminder: false, stepsReminder: false, sleepReminder: false,
+  moodReminder: false,
 };
 // Real fire times each reminder uses — kept separate from the on/off prefs
 // above so Pro users can override them per-type without touching that state.
@@ -62,6 +64,7 @@ const DEFAULT_TIMES = {
   weightReminder: { hour: 8, minute: 0 },
   stepsReminder: { hour: 22, minute: 0 },
   sleepReminder: { hour: 8, minute: 0 },
+  moodReminder: { hour: 20, minute: 0 },
 };
 
 const NotificationContext = createContext(null);

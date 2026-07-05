@@ -43,7 +43,10 @@ const C_WEIGHT = '#fb7185'; // rose
 const C_STEPS  = '#fbbf24'; // bright amber (was duller #f59e0b, low contrast on dark bg)
 const C_KCAL   = '#fb7185'; // rose
 const C_SLEEP  = '#c4b5fd'; // soft violet
+const C_MOOD   = '#a3e635'; // lime green
 const C_GREEN  = '#34d399';
+
+const MOOD_EMOJIS = ['', '😢', '😕', '😐', '😊', '😄'];
 
 // Styles will be defined later using static colors
 
@@ -192,6 +195,7 @@ async function fetchHome(userId) {
     streakStepsHist,
     past35Food,
     past35Workouts,
+    moodHist,
   ] = await Promise.all([
     supabase.from('profiles')
       .select('full_name, goal, weight_goal_kg, step_goal, sleep_goal_hours, workout_weekly_goal')
@@ -263,11 +267,16 @@ async function fetchHome(userId) {
       .select('date').eq('user_id', userId)
       .gte('date', localDateStr(new Date(Date.now() - 35 * 86400000)))
       .order('date', { ascending: false }),
+    supabase.from('mood_logs')
+      .select('date, mood, energy').eq('user_id', userId)
+      .order('date', { ascending: false }).limit(7),
   ]);
 
   const weightArr = (weightHist.data ?? []).map(w => w.weight).reverse();
   const stepsArr  = (stepsHist.data ?? []).map(s => s.steps).reverse();
   const sleepArr  = (sleepHist.data ?? []).map(s => s.hours).reverse();
+  const moodArr   = (moodHist.data ?? []).map(m => m.mood).reverse();
+  const todayMood = (moodHist.data ?? []).find(m => m.date === today) ?? null;
 
   const latestWeight = weightHist.data?.[0];
   const prevWeight   = weightHist.data?.[1];
@@ -595,6 +604,7 @@ async function fetchHome(userId) {
     todayStepsLogged,
     habitCalendar,
     consistencyScore,
+    todayMood, moodArr,
   };
 }
 
@@ -1593,6 +1603,27 @@ export default function HomeScreen() {
                 </View>
                 {data?.sleepIsToday && (data?.sleepArr?.length ?? 0) >= 2 && (
                   <Sparkline data={data.sleepArr} color={C_SLEEP} width={48} height={26} />
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.overviewDivider} />
+
+              <TouchableOpacity style={styles.overviewRow} onPress={() => navigation.navigate('MoodLog')} activeOpacity={0.7}>
+                <View style={styles.overviewIconWrap}>
+                  <Ionicons name="happy-outline" size={15} color={C_MOOD} />
+                </View>
+                <View style={styles.overviewBody}>
+                  <Text style={[styles.overviewLabel, { color: C_MOOD }]}>{t('home.moodLabel')}</Text>
+                  <Text style={styles.overviewSub}>{data?.todayMood ? t('home.loggedToday') : t('home.dataNotAddedYet')}</Text>
+                </View>
+                <View style={styles.overviewRight}>
+                  <Text style={styles.overviewVal}>{data?.todayMood ? MOOD_EMOJIS[data.todayMood.mood] ?? '—' : '—'}</Text>
+                  {data?.todayMood && (
+                    <Text style={[styles.overviewDelta, { color: '#fbbf24' }]}>⚡ {data.todayMood.energy}/5</Text>
+                  )}
+                </View>
+                {(data?.moodArr?.length ?? 0) >= 2 && (
+                  <Sparkline data={data.moodArr} color={C_MOOD} width={48} height={26} />
                 )}
               </TouchableOpacity>
             </View>
