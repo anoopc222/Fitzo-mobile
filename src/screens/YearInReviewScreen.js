@@ -377,41 +377,42 @@ export default function YearInReviewScreen({ navigation }) {
   const maxSleepAvg = Math.max(...monthlyAvgSleep.map(m => m.avg ?? 0), 8);
 
   const totalActivity = data.gymCount + data.cardioCount + data.restCount;
+  const prevYear = data.prevYear ?? {};
 
   // YoY comparison rows
   const yoyRows = [
     {
       label: 'Workouts',
       curr: data.totalWorkouts,
-      prev: data.prevYear.totalWorkouts,
+      prev: prevYear.totalWorkouts,
       fmt: v => String(v),
       higherIsBetter: true,
     },
     {
       label: 'Steps',
       curr: data.totalSteps,
-      prev: data.prevYear.totalSteps,
+      prev: prevYear.totalSteps,
       fmt: v => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v),
       higherIsBetter: true,
     },
     {
       label: 'Avg Sleep',
       curr: data.avgSleep,
-      prev: data.prevYear.avgSleep,
+      prev: prevYear.avgSleep,
       fmt: v => v != null ? `${v}h` : '—',
       higherIsBetter: true,
     },
     {
       label: 'Best Streak',
       curr: data.bestStreak,
-      prev: data.prevYear.bestStreak,
+      prev: prevYear.bestStreak,
       fmt: v => `${v}d`,
       higherIsBetter: true,
     },
     {
       label: 'Weight Δ',
       curr: data.weightDelta,
-      prev: data.prevYear.weightDelta,
+      prev: prevYear.weightDelta,
       fmt: v => v != null ? `${v > 0 ? '+' : ''}${v}kg` : '—',
       higherIsBetter: false,
     },
