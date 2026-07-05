@@ -1688,34 +1688,75 @@ export default function HomeScreen() {
               ];
               const weeks = [];
               for (let w = 0; w < 5; w++) weeks.push(data.habitCalendar.slice(w * 7, w * 7 + 7));
+              const todayStr = new Date().toISOString().split('T')[0];
+              const DOW_SHORT = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+              // Per-habit totals for the 35 days
+              const habitTotals = CAL_HABITS.map(h => ({
+                ...h,
+                done: data.habitCalendar.filter(d => d[h.key]).length,
+              }));
               return (
                 <View style={styles.calCard}>
                   <Text style={styles.calCardTitle}>HABIT CHECK-IN · LAST 5 WEEKS</Text>
+
+                  {/* Legend row */}
                   <View style={styles.calLegend}>
-                    {CAL_HABITS.map(h => (
+                    {habitTotals.map(h => (
                       <View key={h.key} style={styles.calLegendItem}>
                         <View style={[styles.calLegendDot, { backgroundColor: h.color }]} />
-                        <Text style={styles.calLegendText}>{h.emoji}</Text>
+                        <Text style={[styles.calLegendText, { color: colors.text }]}>{h.emoji} {h.done}/35</Text>
                       </View>
                     ))}
                   </View>
+
+                  {/* Day-of-week header */}
+                  <View style={[styles.calWeekRow, { marginBottom: 2 }]}>
+                    {DOW_SHORT.map(d => (
+                      <View key={d} style={styles.calCell}>
+                        <Text style={[styles.calCellText, { color: colors.textMuted, fontSize: 9 }]}>{d}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* 5 weeks × 7 days */}
                   {weeks.map((week, wi) => (
                     <View key={wi} style={styles.calWeekRow}>
                       {week.map((day, di) => {
-                        const d = new Date(day.date + 'T00:00:00');
-                        const dow = ['S','M','T','W','T','F','S'][d.getDay()];
-                        const count = CAL_HABITS.filter(h => day[h.key]).length;
-                        const bgOpacity = count === 0 ? '10' : count === 1 ? '30' : count === 2 ? '55' : count === 3 ? '80' : 'ff';
+                        const isToday = day.date === todayStr;
+                        const isFuture = day.date > todayStr;
                         return (
-                          <View key={di} style={[styles.calCell, { backgroundColor: colors.accent + bgOpacity }]}>
-                            <Text style={styles.calCellText}>{dow}</Text>
+                          <View key={di} style={[
+                            styles.calCell,
+                            { backgroundColor: colors.dim, borderRadius: 8 },
+                            isToday && { borderWidth: 1.5, borderColor: colors.accent },
+                          ]}>
+                            {isFuture ? (
+                              <View style={{ opacity: 0.2 }}>
+                                <View style={styles.calDotGrid}>
+                                  {CAL_HABITS.map(h => (
+                                    <View key={h.key} style={[styles.calDot, { backgroundColor: colors.border }]} />
+                                  ))}
+                                </View>
+                              </View>
+                            ) : (
+                              <View style={styles.calDotGrid}>
+                                {CAL_HABITS.map(h => (
+                                  <View key={h.key} style={[
+                                    styles.calDot,
+                                    { backgroundColor: day[h.key] ? h.color : colors.border },
+                                    day[h.key] && { shadowColor: h.color, shadowOpacity: 0.6, shadowRadius: 2 },
+                                  ]} />
+                                ))}
+                              </View>
+                            )}
                           </View>
                         );
                       })}
                     </View>
                   ))}
+
                   <View style={styles.calFooter}>
-                    <Text style={styles.calFooterText}>Darker = more habits completed that day</Text>
+                    <Text style={styles.calFooterText}>Each dot = one habit · filled = completed</Text>
                   </View>
                 </View>
               );
@@ -2551,14 +2592,16 @@ const createStyles = (colors) => StyleSheet.create({
   consistBarFill: { height: '100%', borderRadius: 2 },
   calCard: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, borderColor: colors.border, padding: 14, marginHorizontal: 16, marginBottom: 16, gap: 10 },
   calCardTitle: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
-  calLegend: { flexDirection: 'row', gap: 10 },
-  calLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  calLegendDot: { width: 8, height: 8, borderRadius: 4 },
-  calLegendText: { fontSize: 11 },
+  calLegend: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 2 },
+  calLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  calLegendDot: { width: 9, height: 9, borderRadius: 5 },
+  calLegendText: { fontSize: 11, fontFamily: fontFamily.body },
   calWeekRow: { flexDirection: 'row', gap: 4 },
-  calCell: { flex: 1, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  calCell: { flex: 1, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   calCellText: { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.text },
-  calFooter: { alignItems: 'center' },
+  calDotGrid: { flexDirection: 'row', flexWrap: 'wrap', width: 18, gap: 2, justifyContent: 'center' },
+  calDot: { width: 7, height: 7, borderRadius: 4 },
+  calFooter: { alignItems: 'center', marginTop: 4 },
   calFooterText: { fontSize: 9, color: colors.textDim, fontFamily: fontFamily.body },
   readinessCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, borderColor: colors.border, padding: 14, marginHorizontal: 16, marginBottom: 16, gap: 14 },
   readinessLeft: { position: 'relative', width: 70, height: 70, alignItems: 'center', justifyContent: 'center' },
