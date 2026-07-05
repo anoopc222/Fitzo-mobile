@@ -367,8 +367,14 @@ export default function YearInReviewScreen({ navigation }) {
     </SafeAreaView>
   );
 
-  const maxWorkouts = Math.max(...data.monthly.map(m => m.workouts), 1);
-  const maxSleepAvg = Math.max(...data.monthlyAvgSleep.map(m => m.avg ?? 0), 8);
+  const monthly        = data.monthly        ?? [];
+  const monthlyAvgSleep = data.monthlyAvgSleep ?? [];
+  const topPRs          = data.topPRs          ?? [];
+  const topVolumeExercises = data.topVolumeExercises ?? [];
+  const achievements    = data.achievements    ?? [];
+
+  const maxWorkouts = Math.max(...monthly.map(m => m.workouts), 1);
+  const maxSleepAvg = Math.max(...monthlyAvgSleep.map(m => m.avg ?? 0), 8);
 
   const totalActivity = data.gymCount + data.cardioCount + data.restCount;
 
@@ -412,11 +418,11 @@ export default function YearInReviewScreen({ navigation }) {
   ];
 
   // highlight best month per column in monthly table
-  const bestWorkoutMonth = data.monthly.reduce((bi, m, i) => m.workouts > (data.monthly[bi]?.workouts ?? 0) ? i : bi, 0);
-  const bestStepsMonth   = data.monthly.reduce((bi, m, i) => (m.steps ?? 0) > (data.monthly[bi]?.steps ?? 0) ? i : bi, 0);
-  const bestSleepMonth   = data.monthly.reduce((bi, m, i) => {
+  const bestWorkoutMonth = monthly.reduce((bi, m, i) => m.workouts > (monthly[bi]?.workouts ?? 0) ? i : bi, 0);
+  const bestStepsMonth   = monthly.reduce((bi, m, i) => (m.steps ?? 0) > (monthly[bi]?.steps ?? 0) ? i : bi, 0);
+  const bestSleepMonth   = monthly.reduce((bi, m, i) => {
     const curr = m.sleep ?? -1;
-    const best = data.monthly[bi]?.sleep ?? -1;
+    const best = monthly[bi]?.sleep ?? -1;
     return curr > best ? i : bi;
   }, 0);
 
@@ -500,7 +506,7 @@ export default function YearInReviewScreen({ navigation }) {
         <View style={s.card}>
           <Text style={s.cardTitle}>WORKOUTS PER MONTH</Text>
           <View style={s.barChart}>
-            {data.monthly.map((m, i) => {
+            {monthly.map((m, i) => {
               const pct = maxWorkouts > 0 ? m.workouts / maxWorkouts : 0;
               return (
                 <View key={i} style={s.barCol}>
@@ -565,7 +571,7 @@ export default function YearInReviewScreen({ navigation }) {
                   <Text style={[s.tableCell, s.tableNumCol, { color: '#fbbf24', fontFamily: fontFamily.bodyBold }]}>Steps(k)</Text>
                   <Text style={[s.tableCell, s.tableNumCol, { color: '#c4b5fd', fontFamily: fontFamily.bodyBold }]}>Sleep(h)</Text>
                 </View>
-                {data.monthly.map((m, i) => (
+                {monthly.map((m, i) => (
                   <View key={i} style={[s.tableRow, i % 2 === 0 && { backgroundColor: colors.bg + '40' }]}>
                     <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.body }]}>{m.label}</Text>
                     <Text style={[s.tableCell, s.tableNumCol, {
@@ -693,12 +699,12 @@ export default function YearInReviewScreen({ navigation }) {
         </ProLock>
 
         {/* ── 10. Top 5 exercises by volume (PRO) ── */}
-        {data.topVolumeExercises.length > 0 && (
+        {topVolumeExercises.length > 0 && (
           <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
             <View style={s.card}>
               <Text style={s.cardTitle}>TOP EXERCISES BY VOLUME</Text>
-              {data.topVolumeExercises.map((ex, i) => (
-                <View key={i} style={[s.prRow, i < data.topVolumeExercises.length - 1 && s.prRowBorder]}>
+              {topVolumeExercises.map((ex, i) => (
+                <View key={i} style={[s.prRow, i < topVolumeExercises.length - 1 && s.prRowBorder]}>
                   <Text style={s.prRank}>#{i + 1}</Text>
                   <Text style={[s.prName, i === 0 && { color: colors.accent }]} numberOfLines={1}>{ex.name}</Text>
                   <Text style={[s.prKg, { color: i === 0 ? colors.accent : colors.text }]}>{fmtVol(ex.totalKg)} kg</Text>
@@ -714,7 +720,7 @@ export default function YearInReviewScreen({ navigation }) {
             <View style={s.card}>
               <Text style={s.cardTitle}>SLEEP TREND</Text>
               <View style={[s.barChart, { height: 90 }]}>
-                {data.monthlyAvgSleep.map((m, i) => {
+                {monthlyAvgSleep.map((m, i) => {
                   const pct = m.avg != null ? (m.avg / Math.max(maxSleepAvg, 9)) : 0;
                   const lineH = (7 / Math.max(maxSleepAvg, 9)) * 100;
                   return (
@@ -784,17 +790,17 @@ export default function YearInReviewScreen({ navigation }) {
             <View style={s.achieveHeader}>
               <Text style={s.cardTitle}>ACHIEVEMENTS</Text>
               <Text style={[s.achieveCount, { color: colors.textDim }]}>
-                {data.achievements.length} / 14 unlocked
+                {achievements.length} / 14 unlocked
               </Text>
             </View>
-            {data.achievements.length === 0 ? (
+            {achievements.length === 0 ? (
               <View style={s.emptyBox}>
                 <Text style={s.emptyIcon}>🎯</Text>
                 <Text style={[s.emptyText, { textAlign: 'center' }]}>Keep going — your achievements are waiting!</Text>
               </View>
             ) : (
               <View style={s.achieveGrid}>
-                {data.achievements.map((a, i) => (
+                {achievements.map((a, i) => (
                   <View key={i} style={[s.achieveBadge, { backgroundColor: colors.dim ?? colors.border + '80' }]}>
                     <Text style={s.achieveEmoji}>{a.emoji}</Text>
                     <Text style={[s.achieveLabel, { color: colors.accent }]}>{a.label}</Text>
@@ -807,7 +813,7 @@ export default function YearInReviewScreen({ navigation }) {
         </ProLock>
 
         {/* ── 14. Top PRs (FREE) ── */}
-        {data.topPRs.length > 0 && (
+        {topPRs.length > 0 && (
           <View style={s.card}>
             <Text style={s.cardTitle}>BEST LIFTS · {selectedYear}</Text>
             {data.topPRs.map((pr, i) => (
