@@ -2098,66 +2098,6 @@ export default function HomeScreen() {
               />
             )}
 
-            {/* ── 7-Day Steps Trend (vs last week, with goal line) ─ */}
-            <Text style={styles.sectionLabel}>{t('home.sevenDayTrend')}</Text>
-            <View style={styles.chartCard}>
-              <View style={styles.chartHdr}>
-                <Text style={styles.chartTitle}>{t('home.stepsVsLastWeek')}</Text>
-                <View style={styles.chartLegend}>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: colors.text }]} />
-                    <Text style={styles.legendText}>{t('home.thisWk')}</Text>
-                  </View>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: colors.textDim }]} />
-                    <Text style={styles.legendText}>{t('home.lastWk')}</Text>
-                  </View>
-                </View>
-              </View>
-              {data?.stepsWeekSeries && (
-                <StepsTrendChart
-                  current={data.stepsWeekSeries.current}
-                  previous={data.stepsWeekSeries.previous}
-                  goal={data.stepGoal}
-                  colors={colors}
-                  width={SCREEN_W - 32 - 28}
-                />
-              )}
-              {data?.stepsWeekSeries && (() => {
-                const curVals = data.stepsWeekSeries.current.filter(v => v != null);
-                const prevVals = data.stepsWeekSeries.previous.filter(v => v != null);
-                const curTotal = curVals.reduce((a, b) => a + b, 0);
-                const prevTotal = prevVals.reduce((a, b) => a + b, 0);
-                const avg = curVals.length ? Math.round(curTotal / curVals.length) : 0;
-                const pctDelta = prevTotal > 0 ? Math.round(((curTotal - prevTotal) / prevTotal) * 100) : null;
-                const bestDay = curVals.length ? Math.max(...curVals) : 0;
-                return (
-                  <View style={styles.chartStatsRow}>
-                    <View style={styles.chartStatTile}>
-                      <Text style={styles.chartStatVal}>{curTotal.toLocaleString()}</Text>
-                      <Text style={styles.chartStatLabel}>{t('home.totalThisWk')}</Text>
-                    </View>
-                    <View style={styles.chartStatDivider} />
-                    <View style={styles.chartStatTile}>
-                      <Text style={styles.chartStatVal}>{avg.toLocaleString()}</Text>
-                      <Text style={styles.chartStatLabel}>{t('home.dailyAvg')}</Text>
-                    </View>
-                    <View style={styles.chartStatDivider} />
-                    <View style={styles.chartStatTile}>
-                      <Text style={styles.chartStatVal}>{bestDay.toLocaleString()}</Text>
-                      <Text style={styles.chartStatLabel}>{t('home.bestDay')}</Text>
-                    </View>
-                    <View style={styles.chartStatDivider} />
-                    <View style={styles.chartStatTile}>
-                      <Text style={[styles.chartStatVal, { color: pctDelta == null ? colors.text : pctDelta >= 0 ? C_GREEN : '#f87171' }]}>
-                        {pctDelta == null ? '—' : `${pctDelta > 0 ? '+' : ''}${pctDelta}%`}
-                      </Text>
-                      <Text style={styles.chartStatLabel}>{t('home.vsLastWk')}</Text>
-                    </View>
-                  </View>
-                );
-              })()}
-            </View>
 
             {/* ── Workout Banner (today completed) ────────────────── */}
             {data?.hasTodayWorkout && (
@@ -2176,8 +2116,8 @@ export default function HomeScreen() {
             {/* ── Weekly Tabs ────────────────────────────────────── */}
             <View style={styles.tabsCard}>
               <View style={styles.tabsRow}>
-                {[t('home.thisWeekTab'), t('home.lastWeekTab'), t('home.thisMonthTab'), t('home.cutScoreTab')].map((tabLabel, i) => {
-                  const isProTab = i === 2 || i === 3;
+                {[t('home.thisWeekTab'), t('home.lastWeekTab'), t('home.thisMonthTab')].map((tabLabel, i) => {
+                  const isProTab = i === 2;
                   const tabLocked = isProTab && !hasAccess;
                   return (
                     <TouchableOpacity
@@ -2195,43 +2135,8 @@ export default function HomeScreen() {
                 })}
               </View>
 
-              {activeTab === 3 ? (
-                <View>
-                  <View style={styles.weekHdr}>
-                    <View style={styles.weekHdrLeft}>
-                      <Ionicons name="speedometer-outline" size={13} color={colors.accent} />
-                      <Text style={styles.weekHdrLabel}>{t('home.weeklyCutScore')}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.cutRow}>
-                    <View style={[styles.cutRing, { borderColor: colors.warning }]}>
-                      <Text style={[styles.cutNum, { color: colors.warning }]}>{cutScore}</Text>
-                      <Text style={styles.cutOf}>/100</Text>
-                    </View>
-                    <View style={styles.cutDetails}>
-                      <Text style={styles.cutTitle}>{cutStatus}</Text>
-                      <Text style={styles.cutSub}>{cutSubtitle}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.cutBreakdown}>
-                    {[
-                      { label: t('home.cutBreakdownSteps'), value: stepsPct },
-                      { label: t('home.cutBreakdownCalories'), value: caloriesPct },
-                      { label: t('home.cutBreakdownSessions'), value: sessionsPct },
-                      { label: t('home.cutBreakdownWtTrend'), value: wtTrendPct },
-                    ].map(row => (
-                      <View key={row.label} style={styles.cutBreakdownRow}>
-                        <Text style={styles.cutBreakdownLabel}>{row.label}</Text>
-                        <View style={styles.cutTrack}>
-                          <View style={[styles.cutFill, { width: `${row.value}%`, backgroundColor: colors.accent }]} />
-                        </View>
-                        <Text style={styles.cutBreakdownValue}>{row.value}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ) : (
-                <>
+              {(() => {
+                return (<>
                   <View style={styles.weekHdr}>
                     <View style={styles.weekHdrLeft}>
                       <Ionicons name="calendar-outline" size={13} color={colors.accent} />
@@ -2297,8 +2202,8 @@ export default function HomeScreen() {
                     />
                   </View>
                   )}
-                </>
-              )}
+                </>);
+              })()}
             </View>
           </>
         )}
