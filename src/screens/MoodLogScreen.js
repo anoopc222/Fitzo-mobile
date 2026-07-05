@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, RefreshControl, ActivityIndicator, Alert, Modal,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -273,6 +274,7 @@ export default function MoodLogScreen({ navigation }) {
   const [notes, setNotes]       = useState('');
   const [editLog, setEditLog]   = useState(null);
   const [search, setSearch]     = useState('');
+  const scrollRef = useRef(null);
   const [paywallVisible, setPaywallVisible] = useState(false);
 
   const { data = { logs: [], sleep: [], workouts: [], steps: [] }, isLoading, refetch } = useQuery({
@@ -418,9 +420,12 @@ export default function MoodLogScreen({ navigation }) {
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
       <ScreenHeader title="Mood & Energy" onBack={() => navigation.goBack()} />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={s.scroll}
         refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} />}
+        keyboardShouldPersistTaps="handled"
       >
 
         {/* 1. Low mood alert */}
@@ -752,6 +757,7 @@ export default function MoodLogScreen({ navigation }) {
               value={search}
               onChangeText={setSearch}
               returnKeyType="search"
+              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)}
             />
             {filteredLogs.length === 0 ? (
               <Text style={s.noResults}>No entries match your search.</Text>
@@ -792,6 +798,7 @@ export default function MoodLogScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <EditModal
         visible={!!editLog}
