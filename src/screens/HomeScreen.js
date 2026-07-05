@@ -545,8 +545,8 @@ async function fetchHome(userId) {
   const sleepDates   = new Set((sleepHist.data ?? []).map(r => r.logged_at?.slice(0, 10)));
   const foodDatesSet = new Set((past35Food.data ?? []).map(r => r.logged_at?.slice(0, 10)));
   const workoutDatesSet = new Set((past35Workouts.data ?? []).map(r => r.date));
-  const habitCalendar = Array.from({ length: 35 }, (_, i) => {
-    const d = localDateStr(new Date(Date.now() - (34 - i) * 86400000));
+  const habitCalendar = Array.from({ length: 28 }, (_, i) => {
+    const d = localDateStr(new Date(Date.now() - (27 - i) * 86400000));
     return {
       date: d,
       steps: stepDates.has(d),
@@ -556,10 +556,10 @@ async function fetchHome(userId) {
     };
   });
 
-  // Consistency Score: % of last 30 days where 3+ habits were logged
-  const last30 = habitCalendar.slice(5);
+  // Consistency Score: % of last 28 days where 3+ habits were logged
+  const last30 = habitCalendar;
   const daysWithThreePlus = last30.filter(d => [d.steps, d.sleep, d.food, d.workout].filter(Boolean).length >= 3).length;
-  const consistencyScore = Math.round((daysWithThreePlus / 30) * 100);
+  const consistencyScore = Math.round((daysWithThreePlus / 28) * 100);
 
   return {
     profile: profile.data,
@@ -1678,90 +1678,6 @@ export default function HomeScreen() {
               );
             })()}
 
-            {/* ── Check-in Calendar ───────────────────────────────── */}
-            {data?.habitCalendar && (() => {
-              const CAL_HABITS = [
-                { key: 'steps',   emoji: '👟', color: '#fbbf24' },
-                { key: 'sleep',   emoji: '😴', color: '#c4b5fd' },
-                { key: 'food',    emoji: '🥗', color: '#34d399' },
-                { key: 'workout', emoji: '🏋️', color: colors.accent },
-              ];
-              const weeks = [];
-              for (let w = 0; w < 5; w++) weeks.push(data.habitCalendar.slice(w * 7, w * 7 + 7));
-              const todayStr = new Date().toISOString().split('T')[0];
-              const DOW_SHORT = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-              // Per-habit totals for the 35 days
-              const habitTotals = CAL_HABITS.map(h => ({
-                ...h,
-                done: data.habitCalendar.filter(d => d[h.key]).length,
-              }));
-              return (
-                <View style={styles.calCard}>
-                  <Text style={styles.calCardTitle}>HABIT CHECK-IN · LAST 5 WEEKS</Text>
-
-                  {/* Legend row */}
-                  <View style={styles.calLegend}>
-                    {habitTotals.map(h => (
-                      <View key={h.key} style={styles.calLegendItem}>
-                        <View style={[styles.calLegendDot, { backgroundColor: h.color }]} />
-                        <Text style={[styles.calLegendText, { color: colors.text }]}>{h.emoji} {h.done}/35</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Day-of-week header */}
-                  <View style={[styles.calWeekRow, { marginBottom: 2 }]}>
-                    {DOW_SHORT.map(d => (
-                      <View key={d} style={styles.calCell}>
-                        <Text style={[styles.calCellText, { color: colors.textMuted, fontSize: 9 }]}>{d}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* 5 weeks × 7 days */}
-                  {weeks.map((week, wi) => (
-                    <View key={wi} style={styles.calWeekRow}>
-                      {week.map((day, di) => {
-                        const isToday = day.date === todayStr;
-                        const isFuture = day.date > todayStr;
-                        return (
-                          <View key={di} style={[
-                            styles.calCell,
-                            { backgroundColor: colors.dim, borderRadius: 8 },
-                            isToday && { borderWidth: 1.5, borderColor: colors.accent },
-                          ]}>
-                            {isFuture ? (
-                              <View style={{ opacity: 0.2 }}>
-                                <View style={styles.calDotGrid}>
-                                  {CAL_HABITS.map(h => (
-                                    <View key={h.key} style={[styles.calDot, { backgroundColor: colors.border }]} />
-                                  ))}
-                                </View>
-                              </View>
-                            ) : (
-                              <View style={styles.calDotGrid}>
-                                {CAL_HABITS.map(h => (
-                                  <View key={h.key} style={[
-                                    styles.calDot,
-                                    { backgroundColor: day[h.key] ? h.color : colors.border },
-                                    day[h.key] && { shadowColor: h.color, shadowOpacity: 0.6, shadowRadius: 2 },
-                                  ]} />
-                                ))}
-                              </View>
-                            )}
-                          </View>
-                        );
-                      })}
-                    </View>
-                  ))}
-
-                  <View style={styles.calFooter}>
-                    <Text style={styles.calFooterText}>Each dot = one habit · filled = completed</Text>
-                  </View>
-                </View>
-              );
-            })()}
-
             <ChallengesCard home={data} />
 
             {/* ── Weekly Recap (share-able summary) ───────────────── */}
@@ -2205,6 +2121,89 @@ export default function HomeScreen() {
                 </>);
               })()}
             </View>
+
+            {/* ── Check-in Calendar ───────────────────────────────── */}
+            {data?.habitCalendar && (() => {
+              const CAL_HABITS = [
+                { key: 'steps',   emoji: '👟', color: '#fbbf24' },
+                { key: 'sleep',   emoji: '😴', color: '#c4b5fd' },
+                { key: 'food',    emoji: '🥗', color: '#34d399' },
+                { key: 'workout', emoji: '🏋️', color: colors.accent },
+              ];
+              const weeks = [];
+              for (let w = 0; w < 4; w++) weeks.push(data.habitCalendar.slice(w * 7, w * 7 + 7));
+              const todayStr = new Date().toISOString().split('T')[0];
+              const DOW_SHORT = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+              const habitTotals = CAL_HABITS.map(h => ({
+                ...h,
+                done: data.habitCalendar.filter(d => d[h.key]).length,
+              }));
+              return (
+                <View style={styles.calCard}>
+                  <Text style={styles.calCardTitle}>HABIT CHECK-IN · LAST 4 WEEKS</Text>
+
+                  {/* Legend row */}
+                  <View style={styles.calLegend}>
+                    {habitTotals.map(h => (
+                      <View key={h.key} style={styles.calLegendItem}>
+                        <View style={[styles.calLegendDot, { backgroundColor: h.color }]} />
+                        <Text style={[styles.calLegendText, { color: colors.text }]}>{h.emoji} {h.done}/28</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Day-of-week header */}
+                  <View style={[styles.calWeekRow, { marginBottom: 2 }]}>
+                    {DOW_SHORT.map(d => (
+                      <View key={d} style={styles.calCell}>
+                        <Text style={[styles.calCellText, { color: colors.textMuted, fontSize: 9 }]}>{d}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* 4 weeks × 7 days */}
+                  {weeks.map((week, wi) => (
+                    <View key={wi} style={styles.calWeekRow}>
+                      {week.map((day, di) => {
+                        const isToday = day.date === todayStr;
+                        const isFuture = day.date > todayStr;
+                        return (
+                          <View key={di} style={[
+                            styles.calCell,
+                            { backgroundColor: colors.dim, borderRadius: 8 },
+                            isToday && { borderWidth: 1.5, borderColor: colors.accent },
+                          ]}>
+                            {isFuture ? (
+                              <View style={{ opacity: 0.2 }}>
+                                <View style={styles.calDotGrid}>
+                                  {CAL_HABITS.map(h => (
+                                    <View key={h.key} style={[styles.calDot, { backgroundColor: colors.border }]} />
+                                  ))}
+                                </View>
+                              </View>
+                            ) : (
+                              <View style={styles.calDotGrid}>
+                                {CAL_HABITS.map(h => (
+                                  <View key={h.key} style={[
+                                    styles.calDot,
+                                    { backgroundColor: day[h.key] ? h.color : colors.border },
+                                    day[h.key] && { shadowColor: h.color, shadowOpacity: 0.6, shadowRadius: 2 },
+                                  ]} />
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ))}
+
+                  <View style={styles.calFooter}>
+                    <Text style={styles.calFooterText}>Each dot = one habit · filled = completed</Text>
+                  </View>
+                </View>
+              );
+            })()}
           </>
         )}
       </ScrollView>
