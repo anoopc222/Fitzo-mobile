@@ -1456,22 +1456,26 @@ export default function HomeScreen() {
             {/* ── Quick Nav: Mood Log + Year in Review ──────────── */}
             <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 16, marginBottom: 4 }}>
               <TouchableOpacity
-                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, alignItems: 'center', gap: 6 }}
+                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}
                 onPress={() => navigation.navigate('MoodLog')}
                 activeOpacity={0.85}
               >
-                <Text style={{ fontSize: 26 }}>😊</Text>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: colors.text }}>Mood Log</Text>
-                <Text style={{ fontSize: 9, color: colors.textDim, textAlign: 'center' }}>Track mood & energy</Text>
+                <Text style={{ fontSize: 20 }}>😊</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: colors.text }}>Mood Log</Text>
+                  <Text style={{ fontSize: 9, color: colors.textDim }}>Track mood & energy</Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, alignItems: 'center', gap: 6 }}
+                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}
                 onPress={() => navigation.navigate('YearInReview')}
                 activeOpacity={0.85}
               >
-                <Text style={{ fontSize: 26 }}>📅</Text>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: colors.text }}>Year in Review</Text>
-                <Text style={{ fontSize: 9, color: colors.textDim, textAlign: 'center' }}>Your {new Date().getFullYear()} stats</Text>
+                <Text style={{ fontSize: 20 }}>📅</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: colors.text }}>Year in Review</Text>
+                  <Text style={{ fontSize: 9, color: colors.textDim }}>{new Date().getFullYear()} stats</Text>
+                </View>
               </TouchableOpacity>
             </View>
 

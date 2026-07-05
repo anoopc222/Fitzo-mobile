@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, RefreshControl, ActivityIndicator, Alert,
+  TextInput, RefreshControl, ActivityIndicator, Alert, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +19,7 @@ function localDateStr(d) {
   return `${y}-${m}-${day}`;
 }
 
-const MOOD_EMOJIS  = ['', '😞', '😕', '😐', '🙂', '😄'];
+const MOOD_EMOJIS   = ['', '😞', '😕', '😐', '🙂', '😄'];
 const ENERGY_EMOJIS = ['', '🪫', '😴', '⚡', '🔋', '🚀'];
 const MOOD_LABELS   = ['', 'Terrible', 'Bad', 'Okay', 'Good', 'Great'];
 const ENERGY_LABELS = ['', 'Drained', 'Low', 'Moderate', 'High', 'Peak'];
@@ -43,6 +43,81 @@ async function upsertMoodLog(userId, { date, mood, energy, notes }) {
   if (error) throw error;
 }
 
+// ── Edit Modal ────────────────────────────────────────────────────────────────
+function EditModal({ visible, log, colors, onClose, onSave, isPending }) {
+  const s = useMemo(() => styles(colors), [colors]);
+  const [mood, setMood]     = useState(log?.mood ?? 0);
+  const [energy, setEnergy] = useState(log?.energy ?? 0);
+  const [notes, setNotes]   = useState(log?.notes ?? '');
+
+  // Sync when log changes (different entry opened)
+  React.useEffect(() => {
+    if (log) { setMood(log.mood); setEnergy(log.energy); setNotes(log.notes ?? ''); }
+  }, [log?.id]);
+
+  if (!log) return null;
+
+  const d = new Date(log.date + 'T00:00:00');
+  const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={s.modalOverlay}>
+        <View style={s.modalBox}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Edit · {label}</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={s.pickerLabel}>Mood</Text>
+          <View style={s.emojiRow}>
+            {[1,2,3,4,5].map(v => (
+              <TouchableOpacity key={v} style={[s.emojiBtn, mood === v && s.emojiBtnActive]} onPress={() => setMood(v)}>
+                <Text style={s.emoji}>{MOOD_EMOJIS[v]}</Text>
+                <Text style={[s.emojiLabel, mood === v && { color: colors.accent }]}>{MOOD_LABELS[v]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={[s.pickerLabel, { marginTop: 4 }]}>Energy</Text>
+          <View style={s.emojiRow}>
+            {[1,2,3,4,5].map(v => (
+              <TouchableOpacity key={v} style={[s.emojiBtn, energy === v && s.emojiBtnActive]} onPress={() => setEnergy(v)}>
+                <Text style={s.emoji}>{ENERGY_EMOJIS[v]}</Text>
+                <Text style={[s.emojiLabel, energy === v && { color: colors.accent }]}>{ENERGY_LABELS[v]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TextInput
+            style={[s.notesInput, { marginTop: 8 }]}
+            placeholder="Optional note..."
+            placeholderTextColor={colors.textDim}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+            maxLength={140}
+          />
+
+          <TouchableOpacity
+            style={[s.saveBtn, { marginTop: 14 }, (mood === 0 || energy === 0) && s.saveBtnDim]}
+            onPress={() => onSave({ date: log.date, mood, energy, notes })}
+            disabled={mood === 0 || energy === 0 || isPending}
+          >
+            {isPending
+              ? <ActivityIndicator color="#000" size="small" />
+              : <Text style={s.saveBtnText}>SAVE CHANGES</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Main Screen ───────────────────────────────────────────────────────────────
 export default function MoodLogScreen({ navigation }) {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -53,6 +128,7 @@ export default function MoodLogScreen({ navigation }) {
   const [mood, setMood]     = useState(0);
   const [energy, setEnergy] = useState(0);
   const [notes, setNotes]   = useState('');
+  const [editLog, setEditLog] = useState(null); // log entry being edited
 
   const { data: logs = [], isLoading, refetch } = useQuery({
     queryKey: ['mood-logs', user?.id],
@@ -63,11 +139,20 @@ export default function MoodLogScreen({ navigation }) {
 
   const todayLog = useMemo(() => logs.find(l => l.date === today), [logs, today]);
 
-  const { mutate: save, isPending } = useMutation({
+  const { mutate: save, isPending: savePending } = useMutation({
     mutationFn: () => upsertMoodLog(user.id, { date: today, mood, energy, notes }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mood-logs', user?.id] });
       setMood(0); setEnergy(0); setNotes('');
+    },
+    onError: (e) => Alert.alert('Error', e.message),
+  });
+
+  const { mutate: editSave, isPending: editPending } = useMutation({
+    mutationFn: (payload) => upsertMoodLog(user.id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mood-logs', user?.id] });
+      setEditLog(null);
     },
     onError: (e) => Alert.alert('Error', e.message),
   });
@@ -89,7 +174,17 @@ export default function MoodLogScreen({ navigation }) {
         {/* Today summary or log form */}
         {todayLog ? (
           <View style={s.todayCard}>
-            <Text style={s.todayLabel}>TODAY'S LOG</Text>
+            <View style={s.todayTopRow}>
+              <Text style={s.todayLabel}>TODAY'S LOG</Text>
+              <TouchableOpacity
+                style={s.editBtn}
+                onPress={() => setEditLog(todayLog)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="pencil" size={13} color={colors.accent} />
+                <Text style={s.editBtnText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
             <View style={s.todayRow}>
               <View style={s.todayStat}>
                 <Text style={s.todayEmoji}>{MOOD_EMOJIS[todayLog.mood]}</Text>
@@ -142,9 +237,9 @@ export default function MoodLogScreen({ navigation }) {
             <TouchableOpacity
               style={[s.saveBtn, (mood === 0 || energy === 0) && s.saveBtnDim]}
               onPress={() => save()}
-              disabled={mood === 0 || energy === 0 || isPending}
+              disabled={mood === 0 || energy === 0 || savePending}
             >
-              {isPending
+              {savePending
                 ? <ActivityIndicator color="#000" size="small" />
                 : <Text style={s.saveBtnText}>SAVE LOG</Text>
               }
@@ -152,7 +247,7 @@ export default function MoodLogScreen({ navigation }) {
           </View>
         )}
 
-        {/* 7-day sparkline */}
+        {/* 7-day bar chart */}
         {last7.length > 1 && (
           <View style={s.card}>
             <Text style={s.cardTitle}>LAST 7 DAYS</Text>
@@ -202,19 +297,25 @@ export default function MoodLogScreen({ navigation }) {
         {/* History list */}
         {logs.length > 0 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>HISTORY</Text>
+            <Text style={s.cardTitle}>HISTORY · TAP TO EDIT</Text>
             {logs.map((l, i) => {
               const d = new Date(l.date + 'T00:00:00');
               const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
               return (
-                <View key={l.id} style={[s.histRow, i < logs.length - 1 && s.histRowBorder]}>
+                <TouchableOpacity
+                  key={l.id}
+                  style={[s.histRow, i < logs.length - 1 && s.histRowBorder]}
+                  onPress={() => setEditLog(l)}
+                  activeOpacity={0.7}
+                >
                   <Text style={s.histDate}>{label}</Text>
                   <View style={s.histRight}>
                     <Text style={s.histEmoji}>{MOOD_EMOJIS[l.mood]}</Text>
                     <Text style={s.histEmoji}>{ENERGY_EMOJIS[l.energy]}</Text>
                     <Text style={[s.histScore, { color: colors.accent }]}>{l.mood}/{l.energy}</Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textDim} />
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -227,6 +328,15 @@ export default function MoodLogScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      <EditModal
+        visible={!!editLog}
+        log={editLog}
+        colors={colors}
+        onClose={() => setEditLog(null)}
+        onSave={editSave}
+        isPending={editPending}
+      />
     </SafeAreaView>
   );
 }
@@ -235,7 +345,10 @@ const styles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 16, paddingBottom: 40, gap: 16 },
   todayCard: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, borderColor: colors.accent + '60', padding: 20, gap: 12 },
+  todayTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   todayLabel: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
+  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent + '18', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
+  editBtnText: { fontSize: 11, fontFamily: fontFamily.bodyBold, color: colors.accent },
   todayRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   todayStat: { flex: 1, alignItems: 'center', gap: 4 },
   todayDivider: { width: 1, height: 60, backgroundColor: colors.border },
@@ -281,4 +394,9 @@ const styles = (colors) => StyleSheet.create({
   emptyBox: { alignItems: 'center', gap: 10, paddingVertical: 32 },
   emptyIcon: { fontSize: 40 },
   emptyText: { fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  // Edit modal
+  modalOverlay: { flex: 1, backgroundColor: '#00000080', justifyContent: 'flex-end' },
+  modalBox: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36, gap: 12 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  modalTitle: { fontSize: 14, fontFamily: fontFamily.bodyExtraBold, color: colors.text },
 });
