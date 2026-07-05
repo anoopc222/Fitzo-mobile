@@ -563,8 +563,7 @@ export default function YearInReviewScreen({ navigation }) {
         <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
           <View style={s.card}>
             <Text style={s.cardTitle}>MONTHLY BREAKDOWN</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View>
+            <View>
                 {/* header */}
                 <View style={[s.tableRow, { backgroundColor: colors.dim ?? colors.border }]}>
                   <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Month</Text>
@@ -589,8 +588,7 @@ export default function YearInReviewScreen({ navigation }) {
                     }]}>{m.sleep != null ? m.sleep : '—'}</Text>
                   </View>
                 ))}
-              </View>
-            </ScrollView>
+            </View>
           </View>
         </ProLock>
 
@@ -908,8 +906,8 @@ const styles = (colors) => StyleSheet.create({
   // monthly table
   tableRow:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, paddingHorizontal: 4, borderRadius: 6 },
   tableCell:          { fontSize: 11 },
-  tableMonthCol:      { width: 44 },
-  tableNumCol:        { width: 72, textAlign: 'center' },
+  tableMonthCol:      { flex: 1 },
+  tableNumCol:        { flex: 2, textAlign: 'center' },
 
   // activity split
   activityBar:        { flexDirection: 'row', height: 18, borderRadius: 6, overflow: 'hidden' },
