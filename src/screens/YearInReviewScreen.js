@@ -179,46 +179,24 @@ export default function YearInReviewScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Big stats */}
-        <View style={s.bigStatsGrid}>
-          <View style={[s.bigStat, { borderColor: colors.accent + '50' }]}>
-            <Text style={s.bigStatEmoji}>🏋️</Text>
-            <Text style={[s.bigStatVal, { color: colors.accent }]}>{data.totalWorkouts}</Text>
-            <Text style={s.bigStatLabel}>WORKOUTS</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: '#fb7185' + '50' }]}>
-            <Text style={s.bigStatEmoji}>⚖️</Text>
-            <Text style={[s.bigStatVal, { color: '#fb7185' }]}>
-              {data.totalVolKg >= 1000 ? `${(data.totalVolKg / 1000).toFixed(1)}t` : `${data.totalVolKg}kg`}
-            </Text>
-            <Text style={s.bigStatLabel}>TOTAL LIFTED</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: '#fbbf24' + '50' }]}>
-            <Text style={s.bigStatEmoji}>👟</Text>
-            <Text style={[s.bigStatVal, { color: '#fbbf24' }]}>
-              {data.totalSteps >= 1000000
-                ? `${(data.totalSteps / 1000000).toFixed(1)}M`
-                : data.totalSteps >= 1000 ? `${(data.totalSteps / 1000).toFixed(0)}k` : String(data.totalSteps)}
-            </Text>
-            <Text style={s.bigStatLabel}>TOTAL STEPS</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: '#c4b5fd' + '50' }]}>
-            <Text style={s.bigStatEmoji}>😴</Text>
-            <Text style={[s.bigStatVal, { color: '#c4b5fd' }]}>{data.avgSleep ? `${data.avgSleep.toFixed(1)}h` : '—'}</Text>
-            <Text style={s.bigStatLabel}>AVG SLEEP</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: '#34d399' + '50' }]}>
-            <Text style={s.bigStatEmoji}>🔥</Text>
-            <Text style={[s.bigStatVal, { color: '#34d399' }]}>{data.bestStreak}</Text>
-            <Text style={s.bigStatLabel}>BEST STREAK</Text>
-          </View>
-          <View style={[s.bigStat, { borderColor: colors.border }]}>
-            <Text style={s.bigStatEmoji}>{data.weightDelta != null ? (data.weightDelta <= 0 ? '📉' : '📈') : '⚖️'}</Text>
-            <Text style={[s.bigStatVal, { color: colors.text }]}>
-              {data.weightDelta != null ? `${data.weightDelta > 0 ? '+' : ''}${data.weightDelta}kg` : '—'}
-            </Text>
-            <Text style={s.bigStatLabel}>WEIGHT CHANGE</Text>
-          </View>
+        {/* Stats grid — 2 per row, horizontal layout */}
+        <View style={s.statsGrid}>
+          {[
+            { emoji: '🏋️', val: String(data.totalWorkouts), label: 'WORKOUTS', color: colors.accent, border: colors.accent + '40' },
+            { emoji: '⚖️', val: data.totalVolKg >= 1000 ? `${(data.totalVolKg / 1000).toFixed(1)}t` : `${data.totalVolKg}kg`, label: 'TOTAL LIFTED', color: '#fb7185', border: '#fb718540' },
+            { emoji: '👟', val: data.totalSteps >= 1000000 ? `${(data.totalSteps / 1000000).toFixed(1)}M` : data.totalSteps >= 1000 ? `${(data.totalSteps / 1000).toFixed(0)}k` : String(data.totalSteps), label: 'TOTAL STEPS', color: '#fbbf24', border: '#fbbf2440' },
+            { emoji: '😴', val: data.avgSleep ? `${data.avgSleep.toFixed(1)}h` : '—', label: 'AVG SLEEP', color: '#c4b5fd', border: '#c4b5fd40' },
+            { emoji: '🔥', val: String(data.bestStreak), label: 'BEST STREAK', color: '#34d399', border: '#34d39940' },
+            { emoji: data.weightDelta != null ? (data.weightDelta <= 0 ? '📉' : '📈') : '⚖️', val: data.weightDelta != null ? `${data.weightDelta > 0 ? '+' : ''}${data.weightDelta}kg` : '—', label: 'WEIGHT CHANGE', color: colors.text, border: colors.border },
+          ].map((item, i) => (
+            <View key={i} style={[s.statCard, { borderColor: item.border }]}>
+              <Text style={s.statEmoji}>{item.emoji}</Text>
+              <View style={s.statBody}>
+                <Text style={[s.statVal, { color: item.color }]}>{item.val}</Text>
+                <Text style={s.statLabel}>{item.label}</Text>
+              </View>
+            </View>
+          ))}
         </View>
 
         {/* Monthly workouts bar chart */}
@@ -280,19 +258,20 @@ export default function YearInReviewScreen({ navigation }) {
 
 const styles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 16, paddingBottom: 40, gap: 16 },
-  yearPicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 14 },
+  scroll: { padding: 14, paddingBottom: 40, gap: 12 },
+  yearPicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 10 },
   yearArrow: { padding: 4 },
   yearArrowDisabled: { opacity: 0.3 },
-  yearCenter: { alignItems: 'center', gap: 4 },
-  yearText: { fontSize: 28, fontFamily: fontFamily.monoBold, color: colors.text },
-  currentBadge: { backgroundColor: colors.accent + '20', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  yearCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  yearText: { fontSize: 22, fontFamily: fontFamily.monoBold, color: colors.text },
+  currentBadge: { backgroundColor: colors.accent + '20', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
   currentBadgeText: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1 },
-  bigStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  bigStat: { width: '47%', backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, padding: 14, alignItems: 'center', gap: 4 },
-  bigStatEmoji: { fontSize: 24 },
-  bigStatVal: { fontSize: 26, fontFamily: fontFamily.monoBold },
-  bigStatLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statCard: { width: '48%', flexGrow: 1, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1.5, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  statEmoji: { fontSize: 22 },
+  statBody: { flex: 1, gap: 2 },
+  statVal: { fontSize: 20, fontFamily: fontFamily.monoBold },
+  statLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.8 },
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 14 },
   cardTitle: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
   barChart: { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 4 },

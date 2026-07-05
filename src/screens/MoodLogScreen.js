@@ -188,14 +188,18 @@ export default function MoodLogScreen({ navigation }) {
             <View style={s.todayRow}>
               <View style={s.todayStat}>
                 <Text style={s.todayEmoji}>{MOOD_EMOJIS[todayLog.mood]}</Text>
-                <Text style={s.todayVal}>{MOOD_LABELS[todayLog.mood]}</Text>
-                <Text style={s.todayStatLabel}>MOOD</Text>
+                <View style={s.todayStatRight}>
+                  <Text style={s.todayVal}>{MOOD_LABELS[todayLog.mood]}</Text>
+                  <Text style={s.todayStatLabel}>MOOD</Text>
+                </View>
               </View>
               <View style={s.todayDivider} />
               <View style={s.todayStat}>
                 <Text style={s.todayEmoji}>{ENERGY_EMOJIS[todayLog.energy]}</Text>
-                <Text style={s.todayVal}>{ENERGY_LABELS[todayLog.energy]}</Text>
-                <Text style={s.todayStatLabel}>ENERGY</Text>
+                <View style={s.todayStatRight}>
+                  <Text style={s.todayVal}>{ENERGY_LABELS[todayLog.energy]}</Text>
+                  <Text style={s.todayStatLabel}>ENERGY</Text>
+                </View>
               </View>
             </View>
             {todayLog.notes ? <Text style={s.todayNotes}>"{todayLog.notes}"</Text> : null}
@@ -281,15 +285,19 @@ export default function MoodLogScreen({ navigation }) {
           <View style={s.avgRow}>
             <View style={s.avgCard}>
               <Text style={s.avgEmoji}>{avgMood ? MOOD_EMOJIS[Math.round(Number(avgMood))] : '—'}</Text>
-              <Text style={[s.avgVal, { color: colors.accent }]}>{avgMood ?? '—'}</Text>
-              <Text style={s.avgLabel}>AVG MOOD</Text>
-              <Text style={s.avgSub}>last {logs.length} days</Text>
+              <View style={s.avgBody}>
+                <Text style={[s.avgVal, { color: colors.accent }]}>{avgMood ?? '—'}</Text>
+                <Text style={s.avgLabel}>AVG MOOD</Text>
+                <Text style={s.avgSub}>{logs.length}d avg</Text>
+              </View>
             </View>
             <View style={s.avgCard}>
               <Text style={s.avgEmoji}>{avgEnergy ? ENERGY_EMOJIS[Math.round(Number(avgEnergy))] : '—'}</Text>
-              <Text style={[s.avgVal, { color: colors.purple ?? '#9d4edd' }]}>{avgEnergy ?? '—'}</Text>
-              <Text style={s.avgLabel}>AVG ENERGY</Text>
-              <Text style={s.avgSub}>last {logs.length} days</Text>
+              <View style={s.avgBody}>
+                <Text style={[s.avgVal, { color: colors.purple ?? '#9d4edd' }]}>{avgEnergy ?? '—'}</Text>
+                <Text style={s.avgLabel}>AVG ENERGY</Text>
+                <Text style={s.avgSub}>{logs.length}d avg</Text>
+              </View>
             </View>
           </View>
         )}
@@ -343,32 +351,33 @@ export default function MoodLogScreen({ navigation }) {
 
 const styles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 16, paddingBottom: 40, gap: 16 },
-  todayCard: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, borderColor: colors.accent + '60', padding: 20, gap: 12 },
+  scroll: { padding: 14, paddingBottom: 40, gap: 12 },
+  todayCard: { backgroundColor: colors.card, borderRadius: 14, borderWidth: 1.5, borderColor: colors.accent + '60', padding: 14, gap: 10 },
   todayTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   todayLabel: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
   editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent + '18', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
   editBtnText: { fontSize: 11, fontFamily: fontFamily.bodyBold, color: colors.accent },
-  todayRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  todayStat: { flex: 1, alignItems: 'center', gap: 4 },
-  todayDivider: { width: 1, height: 60, backgroundColor: colors.border },
-  todayEmoji: { fontSize: 32 },
+  todayRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  todayStat: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  todayStatRight: { gap: 2 },
+  todayDivider: { width: 1, height: 44, backgroundColor: colors.border },
+  todayEmoji: { fontSize: 26 },
   todayVal: { fontSize: 14, fontFamily: fontFamily.bodyBold, color: colors.text },
   todayStatLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1 },
-  todayNotes: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', textAlign: 'center' },
-  logCard: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 20, gap: 12 },
-  logTitle: { fontSize: 16, fontFamily: fontFamily.bodyExtraBold, color: colors.text, textAlign: 'center' },
+  todayNotes: { fontSize: 11, color: colors.textMuted, fontStyle: 'italic' },
+  logCard: { backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 10 },
+  logTitle: { fontSize: 15, fontFamily: fontFamily.bodyExtraBold, color: colors.text, textAlign: 'center' },
   pickerLabel: { fontSize: 11, fontFamily: fontFamily.bodyBold, color: colors.textMuted, letterSpacing: 1 },
-  emojiRow: { flexDirection: 'row', gap: 6 },
-  emojiBtn: { flex: 1, alignItems: 'center', padding: 8, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, gap: 4 },
+  emojiRow: { flexDirection: 'row', gap: 5 },
+  emojiBtn: { flex: 1, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 4, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, gap: 3 },
   emojiBtnActive: { borderColor: colors.accent, backgroundColor: colors.accent + '18' },
-  emoji: { fontSize: 22 },
+  emoji: { fontSize: 20 },
   emojiLabel: { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.3, textAlign: 'center' },
-  notesInput: { backgroundColor: colors.bg, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 10, color: colors.text, fontFamily: fontFamily.body, fontSize: 13, minHeight: 44 },
-  saveBtn: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  notesInput: { backgroundColor: colors.bg, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 9, color: colors.text, fontFamily: fontFamily.body, fontSize: 13, minHeight: 40 },
+  saveBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   saveBtnDim: { opacity: 0.4 },
   saveBtnText: { fontSize: 14, fontFamily: fontFamily.bodyExtraBold, color: '#000', letterSpacing: 1 },
-  card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 12 },
+  card: { backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 10 },
   cardTitle: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 80 },
   chartCol: { flex: 1, alignItems: 'center', gap: 4 },
@@ -379,12 +388,13 @@ const styles = (colors) => StyleSheet.create({
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.body },
-  avgRow: { flexDirection: 'row', gap: 12 },
-  avgCard: { flex: 1, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, alignItems: 'center', gap: 4 },
-  avgEmoji: { fontSize: 28 },
-  avgVal: { fontSize: 28, fontFamily: fontFamily.monoBold },
+  avgRow: { flexDirection: 'row', gap: 10 },
+  avgCard: { flex: 1, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avgEmoji: { fontSize: 24 },
+  avgBody: { gap: 1 },
+  avgVal: { fontSize: 22, fontFamily: fontFamily.monoBold },
   avgLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1 },
-  avgSub: { fontSize: 10, color: colors.textMuted, fontFamily: fontFamily.body },
+  avgSub: { fontSize: 9, color: colors.textMuted, fontFamily: fontFamily.body },
   histRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   histRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   histDate: { fontSize: 13, color: colors.text, fontFamily: fontFamily.body },
