@@ -71,10 +71,10 @@ function calcTrend(sessions) {
 const TREND_SCORE = { up: 2, flat: 1, down: 0 };
 
 const SORT_OPTIONS = [
-  { key: 'recent', labelKey: 'progress.sortRecent' },
-  { key: 'name', labelKey: 'progress.sortName' },
-  { key: 'sessions', labelKey: 'progress.sortSessions' },
-  { key: 'trend', labelKey: 'progress.sortTrend' },
+  { key: 'recent',   label: 'Recent' },
+  { key: 'name',     label: 'Name' },
+  { key: 'sessions', label: 'Sessions' },
+  { key: 'trend',    label: 'Improving' },
 ];
 
 // Epley formula — standard estimated-1RM approximation from a sub-max set.
@@ -300,7 +300,7 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
               style={[styles.sortChip, sortBy === opt.key && styles.sortChipActive]}
               onPress={() => setSortBy(opt.key)}
             >
-              <Text style={[styles.sortChipText, sortBy === opt.key && styles.sortChipTextActive]}>{t(opt.labelKey)}</Text>
+              <Text style={[styles.sortChipText, sortBy === opt.key && styles.sortChipTextActive]}>{opt.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -508,7 +508,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border,
   },
   sortChipActive: { backgroundColor: colors.accent + '20', borderColor: colors.accent },
-  sortChipText: { fontSize: typography.xs, color: colors.textDim, fontWeight: weight.medium },
+  sortChipText: { fontSize: 12, color: colors.textMuted, fontWeight: weight.medium },
   sortChipTextActive: { color: colors.accent, fontWeight: weight.bold },
 
   searchWrap: {
