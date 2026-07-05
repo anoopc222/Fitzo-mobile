@@ -4,8 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { typography, weight, fontFamily } from '../theme/typography';
 import { useTheme } from '../context/ThemeContext';
 
-export default function ScreenHeader({ title, onBack, colors, right }) {
-  const { isDark, setIsDark } = useTheme();
+export default function ScreenHeader({ title, onBack, colors: colorsProp, right }) {
+  const { isDark, setIsDark, colors: themeColors } = useTheme();
+  const colors = colorsProp ?? themeColors;
   const styles = createStyles(colors);
   return (
     <View style={styles.header}>
