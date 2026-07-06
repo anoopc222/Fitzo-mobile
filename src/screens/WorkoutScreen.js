@@ -1870,54 +1870,59 @@ function EditSessionModal({
                 const isLastInGroup  = isInGroup && (exIdx === exercises.length - 1 || exercises[exIdx + 1].group_id !== ex.group_id);
                 return (
                   <React.Fragment key={ex._key}>
+                  <View style={[
+                    { position: 'relative' },
+                    isFirstInGroup && { marginTop: 14 },
+                    !isFirstInGroup && isInGroup && { marginTop: -4 },
+                  ]}>
                   {isFirstInGroup && (
-                    <View style={eS.supersetLabel}>
-                      <View style={eS.supersetDot} />
-                      <Text style={eS.supersetLabelText}>SUPERSET</Text>
-                      <View style={eS.supersetDot} />
+                    <View style={eS.supersetBadgeRow}>
+                      <View style={eS.supersetBadge}>
+                        <Text style={eS.supersetBadgeText}>SUPERSET</Text>
+                      </View>
                     </View>
                   )}
-                  <View style={[
-                    { flexDirection: 'row' },
-                    isInGroup && !isFirstInGroup && { marginTop: -4 },
-                  ]}>
+                  <View style={{ flexDirection: 'row' }}>
                   {isInGroup && <View style={eS.supersetStrip} />}
                   <View ref={r => { cardRefs.current[exIdx] = r; }} style={[
                     eS.exCard, isActive && eS.exCardActive,
                     { flex: 1 },
                     isInGroup && { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
+                    isFirstInGroup && { borderTopColor: colors.purple },
                   ]}>
-                    <TouchableOpacity style={eS.exCardHeader}
-                      onPress={() => {
-                        const next = isActive ? null : exIdx;
-                        setActiveExIdx(next);
-                        if (next != null) scrollCardToTop(next);
-                      }}>
-                      <View style={[eS.exNumBadge, isActive && eS.exNumBadgeActive]}>
-                        <Text style={[eS.exNumText, isActive && eS.exNumTextActive]}>{exIdx + 1}</Text>
-                      </View>
-                      <Text style={[eS.exCardName, isActive && eS.exCardNameActive]} numberOfLines={1}>
-                        {ex.name.trim() || (isCardio ? t('workout.newActivity') : t('workout.newExercise'))}
-                      </Text>
-                      <Text style={eS.exSetsCount}>
-                        {isCardio
-                          ? t('workout.entryCount', { count: (ex.sets ?? []).length })
-                          : t('workout.setsCount', { count: (ex.sets ?? []).length })}
-                      </Text>
+                    <View style={eS.exCardHeader}>
+                      <TouchableOpacity style={eS.exCardHeaderTap}
+                        onPress={() => {
+                          const next = isActive ? null : exIdx;
+                          setActiveExIdx(next);
+                          if (next != null) scrollCardToTop(next);
+                        }}>
+                        <View style={[eS.exNumBadge, isActive && eS.exNumBadgeActive]}>
+                          <Text style={[eS.exNumText, isActive && eS.exNumTextActive]}>{exIdx + 1}</Text>
+                        </View>
+                        <Text style={[eS.exCardName, isActive && eS.exCardNameActive]} numberOfLines={1}>
+                          {ex.name.trim() || (isCardio ? t('workout.newActivity') : t('workout.newExercise'))}
+                        </Text>
+                        <Text style={eS.exSetsCount}>
+                          {isCardio
+                            ? t('workout.entryCount', { count: (ex.sets ?? []).length })
+                            : t('workout.setsCount', { count: (ex.sets ?? []).length })}
+                        </Text>
+                      </TouchableOpacity>
                       <View style={eS.exReorderBtns}>
                         <TouchableOpacity
-                          onPress={(e) => { e.stopPropagation?.(); moveExercise(exIdx, -1); }}
+                          onPress={() => moveExercise(exIdx, -1)}
                           disabled={exIdx === 0}
                           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
-                          <Ionicons name="chevron-up" size={14} color={exIdx === 0 ? colors.textDim + '44' : colors.textDim} />
+                          <Ionicons name="chevron-up" size={14} color={exIdx === 0 ? colors.textDim + '22' : colors.textDim} />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          onPress={(e) => { e.stopPropagation?.(); moveExercise(exIdx, 1); }}
+                          onPress={() => moveExercise(exIdx, 1)}
                           disabled={exIdx === exercises.length - 1}
                           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
-                          <Ionicons name="chevron-down" size={14} color={exIdx === exercises.length - 1 ? colors.textDim + '44' : colors.textDim} />
+                          <Ionicons name="chevron-down" size={14} color={exIdx === exercises.length - 1 ? colors.textDim + '22' : colors.textDim} />
                         </TouchableOpacity>
                       </View>
                       <TouchableOpacity onPress={() => removeExercise(exIdx)} style={eS.exDeleteBtn}
@@ -1926,7 +1931,7 @@ function EditSessionModal({
                           <Ionicons name="close" size={12} color={colors.danger} />
                         </View>
                       </TouchableOpacity>
-                    </TouchableOpacity>
+                    </View>
 
                     {isActive && (
                       <View style={eS.exExpanded}>
@@ -2241,6 +2246,7 @@ function EditSessionModal({
                         </View>
                       </View>
                     )}
+                  </View>
                   </View>
                   </View>
                   </React.Fragment>
@@ -3905,7 +3911,8 @@ const createES = (colors) => StyleSheet.create({
     overflow: 'hidden', borderWidth: 1, borderColor: colors.border,
   },
   exCardActive: { borderColor: colors.accent, borderWidth: 1.5 },
-  exCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  exCardHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8 },
+  exCardHeaderTap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   exNumBadge: {
     width: 26, height: 26, borderRadius: 8,
     backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
@@ -4041,11 +4048,14 @@ const createES = (colors) => StyleSheet.create({
   },
   groupHintText: { fontSize: 10, color: colors.purple, fontWeight: weight.semibold },
 
-  supersetLabel: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, paddingHorizontal: 4,
+  supersetBadgeRow: {
+    position: 'absolute', top: -9, left: 0, right: 0, alignItems: 'center', zIndex: 10,
   },
-  supersetDot: { flex: 1, height: 1, backgroundColor: colors.purple + '55' },
-  supersetLabelText: {
+  supersetBadge: {
+    backgroundColor: colors.card, paddingHorizontal: 10, paddingVertical: 2,
+    borderRadius: 6, borderWidth: 1, borderColor: colors.purple,
+  },
+  supersetBadgeText: {
     fontSize: 9, fontWeight: weight.bold, color: colors.purple,
     letterSpacing: 1.2, textTransform: 'uppercase',
   },
