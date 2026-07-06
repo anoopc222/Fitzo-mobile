@@ -607,6 +607,32 @@ export default function YearInReviewScreen({ navigation }) {
           )}
         </View>
 
+        {/* ── Body transformation (FREE) ── */}
+        {data.bodyTransform && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>BODY TRANSFORMATION</Text>
+            <Text style={[s.cardSubtitle]}>From Jan to Dec</Text>
+            <View style={s.transformRow}>
+              <View style={s.transformSide}>
+                <Text style={s.transformLabel}>START</Text>
+                <Text style={[s.transformVal, { color: colors.textDim }]}>{data.bodyTransform.startWeight} kg</Text>
+              </View>
+              <Text style={{ fontSize: 28 }}>
+                {data.bodyTransform.delta < 0 ? '📉' : data.bodyTransform.delta > 0 ? '📈' : '➡️'}
+              </Text>
+              <View style={s.transformSide}>
+                <Text style={s.transformLabel}>END</Text>
+                <Text style={[s.transformVal, { color: colors.text }]}>{data.bodyTransform.endWeight} kg</Text>
+              </View>
+            </View>
+            <Text style={[s.transformDelta, {
+              color: data.bodyTransform.delta < 0 ? '#34d399' : data.bodyTransform.delta > 0 ? '#fb7185' : colors.textDim,
+            }]}>
+              {data.bodyTransform.delta > 0 ? '+' : ''}{data.bodyTransform.delta} kg change
+            </Text>
+          </View>
+        )}
+
         {/* ── 7. Activity split (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -677,59 +703,6 @@ export default function YearInReviewScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
-
-        {/* ── 8. Body transformation (PRO) ── */}
-        {(data.bodyTransform || !hasAccess) && (
-          <View style={s.card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <Text style={s.cardTitle}>BODY TRANSFORMATION</Text>
-              <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-                <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-              </View>
-            </View>
-            {hasAccess ? (
-              data.bodyTransform ? (
-                <>
-                  <Text style={[s.cardSubtitle]}>From Jan to Dec</Text>
-                  <View style={s.transformRow}>
-                    <View style={s.transformSide}>
-                      <Text style={s.transformLabel}>START</Text>
-                      <Text style={[s.transformVal, { color: colors.textDim }]}>{data.bodyTransform.startWeight} kg</Text>
-                    </View>
-                    <Text style={{ fontSize: 28 }}>
-                      {data.bodyTransform.delta < 0 ? '📉' : data.bodyTransform.delta > 0 ? '📈' : '➡️'}
-                    </Text>
-                    <View style={s.transformSide}>
-                      <Text style={s.transformLabel}>END</Text>
-                      <Text style={[s.transformVal, { color: colors.text }]}>{data.bodyTransform.endWeight} kg</Text>
-                    </View>
-                  </View>
-                  <Text style={[s.transformDelta, {
-                    color: data.bodyTransform.delta < 0 ? '#34d399' : data.bodyTransform.delta > 0 ? '#fb7185' : colors.textDim,
-                  }]}>
-                    {data.bodyTransform.delta > 0 ? '+' : ''}{data.bodyTransform.delta} kg change
-                  </Text>
-                </>
-              ) : null
-            ) : (
-              <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
-                <Text style={[s.cardSubtitle]}>From Jan to Dec</Text>
-                <View style={s.transformRow}>
-                  <View style={s.transformSide}>
-                    <Text style={s.transformLabel}>START</Text>
-                    <Text style={[s.transformVal, { color: colors.textDim }]}>●● kg</Text>
-                  </View>
-                  <Text style={{ fontSize: 28 }}>➡️</Text>
-                  <View style={s.transformSide}>
-                    <Text style={s.transformLabel}>END</Text>
-                    <Text style={[s.transformVal, { color: colors.textDim }]}>●● kg</Text>
-                  </View>
-                </View>
-                <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock body transformation with Pro.</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
 
         {/* ── 9. Nutrition summary (PRO) ── */}
         <View style={s.card}>
