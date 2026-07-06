@@ -1222,15 +1222,26 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             </View>
           )}
 
-          {exercises.map((ex, exIdx) => {
+          {(() => {
+            const dExGroups = [];
+            exercises.forEach((ex, idx) => {
+              if (ex.group_id && dExGroups.length > 0 && dExGroups[dExGroups.length - 1].groupId === ex.group_id) {
+                dExGroups[dExGroups.length - 1].indices.push(idx);
+              } else {
+                dExGroups.push({ groupId: ex.group_id || null, indices: [idx] });
+              }
+            });
+            return dExGroups.map((group) => {
+            const isGrouped = !!group.groupId;
+            const groupCards = group.indices.map((exIdx, posInGroup) => {
+            const ex = exercises[exIdx];
             const isPB = pbSet.has((ex.exercise_name ?? '').toLowerCase());
             const isExpanded = expandedIds.has(ex.id);
             const sortedSets = (ex.sets ?? []).slice().sort((a, b) => a.set_number - b.set_number);
             const bestIdx = getBestSetIndex(sortedSets);
             const exMuscles = getExerciseMuscles(ex.exercise_name);
             const exStyle = getWorkoutStyle(ex.exercise_name, colors);
-            const isInGroup = !!ex.group_id;
-            const isFirstInGroup = isInGroup && (exIdx === 0 || exercises[exIdx - 1].group_id !== ex.group_id);
+            const isLastInGroup = posInGroup === group.indices.length - 1;
 
             if (isCardio) {
               const exMin = sortedSets.reduce((s, st) => s + (st.duration_min ?? 0), 0);
@@ -1258,15 +1269,9 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             }
 
             return (
-              <View key={ex.id} style={[{ position: 'relative' }, isFirstInGroup && { marginTop: 14 }, !isFirstInGroup && isInGroup && { marginTop: -4 }]}>
-              {isFirstInGroup && (
-                <View style={dS.supersetBadgeRow}>
-                  <View style={dS.supersetBadge}>
-                    <Text style={dS.supersetBadgeText}>SUPERSET</Text>
-                  </View>
-                </View>
-              )}
-              <TouchableOpacity style={[dS.exCard, isInGroup && { borderTopColor: colors.purple, backgroundColor: colors.purple + '0a' }, isFirstInGroup && { borderTopColor: colors.purple }]} onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
+              <TouchableOpacity key={ex.id}
+                style={[isGrouped ? dS.exCardInGroup : dS.exCard, isGrouped && !isLastInGroup && dS.exCardInGroupDivider]}
+                onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
                 {/* Exercise header */}
                 <View style={dS.exCardHeader}>
                   <View style={[dS.exIcon, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
@@ -1338,9 +1343,23 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                   <Text style={{ fontSize: typography.xs, color: colors.textDim, padding: 8 }}>{t('workout.noSetsRecorded')}</Text>
                 )}
               </TouchableOpacity>
+            ); // end card
+            }); // end groupCards
+            if (!isGrouped) return groupCards;
+            return (
+              <View key={group.groupId} style={dS.supersetGroup}>
+                <View style={dS.supersetGroupHeader}>
+                  <View style={dS.supersetGroupLine} />
+                  <Ionicons name="link-outline" size={11} color={colors.purple} />
+                  <Text style={dS.supersetGroupHeaderText}>SUPERSET</Text>
+                  <Ionicons name="link-outline" size={11} color={colors.purple} />
+                  <View style={dS.supersetGroupLine} />
+                </View>
+                {groupCards}
               </View>
             );
-          })}
+            }); // end dExGroups.map
+          })()}
 
           {/* Action buttons */}
           <View style={dS.actionRow}>
@@ -1899,29 +1918,26 @@ function EditSessionModal({
                 </View>
               )}
 
-              {exercises.map((ex, exIdx) => {
+              {(() => {
+                const exGroups = [];
+                exercises.forEach((ex, idx) => {
+                  if (ex.group_id && exGroups.length > 0 && exGroups[exGroups.length - 1].groupId === ex.group_id) {
+                    exGroups[exGroups.length - 1].indices.push(idx);
+                  } else {
+                    exGroups.push({ groupId: ex.group_id || null, indices: [idx] });
+                  }
+                });
+                return exGroups.map((group) => {
+                const isGrouped = !!group.groupId;
+                const groupCards = group.indices.map((exIdx, posInGroup) => {
+                const ex = exercises[exIdx];
                 const isActive = activeExIdx === exIdx;
-                const isInGroup = !!ex.group_id;
-                const isFirstInGroup = isInGroup && (exIdx === 0 || exercises[exIdx - 1].group_id !== ex.group_id);
-                const isLastInGroup  = isInGroup && (exIdx === exercises.length - 1 || exercises[exIdx + 1].group_id !== ex.group_id);
+                const isLastInGroup = posInGroup === group.indices.length - 1;
                 return (
-                  <React.Fragment key={ex._key}>
-                  <View style={[
-                    { position: 'relative' },
-                    isFirstInGroup && { marginTop: 14 },
-                    !isFirstInGroup && isInGroup && { marginTop: -4 },
-                  ]}>
-                  {isFirstInGroup && (
-                    <View style={eS.supersetBadgeRow}>
-                      <View style={eS.supersetBadge}>
-                        <Text style={eS.supersetBadgeText}>SUPERSET</Text>
-                      </View>
-                    </View>
-                  )}
-                  <View ref={r => { cardRefs.current[exIdx] = r; }} style={[
-                    eS.exCard, isActive && eS.exCardActive,
-                    isInGroup && { backgroundColor: colors.purple + '0a' },
-                    isFirstInGroup && { borderTopColor: colors.purple },
+                  <View key={ex._key} ref={r => { cardRefs.current[exIdx] = r; }} style={[
+                    isGrouped ? eS.exCardInGroup : eS.exCard,
+                    isActive && eS.exCardActive,
+                    isGrouped && !isLastInGroup && eS.exCardInGroupDivider,
                     dragKey === ex._key && eS.exCardDragging,
                   ]}>
                     <View style={eS.exCardHeader}>
@@ -2269,10 +2285,23 @@ function EditSessionModal({
                       </View>
                     )}
                   </View>
+                ); // end card
+                }); // end groupCards
+                if (!isGrouped) return groupCards;
+                return (
+                  <View key={group.groupId} style={eS.supersetGroup}>
+                    <View style={eS.supersetGroupHeader}>
+                      <View style={eS.supersetGroupLine} />
+                      <Ionicons name="link-outline" size={11} color={colors.purple} />
+                      <Text style={eS.supersetGroupHeaderText}>SUPERSET</Text>
+                      <Ionicons name="link-outline" size={11} color={colors.purple} />
+                      <View style={eS.supersetGroupLine} />
+                    </View>
+                    {groupCards}
                   </View>
-                  </React.Fragment>
                 );
-              })}
+                }); // end exGroups.map
+              })()}
 
               {isNew && exercises.length === 0 && !isCardio && (
                 <View style={eS.templateRow}>
@@ -3809,6 +3838,22 @@ const createDS = (colors) => StyleSheet.create({
     backgroundColor: colors.card, borderRadius: 12, padding: 10,
     marginBottom: 8, borderWidth: 1, borderColor: colors.border,
   },
+  exCardInGroup: { backgroundColor: colors.card, padding: 10 },
+  exCardInGroupDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  supersetGroup: {
+    borderWidth: 1.5, borderColor: colors.purple, borderRadius: 12,
+    marginBottom: 8, overflow: 'hidden',
+  },
+  supersetGroupHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 6, paddingHorizontal: 10,
+    backgroundColor: colors.purple + '20',
+  },
+  supersetGroupLine: { flex: 1, height: 1, backgroundColor: colors.purple + '44' },
+  supersetGroupHeaderText: {
+    fontSize: 10, fontWeight: weight.bold, color: colors.purple,
+    letterSpacing: 1.4, textTransform: 'uppercase',
+  },
   exCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   exIcon: { width: 32, height: 32, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   exName: { fontSize: typography.sm, fontFamily: fontFamily.bodyExtraBold, color: colors.text, letterSpacing: 0.3 },
@@ -3936,6 +3981,24 @@ const createES = (colors) => StyleSheet.create({
     overflow: 'hidden', borderWidth: 1, borderColor: colors.border,
   },
   exCardActive: { borderColor: colors.accent, borderWidth: 1.5 },
+  exCardInGroup: {
+    backgroundColor: colors.card, overflow: 'hidden',
+  },
+  exCardInGroupDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  supersetGroup: {
+    borderWidth: 1.5, borderColor: colors.purple, borderRadius: 12,
+    marginBottom: 8, overflow: 'hidden',
+  },
+  supersetGroupHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 6, paddingHorizontal: 10,
+    backgroundColor: colors.purple + '20',
+  },
+  supersetGroupLine: { flex: 1, height: 1, backgroundColor: colors.purple + '44' },
+  supersetGroupHeaderText: {
+    fontSize: 10, fontWeight: weight.bold, color: colors.purple,
+    letterSpacing: 1.4, textTransform: 'uppercase',
+  },
   exCardHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8 },
   exCardHeaderTap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   exNumBadge: {
