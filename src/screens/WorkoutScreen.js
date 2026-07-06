@@ -1025,6 +1025,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   const dS = useMemo(() => createDS(colors), [colors]);
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [historyEx, setHistoryEx] = useState(null);
+  const [compactView, setCompactView] = useState(false);
   const sessionExport = useGatedExport();
 
   useEffect(() => {
@@ -1208,12 +1209,22 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         <View style={dS.exScroll}>
           <View style={dS.exSectionHeader}>
             <Text style={dS.exLabel}>{isCardio ? t('workout.activities') : t('workout.exercises')}</Text>
-            <TouchableOpacity onPress={toggleAll} style={dS.collapseToggleWrap}>
-              <Text style={dS.collapseToggleText}>{allExpanded ? t('workout.collapseAll') : t('workout.expandAll')}</Text>
-              <View style={[dS.toggleSwitch, allExpanded && dS.toggleSwitchOn]}>
-                <View style={[dS.toggleKnob, allExpanded && dS.toggleKnobOn]} />
-              </View>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <TouchableOpacity onPress={() => setCompactView(v => !v)} style={dS.compactToggleBtn}>
+                <Ionicons name={compactView ? 'list' : 'grid-outline'} size={13} color={compactView ? colors.accent : colors.textDim} />
+                <Text style={[dS.compactToggleText, compactView && { color: colors.accent }]}>
+                  {compactView ? 'Detail' : 'Compact'}
+                </Text>
+              </TouchableOpacity>
+              {!compactView && (
+                <TouchableOpacity onPress={toggleAll} style={dS.collapseToggleWrap}>
+                  <Text style={dS.collapseToggleText}>{allExpanded ? t('workout.collapseAll') : t('workout.expandAll')}</Text>
+                  <View style={[dS.toggleSwitch, allExpanded && dS.toggleSwitchOn]}>
+                    <View style={[dS.toggleKnob, allExpanded && dS.toggleKnobOn]} />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {exercises.length === 0 && (
@@ -1263,6 +1274,49 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                         </View>
                       </View>
                     </View>
+                  </View>
+                </View>
+              );
+            }
+
+            if (compactView) {
+              return (
+                <View key={ex.id}
+                  style={[isGrouped ? dS.exCardInGroup : dS.exCard, isGrouped && !isLastInGroup && dS.exCardInGroupDivider, dS.exCardCompact]}>
+                  <View style={dS.exCardCompactRow}>
+                    <View style={[dS.exIconCompact, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
+                      <Text style={{ fontSize: 14 }}>{exStyle.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <Text style={dS.exNameCompact}>{(ex.exercise_name ?? '').toUpperCase()}</Text>
+                        {isPB && <Text style={dS.pbCompact}>🏆</Text>}
+                        <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); setHistoryEx(ex.exercise_name); }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                          <Ionicons name="time-outline" size={12} color={colors.textDim} />
+                        </TouchableOpacity>
+                      </View>
+                      {sortedSets.length > 0 && (
+                        <View style={dS.compactSetRow}>
+                          {sortedSets.map((s, idx) => {
+                            const isBest = idx === bestIdx;
+                            const wt = s.weight_kg != null ? `${s.weight_kg}kg` : null;
+                            const rp = s.reps != null ? `${s.reps}` : null;
+                            const dur = s.duration_min != null ? `${s.duration_min}min` : null;
+                            const label = wt && rp ? `${wt}×${rp}` : rp ? `${rp} reps` : dur ? dur : '—';
+                            return (
+                              <View key={s.id} style={[dS.compactSetChip, isBest && dS.compactSetChipBest]}>
+                                <Text style={[dS.compactSetChipText, isBest && dS.compactSetChipTextBest]}>
+                                  {label}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
+                    {exMuscles.length > 0 && (
+                      <Text style={dS.compactMuscleText} numberOfLines={1}>{exMuscles[0]}</Text>
+                    )}
                   </View>
                 </View>
               );
@@ -3895,6 +3949,23 @@ const createDS = (colors) => StyleSheet.create({
   setReps: { flex: 1, fontSize: typography.sm, color: colors.text, fontFamily: fontFamily.monoBold, textAlign: 'center' },
   bestBadge: { backgroundColor: colors.accent + '22', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, alignItems: 'center' },
   bestBadgeText: { fontSize: 10, color: colors.accent, fontWeight: weight.bold },
+
+  exIconCompact: { width: 26, height: 26, borderRadius: 6, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  compactToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  compactToggleText: { fontSize: 10, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1 },
+  exCardCompact: { paddingVertical: 7, paddingHorizontal: 10 },
+  exCardCompactRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  exNameCompact: { fontSize: typography.xs, fontFamily: fontFamily.bodyExtraBold, color: colors.text, letterSpacing: 0.3 },
+  pbCompact: { fontSize: 11 },
+  compactSetRow: { flexDirection: 'row', gap: 5, marginTop: 4, flexWrap: 'wrap' },
+  compactSetChip: {
+    backgroundColor: colors.surface, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  compactSetChipBest: { borderColor: colors.accent + '88', backgroundColor: colors.accent + '14' },
+  compactSetChipText: { fontSize: 10, color: colors.textDim, fontWeight: weight.bold },
+  compactSetChipTextBest: { color: colors.accent },
+  compactMuscleText: { fontSize: 9, color: colors.textMuted, maxWidth: 60, textAlign: 'right' },
 
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   editBtn: {
