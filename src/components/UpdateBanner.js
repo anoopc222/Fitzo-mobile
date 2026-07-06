@@ -12,11 +12,23 @@ try {
   Updates = require('expo-updates');
 } catch (_) {}
 
+import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../lib/supabase';
 
 const SNOOZE_KEY = 'fitzo:updateBannerSnoozed';
 const SNOOZE_HOURS = 24;
+
+function semverGt(a, b) {
+  const pa = (a || '0').split('.').map(Number);
+  const pb = (b || '0').split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] ?? 0) > (pb[i] ?? 0)) return true;
+    if ((pa[i] ?? 0) < (pb[i] ?? 0)) return false;
+  }
+  return false;
+}
 
 const STORE_URL = Platform.select({
   ios: 'itms-apps://apps.apple.com/app/id123456789', // replace with real App Store ID
@@ -36,9 +48,6 @@ export default function UpdateBanner() {
 
   async function checkForUpdate() {
     try {
-      // expo-updates unavailable (Expo Go) or not in a standalone build — skip silently
-      if (!Updates || !Updates.isEnabled) return;
-
       // Check if banner was recently snoozed
       const snoozedAt = await AsyncStorage.getItem(SNOOZE_KEY);
       if (snoozedAt) {
@@ -46,10 +55,29 @@ export default function UpdateBanner() {
         if (hours < SNOOZE_HOURS) return;
       }
 
-      const result = await Updates.checkForUpdateAsync();
-      if (result.isAvailable) {
-        setIsOTA(true);
-        show();
+      // 1. OTA update check (EAS standalone builds only)
+      if (Updates?.isEnabled) {
+        const result = await Updates.checkForUpdateAsync();
+        if (result.isAvailable) {
+          setIsOTA(true);
+          show();
+          return;
+        }
+      }
+
+      // 2. Play Store version check via Supabase remote config
+      if (Platform.OS === 'android') {
+        const { data } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'latest_android_version')
+          .single();
+        const latestVersion = data?.value;
+        const installedVersion = Constants.expoConfig?.version ?? '0.0.0';
+        if (latestVersion && semverGt(latestVersion, installedVersion)) {
+          setIsOTA(false);
+          show();
+        }
       }
     } catch (_) {
       // silently ignore — never block the app
