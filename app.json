@@ -3,7 +3,7 @@
     "name": "Fitzo",
     "slug": "Fitzo",
     "scheme": "fitzo",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "sdkVersion": "54.0.0",
