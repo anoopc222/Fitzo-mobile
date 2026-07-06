@@ -1737,7 +1737,19 @@ function EditSessionModal({
   };
 
   const removeExercise = (idx) => {
-    setExercises(prev => prev.filter((_, i) => i !== idx));
+    setExercises(prev => {
+      const removed = prev[idx];
+      const next = prev.filter((_, i) => i !== idx);
+      // If removed exercise was in a superset, check if its partner is now alone
+      if (removed?.group_id) {
+        const remaining = next.filter(e => e.group_id === removed.group_id);
+        if (remaining.length === 1) {
+          // Only one left — no longer a superset, clear its group_id
+          return next.map(e => e.group_id === removed.group_id ? { ...e, group_id: null } : e);
+        }
+      }
+      return next;
+    });
     if (activeExIdx === idx) setActiveExIdx(null);
     else if (activeExIdx > idx) setActiveExIdx(activeExIdx - 1);
   };
