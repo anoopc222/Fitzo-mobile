@@ -1258,15 +1258,15 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             }
 
             return (
-              <View key={ex.id}>
+              <View key={ex.id} style={[{ position: 'relative' }, isFirstInGroup && { marginTop: 14 }, !isFirstInGroup && isInGroup && { marginTop: -4 }]}>
               {isFirstInGroup && (
-                <View style={dS.supersetLabel}>
-                  <View style={dS.supersetDot} />
-                  <Text style={dS.supersetLabelText}>SUPERSET</Text>
-                  <View style={dS.supersetDot} />
+                <View style={dS.supersetBadgeRow}>
+                  <View style={dS.supersetBadge}>
+                    <Text style={dS.supersetBadgeText}>SUPERSET</Text>
+                  </View>
                 </View>
               )}
-              <TouchableOpacity style={[dS.exCard, isInGroup && { borderLeftWidth: 3, borderLeftColor: colors.purple }]} onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
+              <TouchableOpacity style={[dS.exCard, isInGroup && { borderTopColor: colors.purple, backgroundColor: colors.purple + '0a' }, isFirstInGroup && { borderTopColor: colors.purple }]} onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
                 {/* Exercise header */}
                 <View style={dS.exCardHeader}>
                   <View style={[dS.exIcon, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
@@ -1918,12 +1918,9 @@ function EditSessionModal({
                       </View>
                     </View>
                   )}
-                  <View style={{ flexDirection: 'row' }}>
-                  {isInGroup && <View style={eS.supersetStrip} />}
                   <View ref={r => { cardRefs.current[exIdx] = r; }} style={[
                     eS.exCard, isActive && eS.exCardActive,
-                    { flex: 1 },
-                    isInGroup && { borderTopLeftRadius: 0, borderBottomLeftRadius: 0, backgroundColor: colors.purple + '0a' },
+                    isInGroup && { backgroundColor: colors.purple + '0a' },
                     isFirstInGroup && { borderTopColor: colors.purple },
                     dragKey === ex._key && eS.exCardDragging,
                   ]}>
@@ -2271,7 +2268,6 @@ function EditSessionModal({
                         </View>
                       </View>
                     )}
-                  </View>
                   </View>
                   </View>
                   </React.Fragment>
@@ -3797,11 +3793,14 @@ const createDS = (colors) => StyleSheet.create({
   toggleKnob: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.textDim },
   toggleKnobOn: { backgroundColor: colors.bg, alignSelf: 'flex-end' },
 
-  supersetLabel: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, paddingHorizontal: 4,
+  supersetBadgeRow: {
+    position: 'absolute', top: -9, left: 0, right: 0, alignItems: 'center', zIndex: 10,
   },
-  supersetDot: { flex: 1, height: 1, backgroundColor: colors.purple + '55' },
-  supersetLabelText: {
+  supersetBadge: {
+    backgroundColor: colors.card, paddingHorizontal: 10, paddingVertical: 2,
+    borderRadius: 6, borderWidth: 1, borderColor: colors.purple,
+  },
+  supersetBadgeText: {
     fontSize: 9, fontWeight: weight.bold, color: colors.purple,
     letterSpacing: 1.2, textTransform: 'uppercase',
   },
