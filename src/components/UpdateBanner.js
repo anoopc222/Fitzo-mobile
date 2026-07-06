@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Animated,
-  Linking, Platform,
+  Linking, Platform, AppState,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -44,6 +44,11 @@ export default function UpdateBanner() {
 
   useEffect(() => {
     checkForUpdate();
+    // Re-check when app comes back to foreground
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') checkForUpdate();
+    });
+    return () => sub.remove();
   }, []);
 
   async function checkForUpdate() {
