@@ -1537,9 +1537,9 @@ function EditSessionModal({
           if (toStart === blockStart) return;
           const arr = [...cur];
           const items = arr.splice(blockStart, blockSize);
-          // After removing blockSize items before toStart, adjust insert position
-          const insertAt = toStart > blockStart ? toStart - blockSize : toStart;
-          arr.splice(insertAt, 0, ...items);
+          // toStart is the desired final index; after splice the insert position is the same
+          // because we insert into the now-shorter array at exactly that slot
+          arr.splice(toStart, 0, ...items);
           setExercises(arr);
         },
         onPanResponderRelease: () => { delete startIdxMap.current[key]; setDragKey(null); },
