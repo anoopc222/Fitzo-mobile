@@ -2483,6 +2483,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
   const [detailSession, setDetailSession] = useState(null);
   const [showDetail, setShowDetail]       = useState(false);
+  const [dayPickerSessions, setDayPickerSessions] = useState(null); // array or null
   const [showEdit, setShowEdit]           = useState(false);
   const [editIsNew, setEditIsNew]         = useState(false);
   const [editInitial, setEditInitial]     = useState(null);
@@ -3562,65 +3563,25 @@ export default function WorkoutScreen({ embedded = false } = {}) {
           const totalKcal = daySessions.reduce((sum, s) => sum + (s.calories_burned ?? 0), 0);
           const names = daySessions.map(s => s.notes || t('workout.workout')).join(' + ');
           return (
-            <View key={date} style={[s.sessionCard, { backgroundColor: colors.card, borderColor: colors.accent + '40', padding: 0, overflow: 'hidden' }]}>
-              {/* merged header — tapping opens first session */}
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}
-                onPress={() => openDetail(daySessions[0])}
-                activeOpacity={0.82}
-              >
-                <View style={[s.sessionIcon, { backgroundColor: colors.accent + '18', borderColor: colors.accent + '40' }]}>
-                  <Text style={{ fontSize: 18 }}>🗓️</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.sessionName, { color: colors.accent }]} numberOfLines={1}>{names}</Text>
-                  <Text style={s.sessionSub}>
-                    {fmtDate(date)} · {daySessions.length} sessions · {totalExs}ex
-                    {totalVol > 0 ? ` · ${totalVol.toLocaleString()}kg` : ''}
-                    {totalKcal > 0 ? ` · 🔥${totalKcal}kcal` : ''}
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 10, color: colors.textDim, marginRight: 2 }}>TAP EACH ↓</Text>
-              </TouchableOpacity>
-              {/* sub-rows per session */}
-              {daySessions.map((sess, idx) => {
-                const ws = getWorkoutStyle(sess.notes, colors);
-                const vol = sess.total_volume ?? calcSessionVol(sess);
-                const exs = sess.workout_exercises ?? [];
-                let sub = '';
-                if (vol === 0 && exs.length > 0) {
-                  sub = exs.slice(0, 2).map(e => e.exercise_name).filter(Boolean).join(', ');
-                  if (exs.length > 2) sub += ` +${exs.length - 2}`;
-                } else {
-                  if (exs.length > 0) sub += `${exs.length}ex`;
-                  if (vol > 0) sub += (sub ? ' · ' : '') + `${vol.toLocaleString()}kg`;
-                }
-                return (
-                  <TouchableOpacity
-                    key={sess.id}
-                    style={{
-                      flexDirection: 'row', alignItems: 'center', gap: 10,
-                      paddingHorizontal: 12, paddingVertical: 10,
-                      borderTopWidth: 1, borderTopColor: colors.border,
-                      backgroundColor: ws.cardBg,
-                    }}
-                    onPress={() => openDetail(sess)}
-                    activeOpacity={0.82}
-                  >
-                    <View style={[s.sessionIcon, { width: 30, height: 30, borderRadius: 8, backgroundColor: ws.iconBg, borderColor: ws.cardBorder }]}>
-                      <Text style={{ fontSize: 14 }}>{ws.icon}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.sessionName, { fontSize: 13, color: ws.titleColor }]} numberOfLines={1}>
-                        {sess.notes || t('workout.workout')}
-                      </Text>
-                      {!!sub && <Text style={[s.sessionSub, { fontSize: 11 }]} numberOfLines={1}>{sub}</Text>}
-                    </View>
-                    <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TouchableOpacity
+              key={date}
+              style={[s.sessionCard, { backgroundColor: colors.card, borderColor: colors.accent + '40', flexDirection: 'row', alignItems: 'center', gap: 10 }]}
+              onPress={() => setDayPickerSessions(daySessions)}
+              activeOpacity={0.82}
+            >
+              <View style={[s.sessionIcon, { backgroundColor: colors.accent + '18', borderColor: colors.accent + '40' }]}>
+                <Text style={{ fontSize: 18 }}>🗓️</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.sessionName, { color: colors.accent }]} numberOfLines={1}>{names}</Text>
+                <Text style={s.sessionSub}>
+                  {fmtDate(date)} · {daySessions.length} sessions · {totalExs}ex
+                  {totalVol > 0 ? ` · ${totalVol.toLocaleString()}kg` : ''}
+                  {totalKcal > 0 ? ` · 🔥${totalKcal}kcal` : ''}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+            </TouchableOpacity>
           );
         })}
         </View>
@@ -3643,6 +3604,39 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onRepeat={() => handleRepeat(detailSession)}
         onDelete={() => confirmDelete(detailSession?.id)}
       />
+
+      {/* Day session picker — shown when multiple sessions on same day */}
+      {dayPickerSessions && (
+        <Modal transparent animationType="slide" onRequestClose={() => setDayPickerSessions(null)}>
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setDayPickerSessions(null)} />
+          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 36 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 16 }} />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.5, marginBottom: 12 }}>
+              {dayPickerSessions[0]?.date ? fmtDate(dayPickerSessions[0].date) : ''} · {dayPickerSessions.length} SESSIONS
+            </Text>
+            {dayPickerSessions.map((sess, idx) => {
+              const ws = getWorkoutStyle(sess.notes, colors);
+              const vol = sess.total_volume ?? calcSessionVol(sess);
+              const exs = sess.workout_exercises ?? [];
+              return (
+                <TouchableOpacity
+                  key={sess.id}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, backgroundColor: ws.cardBg, borderWidth: 1, borderColor: ws.cardBorder, marginBottom: 10 }}
+                  onPress={() => { setDayPickerSessions(null); openDetail(sess); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 22 }}>{ws.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: ws.titleColor }} numberOfLines={1}>{sess.notes || 'Workout'}</Text>
+                    <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>{exs.length}ex{vol > 0 ? ` · ${vol.toLocaleString()}kg` : ''}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Modal>
+      )}
 
       <EditSessionModal
         visible={showEdit}
