@@ -1858,7 +1858,7 @@ function EditSessionModal({
                 const isFirstInGroup = isInGroup && (exIdx === 0 || exercises[exIdx - 1].group_id !== ex.group_id);
                 const isLastInGroup  = isInGroup && (exIdx === exercises.length - 1 || exercises[exIdx + 1].group_id !== ex.group_id);
                 return (
-                  <View key={ex._key} style={[isInGroup && !isFirstInGroup && { marginTop: -4 }]}>
+                  <React.Fragment key={ex._key}>
                   {isFirstInGroup && (
                     <View style={eS.supersetLabel}>
                       <View style={eS.supersetDot} />
@@ -1868,7 +1868,8 @@ function EditSessionModal({
                   )}
                   <View ref={r => { cardRefs.current[exIdx] = r; }} style={[
                     eS.exCard, isActive && eS.exCardActive,
-                    isInGroup && { borderLeftWidth: 3, borderLeftColor: colors.purple, marginLeft: 0 },
+                    isInGroup && { borderLeftWidth: 3, borderLeftColor: colors.purple },
+                    isInGroup && !isFirstInGroup && { marginTop: -4 },
                   ]}>
                     <TouchableOpacity style={eS.exCardHeader}
                       onPress={() => {
@@ -2212,7 +2213,7 @@ function EditSessionModal({
                       </View>
                     )}
                   </View>
-                  </View>
+                  </React.Fragment>
                 );
               })}
 
