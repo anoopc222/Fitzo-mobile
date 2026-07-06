@@ -1025,7 +1025,6 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
   const dS = useMemo(() => createDS(colors), [colors]);
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [historyEx, setHistoryEx] = useState(null);
-  const [compactView, setCompactView] = useState(false);
   const sessionExport = useGatedExport();
 
   useEffect(() => {
@@ -1209,22 +1208,6 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
         <View style={dS.exScroll}>
           <View style={dS.exSectionHeader}>
             <Text style={dS.exLabel}>{isCardio ? t('workout.activities') : t('workout.exercises')}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <TouchableOpacity onPress={() => setCompactView(v => !v)} style={dS.compactToggleBtn}>
-                <Ionicons name={compactView ? 'list' : 'grid-outline'} size={13} color={compactView ? colors.accent : colors.textDim} />
-                <Text style={[dS.compactToggleText, compactView && { color: colors.accent }]}>
-                  {compactView ? 'Detail' : 'Compact'}
-                </Text>
-              </TouchableOpacity>
-              {!compactView && (
-                <TouchableOpacity onPress={toggleAll} style={dS.collapseToggleWrap}>
-                  <Text style={dS.collapseToggleText}>{allExpanded ? t('workout.collapseAll') : t('workout.expandAll')}</Text>
-                  <View style={[dS.toggleSwitch, allExpanded && dS.toggleSwitchOn]}>
-                    <View style={[dS.toggleKnob, allExpanded && dS.toggleKnobOn]} />
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
           </View>
 
           {exercises.length === 0 && (
@@ -1279,124 +1262,45 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
               );
             }
 
-            if (compactView) {
-              return (
-                <View key={ex.id}
-                  style={[isGrouped ? dS.exCardInGroup : dS.exCard, isGrouped && !isLastInGroup && dS.exCardInGroupDivider, dS.exCardCompact]}>
-                  <View style={dS.exCardCompactRow}>
-                    <View style={[dS.exIconCompact, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
-                      <Text style={{ fontSize: 14 }}>{exStyle.icon}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <Text style={dS.exNameCompact}>{(ex.exercise_name ?? '').toUpperCase()}</Text>
-                        {isPB && <Text style={dS.pbCompact}>🏆</Text>}
-                        <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); setHistoryEx(ex.exercise_name); }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                          <Ionicons name="time-outline" size={12} color={colors.textDim} />
-                        </TouchableOpacity>
-                      </View>
-                      {sortedSets.length > 0 && (
-                        <View style={dS.compactSetRow}>
-                          {sortedSets.map((s, idx) => {
-                            const isBest = idx === bestIdx;
-                            const wt = s.weight_kg != null ? `${s.weight_kg}kg` : null;
-                            const rp = s.reps != null ? `${s.reps}` : null;
-                            const dur = s.duration_min != null ? `${s.duration_min}min` : null;
-                            const label = wt && rp ? `${wt}×${rp}` : rp ? `${rp} reps` : dur ? dur : '—';
-                            return (
-                              <View key={s.id} style={[dS.compactSetChip, isBest && dS.compactSetChipBest]}>
-                                <Text style={[dS.compactSetChipText, isBest && dS.compactSetChipTextBest]}>
-                                  {label}
-                                </Text>
-                              </View>
-                            );
-                          })}
-                        </View>
-                      )}
-                    </View>
-                    {exMuscles.length > 0 && (
-                      <Text style={dS.compactMuscleText} numberOfLines={1}>{exMuscles[0]}</Text>
-                    )}
-                  </View>
-                </View>
-              );
-            }
-
             return (
-              <TouchableOpacity key={ex.id}
-                style={[isGrouped ? dS.exCardInGroup : dS.exCard, isGrouped && !isLastInGroup && dS.exCardInGroupDivider]}
-                onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
-                {/* Exercise header */}
-                <View style={dS.exCardHeader}>
-                  <View style={[dS.exIcon, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
-                    <Text style={{ fontSize: 18 }}>{exStyle.icon}</Text>
+              <View key={ex.id}
+                style={[isGrouped ? dS.exCardInGroup : dS.exCard, isGrouped && !isLastInGroup && dS.exCardInGroupDivider, dS.exCardCompact]}>
+                <View style={dS.exCardCompactRow}>
+                  <View style={[dS.exIconCompact, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
+                    <Text style={{ fontSize: 14 }}>{exStyle.icon}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <Text style={dS.exName}>{(ex.exercise_name ?? '').toUpperCase()}</Text>
-                      {isPB && (
-                        <View style={dS.pbBadge}>
-                          <Text style={dS.pbBadgeText}>🏆 {t('workout.pbAbbrev')}</Text>
-                        </View>
-                      )}
-                      <TouchableOpacity
-                        onPress={(e) => { e.stopPropagation?.(); setHistoryEx(ex.exercise_name); }}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="time-outline" size={15} color={colors.textDim} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <Text style={dS.exNameCompact}>{(ex.exercise_name ?? '').toUpperCase()}</Text>
+                      {isPB && <Text style={dS.pbCompact}>🏆</Text>}
+                      <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); setHistoryEx(ex.exercise_name); }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                        <Ionicons name="time-outline" size={12} color={colors.textDim} />
                       </TouchableOpacity>
                     </View>
-                    {exMuscles.length > 0 && (
-                      <View style={dS.exMuscleRow}>
-                        {exMuscles.map(m => (
-                          <Text key={m} style={dS.exMuscleTag}>{m}</Text>
-                        ))}
+                    {sortedSets.length > 0 && (
+                      <View style={dS.compactSetRow}>
+                        {sortedSets.map((s, idx) => {
+                          const isBest = idx === bestIdx;
+                          const wt = s.weight_kg != null ? `${s.weight_kg}kg` : null;
+                          const rp = s.reps != null ? `${s.reps}` : null;
+                          const dur = s.duration_min != null ? `${s.duration_min}min` : null;
+                          const label = wt && rp ? `${wt}×${rp}` : rp ? `${rp} reps` : dur ? dur : '—';
+                          return (
+                            <View key={s.id} style={[dS.compactSetChip, isBest && dS.compactSetChipBest]}>
+                              <Text style={[dS.compactSetChipText, isBest && dS.compactSetChipTextBest]}>
+                                {label}
+                              </Text>
+                            </View>
+                          );
+                        })}
                       </View>
                     )}
                   </View>
-                  <Ionicons
-                    name={isExpanded ? 'chevron-down' : 'chevron-forward'}
-                    size={14} color={colors.textDim}
-                  />
+                  {exMuscles.length > 0 && (
+                    <Text style={dS.compactMuscleText} numberOfLines={1}>{exMuscles[0]}</Text>
+                  )}
                 </View>
-
-                {/* Set table */}
-                {isExpanded && sortedSets.length > 0 && (
-                  <>
-                    <View style={dS.setTableHdr}>
-                      <Text style={[dS.setTH, { width: 32 }]}>{t('workout.set')}</Text>
-                      <Text style={[dS.setTH, { width: 20 }]}></Text>
-                      <Text style={[dS.setTH, { flex: 1 }]}>{t('workout.weightXReps')}</Text>
-                      <Text style={[dS.setTH, { width: 56 }]}></Text>
-                    </View>
-                    {sortedSets.map((s, idx) => {
-                      const isBest = idx === bestIdx;
-                      return (
-                        <View key={s.id} style={[dS.setRow, isBest && dS.bestSetRow]}>
-                          <Text style={dS.setNum}>S{s.set_number}</Text>
-                          <View style={dS.setDotWrap}>
-                            <View style={[dS.dot, { backgroundColor: isBest ? colors.accent : colors.textDim }]} />
-                          </View>
-                          <Text style={dS.setWeight}>{s.weight_kg != null ? `${s.weight_kg}kg` : '—'}</Text>
-                          <Text style={dS.setXText}>×</Text>
-                          <Text style={dS.setReps}>{s.reps != null ? String(s.reps) : '—'}</Text>
-                          {/* Fixed-width slot keeps all rows aligned */}
-                          <View style={{ width: 58, alignItems: 'flex-end' }}>
-                            {isBest && (
-                              <View style={dS.bestBadge}>
-                                <Text style={dS.bestBadgeText}>★ {t('workout.best')}</Text>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </>
-                )}
-                {isExpanded && sortedSets.length === 0 && (
-                  <Text style={{ fontSize: typography.xs, color: colors.textDim, padding: 8 }}>{t('workout.noSetsRecorded')}</Text>
-                )}
-              </TouchableOpacity>
+              </View>
             ); // end card
             }); // end groupCards
             if (!isGrouped) return <React.Fragment key={group.indices[0]}>{groupCards}</React.Fragment>;
