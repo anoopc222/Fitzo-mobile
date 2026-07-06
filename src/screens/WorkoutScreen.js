@@ -20,6 +20,7 @@ import MonthYearPicker from '../components/ui/MonthYearPicker';
 import DatePickerField from '../components/ui/DatePickerField';
 import Sparkline from '../components/Sparkline';
 import BodyHeatmap from '../components/BodyHeatmap';
+import ProLock from '../components/ProLock';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import ScreenHeader from '../components/ScreenHeader';
@@ -3118,31 +3119,30 @@ export default function WorkoutScreen({ embedded = false } = {}) {
             </View>
 
             {/* Analysis & Insights — Pro */}
-            <View style={s.card}>
-              <View style={s.cardTitleRow}>
-                <Text style={s.cardTitle}>{t('workout.analysisInsightsUpper')}</Text>
-                <View style={s.proBadge}><Text style={s.proBadgeText}>{t('workout.proUpper')}</Text></View>
-              </View>
+            <ProLock hasAccess={hasAccess} onUnlock={() => setShowInsightsPaywall(true)} colors={colors}>
+              <View style={s.card}>
+                <View style={s.cardTitleRow}>
+                  <Text style={s.cardTitle}>{t('workout.analysisInsightsUpper')}</Text>
+                </View>
 
-              <View style={s.tileRow}>
-                <View style={s.tile}>
-                  <Text style={s.tileVal}>{hasAccess ? consistency.longestStreak : '●●'}</Text>
-                  <Text style={s.tileLbl}>{t('workout.bestStreakUpper')}</Text>
+                <View style={s.tileRow}>
+                  <View style={s.tile}>
+                    <Text style={s.tileVal}>{consistency.longestStreak}</Text>
+                    <Text style={s.tileLbl}>{t('workout.bestStreakUpper')}</Text>
+                  </View>
+                  <View style={s.tileColDivider} />
+                  <View style={s.tile}>
+                    <Text style={s.tileVal}>{`${consistency.consistencyPct}%`}</Text>
+                    <Text style={s.tileLbl}>{t('workout.consistency8WkUpper')}</Text>
+                  </View>
+                  <View style={s.tileColDivider} />
+                  <View style={s.tile}>
+                    <Text style={s.tileVal}>{consistency.avgPerWeek.toFixed(1)}</Text>
+                    <Text style={s.tileLbl}>{t('workout.avgPerWeekUpper')}</Text>
+                  </View>
                 </View>
-                <View style={s.tileColDivider} />
-                <View style={s.tile}>
-                  <Text style={s.tileVal}>{hasAccess ? `${consistency.consistencyPct}%` : '●●%'}</Text>
-                  <Text style={s.tileLbl}>{t('workout.consistency8WkUpper')}</Text>
-                </View>
-                <View style={s.tileColDivider} />
-                <View style={s.tile}>
-                  <Text style={s.tileVal}>{hasAccess ? consistency.avgPerWeek.toFixed(1) : '●.●'}</Text>
-                  <Text style={s.tileLbl}>{t('workout.avgPerWeekUpper')}</Text>
-                </View>
-              </View>
 
-              {hasAccess ? (
-                insights.length > 0 && (
+                {insights.length > 0 && (
                   <View style={s.insightsList}>
                     {insights.map((ins, i) => (
                       <View key={i} style={s.insightRow}>
@@ -3153,40 +3153,9 @@ export default function WorkoutScreen({ embedded = false } = {}) {
                       </View>
                     ))}
                   </View>
-                )
-              ) : (
-                <>
-                  {insights.length > 0 && (
-                    <View style={s.insightsList}>
-                      {insights.slice(0, 1).map((ins, i) => (
-                        <View key={`real-${i}`} style={s.insightRow}>
-                          <Text style={s.insightIcon}>{ins.icon}</Text>
-                          <Text style={s.insightText}>
-                            {ins.text}<Text style={s.insightBold}>{ins.bold}</Text>{ins.rest}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                  <TouchableOpacity activeOpacity={0.85} onPress={() => setShowInsightsPaywall(true)}>
-                    <View style={s.insightsList}>
-                      {(insights.length > 1
-                        ? insights.slice(1)
-                        : [['📈', 0.92], ['🔥', 0.68], ['📅', 0.8]].slice(insights.length)
-                      ).map((ins, i) => (
-                        <View key={`locked-${i}`} style={s.insightRow}>
-                          <Text style={s.insightIcon}>{Array.isArray(ins) ? ins[0] : ins.icon}</Text>
-                          <View style={[s.skeletonBar, { width: `${Array.isArray(ins) ? ins[1] * 100 : 80}%` }]} />
-                        </View>
-                      ))}
-                    </View>
-                    <Text style={s.lockedHint}>
-                      🔒 {t('workout.unlockStreakConsistencyInsights')}
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
+                )}
+              </View>
+            </ProLock>
 
             {/* This Week vs Last Week — session count, the consistency-first framing */}
             {isViewingCurrentMonth && (
@@ -3351,13 +3320,13 @@ export default function WorkoutScreen({ embedded = false } = {}) {
             )}
 
             {/* Muscle Group Volume + Auto-Deload — Pro */}
-            <View style={s.card}>
-              <View style={s.cardTitleRow}>
-                <Text style={s.cardTitle}>{t('workout.muscleGroupVolumeThisWeekUpper')}</Text>
-                <View style={s.proBadge}><Text style={s.proBadgeText}>{t('workout.proUpper')}</Text></View>
-              </View>
+            <ProLock hasAccess={hasAccess} onUnlock={() => setShowToolsPaywall(true)} colors={colors}>
+              <View style={s.card}>
+                <View style={s.cardTitleRow}>
+                  <Text style={s.cardTitle}>{t('workout.muscleGroupVolumeThisWeekUpper')}</Text>
+                </View>
 
-              {muscleExpanded && (hasAccess ? (
+              {muscleExpanded && (
                 <>
                   {deload && (
                     <View style={s.deloadBanner}>
@@ -3395,24 +3364,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
                     <Text style={s.lockedHint}>{t('workout.logGymSessionForMuscleBalance')}</Text>
                   )}
                 </>
-              ) : (
-                <TouchableOpacity activeOpacity={0.85} onPress={() => setShowToolsPaywall(true)}>
-                  <View style={s.muscleBarList}>
-                    {['Chest', 'Back', 'Legs'].map(m => (
-                      <View key={m} style={s.muscleBarRow}>
-                        <Text style={s.muscleBarLabel}>{m}</Text>
-                        <View style={s.muscleBarTrack}>
-                          <View style={[s.muscleBarFill, { width: '40%', opacity: 0.3 }]} />
-                        </View>
-                        <Text style={s.muscleBarVal}>●●●kg</Text>
-                      </View>
-                    ))}
-                  </View>
-                  <Text style={s.lockedHint}>
-                    🔒 {t('workout.unlockMuscleGroupBalanceAndMore')}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              )}
 
               <TouchableOpacity
                 onPress={() => setMuscleExpanded(v => !v)}
@@ -3423,7 +3375,8 @@ export default function WorkoutScreen({ embedded = false } = {}) {
                 </Text>
                 <Ionicons name={muscleExpanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.accent} />
               </TouchableOpacity>
-            </View>
+              </View>
+            </ProLock>
           </>
         )}
 

@@ -25,6 +25,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { useNotificationPrefs } from '../context/NotificationContext';
 import { syncConditionalReminder } from '../lib/notifications';
 import ScreenHeader from '../components/ScreenHeader';
+import ProLock from '../components/ProLock';
 import SkeletonScreen from '../components/Skeleton';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -963,44 +964,21 @@ export default function SleepScreen({ embedded = false } = {}) {
 
             {/* ── Analysis & Insights (Pro) ── */}
             {insights.length > 0 && (
-              <View style={styles.card}>
-                <View style={styles.cardTitleRow}>
-                  <Text style={styles.cardTitle}>{t('sleep.analysisInsightsTitle')}</Text>
-                  <View style={styles.proBadge}><Text style={styles.proBadgeText}>{t('sleep.proBadge')}</Text></View>
-                </View>
-                {hasAccess ? (
-                  insights.map((ins, i) => (
+              <ProLock hasAccess={hasAccess} onUnlock={() => recoveryExport.setShowPaywall(true)} colors={colors}>
+                <View style={styles.card}>
+                  <View style={styles.cardTitleRow}>
+                    <Text style={styles.cardTitle}>{t('sleep.analysisInsightsTitle')}</Text>
+                  </View>
+                  {insights.map((ins, i) => (
                     <View key={i} style={styles.insightRow}>
                       <Text style={styles.insightIcon}>{ins.icon}</Text>
                       <Text style={styles.insightText}>
                         {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
                       </Text>
                     </View>
-                  ))
-                ) : (
-                  <>
-                    {insights.slice(0, 1).map((ins, i) => (
-                      <View key={i} style={styles.insightRow}>
-                        <Text style={styles.insightIcon}>{ins.icon}</Text>
-                        <Text style={styles.insightText}>
-                          {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
-                        </Text>
-                      </View>
-                    ))}
-                    {insights.length > 1 && (
-                      <TouchableOpacity onPress={() => setShowRangePaywall(true)}>
-                        {insights.slice(1).map((ins, i) => (
-                          <View key={i} style={styles.insightRow}>
-                            <Text style={styles.insightIcon}>{ins.icon}</Text>
-                            <View style={[styles.skeletonBar, { width: `${[92, 68, 80, 75][i % 4]}%` }]} />
-                          </View>
-                        ))}
-                        <Text style={styles.emptyText}>{t('sleep.unlockInsightsCta')}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
-              </View>
+                  ))}
+                </View>
+              </ProLock>
             )}
 
             {/* ── Sleep → Workout Volume Insights ── */}
