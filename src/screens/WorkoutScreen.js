@@ -1497,7 +1497,8 @@ function EditSessionModal({
   const exercisesRef = useRef(exercises);
   useEffect(() => { exercisesRef.current = exercises; }, [exercises]);
   const panRefs = useRef({});
-  const CARD_H = 64;
+  const startIdxMap = useRef({});
+  const CARD_H = 80;
   const getDragPan = (key) => {
     if (!panRefs.current[key]) {
       panRefs.current[key] = PanResponder.create({
@@ -1505,23 +1506,24 @@ function EditSessionModal({
         onMoveShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponderCapture: () => true,
         onPanResponderGrant: () => {
+          startIdxMap.current[key] = exercisesRef.current.findIndex(e => e._key === key);
           setDragKey(key);
           setActiveExIdx(null);
         },
         onPanResponderMove: (_, gs) => {
+          const startIdx = startIdxMap.current[key];
+          if (startIdx == null) return;
           const cur = exercisesRef.current;
+          const toIdx = Math.max(0, Math.min(cur.length - 1, startIdx + Math.round(gs.dy / CARD_H)));
           const fromIdx = cur.findIndex(e => e._key === key);
-          if (fromIdx === -1) return;
-          const toIdx = Math.max(0, Math.min(cur.length - 1, fromIdx + Math.round(gs.dy / CARD_H)));
-          if (toIdx !== fromIdx) {
-            const arr = [...cur];
-            const [item] = arr.splice(fromIdx, 1);
-            arr.splice(toIdx, 0, item);
-            setExercises(arr);
-          }
+          if (fromIdx === -1 || toIdx === fromIdx) return;
+          const arr = [...cur];
+          const [item] = arr.splice(fromIdx, 1);
+          arr.splice(toIdx, 0, item);
+          setExercises(arr);
         },
-        onPanResponderRelease: () => setDragKey(null),
-        onPanResponderTerminate: () => setDragKey(null),
+        onPanResponderRelease: () => { delete startIdxMap.current[key]; setDragKey(null); },
+        onPanResponderTerminate: () => { delete startIdxMap.current[key]; setDragKey(null); },
       });
     }
     return panRefs.current[key];
@@ -2921,6 +2923,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         .map(ex => ({
           _key: ex.id,
           name: ex.exercise_name,
+          group_id: ex.group_id ?? null,
           sets: (ex.sets ?? []).slice().sort((a, b) => a.set_number - b.set_number)
             .map(s => ({
               _key: s.id,
