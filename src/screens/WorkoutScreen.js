@@ -1484,6 +1484,15 @@ function EditSessionModal({
   const panRefs = useRef({});
   const startIdxMap = useRef({});
   const CARD_H = 80;
+  // Returns array of indices for a group (consecutive block), or [idx] for ungrouped
+  const getGroupBlock = (arr, idx) => {
+    const gId = arr[idx]?.group_id;
+    if (!gId) return [idx];
+    const indices = [];
+    arr.forEach((ex, i) => { if (ex.group_id === gId) indices.push(i); });
+    return indices;
+  };
+
   const getDragPan = (key) => {
     if (!panRefs.current[key]) {
       panRefs.current[key] = PanResponder.create({
@@ -1491,46 +1500,49 @@ function EditSessionModal({
         onMoveShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponderCapture: () => true,
         onPanResponderGrant: () => {
-          startIdxMap.current[key] = exercisesRef.current.findIndex(e => e._key === key);
+          const cur = exercisesRef.current;
+          const exIdx = cur.findIndex(e => e._key === key);
+          const block = getGroupBlock(cur, exIdx);
+          // Store the block's top index at gesture start
+          startIdxMap.current[key] = block[0];
           setDragKey(key);
           setActiveExIdx(null);
         },
         onPanResponderMove: (_, gs) => {
-          const startIdx = startIdxMap.current[key];
-          if (startIdx == null) return;
+          const origBlockStart = startIdxMap.current[key];
+          if (origBlockStart == null) return;
           const cur = exercisesRef.current;
-          const toIdx = Math.max(0, Math.min(cur.length - 1, startIdx + Math.round(gs.dy / CARD_H)));
-          const fromIdx = cur.findIndex(e => e._key === key);
-          if (fromIdx === -1 || toIdx === fromIdx) return;
+          const exIdx = cur.findIndex(e => e._key === key);
+          if (exIdx === -1) return;
+          const block = getGroupBlock(cur, exIdx);
+          const blockStart = block[0];
+          const blockSize = block.length;
+
+          // Desired new block start position based on original position + drag delta
+          const rawTarget = origBlockStart + Math.round(gs.dy / CARD_H);
+          const maxStart = cur.length - blockSize;
+          let toStart = Math.max(0, Math.min(maxStart, rawTarget));
+
+          // If dragging a solo exercise, prevent it landing inside another group
+          if (blockSize === 1) {
+            const targetEx = cur[toStart];
+            if (targetEx?.group_id) {
+              // Find the group block at target and snap to before or after it
+              const targetBlock = getGroupBlock(cur, toStart);
+              toStart = toStart > blockStart ? targetBlock[targetBlock.length - 1] + 1 : targetBlock[0];
+              toStart = Math.max(0, Math.min(cur.length - 1, toStart));
+            }
+          }
+
+          if (toStart === blockStart) return;
           const arr = [...cur];
-          const [item] = arr.splice(fromIdx, 1);
-          arr.splice(toIdx, 0, item);
+          const items = arr.splice(blockStart, blockSize);
+          // After removing blockSize items before toStart, adjust insert position
+          const insertAt = toStart > blockStart ? toStart - blockSize : toStart;
+          arr.splice(insertAt, 0, ...items);
           setExercises(arr);
         },
-        onPanResponderRelease: () => {
-          delete startIdxMap.current[key];
-          setDragKey(null);
-          // Clear group_ids for any group whose members are no longer consecutive
-          setExercises(prev => {
-            const groupPositions = {};
-            prev.forEach((ex, i) => {
-              if (ex.group_id) {
-                if (!groupPositions[ex.group_id]) groupPositions[ex.group_id] = [];
-                groupPositions[ex.group_id].push(i);
-              }
-            });
-            let changed = false;
-            const next = prev.map(ex => {
-              if (!ex.group_id) return ex;
-              const positions = groupPositions[ex.group_id];
-              if (!positions || positions.length < 2) { changed = true; return { ...ex, group_id: null }; }
-              const isConsecutive = positions.every((p, i) => i === 0 || p === positions[i - 1] + 1);
-              if (!isConsecutive) { changed = true; return { ...ex, group_id: null }; }
-              return ex;
-            });
-            return changed ? next : prev;
-          });
-        },
+        onPanResponderRelease: () => { delete startIdxMap.current[key]; setDragKey(null); },
         onPanResponderTerminate: () => { delete startIdxMap.current[key]; setDragKey(null); },
       });
     }
