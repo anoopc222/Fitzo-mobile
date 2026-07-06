@@ -2939,31 +2939,42 @@ export default function WorkoutScreen({ embedded = false } = {}) {
 
   const openEdit = (session) => {
     setEditIsNew(false);
+    const mappedExercises = (session.workout_exercises ?? [])
+      .slice().sort((a, b) => a.order_index - b.order_index)
+      .map(ex => ({
+        _key: ex.id,
+        name: ex.exercise_name,
+        group_id: ex.group_id ?? null,
+        sets: (ex.sets ?? []).slice().sort((a, b) => a.set_number - b.set_number)
+          .map(s => ({
+            _key: s.id,
+            weight_kg: s.weight_kg != null ? String(s.weight_kg) : '',
+            reps: s.reps != null ? String(s.reps) : '',
+            rpe: s.rpe != null ? String(s.rpe) : '',
+            duration_min: s.duration_min != null ? String(s.duration_min) : '',
+            distance_km: s.distance_km != null ? String(s.distance_km) : '',
+            avg_rpm: s.avg_rpm != null ? String(s.avg_rpm) : '',
+            speed_kmh: s.speed_kmh != null ? String(s.speed_kmh) : '',
+            incline_pct: s.incline_pct != null ? String(s.incline_pct) : '',
+            calories: s.calories != null ? String(s.calories) : '',
+          })),
+      }));
+    // Repair legacy data: if a group_id appears only once, assign it to the exercise directly above
+    const groupCounts = {};
+    mappedExercises.forEach(ex => { if (ex.group_id) groupCounts[ex.group_id] = (groupCounts[ex.group_id] || 0) + 1; });
+    const repairedExercises = mappedExercises.slice();
+    repairedExercises.forEach((ex, i) => {
+      if (ex.group_id && groupCounts[ex.group_id] === 1 && i > 0 && !repairedExercises[i - 1].group_id) {
+        repairedExercises[i - 1] = { ...repairedExercises[i - 1], group_id: ex.group_id };
+        groupCounts[ex.group_id] = 2;
+      }
+    });
     setEditInitial({
       sessionId: session.id,
       date: session.date,
       name: session.notes ?? '',
       coachNotes: session.coach_notes ?? '',
-      exercises: (session.workout_exercises ?? [])
-        .slice().sort((a, b) => a.order_index - b.order_index)
-        .map(ex => ({
-          _key: ex.id,
-          name: ex.exercise_name,
-          group_id: ex.group_id ?? null,
-          sets: (ex.sets ?? []).slice().sort((a, b) => a.set_number - b.set_number)
-            .map(s => ({
-              _key: s.id,
-              weight_kg: s.weight_kg != null ? String(s.weight_kg) : '',
-              reps: s.reps != null ? String(s.reps) : '',
-              rpe: s.rpe != null ? String(s.rpe) : '',
-              duration_min: s.duration_min != null ? String(s.duration_min) : '',
-              distance_km: s.distance_km != null ? String(s.distance_km) : '',
-              avg_rpm: s.avg_rpm != null ? String(s.avg_rpm) : '',
-              speed_kmh: s.speed_kmh != null ? String(s.speed_kmh) : '',
-              incline_pct: s.incline_pct != null ? String(s.incline_pct) : '',
-              calories: s.calories != null ? String(s.calories) : '',
-            })),
-        })),
+      exercises: repairedExercises,
     });
     setShowDetail(false);
     setShowEdit(true);
