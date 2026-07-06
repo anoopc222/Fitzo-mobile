@@ -1407,7 +1407,7 @@ function ExerciseHistoryModal({ exerciseName, allSessions, visible, onClose }) {
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={ehS.container}>
+      <SafeAreaView style={ehS.container} edges={['top', 'bottom']}>
         <View style={ehS.handle} />
         <View style={ehS.header}>
           <Text style={ehS.title}>{(exerciseName ?? '').toUpperCase()}</Text>
@@ -1446,7 +1446,7 @@ function ExerciseHistoryModal({ exerciseName, allSessions, visible, onClose }) {
           ))}
           <View style={{ height: 30 }} />
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
