@@ -170,22 +170,6 @@ async function upsertMoodLog(userId, { date, mood, energy, notes }) {
   if (error) throw error;
 }
 
-// ── ProRow ────────────────────────────────────────────────────────────────────
-function ProRow({ hasAccess, onPaywall, children, colors }) {
-  if (hasAccess) return children;
-  return (
-    <TouchableOpacity style={{ opacity: 0.55 }} onPress={onPaywall} activeOpacity={0.8}>
-      <View pointerEvents="none">{children}</View>
-      <View style={{
-        position: 'absolute', top: 8, right: 8,
-        backgroundColor: colors.accent, borderRadius: 6,
-        paddingHorizontal: 6, paddingVertical: 2,
-      }}>
-        <Text style={{ fontSize: 9, fontFamily: fontFamily.bodyBold, color: '#000', letterSpacing: 1 }}>PRO</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 // ── EditModal ─────────────────────────────────────────────────────────────────
 function EditModal({ visible, log, colors, onClose, onSave, isPending }) {
@@ -558,31 +542,56 @@ export default function MoodLogScreen({ navigation }) {
         )}
 
         {/* 5. [PRO] Weekly mood summary */}
-        {weeklySummary && (
-          <ProRow hasAccess={hasAccess} onPaywall={() => setPaywallVisible(true)} colors={colors}>
-            <View style={s.card}>
-              <Text style={s.cardTitle}>THIS WEEK</Text>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={s.cardTitle}>THIS WEEK</Text>
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+            </View>
+          </View>
+          {hasAccess && weeklySummary ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <View style={s.weekSummaryTile}>
+                <Text style={s.weekSummaryVal}>{weeklySummary.avg}</Text>
+                <Text style={s.weekSummaryLabel}>Avg mood</Text>
+              </View>
+              <View style={s.weekSummaryTile}>
+                <Text style={s.weekSummaryEmoji}>{MOOD_EMOJIS[weeklySummary.best.mood]}</Text>
+                <Text style={s.weekSummaryLabel}>Best · {weeklySummary.bestDow}</Text>
+              </View>
+              <View style={s.weekSummaryTile}>
+                <Text style={s.weekSummaryEmoji}>{MOOD_EMOJIS[weeklySummary.worst.mood]}</Text>
+                <Text style={s.weekSummaryLabel}>Worst · {weeklySummary.worstDow}</Text>
+              </View>
+              <View style={s.weekSummaryTile}>
+                <Text style={s.weekSummaryVal}>{weeklySummary.daysLogged}/7</Text>
+                <Text style={s.weekSummaryLabel}>Days logged</Text>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setPaywallVisible(true)}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <View style={s.weekSummaryTile}>
-                  <Text style={s.weekSummaryVal}>{weeklySummary.avg}</Text>
+                  <Text style={s.weekSummaryVal}>●.●</Text>
                   <Text style={s.weekSummaryLabel}>Avg mood</Text>
                 </View>
                 <View style={s.weekSummaryTile}>
-                  <Text style={s.weekSummaryEmoji}>{MOOD_EMOJIS[weeklySummary.best.mood]}</Text>
-                  <Text style={s.weekSummaryLabel}>Best · {weeklySummary.bestDow}</Text>
+                  <Text style={s.weekSummaryEmoji}>😐</Text>
+                  <Text style={s.weekSummaryLabel}>Best · ●●●</Text>
                 </View>
                 <View style={s.weekSummaryTile}>
-                  <Text style={s.weekSummaryEmoji}>{MOOD_EMOJIS[weeklySummary.worst.mood]}</Text>
-                  <Text style={s.weekSummaryLabel}>Worst · {weeklySummary.worstDow}</Text>
+                  <Text style={s.weekSummaryEmoji}>😐</Text>
+                  <Text style={s.weekSummaryLabel}>Worst · ●●●</Text>
                 </View>
                 <View style={s.weekSummaryTile}>
-                  <Text style={s.weekSummaryVal}>{weeklySummary.daysLogged}/7</Text>
+                  <Text style={s.weekSummaryVal}>●/7</Text>
                   <Text style={s.weekSummaryLabel}>Days logged</Text>
                 </View>
               </View>
-            </View>
-          </ProRow>
-        )}
+              <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock weekly summary with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* 6. 28-day mood heatmap */}
         {logs.length > 0 && (
@@ -675,10 +684,15 @@ export default function MoodLogScreen({ navigation }) {
         )}
 
         {/* 9. [PRO] Mood × Sleep correlation */}
-        {sleepCorr && (
-          <ProRow hasAccess={hasAccess} onPaywall={() => setPaywallVisible(true)} colors={colors}>
-            <View style={s.card}>
-              <Text style={s.cardTitle}>MOOD × SLEEP</Text>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={s.cardTitle}>MOOD × SLEEP</Text>
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+            </View>
+          </View>
+          {hasAccess && sleepCorr ? (
+            <>
               <View style={s.corrTileRow}>
                 {[sleepCorr.poor, sleepCorr.ok, sleepCorr.good].map((bucket, i) => {
                   const val = bucket.avg ? parseFloat(bucket.avg) : null;
@@ -693,15 +707,33 @@ export default function MoodLogScreen({ navigation }) {
                 })}
               </View>
               <Text style={s.corrInsight}>{sleepInsight(sleepCorr)}</Text>
-            </View>
-          </ProRow>
-        )}
+            </>
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setPaywallVisible(true)}>
+              <View style={s.corrTileRow}>
+                {['Poor sleep', 'OK sleep', 'Good sleep'].map((label, i) => (
+                  <View key={i} style={s.corrTile}>
+                    <Text style={s.corrTileLabel}>{label}</Text>
+                    <Text style={[s.corrTileVal, { color: colors.textDim }]}>●.●</Text>
+                    <Text style={s.corrTileN}>●● days</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock mood × sleep correlation with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* 10. [PRO] Mood × Workout correlation */}
-        {workoutCorr && (
-          <ProRow hasAccess={hasAccess} onPaywall={() => setPaywallVisible(true)} colors={colors}>
-            <View style={s.card}>
-              <Text style={s.cardTitle}>MOOD × WORKOUT</Text>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={s.cardTitle}>MOOD × WORKOUT</Text>
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+            </View>
+          </View>
+          {hasAccess && workoutCorr ? (
+            <>
               <View style={s.corrTileRow}>
                 {[
                   { ...workoutCorr.gym,  label: 'Workout days' },
@@ -719,15 +751,33 @@ export default function MoodLogScreen({ navigation }) {
                 })}
               </View>
               <Text style={s.corrInsight}>{workoutInsight(workoutCorr)}</Text>
-            </View>
-          </ProRow>
-        )}
+            </>
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setPaywallVisible(true)}>
+              <View style={s.corrTileRow}>
+                {['Workout days', 'Rest days'].map((label, i) => (
+                  <View key={i} style={[s.corrTile, { flex: 1 }]}>
+                    <Text style={s.corrTileLabel}>{label}</Text>
+                    <Text style={[s.corrTileVal, { color: colors.textDim }]}>●.●</Text>
+                    <Text style={s.corrTileN}>●● days</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock mood × workout correlation with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* 11. [PRO] Mood × Steps correlation */}
-        {stepsCorr && (
-          <ProRow hasAccess={hasAccess} onPaywall={() => setPaywallVisible(true)} colors={colors}>
-            <View style={s.card}>
-              <Text style={s.cardTitle}>MOOD × STEPS</Text>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={s.cardTitle}>MOOD × STEPS</Text>
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+            </View>
+          </View>
+          {hasAccess && stepsCorr ? (
+            <>
               <View style={s.corrTileRow}>
                 {[stepsCorr.high, stepsCorr.low].map((bucket, i) => {
                   const val = bucket.avg ? parseFloat(bucket.avg) : null;
@@ -742,9 +792,22 @@ export default function MoodLogScreen({ navigation }) {
                 })}
               </View>
               <Text style={s.corrInsight}>{stepsInsight(stepsCorr)}</Text>
-            </View>
-          </ProRow>
-        )}
+            </>
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setPaywallVisible(true)}>
+              <View style={s.corrTileRow}>
+                {['High steps', 'Low steps'].map((label, i) => (
+                  <View key={i} style={[s.corrTile, { flex: 1 }]}>
+                    <Text style={s.corrTileLabel}>{label}</Text>
+                    <Text style={[s.corrTileVal, { color: colors.textDim }]}>●.●</Text>
+                    <Text style={s.corrTileN}>●● days</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock mood × steps correlation with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* 12. History with search */}
         {logs.length > 0 && (
