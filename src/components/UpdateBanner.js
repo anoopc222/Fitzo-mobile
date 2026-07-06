@@ -77,11 +77,15 @@ export default function UpdateBanner() {
 
       // 1. OTA update check (EAS standalone builds only)
       if (Updates?.isEnabled) {
-        const result = await Updates.checkForUpdateAsync();
-        if (result.isAvailable) {
-          setIsOTA(true);
-          show();
-          return;
+        try {
+          const result = await Updates.checkForUpdateAsync();
+          if (result.isAvailable) {
+            setIsOTA(true);
+            show();
+            return;
+          }
+        } catch (_) {
+          // Not available in dev/local builds — fall through to store check
         }
       }
 
