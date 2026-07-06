@@ -1773,12 +1773,13 @@ function EditSessionModal({
       if (target.group_id) {
         return prev.map((ex, i) => i === exIdx ? { ...ex, group_id: null } : ex);
       }
-      const openGroup = [...prev].reverse().find((ex, ri) => {
-        const i = prev.length - 1 - ri;
-        return ex.group_id && i !== exIdx && prev.filter(e => e.group_id === ex.group_id).length < 3;
+      const above = exIdx > 0 ? prev[exIdx - 1] : null;
+      const groupId = above?.group_id ?? tid();
+      return prev.map((ex, i) => {
+        if (i === exIdx) return { ...ex, group_id: groupId };
+        if (i === exIdx - 1 && !above?.group_id) return { ...ex, group_id: groupId };
+        return ex;
       });
-      const groupId = openGroup?.group_id ?? tid();
-      return prev.map((ex, i) => i === exIdx ? { ...ex, group_id: groupId } : ex);
     });
   };
 
