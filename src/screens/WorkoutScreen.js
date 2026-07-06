@@ -1873,7 +1873,8 @@ function EditSessionModal({
                   {isInGroup && <View style={eS.supersetStrip} />}
                   <View ref={r => { cardRefs.current[exIdx] = r; }} style={[
                     eS.exCard, isActive && eS.exCardActive,
-                    isInGroup && { flex: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
+                    { flex: 1 },
+                    isInGroup && { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
                   ]}>
                     <TouchableOpacity style={eS.exCardHeader}
                       onPress={() => {
