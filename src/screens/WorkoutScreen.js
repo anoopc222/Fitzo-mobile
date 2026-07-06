@@ -1790,7 +1790,6 @@ function EditSessionModal({
                 value={date}
                 onChange={setDate}
                 colors={colors}
-                maxDate={localDateStr(new Date())}
                 placeholder={t('workout.pickDate')}
                 style={eS.datePickerBtn}
               />
@@ -2807,15 +2806,11 @@ export default function WorkoutScreen({ embedded = false } = {}) {
     });
   }, [dayList, hideRestDays]);
 
-  const canGoNext = viewYear < today.getFullYear() ||
-    (viewYear === today.getFullYear() && viewMonth < today.getMonth() + 1);
-
   const prevMonth = () => {
     if (viewMonth === 1) { setViewMonth(12); setViewYear(y => y - 1); }
     else setViewMonth(m => m - 1);
   };
   const nextMonth = () => {
-    if (!canGoNext) return;
     if (viewMonth === 12) { setViewMonth(1); setViewYear(y => y + 1); }
     else setViewMonth(m => m + 1);
   };
@@ -2898,8 +2893,8 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         <TouchableOpacity onPress={() => setShowMonthPicker(true)}>
           <Text style={s.monthLabel}>{MONTH_FULL[viewMonth - 1]} {viewYear}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={nextMonth} style={s.monthBtn} disabled={!canGoNext}>
-          <Text style={[s.monthChevron, !canGoNext && { color: colors.textDim }]}>›</Text>
+        <TouchableOpacity onPress={nextMonth} style={s.monthBtn}>
+          <Text style={s.monthChevron}>›</Text>
         </TouchableOpacity>
       </View>
 
