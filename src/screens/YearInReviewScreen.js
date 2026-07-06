@@ -593,19 +593,43 @@ export default function YearInReviewScreen({ navigation }) {
               </View>
             ))
           ) : (
-            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
-              {['Jan','Feb','Mar'].map((label, i) => (
+            <>
+              {monthly.slice(0, 2).map((m, i) => (
                 <View key={i} style={[s.tableRow, i % 2 === 0 && { backgroundColor: colors.bg + '40' }]}>
-                  <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.body }]}>{label}</Text>
-                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.textDim, fontFamily: fontFamily.mono }]}>●●</Text>
-                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.textDim, fontFamily: fontFamily.mono }]}>●.●</Text>
-                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.textDim, fontFamily: fontFamily.mono }]}>●.●</Text>
+                  <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.body }]}>{m.label}</Text>
+                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.text, fontFamily: fontFamily.mono }]}>{m.workouts}</Text>
+                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.text, fontFamily: fontFamily.mono }]}>{m.steps > 0 ? (m.steps / 1000).toFixed(1) : '—'}</Text>
+                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.text, fontFamily: fontFamily.mono }]}>{m.sleep != null ? m.sleep : '—'}</Text>
                 </View>
               ))}
-              <Text style={[s.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock full monthly breakdown with Pro.</Text>
-            </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+                {[2,3,4].map(i => (
+                  <View key={i} style={[s.tableRow, i % 2 === 0 && { backgroundColor: colors.bg + '40' }]}>
+                    <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.body }]}>{MONTHS_SHORT[i]}</Text>
+                    <Text style={[s.tableCell, s.tableNumCol, { color: colors.textDim, fontFamily: fontFamily.mono }]}>●●</Text>
+                    <Text style={[s.tableCell, s.tableNumCol, { color: colors.textDim, fontFamily: fontFamily.mono }]}>●.●</Text>
+                    <Text style={[s.tableCell, s.tableNumCol, { color: colors.textDim, fontFamily: fontFamily.mono }]}>●.●</Text>
+                  </View>
+                ))}
+                <Text style={[s.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock full monthly breakdown with Pro.</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
+
+        {/* ── Best Lifts (FREE) ── */}
+        {topPRs.length > 0 && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>BEST LIFTS · {selectedYear}</Text>
+            {data.topPRs.map((pr, i) => (
+              <View key={i} style={[s.prRow, i < data.topPRs.length - 1 && s.prRowBorder]}>
+                <Text style={s.prRank}>#{i + 1}</Text>
+                <Text style={s.prName} numberOfLines={1}>{pr.name}</Text>
+                <Text style={[s.prKg, { color: colors.accent }]}>{pr.kg} kg</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* ── Body transformation (FREE) ── */}
         {data.bodyTransform && (
@@ -779,16 +803,25 @@ export default function YearInReviewScreen({ navigation }) {
               <Text style={s.emptyText}>No exercises logged</Text>
             )
           ) : (
-            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
-              {[1,2,3].map(i => (
-                <View key={i} style={[s.prRow, i < 3 && s.prRowBorder]}>
-                  <Text style={s.prRank}>#{i}</Text>
-                  <View style={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: colors.border, marginHorizontal: 8, marginVertical: 2 }} />
-                  <Text style={[s.prKg, { color: colors.textDim }]}>●●● kg</Text>
+            <>
+              {topVolumeExercises.slice(0, 2).map((ex, i) => (
+                <View key={i} style={[s.prRow, s.prRowBorder]}>
+                  <Text style={s.prRank}>#{i + 1}</Text>
+                  <Text style={[s.prName, i === 0 && { color: colors.accent }]} numberOfLines={1}>{ex.name}</Text>
+                  <Text style={[s.prKg, { color: i === 0 ? colors.accent : colors.text }]}>{fmtVol(ex.totalKg)} kg</Text>
                 </View>
               ))}
-              <Text style={[s.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock top exercises by volume with Pro.</Text>
-            </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+                {[3,4,5].map(i => (
+                  <View key={i} style={[s.prRow, i < 5 && s.prRowBorder]}>
+                    <Text style={s.prRank}>#{i}</Text>
+                    <View style={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: colors.border, marginHorizontal: 8, marginVertical: 2 }} />
+                    <Text style={[s.prKg, { color: colors.textDim }]}>●●● kg</Text>
+                  </View>
+                ))}
+                <Text style={[s.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock top exercises by volume with Pro.</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
@@ -956,20 +989,6 @@ export default function YearInReviewScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
-
-        {/* ── 14. Top PRs (FREE) ── */}
-        {topPRs.length > 0 && (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>BEST LIFTS · {selectedYear}</Text>
-            {data.topPRs.map((pr, i) => (
-              <View key={i} style={[s.prRow, i < data.topPRs.length - 1 && s.prRowBorder]}>
-                <Text style={s.prRank}>#{i + 1}</Text>
-                <Text style={s.prName} numberOfLines={1}>{pr.name}</Text>
-                <Text style={[s.prKg, { color: colors.accent }]}>{pr.kg} kg</Text>
-              </View>
-            ))}
-          </View>
-        )}
 
         {/* ── 15. Fun fact (FREE) ── */}
         {data.totalSteps > 0 && (
