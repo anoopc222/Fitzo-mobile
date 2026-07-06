@@ -38,11 +38,6 @@ export default function OnboardingScreen({ onComplete }) {
   const [height, setHeight] = useState('');
   const [sex, setSex] = useState(null);
 
-  // Step 3
-  const [stepGoal, setStepGoal] = useState('10000');
-  const [sleepGoal, setSleepGoal] = useState('8');
-  const [calorieTarget, setCalorieTarget] = useState('2000');
-
   async function handleFinish() {
     if (saving) return;
     setSaving(true);
@@ -56,9 +51,9 @@ export default function OnboardingScreen({ onComplete }) {
         height_cm: height ? parseFloat(height) : null,
         sex,
         weight_goal_kg: weight ? parseFloat(weight) : null,
-        step_goal: stepGoal ? parseInt(stepGoal, 10) : 10000,
-        sleep_goal_hours: sleepGoal ? parseFloat(sleepGoal) : 8,
-        calorie_target: calorieTarget ? parseInt(calorieTarget, 10) : 2000,
+        step_goal: 10000,
+        sleep_goal_hours: 8,
+        calorie_target: 2000,
       });
 
       if (weight) {
@@ -80,7 +75,7 @@ export default function OnboardingScreen({ onComplete }) {
   function renderDots() {
     return (
       <View style={s.dotsRow}>
-        {[1, 2, 3].map(n => (
+        {[1, 2].map(n => (
           <View
             key={n}
             style={[s.dot, n === step && s.dotActive]}
@@ -160,45 +155,6 @@ export default function OnboardingScreen({ onComplete }) {
     );
   }
 
-  function renderStep3() {
-    return (
-      <View style={s.stepContainer}>
-        <Text style={s.title}>Set your daily targets</Text>
-        <Text style={s.subtitle}>You can change these anytime in Settings.</Text>
-
-        <Text style={s.fieldLabel}>Daily step goal</Text>
-        <TextInput
-          style={s.input}
-          keyboardType="numeric"
-          placeholder="10000"
-          placeholderTextColor={colors.textDim}
-          value={stepGoal}
-          onChangeText={setStepGoal}
-        />
-
-        <Text style={s.fieldLabel}>Sleep goal (hours)</Text>
-        <TextInput
-          style={s.input}
-          keyboardType="numeric"
-          placeholder="8"
-          placeholderTextColor={colors.textDim}
-          value={sleepGoal}
-          onChangeText={setSleepGoal}
-        />
-
-        <Text style={s.fieldLabel}>Daily calorie target</Text>
-        <TextInput
-          style={s.input}
-          keyboardType="numeric"
-          placeholder="2000"
-          placeholderTextColor={colors.textDim}
-          value={calorieTarget}
-          onChangeText={setCalorieTarget}
-        />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bg }]}>
       <KeyboardAvoidingView
@@ -215,7 +171,6 @@ export default function OnboardingScreen({ onComplete }) {
           <View style={s.card}>
             {step === 1 && renderStep1()}
             {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
           </View>
 
           <View style={s.navRow}>
@@ -227,7 +182,7 @@ export default function OnboardingScreen({ onComplete }) {
               <View style={s.backBtn} />
             )}
 
-            {step < 3 ? (
+            {step < 2 ? (
               <TouchableOpacity
                 style={[s.nextBtn, { backgroundColor: colors.accent }]}
                 onPress={() => setStep(s => s + 1)}
