@@ -3563,8 +3563,12 @@ export default function WorkoutScreen({ embedded = false } = {}) {
           const names = daySessions.map(s => s.notes || t('workout.workout')).join(' + ');
           return (
             <View key={date} style={[s.sessionCard, { backgroundColor: colors.card, borderColor: colors.accent + '40', padding: 0, overflow: 'hidden' }]}>
-              {/* merged header */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}>
+              {/* merged header — tapping opens first session */}
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}
+                onPress={() => openDetail(daySessions[0])}
+                activeOpacity={0.82}
+              >
                 <View style={[s.sessionIcon, { backgroundColor: colors.accent + '18', borderColor: colors.accent + '40' }]}>
                   <Text style={{ fontSize: 18 }}>🗓️</Text>
                 </View>
@@ -3576,7 +3580,8 @@ export default function WorkoutScreen({ embedded = false } = {}) {
                     {totalKcal > 0 ? ` · 🔥${totalKcal}kcal` : ''}
                   </Text>
                 </View>
-              </View>
+                <Text style={{ fontSize: 10, color: colors.textDim, marginRight: 2 }}>TAP EACH ↓</Text>
+              </TouchableOpacity>
               {/* sub-rows per session */}
               {daySessions.map((sess, idx) => {
                 const ws = getWorkoutStyle(sess.notes, colors);
