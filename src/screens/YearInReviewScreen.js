@@ -508,7 +508,47 @@ export default function YearInReviewScreen({ navigation }) {
           </View>
         </View>
 
-        {/* ── 5. Year-over-year comparison (PRO) ── */}
+        {/* ── Best Lifts (FREE) ── */}
+        {topPRs.length > 0 && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>BEST LIFTS · {selectedYear}</Text>
+            {data.topPRs.map((pr, i) => (
+              <View key={i} style={[s.prRow, i < data.topPRs.length - 1 && s.prRowBorder]}>
+                <Text style={s.prRank}>#{i + 1}</Text>
+                <Text style={s.prName} numberOfLines={1}>{pr.name}</Text>
+                <Text style={[s.prKg, { color: colors.accent }]}>{pr.kg} kg</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ── Body transformation (FREE) ── */}
+        {data.bodyTransform && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>BODY TRANSFORMATION</Text>
+            <Text style={[s.cardSubtitle]}>From Jan to Dec</Text>
+            <View style={s.transformRow}>
+              <View style={s.transformSide}>
+                <Text style={s.transformLabel}>START</Text>
+                <Text style={[s.transformVal, { color: colors.textDim }]}>{data.bodyTransform.startWeight} kg</Text>
+              </View>
+              <Text style={{ fontSize: 28 }}>
+                {data.bodyTransform.delta < 0 ? '📉' : data.bodyTransform.delta > 0 ? '📈' : '➡️'}
+              </Text>
+              <View style={s.transformSide}>
+                <Text style={s.transformLabel}>END</Text>
+                <Text style={[s.transformVal, { color: colors.text }]}>{data.bodyTransform.endWeight} kg</Text>
+              </View>
+            </View>
+            <Text style={[s.transformDelta, {
+              color: data.bodyTransform.delta < 0 ? '#34d399' : data.bodyTransform.delta > 0 ? '#fb7185' : colors.textDim,
+            }]}>
+              {data.bodyTransform.delta > 0 ? '+' : ''}{data.bodyTransform.delta} kg change
+            </Text>
+          </View>
+        )}
+
+        {/* ── Year-over-year comparison (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>YEAR-OVER-YEAR COMPARISON</Text>
@@ -516,7 +556,6 @@ export default function YearInReviewScreen({ navigation }) {
               <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
             </View>
           </View>
-          {/* header */}
           <View style={[s.yoyRow, { backgroundColor: colors.dim ?? colors.border }]}>
             <Text style={[s.yoyCell, s.yoyLabelCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Metric</Text>
             <Text style={[s.yoyCell, s.yoyValCol, { color: colors.accent, fontFamily: fontFamily.bodyBold, textAlign: 'center' }]}>{selectedYear}</Text>
@@ -559,7 +598,7 @@ export default function YearInReviewScreen({ navigation }) {
           )}
         </View>
 
-        {/* ── 6. Monthly breakdown table (PRO) ── */}
+        {/* ── Monthly breakdown table (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>MONTHLY BREAKDOWN</Text>
@@ -567,7 +606,6 @@ export default function YearInReviewScreen({ navigation }) {
               <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
             </View>
           </View>
-          {/* header */}
           <View style={[s.tableRow, { backgroundColor: colors.dim ?? colors.border }]}>
             <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Month</Text>
             <Text style={[s.tableCell, s.tableNumCol, { color: colors.accent, fontFamily: fontFamily.bodyBold }]}>Workouts</Text>
@@ -616,46 +654,6 @@ export default function YearInReviewScreen({ navigation }) {
             </>
           )}
         </View>
-
-        {/* ── Best Lifts (FREE) ── */}
-        {topPRs.length > 0 && (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>BEST LIFTS · {selectedYear}</Text>
-            {data.topPRs.map((pr, i) => (
-              <View key={i} style={[s.prRow, i < data.topPRs.length - 1 && s.prRowBorder]}>
-                <Text style={s.prRank}>#{i + 1}</Text>
-                <Text style={s.prName} numberOfLines={1}>{pr.name}</Text>
-                <Text style={[s.prKg, { color: colors.accent }]}>{pr.kg} kg</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* ── Body transformation (FREE) ── */}
-        {data.bodyTransform && (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>BODY TRANSFORMATION</Text>
-            <Text style={[s.cardSubtitle]}>From Jan to Dec</Text>
-            <View style={s.transformRow}>
-              <View style={s.transformSide}>
-                <Text style={s.transformLabel}>START</Text>
-                <Text style={[s.transformVal, { color: colors.textDim }]}>{data.bodyTransform.startWeight} kg</Text>
-              </View>
-              <Text style={{ fontSize: 28 }}>
-                {data.bodyTransform.delta < 0 ? '📉' : data.bodyTransform.delta > 0 ? '📈' : '➡️'}
-              </Text>
-              <View style={s.transformSide}>
-                <Text style={s.transformLabel}>END</Text>
-                <Text style={[s.transformVal, { color: colors.text }]}>{data.bodyTransform.endWeight} kg</Text>
-              </View>
-            </View>
-            <Text style={[s.transformDelta, {
-              color: data.bodyTransform.delta < 0 ? '#34d399' : data.bodyTransform.delta > 0 ? '#fb7185' : colors.textDim,
-            }]}>
-              {data.bodyTransform.delta > 0 ? '+' : ''}{data.bodyTransform.delta} kg change
-            </Text>
-          </View>
-        )}
 
         {/* ── 7. Activity split (PRO) ── */}
         <View style={s.card}>
@@ -1022,7 +1020,7 @@ export default function YearInReviewScreen({ navigation }) {
 
 const styles = (colors) => StyleSheet.create({
   safe:               { flex: 1, backgroundColor: colors.bg },
-  scroll:             { padding: 14, paddingBottom: 40, gap: 12 },
+  scroll:             { padding: 10, paddingBottom: 40, gap: 8 },
 
   // year picker
   yearPicker:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 10 },
@@ -1042,9 +1040,9 @@ const styles = (colors) => StyleSheet.create({
   statLabel:          { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.8 },
 
   // card
-  card:               { backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 12 },
-  cardTitle:          { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
-  cardSubtitle:       { fontSize: 11, fontFamily: fontFamily.body, color: colors.textDim },
+  card:               { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 10, gap: 8 },
+  cardTitle:          { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
+  cardSubtitle:       { fontSize: 10, fontFamily: fontFamily.body, color: colors.textDim },
 
   // quick wins
   quickWinsRow:       { flexDirection: 'row' },

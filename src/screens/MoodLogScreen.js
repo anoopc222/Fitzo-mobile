@@ -883,7 +883,7 @@ export default function MoodLogScreen({ navigation }) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 14, paddingBottom: 40, gap: 12 },
+  scroll: { padding: 10, paddingBottom: 40, gap: 8 },
 
   // Alert banner
   alertBanner: {
@@ -942,8 +942,8 @@ const styles = (colors) => StyleSheet.create({
   weekSummaryLabel: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.4, textAlign: 'center' },
 
   // Generic card
-  card: { backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 10 },
-  cardTitle: { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
+  card: { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 10, gap: 8 },
+  cardTitle: { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
 
   // Heatmap
   heatmapGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
