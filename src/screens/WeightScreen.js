@@ -18,7 +18,6 @@ import MonthYearPicker from '../components/ui/MonthYearPicker';
 import ExportCardTemplate from '../components/ui/ExportCardTemplate';
 import PaywallModal from '../components/ui/PaywallModal';
 import { useSubscription } from '../context/SubscriptionContext';
-import ProLock from '../components/ProLock';
 import { useNotificationPrefs } from '../context/NotificationContext';
 import { syncConditionalReminder } from '../lib/notifications';
 import CircularGauge from '../components/CircularGauge';
@@ -1184,10 +1183,10 @@ export default function WeightScreen({ embedded = false } = {}) {
             </View>
 
             {/* ── Analysis & Insights — Pro ── */}
-            <ProLock hasAccess={hasAccess} onUnlock={() => setShowPaywall(true)} colors={colors}>
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>{t('weight.analysisInsightsTitle')}</Text>
+                <View style={styles.proBadge}><Text style={styles.proBadgeText}>{t('weight.proLabel')}</Text></View>
               </View>
 
               {hasAccess ? (
@@ -1264,7 +1263,6 @@ export default function WeightScreen({ embedded = false } = {}) {
                 </TouchableOpacity>
               )}
             </View>
-            </ProLock>
 
             {/* ── Monthly Heatmap ── */}
             <View style={styles.card}>

@@ -24,7 +24,6 @@ import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import EmptyState from '../components/EmptyState';
 import { useSubscription } from '../context/SubscriptionContext';
-import ProLock from '../components/ProLock';
 import { useNotificationPrefs } from '../context/NotificationContext';
 import { syncConditionalReminder } from '../lib/notifications';
 
@@ -1199,10 +1198,10 @@ export default function StepsScreen({ embedded = false } = {}) {
             </View>
 
             {/* ── Analysis & Insights (Pro) ── */}
-            <ProLock hasAccess={hasAccess} onUnlock={() => heroExport.setShowPaywall(true)} colors={colors}>
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>{t('steps.analysisInsightsTitle')}</Text>
+                <View style={styles.proBadge}><Text style={styles.proBadgeText}>{t('steps.proBadge')}</Text></View>
               </View>
               <View style={styles.weekStatsRow}>
                 <WeekStatCell value={hasAccess ? String(streaks.longest) : '●●'} label={t('steps.bestStreakLabel')} color="#f59e0b" colors={colors} />
@@ -1287,7 +1286,6 @@ export default function StepsScreen({ embedded = false } = {}) {
                 </View>
               )}
             </View>
-            </ProLock>
 
             {/* ── This Week sections — only meaningful for the current real month ── */}
             {isCurrentMonth && (
