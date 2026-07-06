@@ -993,10 +993,17 @@ function suggestAutoReg(prevSetInSession, t) {
 }
 
 function generateDayList(sessions) {
-  return sessions
-    .slice()
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .map(session => ({ type: 'session', session, date: session.date }));
+  const sorted = sessions.slice().sort((a, b) => b.date.localeCompare(a.date));
+  const byDate = new Map();
+  for (const s of sorted) {
+    if (!byDate.has(s.date)) byDate.set(s.date, []);
+    byDate.get(s.date).push(s);
+  }
+  return Array.from(byDate.entries()).map(([date, daySessions]) => ({
+    type: 'day',
+    date,
+    sessions: daySessions,
+  }));
 }
 
 function getRecentTypes(sessions) {
@@ -2926,8 +2933,8 @@ export default function WorkoutScreen({ embedded = false } = {}) {
   const visibleDayList = useMemo(() => {
     if (!hideRestDays) return dayList;
     return dayList.filter(item => {
-      if (item.type === 'rest') return false;
-      return getSessionType(item.session?.notes) !== 'rest';
+      // hide days where all sessions are rest days
+      return item.sessions.some(s => getSessionType(s.notes) !== 'rest');
     });
   }, [dayList, hideRestDays]);
 
@@ -3459,80 +3466,144 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         )}
 
         {visibleDayList.map(item => {
-          if (item.type === 'rest') {
+          const { date, sessions: daySessions } = item;
+
+          // Pure rest day
+          if (daySessions.length === 1 && (daySessions[0].notes ?? '').toLowerCase() === 'rest day') {
+            const sess = daySessions[0];
             return (
               <TouchableOpacity
-                key={item.date}
+                key={date}
                 style={s.restCard}
                 onPress={() => {
                   setEditIsNew(true);
-                  setEditInitial({ sessionId: null, date: item.date, name: t('workout.restDay'), exercises: [] });
+                  setEditInitial({ sessionId: null, date, name: t('workout.restDay'), exercises: [] });
                   setShowEdit(true);
                 }}
                 activeOpacity={0.75}
               >
-                <View style={s.restIcon}>
-                  <Text style={{ fontSize: 20 }}>😴</Text>
-                </View>
+                <View style={s.restIcon}><Text style={{ fontSize: 20 }}>😴</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.restTitle}>{t('workout.restDay')}</Text>
-                  <Text style={s.restSub}>{t('workout.recoveryNoWorkout', { date: fmtDate(item.date) })}</Text>
+                  <Text style={s.restSub}>{t('workout.recoveryNoWorkout', { date: fmtDate(date) })}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={14} color={colors.good} />
               </TouchableOpacity>
             );
           }
 
-          const sess = item.session;
-          const ws   = getWorkoutStyle(sess.notes, colors);
-          const vol  = sess.total_volume ?? calcSessionVol(sess);
-          const delta = vol > 0 ? getVolumeDelta(sess, sessions) : null;
-          const exs  = sess.workout_exercises ?? [];
-
-          // Subtitle: cardio (vol=0) → show ex names; weighted → show count + vol
-          let subtitle = fmtDate(sess.date);
-          if (vol === 0 && exs.length > 0) {
-            const names = exs.slice(0, 2).map(e => e.exercise_name).filter(Boolean).join(', ');
-            const more = exs.length > 2 ? ` +${exs.length - 2}` : '';
-            subtitle += ` · ${names}${more}`;
-            if (sess.duration_min) subtitle += ` · ${sess.duration_min}min`;
-            if (sess.calories_burned) subtitle += ` · 🔥${sess.calories_burned}kcal`;
-          } else {
-            if (exs.length > 0) subtitle += ` · ${exs.length}ex`;
-            if (vol > 0) subtitle += ` · ${vol.toLocaleString()}kg`;
-            if (sess.calories_burned) subtitle += ` · 🔥${sess.calories_burned}kcal`;
-          }
-
-          return (
-            <TouchableOpacity
-              key={sess.id}
-              style={[s.sessionCard, { backgroundColor: ws.cardBg, borderColor: ws.cardBorder }]}
-              onPress={() => openDetail(sess)}
-              activeOpacity={0.82}
-            >
-              <View style={[s.sessionIcon, { backgroundColor: ws.iconBg, borderColor: ws.cardBorder }]}>
-                <Text style={{ fontSize: 18 }}>{ws.icon}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={s.sessionNameRow}>
-                  <Text style={[s.sessionName, { color: ws.titleColor }]} numberOfLines={1}>
-                    {sess.notes || t('workout.workout')}
-                  </Text>
-                  {delta && (
-                    <View style={[s.deltaBadge, { backgroundColor: delta.delta >= 0 ? colors.good + '22' : colors.danger + '22' }]}>
-                      <Text style={[s.deltaText, { color: delta.delta >= 0 ? colors.success : colors.danger }]}>
-                        {delta.delta >= 0 ? '▲' : '▼'}{Math.abs(delta.delta).toLocaleString()}kg
-                      </Text>
-                    </View>
+          // Single session — original card
+          if (daySessions.length === 1) {
+            const sess = daySessions[0];
+            const ws   = getWorkoutStyle(sess.notes, colors);
+            const vol  = sess.total_volume ?? calcSessionVol(sess);
+            const delta = vol > 0 ? getVolumeDelta(sess, sessions) : null;
+            const exs  = sess.workout_exercises ?? [];
+            let subtitle = fmtDate(sess.date);
+            if (vol === 0 && exs.length > 0) {
+              const names = exs.slice(0, 2).map(e => e.exercise_name).filter(Boolean).join(', ');
+              const more = exs.length > 2 ? ` +${exs.length - 2}` : '';
+              subtitle += ` · ${names}${more}`;
+              if (sess.duration_min) subtitle += ` · ${sess.duration_min}min`;
+              if (sess.calories_burned) subtitle += ` · 🔥${sess.calories_burned}kcal`;
+            } else {
+              if (exs.length > 0) subtitle += ` · ${exs.length}ex`;
+              if (vol > 0) subtitle += ` · ${vol.toLocaleString()}kg`;
+              if (sess.calories_burned) subtitle += ` · 🔥${sess.calories_burned}kcal`;
+            }
+            return (
+              <TouchableOpacity
+                key={sess.id}
+                style={[s.sessionCard, { backgroundColor: ws.cardBg, borderColor: ws.cardBorder }]}
+                onPress={() => openDetail(sess)}
+                activeOpacity={0.82}
+              >
+                <View style={[s.sessionIcon, { backgroundColor: ws.iconBg, borderColor: ws.cardBorder }]}>
+                  <Text style={{ fontSize: 18 }}>{ws.icon}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={s.sessionNameRow}>
+                    <Text style={[s.sessionName, { color: ws.titleColor }]} numberOfLines={1}>
+                      {sess.notes || t('workout.workout')}
+                    </Text>
+                    {delta && (
+                      <View style={[s.deltaBadge, { backgroundColor: delta.delta >= 0 ? colors.good + '22' : colors.danger + '22' }]}>
+                        <Text style={[s.deltaText, { color: delta.delta >= 0 ? colors.success : colors.danger }]}>
+                          {delta.delta >= 0 ? '▲' : '▼'}{Math.abs(delta.delta).toLocaleString()}kg
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={s.sessionSub} numberOfLines={1}>{subtitle}</Text>
+                  {!!sess.coach_notes && (
+                    <Text style={s.sessionNoteSnippet} numberOfLines={1}>📋 {sess.coach_notes}</Text>
                   )}
                 </View>
-                <Text style={s.sessionSub} numberOfLines={1}>{subtitle}</Text>
-                {!!sess.coach_notes && (
-                  <Text style={s.sessionNoteSnippet} numberOfLines={1}>📋 {sess.coach_notes}</Text>
-                )}
+                <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+              </TouchableOpacity>
+            );
+          }
+
+          // Multiple sessions on same day — merged card
+          const totalVol = daySessions.reduce((sum, s) => sum + (s.total_volume ?? calcSessionVol(s)), 0);
+          const totalExs = daySessions.reduce((sum, s) => sum + (s.workout_exercises ?? []).length, 0);
+          const totalKcal = daySessions.reduce((sum, s) => sum + (s.calories_burned ?? 0), 0);
+          const names = daySessions.map(s => s.notes || t('workout.workout')).join(' + ');
+          return (
+            <View key={date} style={[s.sessionCard, { backgroundColor: colors.card, borderColor: colors.accent + '40', padding: 0, overflow: 'hidden' }]}>
+              {/* merged header */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}>
+                <View style={[s.sessionIcon, { backgroundColor: colors.accent + '18', borderColor: colors.accent + '40' }]}>
+                  <Text style={{ fontSize: 18 }}>🗓️</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.sessionName, { color: colors.accent }]} numberOfLines={1}>{names}</Text>
+                  <Text style={s.sessionSub}>
+                    {fmtDate(date)} · {daySessions.length} sessions · {totalExs}ex
+                    {totalVol > 0 ? ` · ${totalVol.toLocaleString()}kg` : ''}
+                    {totalKcal > 0 ? ` · 🔥${totalKcal}kcal` : ''}
+                  </Text>
+                </View>
               </View>
-              <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
-            </TouchableOpacity>
+              {/* sub-rows per session */}
+              {daySessions.map((sess, idx) => {
+                const ws = getWorkoutStyle(sess.notes, colors);
+                const vol = sess.total_volume ?? calcSessionVol(sess);
+                const exs = sess.workout_exercises ?? [];
+                let sub = '';
+                if (vol === 0 && exs.length > 0) {
+                  sub = exs.slice(0, 2).map(e => e.exercise_name).filter(Boolean).join(', ');
+                  if (exs.length > 2) sub += ` +${exs.length - 2}`;
+                } else {
+                  if (exs.length > 0) sub += `${exs.length}ex`;
+                  if (vol > 0) sub += (sub ? ' · ' : '') + `${vol.toLocaleString()}kg`;
+                }
+                return (
+                  <TouchableOpacity
+                    key={sess.id}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 10,
+                      paddingHorizontal: 12, paddingVertical: 10,
+                      borderTopWidth: 1, borderTopColor: colors.border,
+                      backgroundColor: ws.cardBg,
+                    }}
+                    onPress={() => openDetail(sess)}
+                    activeOpacity={0.82}
+                  >
+                    <View style={[s.sessionIcon, { width: 30, height: 30, borderRadius: 8, backgroundColor: ws.iconBg, borderColor: ws.cardBorder }]}>
+                      <Text style={{ fontSize: 14 }}>{ws.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.sessionName, { fontSize: 13, color: ws.titleColor }]} numberOfLines={1}>
+                        {sess.notes || t('workout.workout')}
+                      </Text>
+                      {!!sub && <Text style={[s.sessionSub, { fontSize: 11 }]} numberOfLines={1}>{sub}</Text>}
+                    </View>
+                    <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           );
         })}
         </View>
