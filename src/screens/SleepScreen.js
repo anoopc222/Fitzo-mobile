@@ -70,26 +70,33 @@ async function fetchSleep(userId) {
   if (logs.error) throw logs.error;
   if (sessions.error) throw sessions.error;
   if (steps.error) throw steps.error;
-  const normLogs = (logs.data ?? []).map(l => ({ ...l, logged_at: l.logged_at.slice(0, 10) }));
+  const seenSleep = new Set();
+  const normLogs = (logs.data ?? [])
+    .map(l => ({ ...l, logged_at: l.logged_at.slice(0, 10) }))
+    .filter(l => { if (seenSleep.has(l.logged_at)) return false; seenSleep.add(l.logged_at); return true; });
   const normSteps = (steps.data ?? []).map(s => ({ ...s, logged_at: s.logged_at.slice(0, 10) }));
   return { logs: normLogs, profile: profile.data, sessions: sessions.data ?? [], steps: normSteps };
 }
 
 async function logSleep(userId, { date, hours }) {
-  const existing = await supabase
+  const { data: existing, error: fetchErr } = await supabase
     .from('sleep_logs')
     .select('id')
     .eq('user_id', userId)
-    .eq('logged_at', date)
-    .limit(1)
-    .maybeSingle();
-  if (existing.error) throw existing.error;
+    .gte('logged_at', `${date}T00:00:00`)
+    .lte('logged_at', `${date}T23:59:59`)
+    .order('logged_at', { ascending: false });
+  if (fetchErr) throw fetchErr;
 
   const fields = { hours };
 
-  if (existing.data) {
-    const { error } = await supabase.from('sleep_logs').update(fields).eq('id', existing.data.id);
+  if (existing && existing.length > 0) {
+    const [keep, ...dupes] = existing;
+    const { error } = await supabase.from('sleep_logs').update(fields).eq('id', keep.id);
     if (error) throw error;
+    if (dupes.length > 0) {
+      await supabase.from('sleep_logs').delete().in('id', dupes.map(d => d.id));
+    }
   } else {
     const { error } = await supabase.from('sleep_logs').insert({ ...fields, user_id: userId, logged_at: date });
     if (error) throw error;

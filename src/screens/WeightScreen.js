@@ -87,25 +87,39 @@ async function fetchWeightData(userId) {
     supabase.from('profiles').select('weight_goal_kg, full_name').eq('id', userId).single(),
   ]);
   if (logs.error) throw logs.error;
-  const normLogs = (logs.data ?? []).map(l => ({ ...l, logged_at: l.logged_at.slice(0, 10) }));
+  // Normalise to date string; deduplicate keeping the most-recent entry per day
+  const seen = new Set();
+  const normLogs = (logs.data ?? [])
+    .map(l => ({ ...l, logged_at: l.logged_at.slice(0, 10) }))
+    .filter(l => {
+      if (seen.has(l.logged_at)) return false;
+      seen.add(l.logged_at);
+      return true;
+    });
   return { logs: normLogs, profile: profile.data };
 }
 
 async function logWeight(userId, { date, weight: weightKg, note }) {
-  const existing = await supabase
+  // Find any existing log(s) on the same calendar day using a date range
+  const { data: existing, error: fetchErr } = await supabase
     .from('weight_logs')
     .select('id')
     .eq('user_id', userId)
-    .eq('logged_at', date)
-    .limit(1)
-    .maybeSingle();
-  if (existing.error) throw existing.error;
+    .gte('logged_at', `${date}T00:00:00`)
+    .lte('logged_at', `${date}T23:59:59`)
+    .order('logged_at', { ascending: false });
+  if (fetchErr) throw fetchErr;
 
   const fields = { weight: weightKg, notes: note || null };
 
-  if (existing.data) {
-    const { error } = await supabase.from('weight_logs').update(fields).eq('id', existing.data.id);
+  if (existing && existing.length > 0) {
+    // Update the most-recent entry and delete any accidental duplicates
+    const [keep, ...dupes] = existing;
+    const { error } = await supabase.from('weight_logs').update(fields).eq('id', keep.id);
     if (error) throw error;
+    if (dupes.length > 0) {
+      await supabase.from('weight_logs').delete().in('id', dupes.map(d => d.id));
+    }
   } else {
     const { error } = await supabase.from('weight_logs').insert({ ...fields, user_id: userId, logged_at: date });
     if (error) throw error;
