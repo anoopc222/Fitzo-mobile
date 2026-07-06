@@ -164,7 +164,7 @@ function buildOptimisticSession(sessionId, { date, name, exercises, duration_min
 async function saveSession(userId, { sessionId, date, name, exercises, duration_min, coachNotes }) {
   let sid = sessionId;
   const durPatch = duration_min != null ? { duration_min } : {};
-  const notesPatch = coachNotes != null ? { coach_notes: coachNotes } : {};
+  const notesPatch = coachNotes !== undefined ? { coach_notes: coachNotes } : {};
   if (!sid) {
     const { data, error } = await supabase
       .from('workout_sessions')
