@@ -302,23 +302,6 @@ async function fetchYearData(userId, year) {
   };
 }
 
-// ProLock wrapper
-function ProLock({ hasAccess, onPaywall, children, colors }) {
-  if (hasAccess) return <>{children}</>;
-  return (
-    <TouchableOpacity style={{ opacity: 0.55 }} onPress={onPaywall} activeOpacity={0.8}>
-      <View pointerEvents="none">{children}</View>
-      <View style={{
-        position: 'absolute', top: 8, right: 8,
-        backgroundColor: colors.accent,
-        borderRadius: 5,
-        paddingHorizontal: 5, paddingVertical: 2,
-      }}>
-        <Text style={{ fontSize: 8, fontFamily: fontFamily.bodyBold, color: '#000', letterSpacing: 0.8 }}>PRO</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 function fmtVol(kg) {
   if (kg >= 1000) return `${(kg / 1000).toFixed(1)}k`;
@@ -526,17 +509,22 @@ export default function YearInReviewScreen({ navigation }) {
         </View>
 
         {/* ── 5. Year-over-year comparison (PRO) ── */}
-        <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-          <View style={s.card}>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>YEAR-OVER-YEAR COMPARISON</Text>
-            {/* header */}
-            <View style={[s.yoyRow, { backgroundColor: colors.dim ?? colors.border }]}>
-              <Text style={[s.yoyCell, s.yoyLabelCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Metric</Text>
-              <Text style={[s.yoyCell, s.yoyValCol, { color: colors.accent, fontFamily: fontFamily.bodyBold, textAlign: 'center' }]}>{selectedYear}</Text>
-              <Text style={[s.yoyCell, s.yoyValCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold, textAlign: 'center' }]}>{selectedYear - 1}</Text>
-              <Text style={[s.yoyCell, { width: 28 }]}> </Text>
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
             </View>
-            {yoyRows.map((row, i) => {
+          </View>
+          {/* header */}
+          <View style={[s.yoyRow, { backgroundColor: colors.dim ?? colors.border }]}>
+            <Text style={[s.yoyCell, s.yoyLabelCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Metric</Text>
+            <Text style={[s.yoyCell, s.yoyValCol, { color: colors.accent, fontFamily: fontFamily.bodyBold, textAlign: 'center' }]}>{selectedYear}</Text>
+            <Text style={[s.yoyCell, s.yoyValCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold, textAlign: 'center' }]}>{selectedYear - 1}</Text>
+            <Text style={[s.yoyCell, { width: 28 }]}> </Text>
+          </View>
+          {hasAccess ? (
+            yoyRows.map((row, i) => {
               const currVal = row.curr ?? 0;
               const prevVal = row.prev ?? 0;
               let arrow = null;
@@ -555,48 +543,80 @@ export default function YearInReviewScreen({ navigation }) {
                   </View>
                 </View>
               );
-            })}
-          </View>
-        </ProLock>
+            })
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+              {[0,1,2].map(i => (
+                <View key={i} style={[s.yoyRow, i % 2 === 0 && { backgroundColor: colors.bg + '60' }]}>
+                  <View style={[s.yoyCell, s.yoyLabelCol, { height: 12, borderRadius: 6, backgroundColor: colors.border, marginVertical: 4 }]} />
+                  <Text style={[s.yoyCell, s.yoyValCol, { color: colors.textDim, fontFamily: fontFamily.mono, textAlign: 'center' }]}>●●</Text>
+                  <Text style={[s.yoyCell, s.yoyValCol, { color: colors.textDim, fontFamily: fontFamily.mono, textAlign: 'center' }]}>●●</Text>
+                  <View style={[s.yoyCell, { width: 28 }]} />
+                </View>
+              ))}
+              <Text style={[s.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock year-over-year comparison with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* ── 6. Monthly breakdown table (PRO) ── */}
-        <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-          <View style={s.card}>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>MONTHLY BREAKDOWN</Text>
-            <View>
-                {/* header */}
-                <View style={[s.tableRow, { backgroundColor: colors.dim ?? colors.border }]}>
-                  <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Month</Text>
-                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.accent, fontFamily: fontFamily.bodyBold }]}>Workouts</Text>
-                  <Text style={[s.tableCell, s.tableNumCol, { color: '#fbbf24', fontFamily: fontFamily.bodyBold }]}>Steps(k)</Text>
-                  <Text style={[s.tableCell, s.tableNumCol, { color: '#c4b5fd', fontFamily: fontFamily.bodyBold }]}>Sleep(h)</Text>
-                </View>
-                {monthly.map((m, i) => (
-                  <View key={i} style={[s.tableRow, i % 2 === 0 && { backgroundColor: colors.bg + '40' }]}>
-                    <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.body }]}>{m.label}</Text>
-                    <Text style={[s.tableCell, s.tableNumCol, {
-                      color: i === bestWorkoutMonth && m.workouts > 0 ? colors.accent : colors.text,
-                      fontFamily: i === bestWorkoutMonth && m.workouts > 0 ? fontFamily.monoBold : fontFamily.mono,
-                    }]}>{m.workouts}</Text>
-                    <Text style={[s.tableCell, s.tableNumCol, {
-                      color: i === bestStepsMonth && m.steps > 0 ? '#fbbf24' : colors.text,
-                      fontFamily: i === bestStepsMonth && m.steps > 0 ? fontFamily.monoBold : fontFamily.mono,
-                    }]}>{m.steps > 0 ? (m.steps / 1000).toFixed(1) : '—'}</Text>
-                    <Text style={[s.tableCell, s.tableNumCol, {
-                      color: i === bestSleepMonth && m.sleep != null ? '#c4b5fd' : colors.text,
-                      fontFamily: i === bestSleepMonth && m.sleep != null ? fontFamily.monoBold : fontFamily.mono,
-                    }]}>{m.sleep != null ? m.sleep : '—'}</Text>
-                  </View>
-                ))}
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
             </View>
           </View>
-        </ProLock>
+          {/* header */}
+          <View style={[s.tableRow, { backgroundColor: colors.dim ?? colors.border }]}>
+            <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Month</Text>
+            <Text style={[s.tableCell, s.tableNumCol, { color: colors.accent, fontFamily: fontFamily.bodyBold }]}>Workouts</Text>
+            <Text style={[s.tableCell, s.tableNumCol, { color: '#fbbf24', fontFamily: fontFamily.bodyBold }]}>Steps(k)</Text>
+            <Text style={[s.tableCell, s.tableNumCol, { color: '#c4b5fd', fontFamily: fontFamily.bodyBold }]}>Sleep(h)</Text>
+          </View>
+          {hasAccess ? (
+            monthly.map((m, i) => (
+              <View key={i} style={[s.tableRow, i % 2 === 0 && { backgroundColor: colors.bg + '40' }]}>
+                <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.body }]}>{m.label}</Text>
+                <Text style={[s.tableCell, s.tableNumCol, {
+                  color: i === bestWorkoutMonth && m.workouts > 0 ? colors.accent : colors.text,
+                  fontFamily: i === bestWorkoutMonth && m.workouts > 0 ? fontFamily.monoBold : fontFamily.mono,
+                }]}>{m.workouts}</Text>
+                <Text style={[s.tableCell, s.tableNumCol, {
+                  color: i === bestStepsMonth && m.steps > 0 ? '#fbbf24' : colors.text,
+                  fontFamily: i === bestStepsMonth && m.steps > 0 ? fontFamily.monoBold : fontFamily.mono,
+                }]}>{m.steps > 0 ? (m.steps / 1000).toFixed(1) : '—'}</Text>
+                <Text style={[s.tableCell, s.tableNumCol, {
+                  color: i === bestSleepMonth && m.sleep != null ? '#c4b5fd' : colors.text,
+                  fontFamily: i === bestSleepMonth && m.sleep != null ? fontFamily.monoBold : fontFamily.mono,
+                }]}>{m.sleep != null ? m.sleep : '—'}</Text>
+              </View>
+            ))
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+              {['Jan','Feb','Mar'].map((label, i) => (
+                <View key={i} style={[s.tableRow, i % 2 === 0 && { backgroundColor: colors.bg + '40' }]}>
+                  <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.body }]}>{label}</Text>
+                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.textDim, fontFamily: fontFamily.mono }]}>●●</Text>
+                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.textDim, fontFamily: fontFamily.mono }]}>●.●</Text>
+                  <Text style={[s.tableCell, s.tableNumCol, { color: colors.textDim, fontFamily: fontFamily.mono }]}>●.●</Text>
+                </View>
+              ))}
+              <Text style={[s.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock full monthly breakdown with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* ── 7. Activity split (PRO) ── */}
-        <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-          <View style={s.card}>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>ACTIVITY SPLIT</Text>
-            {totalActivity > 0 ? (
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+            </View>
+          </View>
+          {hasAccess ? (
+            totalActivity > 0 ? (
               <>
                 <View style={s.activityBar}>
                   {data.gymCount > 0 && (
@@ -637,43 +657,90 @@ export default function YearInReviewScreen({ navigation }) {
               </>
             ) : (
               <Text style={s.emptyText}>No sessions logged</Text>
-            )}
-          </View>
-        </ProLock>
+            )
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+              <View style={s.activityBar}>
+                <View style={[s.activitySegment, { flex: 3, backgroundColor: colors.border, borderTopLeftRadius: 6, borderBottomLeftRadius: 6 }]} />
+                <View style={[s.activitySegment, { flex: 2, backgroundColor: colors.border + '80' }]} />
+                <View style={[s.activitySegment, { flex: 5, backgroundColor: colors.border + '40', borderTopRightRadius: 6, borderBottomRightRadius: 6 }]} />
+              </View>
+              <View style={s.activityLegend}>
+                {['Gym · ●●', 'Cardio · ●●', 'Rest · ●●'].map((label, i) => (
+                  <View key={i} style={s.legendItem}>
+                    <View style={[s.legendDot, { backgroundColor: colors.border }]} />
+                    <Text style={[s.legendText, { color: colors.textDim }]}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock activity split with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* ── 8. Body transformation (PRO) ── */}
-        {data.bodyTransform && (
-          <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-            <View style={s.card}>
+        {(data.bodyTransform || !hasAccess) && (
+          <View style={s.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <Text style={s.cardTitle}>BODY TRANSFORMATION</Text>
-              <Text style={[s.cardSubtitle]}>From Jan to Dec</Text>
-              <View style={s.transformRow}>
-                <View style={s.transformSide}>
-                  <Text style={s.transformLabel}>START</Text>
-                  <Text style={[s.transformVal, { color: colors.textDim }]}>{data.bodyTransform.startWeight} kg</Text>
-                </View>
-                <Text style={{ fontSize: 28 }}>
-                  {data.bodyTransform.delta < 0 ? '📉' : data.bodyTransform.delta > 0 ? '📈' : '➡️'}
-                </Text>
-                <View style={s.transformSide}>
-                  <Text style={s.transformLabel}>END</Text>
-                  <Text style={[s.transformVal, { color: colors.text }]}>{data.bodyTransform.endWeight} kg</Text>
-                </View>
+              <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+                <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
               </View>
-              <Text style={[s.transformDelta, {
-                color: data.bodyTransform.delta < 0 ? '#34d399' : data.bodyTransform.delta > 0 ? '#fb7185' : colors.textDim,
-              }]}>
-                {data.bodyTransform.delta > 0 ? '+' : ''}{data.bodyTransform.delta} kg change
-              </Text>
             </View>
-          </ProLock>
+            {hasAccess ? (
+              data.bodyTransform ? (
+                <>
+                  <Text style={[s.cardSubtitle]}>From Jan to Dec</Text>
+                  <View style={s.transformRow}>
+                    <View style={s.transformSide}>
+                      <Text style={s.transformLabel}>START</Text>
+                      <Text style={[s.transformVal, { color: colors.textDim }]}>{data.bodyTransform.startWeight} kg</Text>
+                    </View>
+                    <Text style={{ fontSize: 28 }}>
+                      {data.bodyTransform.delta < 0 ? '📉' : data.bodyTransform.delta > 0 ? '📈' : '➡️'}
+                    </Text>
+                    <View style={s.transformSide}>
+                      <Text style={s.transformLabel}>END</Text>
+                      <Text style={[s.transformVal, { color: colors.text }]}>{data.bodyTransform.endWeight} kg</Text>
+                    </View>
+                  </View>
+                  <Text style={[s.transformDelta, {
+                    color: data.bodyTransform.delta < 0 ? '#34d399' : data.bodyTransform.delta > 0 ? '#fb7185' : colors.textDim,
+                  }]}>
+                    {data.bodyTransform.delta > 0 ? '+' : ''}{data.bodyTransform.delta} kg change
+                  </Text>
+                </>
+              ) : null
+            ) : (
+              <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+                <Text style={[s.cardSubtitle]}>From Jan to Dec</Text>
+                <View style={s.transformRow}>
+                  <View style={s.transformSide}>
+                    <Text style={s.transformLabel}>START</Text>
+                    <Text style={[s.transformVal, { color: colors.textDim }]}>●● kg</Text>
+                  </View>
+                  <Text style={{ fontSize: 28 }}>➡️</Text>
+                  <View style={s.transformSide}>
+                    <Text style={s.transformLabel}>END</Text>
+                    <Text style={[s.transformVal, { color: colors.textDim }]}>●● kg</Text>
+                  </View>
+                </View>
+                <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock body transformation with Pro.</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         {/* ── 9. Nutrition summary (PRO) ── */}
-        <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-          <View style={s.card}>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>NUTRITION SUMMARY</Text>
-            {data.nutritionDays > 0 ? (
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+            </View>
+          </View>
+          {hasAccess ? (
+            data.nutritionDays > 0 ? (
               <View style={s.quickWinsRow}>
                 <View style={s.quickWinTile}>
                   <Text style={s.quickWinEmoji}>🔥</Text>
@@ -693,66 +760,135 @@ export default function YearInReviewScreen({ navigation }) {
               </View>
             ) : (
               <Text style={s.emptyText}>No food logged in {selectedYear} — start logging meals to see your nutrition summary.</Text>
-            )}
-          </View>
-        </ProLock>
+            )
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+              <View style={s.quickWinsRow}>
+                <View style={s.quickWinTile}>
+                  <Text style={s.quickWinEmoji}>🔥</Text>
+                  <Text style={[s.quickWinVal, { color: colors.textDim }]}>●●●</Text>
+                  <Text style={s.quickWinLabel}>KCAL/DAY</Text>
+                </View>
+                <View style={[s.quickWinTile, s.quickWinTileBorder]}>
+                  <Text style={s.quickWinEmoji}>🥩</Text>
+                  <Text style={[s.quickWinVal, { color: colors.textDim }]}>●●g</Text>
+                  <Text style={s.quickWinLabel}>PROTEIN/DAY</Text>
+                </View>
+                <View style={s.quickWinTile}>
+                  <Text style={s.quickWinEmoji}>📅</Text>
+                  <Text style={[s.quickWinVal, { color: colors.textDim }]}>●●</Text>
+                  <Text style={s.quickWinLabel}>DAYS TRACKED</Text>
+                </View>
+              </View>
+              <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock nutrition summary with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* ── 10. Top 5 exercises by volume (PRO) ── */}
-        {topVolumeExercises.length > 0 && (
-          <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-            <View style={s.card}>
-              <Text style={s.cardTitle}>TOP EXERCISES BY VOLUME</Text>
-              {topVolumeExercises.map((ex, i) => (
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={s.cardTitle}>TOP EXERCISES BY VOLUME</Text>
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+            </View>
+          </View>
+          {hasAccess ? (
+            topVolumeExercises.length > 0 ? (
+              topVolumeExercises.map((ex, i) => (
                 <View key={i} style={[s.prRow, i < topVolumeExercises.length - 1 && s.prRowBorder]}>
                   <Text style={s.prRank}>#{i + 1}</Text>
                   <Text style={[s.prName, i === 0 && { color: colors.accent }]} numberOfLines={1}>{ex.name}</Text>
                   <Text style={[s.prKg, { color: i === 0 ? colors.accent : colors.text }]}>{fmtVol(ex.totalKg)} kg</Text>
                 </View>
+              ))
+            ) : (
+              <Text style={s.emptyText}>No exercises logged</Text>
+            )
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+              {[1,2,3].map(i => (
+                <View key={i} style={[s.prRow, i < 3 && s.prRowBorder]}>
+                  <Text style={s.prRank}>#{i}</Text>
+                  <View style={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: colors.border, marginHorizontal: 8, marginVertical: 2 }} />
+                  <Text style={[s.prKg, { color: colors.textDim }]}>●●● kg</Text>
+                </View>
               ))}
-            </View>
-          </ProLock>
-        )}
+              <Text style={[s.emptyText, { paddingTop: 10, paddingBottom: 0 }]}>🔒 Unlock top exercises by volume with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* ── 11. Sleep quality trend (PRO) ── */}
-        {data.sleepDays > 0 && (
-          <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-            <View style={s.card}>
-              <Text style={s.cardTitle}>SLEEP TREND</Text>
-              <View style={[s.barChart, { height: 90 }]}>
-                {monthlyAvgSleep.map((m, i) => {
-                  const pct = m.avg != null ? (m.avg / Math.max(maxSleepAvg, 9)) : 0;
-                  const lineH = (7 / Math.max(maxSleepAvg, 9)) * 100;
-                  return (
-                    <View key={i} style={s.barCol}>
-                      <View style={s.barTrack}>
-                        <View style={[s.barFill, {
-                          height: `${Math.max(pct * 100, m.avg != null ? 4 : 0)}%`,
-                          backgroundColor: m.avg != null ? '#c4b5fd' : colors.border,
-                        }]} />
-                        {/* 7h reference line */}
-                        <View style={{
-                          position: 'absolute',
-                          bottom: `${lineH}%`,
-                          left: 0, right: 0,
-                          height: 1,
-                          backgroundColor: colors.accent + '60',
-                        }} />
-                      </View>
-                      <Text style={s.barLabel}>{m.label.slice(0, 1)}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-              <Text style={[s.cardSubtitle, { color: colors.accent + '80' }]}>— 7h target line</Text>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={s.cardTitle}>SLEEP TREND</Text>
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
             </View>
-          </ProLock>
-        )}
+          </View>
+          {hasAccess ? (
+            data.sleepDays > 0 ? (
+              <>
+                <View style={[s.barChart, { height: 90 }]}>
+                  {monthlyAvgSleep.map((m, i) => {
+                    const pct = m.avg != null ? (m.avg / Math.max(maxSleepAvg, 9)) : 0;
+                    const lineH = (7 / Math.max(maxSleepAvg, 9)) * 100;
+                    return (
+                      <View key={i} style={s.barCol}>
+                        <View style={s.barTrack}>
+                          <View style={[s.barFill, {
+                            height: `${Math.max(pct * 100, m.avg != null ? 4 : 0)}%`,
+                            backgroundColor: m.avg != null ? '#c4b5fd' : colors.border,
+                          }]} />
+                          <View style={{
+                            position: 'absolute',
+                            bottom: `${lineH}%`,
+                            left: 0, right: 0,
+                            height: 1,
+                            backgroundColor: colors.accent + '60',
+                          }} />
+                        </View>
+                        <Text style={s.barLabel}>{m.label.slice(0, 1)}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+                <Text style={[s.cardSubtitle, { color: colors.accent + '80' }]}>— 7h target line</Text>
+              </>
+            ) : (
+              <Text style={s.emptyText}>No sleep data logged</Text>
+            )
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+              <View style={[s.barChart, { height: 90 }]}>
+                {['J','F','M','A','M','J','J','A','S','O','N','D'].map((label, i) => (
+                  <View key={i} style={s.barCol}>
+                    <View style={s.barTrack}>
+                      <View style={[s.barFill, {
+                        height: `${[55, 70, 60, 75, 50, 65, 80, 55, 70, 60, 75, 65][i]}%`,
+                        backgroundColor: colors.border,
+                      }]} />
+                    </View>
+                    <Text style={s.barLabel}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock sleep trend with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* ── 12. Mood year summary (PRO) ── */}
-        <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-          <View style={s.card}>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>MOOD YEAR SUMMARY</Text>
-            {data.moodDays > 0 ? (
+            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+            </View>
+          </View>
+          {hasAccess ? (
+            data.moodDays > 0 ? (
               <>
                 <View style={s.moodRow}>
                   <View style={s.moodTile}>
@@ -779,20 +915,44 @@ export default function YearInReviewScreen({ navigation }) {
               </>
             ) : (
               <Text style={s.emptyText}>No mood logs in {selectedYear} — log your mood daily to see your year summary.</Text>
-            )}
-          </View>
-        </ProLock>
+            )
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+              <View style={s.moodRow}>
+                <View style={s.moodTile}>
+                  <Text style={s.moodEmoji}>😐</Text>
+                  <Text style={[s.quickWinVal, { color: colors.textDim }]}>●.●</Text>
+                  <Text style={s.quickWinLabel}>AVG MOOD</Text>
+                </View>
+                <View style={s.moodTile}>
+                  <Text style={s.moodEmoji}>⚡</Text>
+                  <Text style={[s.quickWinVal, { color: colors.textDim }]}>●.●</Text>
+                  <Text style={s.quickWinLabel}>AVG ENERGY</Text>
+                </View>
+                <View style={s.moodTile}>
+                  <Text style={s.moodEmoji}>📅</Text>
+                  <Text style={[s.quickWinVal, { color: colors.textDim }]}>●●</Text>
+                  <Text style={s.quickWinLabel}>DAYS LOGGED</Text>
+                </View>
+              </View>
+              <Text style={[s.emptyText, { paddingTop: 8, paddingBottom: 0 }]}>🔒 Unlock mood year summary with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* ── 13. Achievements (PRO) ── */}
-        <ProLock hasAccess={hasAccess} onPaywall={() => setShowPaywall(true)} colors={colors}>
-          <View style={s.card}>
-            <View style={s.achieveHeader}>
-              <Text style={s.cardTitle}>ACHIEVEMENTS</Text>
-              <Text style={[s.achieveCount, { color: colors.textDim }]}>
-                {achievements.length} / 14 unlocked
-              </Text>
+        <View style={s.card}>
+          <View style={s.achieveHeader}>
+            <Text style={s.cardTitle}>ACHIEVEMENTS</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {hasAccess && <Text style={[s.achieveCount, { color: colors.textDim }]}>{achievements.length} / 14 unlocked</Text>}
+              <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+                <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+              </View>
             </View>
-            {achievements.length === 0 ? (
+          </View>
+          {hasAccess ? (
+            achievements.length === 0 ? (
               <View style={s.emptyBox}>
                 <Text style={s.emptyIcon}>🎯</Text>
                 <Text style={[s.emptyText, { textAlign: 'center' }]}>Keep going — your achievements are waiting!</Text>
@@ -807,9 +967,22 @@ export default function YearInReviewScreen({ navigation }) {
                   </View>
                 ))}
               </View>
-            )}
-          </View>
-        </ProLock>
+            )
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
+              <View style={s.achieveGrid}>
+                {['🏋️','🔥','📅','⭐','💪','🌍'].map((emoji, i) => (
+                  <View key={i} style={[s.achieveBadge, { backgroundColor: colors.dim ?? colors.border + '80' }]}>
+                    <Text style={s.achieveEmoji}>{emoji}</Text>
+                    <View style={{ height: 10, borderRadius: 5, backgroundColor: colors.border, marginVertical: 3, width: '80%' }} />
+                    <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.border + '80', width: '60%' }} />
+                  </View>
+                ))}
+              </View>
+              <Text style={[s.emptyText, { paddingTop: 10, paddingBottom: 0, textAlign: 'center' }]}>🔒 Unlock achievements with Pro.</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* ── 14. Top PRs (FREE) ── */}
         {topPRs.length > 0 && (
