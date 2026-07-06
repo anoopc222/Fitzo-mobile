@@ -4,6 +4,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
   Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle, UIManager, AppState,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -1492,6 +1493,39 @@ function EditSessionModal({
   const [programTemplate, setProgramTemplate] = useState(null);
   const scrollRef = useRef(null);
   const cardRefs = useRef({});
+  const [dragKey, setDragKey] = useState(null);
+  const exercisesRef = useRef(exercises);
+  useEffect(() => { exercisesRef.current = exercises; }, [exercises]);
+  const panRefs = useRef({});
+  const CARD_H = 64;
+  const getDragPan = (key) => {
+    if (!panRefs.current[key]) {
+      panRefs.current[key] = PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponderCapture: () => true,
+        onPanResponderGrant: () => {
+          setDragKey(key);
+          setActiveExIdx(null);
+        },
+        onPanResponderMove: (_, gs) => {
+          const cur = exercisesRef.current;
+          const fromIdx = cur.findIndex(e => e._key === key);
+          if (fromIdx === -1) return;
+          const toIdx = Math.max(0, Math.min(cur.length - 1, fromIdx + Math.round(gs.dy / CARD_H)));
+          if (toIdx !== fromIdx) {
+            const arr = [...cur];
+            const [item] = arr.splice(fromIdx, 1);
+            arr.splice(toIdx, 0, item);
+            setExercises(arr);
+          }
+        },
+        onPanResponderRelease: () => setDragKey(null),
+        onPanResponderTerminate: () => setDragKey(null),
+      });
+    }
+    return panRefs.current[key];
+  };
   const scrollCardToTop = useCallback((exIdx) => {
     setTimeout(() => {
       const card = cardRefs.current[exIdx];
@@ -1759,7 +1793,7 @@ function EditSessionModal({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <SafeAreaView style={eS.container}>
-          <ScrollView ref={scrollRef} style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+          <ScrollView ref={scrollRef} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" scrollEnabled={!dragKey}>
           {/* Header */}
           <View style={eS.header}>
             <View style={{ flex: 1 }}>
@@ -1887,8 +1921,9 @@ function EditSessionModal({
                   <View ref={r => { cardRefs.current[exIdx] = r; }} style={[
                     eS.exCard, isActive && eS.exCardActive,
                     { flex: 1 },
-                    isInGroup && { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
+                    isInGroup && { borderTopLeftRadius: 0, borderBottomLeftRadius: 0, backgroundColor: colors.purple + '0a' },
                     isFirstInGroup && { borderTopColor: colors.purple },
+                    dragKey === ex._key && eS.exCardDragging,
                   ]}>
                     <View style={eS.exCardHeader}>
                       <TouchableOpacity style={eS.exCardHeaderTap}
@@ -1909,21 +1944,9 @@ function EditSessionModal({
                             : t('workout.setsCount', { count: (ex.sets ?? []).length })}
                         </Text>
                       </TouchableOpacity>
-                      <View style={eS.exReorderBtns}>
-                        <TouchableOpacity
-                          onPress={() => moveExercise(exIdx, -1)}
-                          disabled={exIdx === 0}
-                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        >
-                          <Ionicons name="chevron-up" size={14} color={exIdx === 0 ? colors.textDim + '22' : colors.textDim} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => moveExercise(exIdx, 1)}
-                          disabled={exIdx === exercises.length - 1}
-                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        >
-                          <Ionicons name="chevron-down" size={14} color={exIdx === exercises.length - 1 ? colors.textDim + '22' : colors.textDim} />
-                        </TouchableOpacity>
+                      <View style={[eS.dragHandle, dragKey === ex._key && eS.dragHandleActive]}
+                        {...getDragPan(ex._key).panHandlers}>
+                        <Ionicons name="menu" size={18} color={dragKey === ex._key ? colors.accent : colors.textDim} />
                       </View>
                       <TouchableOpacity onPress={() => removeExercise(exIdx)} style={eS.exDeleteBtn}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -3923,7 +3946,9 @@ const createES = (colors) => StyleSheet.create({
   exCardName: { flex: 1, fontSize: typography.sm, fontWeight: weight.semibold, color: colors.textMuted },
   exCardNameActive: { color: colors.text },
   exSetsCount: { fontSize: typography.xs, color: colors.textDim },
-  exReorderBtns: { flexDirection: 'column', alignItems: 'center', gap: 1, paddingHorizontal: 2 },
+  dragHandle: { padding: 8, alignItems: 'center', justifyContent: 'center' },
+  dragHandleActive: { opacity: 0.7 },
+  exCardDragging: { borderColor: colors.accent, opacity: 0.85, backgroundColor: colors.surface },
   exDeleteBtn: { padding: 4 },
   exDeleteX: {
     width: 20, height: 20, borderRadius: 10, backgroundColor: colors.danger + '1f',
@@ -4059,7 +4084,7 @@ const createES = (colors) => StyleSheet.create({
     fontSize: 9, fontWeight: weight.bold, color: colors.purple,
     letterSpacing: 1.2, textTransform: 'uppercase',
   },
-  supersetStrip: { width: 3, backgroundColor: colors.purple, borderRadius: 2, marginBottom: 6, marginRight: 0 },
+  supersetStrip: { width: 4, backgroundColor: colors.purple, borderRadius: 2, marginBottom: 6 },
   supersetToggleBtn: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
     borderWidth: 1, borderColor: colors.purple + '55',
