@@ -94,7 +94,10 @@ async function fetchSteps(userId) {
     supabase.from('profiles').select('step_goal').eq('id', userId).single(),
   ]);
   if (logs.error) throw logs.error;
-  const normLogs = (logs.data ?? []).map(l => ({ ...l, logged_at: l.logged_at.slice(0, 10) }));
+  const seen = new Set();
+  const normLogs = (logs.data ?? [])
+    .map(l => ({ ...l, logged_at: l.logged_at.slice(0, 10) }))
+    .filter(l => { if (seen.has(l.logged_at)) return false; seen.add(l.logged_at); return true; });
   return { logs: normLogs, profile: profile.data };
 }
 
@@ -104,26 +107,27 @@ async function logSteps(userId, { date, steps, goal, activityType, note }) {
   // No unique constraint on (user_id, logged_at) in the real schema, so we
   // can't rely on upsert's onConflict. Manually check for an existing row on
   // that date and update it; otherwise insert a new one.
-  const existing = await supabase
+  const { data: existing, error: fetchErr } = await supabase
     .from('step_logs')
     .select('id')
     .eq('user_id', userId)
-    .eq('logged_at', date)
-    .limit(1)
-    .maybeSingle();
-  if (existing.error) throw existing.error;
+    .gte('logged_at', `${date}T00:00:00`)
+    .lte('logged_at', `${date}T23:59:59`)
+    .order('logged_at', { ascending: false });
+  if (fetchErr) throw fetchErr;
 
   const fields = {
     steps, goal: goal ?? 12000, distance_km, calories_burned,
     activity_type: activityType || 'walk', note: note || null,
   };
 
-  if (existing.data) {
-    const { error } = await supabase
-      .from('step_logs')
-      .update(fields)
-      .eq('id', existing.data.id);
+  if (existing && existing.length > 0) {
+    const [keep, ...dupes] = existing;
+    const { error } = await supabase.from('step_logs').update(fields).eq('id', keep.id);
     if (error) throw error;
+    if (dupes.length > 0) {
+      await supabase.from('step_logs').delete().in('id', dupes.map(d => d.id));
+    }
   } else {
     const { error } = await supabase.from('step_logs').insert({
       ...fields, user_id: userId, logged_at: date,
