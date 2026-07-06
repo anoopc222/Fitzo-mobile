@@ -1399,17 +1399,25 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
               </TouchableOpacity>
             ); // end card
             }); // end groupCards
-            if (!isGrouped) return groupCards;
+            if (!isGrouped) return <React.Fragment key={group.indices[0]}>{groupCards}</React.Fragment>;
+            const dCardsWithDivider = [];
+            groupCards.forEach((card, i) => {
+              dCardsWithDivider.push(card);
+              if (i < groupCards.length - 1) {
+                dCardsWithDivider.push(
+                  <View key={`div-${group.groupId}-${i}`} style={dS.supersetGroupDivider}>
+                    <View style={dS.supersetGroupLine} />
+                    <Ionicons name="link-outline" size={11} color={colors.purple} />
+                    <Text style={dS.supersetGroupHeaderText}>SUPERSET</Text>
+                    <Ionicons name="link-outline" size={11} color={colors.purple} />
+                    <View style={dS.supersetGroupLine} />
+                  </View>
+                );
+              }
+            });
             return (
               <View key={group.groupId} style={dS.supersetGroup}>
-                <View style={dS.supersetGroupHeader}>
-                  <View style={dS.supersetGroupLine} />
-                  <Ionicons name="link-outline" size={11} color={colors.purple} />
-                  <Text style={dS.supersetGroupHeaderText}>SUPERSET</Text>
-                  <Ionicons name="link-outline" size={11} color={colors.purple} />
-                  <View style={dS.supersetGroupLine} />
-                </View>
-                {groupCards}
+                {dCardsWithDivider}
               </View>
             );
             }); // end dExGroups.map
@@ -1595,7 +1603,30 @@ function EditSessionModal({
           arr.splice(toIdx, 0, item);
           setExercises(arr);
         },
-        onPanResponderRelease: () => { delete startIdxMap.current[key]; setDragKey(null); },
+        onPanResponderRelease: () => {
+          delete startIdxMap.current[key];
+          setDragKey(null);
+          // Clear group_ids for any group whose members are no longer consecutive
+          setExercises(prev => {
+            const groupPositions = {};
+            prev.forEach((ex, i) => {
+              if (ex.group_id) {
+                if (!groupPositions[ex.group_id]) groupPositions[ex.group_id] = [];
+                groupPositions[ex.group_id].push(i);
+              }
+            });
+            let changed = false;
+            const next = prev.map(ex => {
+              if (!ex.group_id) return ex;
+              const positions = groupPositions[ex.group_id];
+              if (!positions || positions.length < 2) { changed = true; return { ...ex, group_id: null }; }
+              const isConsecutive = positions.every((p, i) => i === 0 || p === positions[i - 1] + 1);
+              if (!isConsecutive) { changed = true; return { ...ex, group_id: null }; }
+              return ex;
+            });
+            return changed ? next : prev;
+          });
+        },
         onPanResponderTerminate: () => { delete startIdxMap.current[key]; setDragKey(null); },
       });
     }
@@ -2342,17 +2373,25 @@ function EditSessionModal({
                   </View>
                 ); // end card
                 }); // end groupCards
-                if (!isGrouped) return groupCards;
+                if (!isGrouped) return <React.Fragment key={group.indices[0]}>{groupCards}</React.Fragment>;
+                const cardsWithDivider = [];
+                groupCards.forEach((card, i) => {
+                  cardsWithDivider.push(card);
+                  if (i < groupCards.length - 1) {
+                    cardsWithDivider.push(
+                      <View key={`div-${group.groupId}-${i}`} style={eS.supersetGroupDivider}>
+                        <View style={eS.supersetGroupLine} />
+                        <Ionicons name="link-outline" size={11} color={colors.purple} />
+                        <Text style={eS.supersetGroupHeaderText}>SUPERSET</Text>
+                        <Ionicons name="link-outline" size={11} color={colors.purple} />
+                        <View style={eS.supersetGroupLine} />
+                      </View>
+                    );
+                  }
+                });
                 return (
                   <View key={group.groupId} style={eS.supersetGroup}>
-                    <View style={eS.supersetGroupHeader}>
-                      <View style={eS.supersetGroupLine} />
-                      <Ionicons name="link-outline" size={11} color={colors.purple} />
-                      <Text style={eS.supersetGroupHeaderText}>SUPERSET</Text>
-                      <Ionicons name="link-outline" size={11} color={colors.purple} />
-                      <View style={eS.supersetGroupLine} />
-                    </View>
-                    {groupCards}
+                    {cardsWithDivider}
                   </View>
                 );
                 }); // end exGroups.map
@@ -3910,10 +3949,10 @@ const createDS = (colors) => StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.purple, borderRadius: 12,
     marginBottom: 8, overflow: 'hidden',
   },
-  supersetGroupHeader: {
+  supersetGroupDivider: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingVertical: 6, paddingHorizontal: 10,
-    backgroundColor: colors.purple + '20',
+    paddingVertical: 5, paddingHorizontal: 10,
+    backgroundColor: colors.purple + '18',
   },
   supersetGroupLine: { flex: 1, height: 1, backgroundColor: colors.purple + '44' },
   supersetGroupHeaderText: {
@@ -4072,10 +4111,10 @@ const createES = (colors) => StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.purple, borderRadius: 12,
     marginBottom: 8, overflow: 'hidden',
   },
-  supersetGroupHeader: {
+  supersetGroupDivider: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingVertical: 6, paddingHorizontal: 10,
-    backgroundColor: colors.purple + '20',
+    paddingVertical: 5, paddingHorizontal: 10,
+    backgroundColor: colors.purple + '18',
   },
   supersetGroupLine: { flex: 1, height: 1, backgroundColor: colors.purple + '44' },
   supersetGroupHeaderText: {
