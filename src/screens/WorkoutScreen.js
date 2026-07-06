@@ -1866,10 +1866,14 @@ function EditSessionModal({
                       <View style={eS.supersetDot} />
                     </View>
                   )}
+                  <View style={[
+                    { flexDirection: 'row' },
+                    isInGroup && !isFirstInGroup && { marginTop: -4 },
+                  ]}>
+                  {isInGroup && <View style={eS.supersetStrip} />}
                   <View ref={r => { cardRefs.current[exIdx] = r; }} style={[
                     eS.exCard, isActive && eS.exCardActive,
-                    isInGroup && { borderLeftWidth: 3, borderLeftColor: colors.purple },
-                    isInGroup && !isFirstInGroup && { marginTop: -4 },
+                    isInGroup && { flex: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
                   ]}>
                     <TouchableOpacity style={eS.exCardHeader}
                       onPress={() => {
@@ -2212,6 +2216,7 @@ function EditSessionModal({
                         </View>
                       </View>
                     )}
+                  </View>
                   </View>
                   </React.Fragment>
                 );
@@ -4018,6 +4023,7 @@ const createES = (colors) => StyleSheet.create({
     fontSize: 9, fontWeight: weight.bold, color: colors.purple,
     letterSpacing: 1.2, textTransform: 'uppercase',
   },
+  supersetStrip: { width: 3, backgroundColor: colors.purple, borderRadius: 2, marginBottom: 6, marginRight: 0 },
   supersetToggleBtn: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
     borderWidth: 1, borderColor: colors.purple + '55',
