@@ -3338,7 +3338,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
                     const ratio = (push / Math.max(pull, 1)).toFixed(1);
                     const isBalanced = ratio >= 0.8 && ratio <= 1.4;
                     return (
-                      <View style={[s.deloadBanner, { backgroundColor: isBalanced ? '#22c55e18' : '#f59e0b18', borderColor: isBalanced ? '#22c55e40' : '#f59e0b40' }]}>
+                      <View style={[s.deloadBanner, { marginTop: 10, backgroundColor: isBalanced ? '#22c55e18' : '#f59e0b18', borderColor: isBalanced ? '#22c55e40' : '#f59e0b40' }]}>
                         <Text style={[s.deloadBannerText, { color: isBalanced ? '#22c55e' : '#f59e0b' }]}>
                           {isBalanced ? `✅ Push:Pull ratio ${ratio}:1 — well balanced` : `⚠️ Push:Pull ratio ${ratio}:1 — aim for 1:1 to protect shoulders`}
                         </Text>
@@ -4293,7 +4293,7 @@ const createES = (colors) => StyleSheet.create({
     fontWeight: '600',
   },
 
-  coachNotesWrap: { paddingHorizontal: 16, paddingBottom: 12 },
+  coachNotesWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
   coachNotesInput: {
     backgroundColor: colors.dim,
     borderWidth: 1, borderColor: colors.border,
