@@ -25,7 +25,6 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { useNotificationPrefs } from '../context/NotificationContext';
 import { syncConditionalReminder } from '../lib/notifications';
 import ScreenHeader from '../components/ScreenHeader';
-import ProLock from '../components/ProLock';
 import SkeletonScreen from '../components/Skeleton';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -963,23 +962,58 @@ export default function SleepScreen({ embedded = false } = {}) {
             </View>
 
             {/* ── Analysis & Insights (Pro) ── */}
-            {insights.length > 0 && (
-              <ProLock hasAccess={hasAccess} onUnlock={() => recoveryExport.setShowPaywall(true)} colors={colors}>
-                <View style={styles.card}>
-                  <View style={styles.cardTitleRow}>
-                    <Text style={styles.cardTitle}>{t('sleep.analysisInsightsTitle')}</Text>
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>{t('sleep.analysisInsightsTitle')}</Text>
+                <View style={styles.proBadge}><Text style={styles.proBadgeText}>{t('sleep.proBadge')}</Text></View>
+              </View>
+
+              {/* Stat tiles — always visible, values hidden when locked */}
+              <View style={styles.statTileRow}>
+                <StatTile value={hasAccess ? `${sleepConsistency.longestLogStreak}d` : '●●'} label={t('sleep.statGoalStreak')} color={colors.accent} colors={colors} />
+                <View style={styles.statTileDivider} />
+                <StatTile value={hasAccess ? `${sleepConsistency.consistencyPct}%` : '●●%'} label={t('sleep.statConsistency')} color={colors.good} colors={colors} />
+                <View style={styles.statTileDivider} />
+                <StatTile value={hasAccess ? (weekDebt > 0 ? `-${weekDebt}h` : '0h') : '●●'} label={t('sleep.statSleepDebt')} color={weekDebt > 3 ? colors.danger : weekDebt > 1 ? colors.warn : colors.good} colors={colors} />
+              </View>
+
+              {hasAccess ? (
+                insights.length > 0 ? (
+                  <View style={{ marginTop: 8, gap: 8 }}>
+                    {insights.map((ins, i) => (
+                      <View key={i} style={styles.insightRow}>
+                        <Text style={styles.insightIcon}>{ins.icon}</Text>
+                        <Text style={styles.insightText}>
+                          {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                  {insights.map((ins, i) => (
-                    <View key={i} style={styles.insightRow}>
+                ) : (
+                  <Text style={styles.emptyText}>{t('sleep.logMoreDaysForInsights')}</Text>
+                )
+              ) : (
+                <>
+                  {insights.slice(0, 1).map((ins, i) => (
+                    <View key={i} style={[styles.insightRow, { marginTop: 8 }]}>
                       <Text style={styles.insightIcon}>{ins.icon}</Text>
                       <Text style={styles.insightText}>
                         {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
                       </Text>
                     </View>
                   ))}
-                </View>
-              </ProLock>
-            )}
+                  <TouchableOpacity onPress={() => setShowRangePaywall(true)}>
+                    {(insights.length > 1 ? insights.slice(1) : [{ icon: '😴' }, { icon: '📈' }]).map((ins, i) => (
+                      <View key={i} style={styles.insightRow}>
+                        <Text style={styles.insightIcon}>{ins.icon}</Text>
+                        <View style={[styles.skeletonBar, { width: `${[92, 68, 80, 75][i % 4]}%` }]} />
+                      </View>
+                    ))}
+                    <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>{t('sleep.unlockInsightsCta')}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
 
             {/* ── Sleep → Workout Volume Insights ── */}
             <SleepWorkoutInsightsCard logs={logs} sessions={sessions} goal={goal} colors={colors} />

@@ -24,7 +24,6 @@ import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import EmptyState from '../components/EmptyState';
 import { useSubscription } from '../context/SubscriptionContext';
-import ProLock from '../components/ProLock';
 import { useNotificationPrefs } from '../context/NotificationContext';
 import { syncConditionalReminder } from '../lib/notifications';
 
@@ -1199,10 +1198,10 @@ export default function StepsScreen({ embedded = false } = {}) {
             </View>
 
             {/* ── Analysis & Insights (Pro) ── */}
-            <ProLock hasAccess={hasAccess} onUnlock={() => heroExport.setShowPaywall(true)} colors={colors}>
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle}>{t('steps.analysisInsightsTitle')}</Text>
+                <View style={styles.proBadge}><Text style={styles.proBadgeText}>{t('steps.proBadge')}</Text></View>
               </View>
               <View style={styles.weekStatsRow}>
                 <WeekStatCell value={hasAccess ? String(streaks.longest) : '●●'} label={t('steps.bestStreakLabel')} color="#f59e0b" colors={colors} />
@@ -1231,9 +1230,6 @@ export default function StepsScreen({ embedded = false } = {}) {
                       <Text style={styles.tipText}>{t('steps.tipMilestone', { name: t(milestone.best.nameKey), km: Math.round(milestone.totalKm).toLocaleString() })}</Text>
                     </View>
                   )}
-                  {!goalSuggestion && !sleepCorrelation && !milestone.best && stepsDeepInsights.length === 0 && (
-                    <Text style={styles.emptyText}>{t('steps.logMoreDaysForInsights')}</Text>
-                  )}
                   {stepsDeepInsights.map((ins, i) => (
                     <View key={`deep-${i}`} style={styles.tipRow}>
                       <Text style={styles.tipEmoji}>{ins.icon}</Text>
@@ -1242,52 +1238,42 @@ export default function StepsScreen({ embedded = false } = {}) {
                       </Text>
                     </View>
                   ))}
+                  {!goalSuggestion && !sleepCorrelation && !milestone.best && stepsDeepInsights.length === 0 && (
+                    <Text style={styles.emptyText}>{t('steps.logMoreDaysForInsights')}</Text>
+                  )}
                 </View>
               ) : (
                 <View style={{ marginTop: 12, gap: 8 }}>
-                  {(() => {
-                    const tips = [];
-                    if (goalSuggestion) tips.push({ icon: '📈', node: t('steps.tipRaiseGoal', { avg: goalSuggestion.avg.toLocaleString(), hitRate: goalSuggestion.hitRate, suggested: goalSuggestion.suggested.toLocaleString() }) });
-                    if (sleepCorrelation && sleepCorrelation.diff > 200) tips.push({ icon: '😴', node: t('steps.tipSleepCorrelation', { diff: sleepCorrelation.diff.toLocaleString(), avgLow: sleepCorrelation.avgLow.toLocaleString(), avgNormal: sleepCorrelation.avgNormal.toLocaleString() }) });
-                    if (milestone.best) tips.push({ icon: '🌍', node: t('steps.tipMilestone', { name: t(milestone.best.nameKey), km: Math.round(milestone.totalKm).toLocaleString() }) });
-                    stepsDeepInsights.forEach(ins => tips.push({
-                      icon: ins.icon,
-                      node: (<>{ins.text}<Text style={{ fontWeight: '800' }}>{ins.bold}</Text>{ins.rest}</>),
-                    }));
-                    const real = tips[0];
-                    const maskedIcons = tips.slice(1, 3).map(tp => tp.icon);
-                    const fallbackIcons = ['😴', '🌍'];
-                    while (maskedIcons.length < 2) maskedIcons.push(fallbackIcons[maskedIcons.length] ?? '⚡');
-                    const maskedWidths = [68, 80];
-                    return (
-                      <>
-                        {real ? (
-                          <View style={styles.tipRow}>
-                            <Text style={styles.tipEmoji}>{real.icon}</Text>
-                            <Text style={styles.tipText}>{real.node}</Text>
-                          </View>
-                        ) : (
-                          <View style={styles.tipRow}>
-                            <Text style={styles.tipEmoji}>📈</Text>
-                            <View style={[styles.skeletonBar, { width: '92%' }]} />
-                          </View>
-                        )}
-                        <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
-                          {maskedIcons.map((icon, i) => (
-                            <View key={`locked-${i}`} style={styles.tipRow}>
-                              <Text style={styles.tipEmoji}>{icon}</Text>
-                              <View style={[styles.skeletonBar, { width: `${maskedWidths[i]}%` }]} />
-                            </View>
-                          ))}
-                          <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>{t('steps.unlockInsightsPro')}</Text>
-                        </TouchableOpacity>
-                      </>
-                    );
-                  })()}
+                  {/* First insight visible as teaser */}
+                  {goalSuggestion ? (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>📈</Text>
+                      <Text style={styles.tipText}>{t('steps.tipRaiseGoal', { avg: goalSuggestion.avg.toLocaleString(), hitRate: goalSuggestion.hitRate, suggested: goalSuggestion.suggested.toLocaleString() })}</Text>
+                    </View>
+                  ) : milestone.best ? (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>🌍</Text>
+                      <Text style={styles.tipText}>{t('steps.tipMilestone', { name: t(milestone.best.nameKey), km: Math.round(milestone.totalKm).toLocaleString() })}</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.tipRow}>
+                      <Text style={styles.tipEmoji}>📈</Text>
+                      <View style={[styles.skeletonBar, { width: '92%' }]} />
+                    </View>
+                  )}
+                  {/* Locked rows + CTA */}
+                  <TouchableOpacity onPress={() => setShowInsightsPaywall(true)}>
+                    {['😴', '🌍'].map((icon, i) => (
+                      <View key={`locked-${i}`} style={styles.tipRow}>
+                        <Text style={styles.tipEmoji}>{icon}</Text>
+                        <View style={[styles.skeletonBar, { width: `${[68, 80][i]}%` }]} />
+                      </View>
+                    ))}
+                    <Text style={[styles.emptyText, { paddingTop: 12, paddingBottom: 0 }]}>{t('steps.unlockInsightsPro')}</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </View>
-            </ProLock>
 
             {/* ── This Week sections — only meaningful for the current real month ── */}
             {isCurrentMonth && (
