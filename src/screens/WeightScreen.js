@@ -1189,55 +1189,39 @@ export default function WeightScreen({ embedded = false } = {}) {
                 <View style={styles.proBadge}><Text style={styles.proBadgeText}>{t('weight.proLabel')}</Text></View>
               </View>
 
+              {/* Stat tiles — always visible, values hidden when locked */}
+              <View style={styles.tileRow}>
+                <View style={styles.tile}>
+                  <Text style={styles.tileVal}>{hasAccess ? weightConsistency.longestStreak : '●●'}</Text>
+                  <Text style={styles.tileLbl}>{t('weight.bestStreakLabel')}</Text>
+                </View>
+                <View style={styles.tileColDivider} />
+                <View style={styles.tile}>
+                  <Text style={styles.tileVal}>{hasAccess ? `${weightConsistency.consistencyPct}%` : '●●%'}</Text>
+                  <Text style={styles.tileLbl}>{t('weight.eightWkConsistencyLabel')}</Text>
+                </View>
+                <View style={styles.tileColDivider} />
+                <View style={styles.tile}>
+                  <Text style={styles.tileVal}>{hasAccess ? (weightConsistency.volatility != null ? `±${toDisp(weightConsistency.volatility, unit).toFixed(1)}` : '—') : '±●.●'}</Text>
+                  <Text style={styles.tileLbl}>{t('weight.volatilityWithUnitLabel', { unit: unit.toUpperCase() })}</Text>
+                </View>
+              </View>
+
               {hasAccess ? (
-                <>
-                  <View style={styles.tileRow}>
-                    <View style={styles.tile}>
-                      <Text style={styles.tileVal}>{weightConsistency.longestStreak}</Text>
-                      <Text style={styles.tileLbl}>{t('weight.bestStreakLabel')}</Text>
-                    </View>
-                    <View style={styles.tileColDivider} />
-                    <View style={styles.tile}>
-                      <Text style={styles.tileVal}>{weightConsistency.consistencyPct}%</Text>
-                      <Text style={styles.tileLbl}>{t('weight.eightWkConsistencyLabel')}</Text>
-                    </View>
-                    <View style={styles.tileColDivider} />
-                    <View style={styles.tile}>
-                      <Text style={styles.tileVal}>{weightConsistency.volatility != null ? `±${toDisp(weightConsistency.volatility, unit).toFixed(1)}` : '—'}</Text>
-                      <Text style={styles.tileLbl}>{t('weight.volatilityWithUnitLabel', { unit: unit.toUpperCase() })}</Text>
-                    </View>
+                weightInsights.length > 0 && (
+                  <View style={styles.insightsList}>
+                    {weightInsights.map((ins, i) => (
+                      <View key={i} style={styles.insightRow}>
+                        <Text style={styles.insightIcon}>{ins.icon}</Text>
+                        <Text style={styles.insightText}>
+                          {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                  {weightInsights.length > 0 && (
-                    <View style={styles.insightsList}>
-                      {weightInsights.map((ins, i) => (
-                        <View key={i} style={styles.insightRow}>
-                          <Text style={styles.insightIcon}>{ins.icon}</Text>
-                          <Text style={styles.insightText}>
-                            {ins.text}<Text style={styles.insightBold}>{ins.bold}</Text>{ins.rest}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </>
+                )
               ) : (
                 <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
-                  <View style={styles.tileRow}>
-                    <View style={styles.tile}>
-                      <Text style={styles.tileVal}>●●</Text>
-                      <Text style={styles.tileLbl}>{t('weight.bestStreakLabel')}</Text>
-                    </View>
-                    <View style={styles.tileColDivider} />
-                    <View style={styles.tile}>
-                      <Text style={styles.tileVal}>●●%</Text>
-                      <Text style={styles.tileLbl}>{t('weight.eightWkConsistencyLabel')}</Text>
-                    </View>
-                    <View style={styles.tileColDivider} />
-                    <View style={styles.tile}>
-                      <Text style={styles.tileVal}>±●.●</Text>
-                      <Text style={styles.tileLbl}>{t('weight.volatilityLabel')}</Text>
-                    </View>
-                  </View>
                   <View style={styles.insightsList}>
                     {weightInsights.slice(0, 1).map((ins, i) => (
                       <View key={`real-${i}`} style={styles.insightRow}>
