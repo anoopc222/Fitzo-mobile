@@ -53,11 +53,26 @@ export default function UpdateBanner() {
 
   async function checkForUpdate() {
     try {
-      // Check if banner was recently snoozed
-      const snoozedAt = await AsyncStorage.getItem(SNOOZE_KEY);
-      if (snoozedAt) {
-        const hours = (Date.now() - Number(snoozedAt)) / 3_600_000;
-        if (hours < SNOOZE_HOURS) return;
+      // Resolve installed version from multiple sources (varies by build type)
+      const installedVersion =
+        Constants.expoConfig?.version ||
+        Constants.manifest?.version ||
+        Constants.manifest2?.extra?.expoClient?.version ||
+        '0.0.0';
+
+      // Check if banner was recently snoozed for THIS installed version
+      const snoozeRaw = await AsyncStorage.getItem(SNOOZE_KEY);
+      if (snoozeRaw) {
+        try {
+          const { ts, version } = JSON.parse(snoozeRaw);
+          // Only honour snooze if it was for the same installed version
+          if (version === installedVersion) {
+            const hours = (Date.now() - ts) / 3_600_000;
+            if (hours < SNOOZE_HOURS) return;
+          }
+        } catch (_) {
+          // legacy string snooze — ignore and proceed
+        }
       }
 
       // 1. OTA update check (EAS standalone builds only)
@@ -72,13 +87,13 @@ export default function UpdateBanner() {
 
       // 2. Play Store version check via Supabase remote config
       if (Platform.OS === 'android') {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('app_config')
           .select('value')
           .eq('key', 'latest_android_version')
           .single();
+        if (error) return;
         const latestVersion = data?.value;
-        const installedVersion = Constants.expoConfig?.version ?? '0.0.0';
         if (latestVersion && semverGt(latestVersion, installedVersion)) {
           setIsOTA(false);
           show();
@@ -120,7 +135,12 @@ export default function UpdateBanner() {
   }
 
   async function handleDismiss() {
-    await AsyncStorage.setItem(SNOOZE_KEY, String(Date.now()));
+    const installedVersion =
+      Constants.expoConfig?.version ||
+      Constants.manifest?.version ||
+      Constants.manifest2?.extra?.expoClient?.version ||
+      '0.0.0';
+    await AsyncStorage.setItem(SNOOZE_KEY, JSON.stringify({ ts: Date.now(), version: installedVersion }));
     hide();
   }
 
