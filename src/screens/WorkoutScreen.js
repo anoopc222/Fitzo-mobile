@@ -1221,13 +1221,15 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             </View>
           )}
 
-          {exercises.map(ex => {
+          {exercises.map((ex, exIdx) => {
             const isPB = pbSet.has((ex.exercise_name ?? '').toLowerCase());
             const isExpanded = expandedIds.has(ex.id);
             const sortedSets = (ex.sets ?? []).slice().sort((a, b) => a.set_number - b.set_number);
             const bestIdx = getBestSetIndex(sortedSets);
             const exMuscles = getExerciseMuscles(ex.exercise_name);
             const exStyle = getWorkoutStyle(ex.exercise_name, colors);
+            const isInGroup = !!ex.group_id;
+            const isFirstInGroup = isInGroup && (exIdx === 0 || exercises[exIdx - 1].group_id !== ex.group_id);
 
             if (isCardio) {
               const exMin = sortedSets.reduce((s, st) => s + (st.duration_min ?? 0), 0);
@@ -1255,7 +1257,15 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
             }
 
             return (
-              <TouchableOpacity key={ex.id} style={dS.exCard} onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
+              <View key={ex.id}>
+              {isFirstInGroup && (
+                <View style={dS.supersetLabel}>
+                  <View style={dS.supersetDot} />
+                  <Text style={dS.supersetLabelText}>SUPERSET</Text>
+                  <View style={dS.supersetDot} />
+                </View>
+              )}
+              <TouchableOpacity style={[dS.exCard, isInGroup && { borderLeftWidth: 3, borderLeftColor: colors.purple }]} onPress={() => toggleEx(ex.id)} activeOpacity={0.85}>
                 {/* Exercise header */}
                 <View style={dS.exCardHeader}>
                   <View style={[dS.exIcon, { backgroundColor: exStyle.iconBg, borderColor: exStyle.cardBorder }]}>
@@ -1327,6 +1337,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                   <Text style={{ fontSize: typography.xs, color: colors.textDim, padding: 8 }}>{t('workout.noSetsRecorded')}</Text>
                 )}
               </TouchableOpacity>
+              </View>
             );
           })}
 
@@ -1843,8 +1854,22 @@ function EditSessionModal({
 
               {exercises.map((ex, exIdx) => {
                 const isActive = activeExIdx === exIdx;
+                const isInGroup = !!ex.group_id;
+                const isFirstInGroup = isInGroup && (exIdx === 0 || exercises[exIdx - 1].group_id !== ex.group_id);
+                const isLastInGroup  = isInGroup && (exIdx === exercises.length - 1 || exercises[exIdx + 1].group_id !== ex.group_id);
                 return (
-                  <View key={ex._key} ref={r => { cardRefs.current[exIdx] = r; }} style={[eS.exCard, isActive && eS.exCardActive]}>
+                  <View key={ex._key} style={[isInGroup && !isFirstInGroup && { marginTop: -4 }]}>
+                  {isFirstInGroup && (
+                    <View style={eS.supersetLabel}>
+                      <View style={eS.supersetDot} />
+                      <Text style={eS.supersetLabelText}>SUPERSET</Text>
+                      <View style={eS.supersetDot} />
+                    </View>
+                  )}
+                  <View ref={r => { cardRefs.current[exIdx] = r; }} style={[
+                    eS.exCard, isActive && eS.exCardActive,
+                    isInGroup && { borderLeftWidth: 3, borderLeftColor: colors.purple, marginLeft: 0 },
+                  ]}>
                     <TouchableOpacity style={eS.exCardHeader}
                       onPress={() => {
                         const next = isActive ? null : exIdx;
@@ -1910,10 +1935,12 @@ function EditSessionModal({
                               </TouchableOpacity>
                             )}
                             <TouchableOpacity
-                              style={[eS.swapBtn, ex.group_id && { backgroundColor: colors.purple + '33' }]}
+                              style={[eS.supersetToggleBtn, ex.group_id && eS.supersetToggleBtnActive]}
                               onPress={() => hasAccess ? toggleExerciseGroup(exIdx) : onOpenToolsPaywall?.()}
                             >
-                              <Text style={eS.swapBtnText}>{hasAccess ? '🔗' : '🔒'}</Text>
+                              <Text style={[eS.supersetToggleBtnText, ex.group_id && eS.supersetToggleBtnTextActive]}>
+                                {hasAccess ? (ex.group_id ? '🔗 Superset ✓' : '🔗 Superset') : '🔒 Superset'}
+                              </Text>
                             </TouchableOpacity>
                           </View>
                         )}
@@ -2184,6 +2211,7 @@ function EditSessionModal({
                         </View>
                       </View>
                     )}
+                  </View>
                   </View>
                 );
               })}
@@ -3706,6 +3734,15 @@ const createDS = (colors) => StyleSheet.create({
   toggleKnob: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.textDim },
   toggleKnobOn: { backgroundColor: colors.bg, alignSelf: 'flex-end' },
 
+  supersetLabel: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, paddingHorizontal: 4,
+  },
+  supersetDot: { flex: 1, height: 1, backgroundColor: colors.purple + '55' },
+  supersetLabelText: {
+    fontSize: 9, fontWeight: weight.bold, color: colors.purple,
+    letterSpacing: 1.2, textTransform: 'uppercase',
+  },
+
   exCard: {
     backgroundColor: colors.card, borderRadius: 12, padding: 10,
     marginBottom: 8, borderWidth: 1, borderColor: colors.border,
@@ -3971,6 +4008,25 @@ const createES = (colors) => StyleSheet.create({
     borderRadius: 8, padding: 6, marginBottom: 6,
   },
   groupHintText: { fontSize: 10, color: colors.purple, fontWeight: weight.semibold },
+
+  supersetLabel: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, paddingHorizontal: 4,
+  },
+  supersetDot: { flex: 1, height: 1, backgroundColor: colors.purple + '55' },
+  supersetLabelText: {
+    fontSize: 9, fontWeight: weight.bold, color: colors.purple,
+    letterSpacing: 1.2, textTransform: 'uppercase',
+  },
+  supersetToggleBtn: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.purple + '55',
+    backgroundColor: colors.purple + '11',
+  },
+  supersetToggleBtnActive: {
+    backgroundColor: colors.purple + '33', borderColor: colors.purple,
+  },
+  supersetToggleBtnText: { fontSize: 11, color: colors.purple, fontWeight: weight.semibold },
+  supersetToggleBtnTextActive: { color: colors.purple },
 
   addSetRow: { flexDirection: 'row', gap: 8, marginTop: 2 },
   restBtn: {
