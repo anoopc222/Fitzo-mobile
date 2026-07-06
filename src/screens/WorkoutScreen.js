@@ -1679,6 +1679,17 @@ function EditSessionModal({
     else if (activeExIdx > idx) setActiveExIdx(activeExIdx - 1);
   };
 
+  const moveExercise = (idx, dir) => {
+    const next = idx + dir;
+    setExercises(prev => {
+      if (next < 0 || next >= prev.length) return prev;
+      const arr = [...prev];
+      [arr[idx], arr[next]] = [arr[next], arr[idx]];
+      return arr;
+    });
+    setActiveExIdx(next);
+  };
+
   const updateExName = (idx, val) =>
     setExercises(prev => prev.map((ex, i) => i === idx ? { ...ex, name: val } : ex));
 
@@ -1893,6 +1904,22 @@ function EditSessionModal({
                           ? t('workout.entryCount', { count: (ex.sets ?? []).length })
                           : t('workout.setsCount', { count: (ex.sets ?? []).length })}
                       </Text>
+                      <View style={eS.exReorderBtns}>
+                        <TouchableOpacity
+                          onPress={(e) => { e.stopPropagation?.(); moveExercise(exIdx, -1); }}
+                          disabled={exIdx === 0}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <Ionicons name="chevron-up" size={14} color={exIdx === 0 ? colors.textDim + '44' : colors.textDim} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={(e) => { e.stopPropagation?.(); moveExercise(exIdx, 1); }}
+                          disabled={exIdx === exercises.length - 1}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <Ionicons name="chevron-down" size={14} color={exIdx === exercises.length - 1 ? colors.textDim + '44' : colors.textDim} />
+                        </TouchableOpacity>
+                      </View>
                       <TouchableOpacity onPress={() => removeExercise(exIdx)} style={eS.exDeleteBtn}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                         <View style={eS.exDeleteX}>
@@ -1919,9 +1946,6 @@ function EditSessionModal({
                           </ScrollView>
                         ) : (
                           <View style={eS.exNameRow}>
-                            <View style={eS.hashIcon}>
-                              <Text style={eS.hashText}>#</Text>
-                            </View>
                             <TextInput
                               style={eS.exNameInput}
                               value={ex.name}
@@ -3892,6 +3916,7 @@ const createES = (colors) => StyleSheet.create({
   exCardName: { flex: 1, fontSize: typography.sm, fontWeight: weight.semibold, color: colors.textMuted },
   exCardNameActive: { color: colors.text },
   exSetsCount: { fontSize: typography.xs, color: colors.textDim },
+  exReorderBtns: { flexDirection: 'column', alignItems: 'center', gap: 1, paddingHorizontal: 2 },
   exDeleteBtn: { padding: 4 },
   exDeleteX: {
     width: 20, height: 20, borderRadius: 10, backgroundColor: colors.danger + '1f',
