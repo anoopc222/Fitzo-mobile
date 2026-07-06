@@ -239,43 +239,6 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
       {!embedded && <ScreenHeader title={t('progress.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />}
       <Text style={styles.subtitle}>{t('progress.exercisesTracked', { count: grouped.length })}</Text>
 
-      {grouped.length > 0 && (
-        <View style={styles.overviewRow}>
-          <View style={styles.overviewCard}>
-            <Text style={styles.overviewValue}>{overview.totalVolumeThisMonth.toLocaleString()}</Text>
-            <Text style={styles.overviewLabel}>{t('progress.volumeThisMonth')}</Text>
-          </View>
-          <View style={styles.overviewCard}>
-            <Text style={styles.overviewValue}>{overview.prsThisMonth}</Text>
-            <Text style={styles.overviewLabel}>{t('progress.prsThisMonth')}</Text>
-          </View>
-          <View style={styles.overviewCard}>
-            <Text style={[styles.overviewValue, styles.overviewValueSmall]} numberOfLines={1}>
-              {overview.mostImproved ? overview.mostImproved.name : '—'}
-            </Text>
-            <Text style={styles.overviewLabel}>{t('progress.mostImproved')}</Text>
-          </View>
-        </View>
-      )}
-
-      {overview.recentPRs.length > 0 && (
-        <View style={styles.recentPrsSection}>
-          <Text style={styles.recentPrsTitle}>{t('progress.recentPrs')}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentPrsContent}>
-            {overview.recentPRs.map((p, i) => (
-              <View key={i} style={styles.recentPrCard}>
-                <Ionicons name="trophy" size={12} color={colors.warning} />
-                <Text style={styles.recentPrName} numberOfLines={1}>{p.name}</Text>
-                <Text style={styles.recentPrValue}>
-                  {p.type === 'weight' ? t('progress.prBadge', { kg: p.value }) : t('progress.kgVolLabel', { value: p.value.toLocaleString() })}
-                </Text>
-                <Text style={styles.recentPrDate}>{new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={16} color={colors.textDim} />
         <TextInput
