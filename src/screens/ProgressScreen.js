@@ -417,12 +417,14 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
                         {new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </Text>
                       <View style={styles.histSets}>
-                        {s.sets.slice(0, 5).map((st, j) => (
+                        {s.sets.filter(st => st.weight_kg > 0 || st.reps > 0).slice(0, 5).map((st, j) => (
                           <Text key={j} style={styles.histSet}>
-                            {st.weight_kg}×{st.reps}{st.rpe ? `@${st.rpe}` : ''}
+                            {st.weight_kg ?? 0}×{st.reps ?? 0}{st.rpe ? `@${st.rpe}` : ''}
                           </Text>
                         ))}
-                        {s.sets.length > 5 && <Text style={styles.histMoreSets}>{t('progress.moreSets', { count: s.sets.length - 5 })}</Text>}
+                        {s.sets.filter(st => st.weight_kg > 0 || st.reps > 0).length > 5 && (
+                          <Text style={styles.histMoreSets}>{t('progress.moreSets', { count: s.sets.filter(st => st.weight_kg > 0 || st.reps > 0).length - 5 })}</Text>
+                        )}
                       </View>
                       <Text style={styles.histVol}>{s.volume.toLocaleString()}</Text>
                     </View>
@@ -464,8 +466,8 @@ const createStyles = (colors) => StyleSheet.create({
   recentPrValue: { fontSize: 11, color: colors.warning, fontWeight: weight.bold },
   recentPrDate: { fontSize: 9, color: colors.textDim },
 
-  sortRow: { flexGrow: 0, marginTop: 10, marginBottom: 4 },
-  sortRowContent: { paddingHorizontal: 16, gap: 8 },
+  sortRow: { marginTop: 10, marginBottom: 4 },
+  sortRowContent: { paddingHorizontal: 16, paddingRight: 24, gap: 8 },
   sortChip: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14,
     backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border,
