@@ -412,8 +412,8 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
 
                   <Text style={styles.histSectionLabel}>{t('progress.lastSessions', { count: Math.min(ex.sessions.length, 10) })}</Text>
                   {ex.sessions.slice(0, 10).map((s, i) => {
-                    const validSets = s.sets.filter(st => (st.reps ?? 0) > 0);
-                    if (validSets.length === 0 && s.volume === 0) return null;
+                    const validSets = s.sets.filter(st => (st.reps ?? 0) > 0 && (st.weight_kg ?? 0) > 0);
+                    if (validSets.length === 0) return null;
                     return (
                       <View key={i} style={styles.histSessionRow}>
                         <Text style={styles.histDate}>
@@ -422,7 +422,7 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
                         <View style={styles.histSets}>
                           {validSets.slice(0, 5).map((st, j) => (
                             <Text key={j} style={styles.histSet}>
-                              {(st.weight_kg ?? 0) > 0 ? st.weight_kg : 'BW'}×{st.reps}{st.rpe ? `@${st.rpe}` : ''}
+                              {st.weight_kg}×{st.reps}{st.rpe ? `@${st.rpe}` : ''}
                             </Text>
                           ))}
                           {validSets.length > 5 && (
