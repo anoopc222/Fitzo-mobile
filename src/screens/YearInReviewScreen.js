@@ -553,9 +553,6 @@ export default function YearInReviewScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>YEAR-OVER-YEAR COMPARISON</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           <View style={[s.yoyRow, { backgroundColor: colors.dim ?? colors.border }]}>
             <Text style={[s.yoyCell, s.yoyLabelCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Metric</Text>
@@ -603,9 +600,6 @@ export default function YearInReviewScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>MONTHLY BREAKDOWN</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           <View style={[s.tableRow, { backgroundColor: colors.dim ?? colors.border }]}>
             <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Month</Text>
@@ -660,9 +654,6 @@ export default function YearInReviewScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>ACTIVITY SPLIT</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           {hasAccess ? (
             totalActivity > 0 ? (
@@ -731,9 +722,6 @@ export default function YearInReviewScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>NUTRITION SUMMARY</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           {hasAccess ? (
             data.nutritionDays > 0 ? (
@@ -795,8 +783,6 @@ export default function YearInReviewScreen({ navigation }) {
                   </TouchableOpacity>
                 ))}
               </View>
-              <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-                <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
               </View>
             </View>
           </View>
@@ -845,9 +831,6 @@ export default function YearInReviewScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>SLEEP TREND</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           {hasAccess ? (
             data.sleepDays > 0 ? (
@@ -905,9 +888,6 @@ export default function YearInReviewScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>MOOD YEAR SUMMARY</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           {hasAccess ? (
             data.moodDays > 0 ? (
@@ -968,8 +948,6 @@ export default function YearInReviewScreen({ navigation }) {
             <Text style={s.cardTitle}>ACHIEVEMENTS</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {hasAccess && <Text style={[s.achieveCount, { color: colors.textDim }]}>{achievements.length} / 14 unlocked</Text>}
-              <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-                <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
               </View>
             </View>
           </View>
