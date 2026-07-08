@@ -947,7 +947,6 @@ export default function YearInReviewScreen({ navigation }) {
             <Text style={s.cardTitle}>ACHIEVEMENTS</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {hasAccess && <Text style={[s.achieveCount, { color: colors.textDim }]}>{achievements.length} / 14 unlocked</Text>}
-              </View>
             </View>
           </View>
           {hasAccess ? (
