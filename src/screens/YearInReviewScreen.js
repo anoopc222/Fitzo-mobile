@@ -958,10 +958,9 @@ export default function YearInReviewScreen({ navigation }) {
             ) : (
               <View style={s.achieveGrid}>
                 {achievements.map((a, i) => (
-                  <View key={i} style={[s.achieveBadge, { backgroundColor: colors.dim ?? colors.border + '80' }]}>
-                    <Text style={s.achieveEmoji}>{a.emoji}</Text>
-                    <Text style={[s.achieveLabel, { color: colors.accent }]}>{a.label}</Text>
-                    <Text style={[s.achieveDesc, { color: colors.textDim }]}>{a.desc}</Text>
+                  <View key={i} style={[s.achieveChip, { backgroundColor: colors.dim ?? colors.border + '80' }]}>
+                    <Text style={s.achieveChipEmoji}>{a.emoji}</Text>
+                    <Text style={[s.achieveChipLabel, { color: colors.accent }]} numberOfLines={1}>{a.label}</Text>
                   </View>
                 ))}
               </View>
@@ -970,10 +969,9 @@ export default function YearInReviewScreen({ navigation }) {
             <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
               <View style={s.achieveGrid}>
                 {['🏋️','🔥','📅','⭐','💪','🌍'].map((emoji, i) => (
-                  <View key={i} style={[s.achieveBadge, { backgroundColor: colors.dim ?? colors.border + '80' }]}>
-                    <Text style={s.achieveEmoji}>{emoji}</Text>
-                    <View style={{ height: 10, borderRadius: 5, backgroundColor: colors.border, marginVertical: 3, width: '80%' }} />
-                    <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.border + '80', width: '60%' }} />
+                  <View key={i} style={[s.achieveChip, { backgroundColor: colors.dim ?? colors.border + '80' }]}>
+                    <Text style={s.achieveChipEmoji}>{emoji}</Text>
+                    <View style={{ height: 9, borderRadius: 5, backgroundColor: colors.border, width: 60 }} />
                   </View>
                 ))}
               </View>
@@ -1089,11 +1087,10 @@ const styles = (colors) => StyleSheet.create({
   // achievements
   achieveHeader:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   achieveCount:       { fontSize: 11, fontFamily: fontFamily.body },
-  achieveGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  achieveBadge:       { width: '48%', flexGrow: 1, borderRadius: 12, padding: 10, alignItems: 'center', gap: 4 },
-  achieveEmoji:       { fontSize: 24 },
-  achieveLabel:       { fontSize: 11, fontFamily: fontFamily.bodyBold, textAlign: 'center' },
-  achieveDesc:        { fontSize: 10, fontFamily: fontFamily.body, textAlign: 'center', lineHeight: 14 },
+  achieveGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  achieveChip:        { flexDirection: 'row', alignItems: 'center', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, gap: 5 },
+  achieveChipEmoji:   { fontSize: 14 },
+  achieveChipLabel:   { fontSize: 11, fontFamily: fontFamily.bodyBold },
 
   // PR rows
   prRow:              { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
