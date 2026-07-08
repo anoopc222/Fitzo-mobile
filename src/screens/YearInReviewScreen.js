@@ -783,7 +783,6 @@ export default function YearInReviewScreen({ navigation }) {
                   </TouchableOpacity>
                 ))}
               </View>
-              </View>
             </View>
           </View>
           {hasAccess ? (
