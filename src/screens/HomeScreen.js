@@ -17,7 +17,7 @@ const CAL_PAD   = 16;  // horizontal padding inside the calendar section
 const CAL_GAP   = 3;   // gap between cells
 const MODAL_W   = Math.min(SCREEN_W - 40, 420) - 2; // overlay padding(20*2) + popup maxWidth - popup border(1*2)
 const CAL_CELL  = Math.floor((MODAL_W - CAL_PAD * 2 - CAL_GAP * 6) / 7);
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -1151,6 +1151,14 @@ export default function HomeScreen() {
     queryFn: () => fetchHome(user.id),
     enabled: !!user?.id,
   });
+
+  // Refetch whenever the user navigates back to the Home tab so stats
+  // logged on other screens (Steps, Weight, Sleep, etc.) are reflected.
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) refetch();
+    }, [user?.id, refetch])
+  );
 
   const weightQuickMut = useMutation({
     mutationFn: (kg) => quickLogWeight(user.id, kg),
