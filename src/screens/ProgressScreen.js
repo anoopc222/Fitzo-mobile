@@ -411,24 +411,28 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
                   </View>
 
                   <Text style={styles.histSectionLabel}>{t('progress.lastSessions', { count: Math.min(ex.sessions.length, 10) })}</Text>
-                  {ex.sessions.slice(0, 10).map((s, i) => (
-                    <View key={i} style={styles.histSessionRow}>
-                      <Text style={styles.histDate}>
-                        {new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </Text>
-                      <View style={styles.histSets}>
-                        {s.sets.filter(st => (st.reps ?? 0) > 0).slice(0, 5).map((st, j) => (
-                          <Text key={j} style={styles.histSet}>
-                            {st.weight_kg ?? 0}×{st.reps}{st.rpe ? `@${st.rpe}` : ''}
-                          </Text>
-                        ))}
-                        {s.sets.filter(st => (st.reps ?? 0) > 0).length > 5 && (
-                          <Text style={styles.histMoreSets}>{t('progress.moreSets', { count: s.sets.filter(st => (st.reps ?? 0) > 0).length - 5 })}</Text>
-                        )}
+                  {ex.sessions.slice(0, 10).map((s, i) => {
+                    const validSets = s.sets.filter(st => (st.reps ?? 0) > 0);
+                    if (validSets.length === 0 && s.volume === 0) return null;
+                    return (
+                      <View key={i} style={styles.histSessionRow}>
+                        <Text style={styles.histDate}>
+                          {new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </Text>
+                        <View style={styles.histSets}>
+                          {validSets.slice(0, 5).map((st, j) => (
+                            <Text key={j} style={styles.histSet}>
+                              {(st.weight_kg ?? 0) > 0 ? st.weight_kg : 'BW'}×{st.reps}{st.rpe ? `@${st.rpe}` : ''}
+                            </Text>
+                          ))}
+                          {validSets.length > 5 && (
+                            <Text style={styles.histMoreSets}>{t('progress.moreSets', { count: validSets.length - 5 })}</Text>
+                          )}
+                        </View>
+                        <Text style={styles.histVol}>{s.volume.toLocaleString()}</Text>
                       </View>
-                      <Text style={styles.histVol}>{s.volume.toLocaleString()}</Text>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               )}
             </View>
