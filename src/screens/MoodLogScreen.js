@@ -545,9 +545,6 @@ export default function MoodLogScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>THIS WEEK</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           {hasAccess && weeklySummary ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -687,9 +684,6 @@ export default function MoodLogScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>MOOD × SLEEP</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           {hasAccess && sleepCorr ? (
             <>
@@ -728,9 +722,6 @@ export default function MoodLogScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>MOOD × WORKOUT</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           {hasAccess && workoutCorr ? (
             <>
@@ -772,9 +763,6 @@ export default function MoodLogScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>MOOD × STEPS</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
-            </View>
           </View>
           {hasAccess && stepsCorr ? (
             <>
