@@ -333,6 +333,7 @@ export default function YearInReviewScreen({ navigation }) {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showPaywall, setShowPaywall]   = useState(false);
+  const [volUnit, setVolUnit]           = useState('kg'); // 'kg' | 'lbs'
 
   const { data, isLoading } = useQuery({
     queryKey: ['year-in-review', user?.id, selectedYear],
@@ -784,31 +785,48 @@ export default function YearInReviewScreen({ navigation }) {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={s.cardTitle}>TOP EXERCISES BY VOLUME</Text>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {/* kg / lbs toggle */}
+              <View style={{ flexDirection: 'row', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
+                {['kg', 'lbs'].map(u => (
+                  <TouchableOpacity key={u} onPress={() => setVolUnit(u)}
+                    style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: volUnit === u ? colors.accent : 'transparent' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: volUnit === u ? '#000' : colors.textMuted }}>{u}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={{ backgroundColor: colors.accent, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 }}>
+                <Text style={{ fontSize: 8, fontWeight: '800', color: '#000', letterSpacing: 1 }}>PRO</Text>
+              </View>
             </View>
           </View>
           {hasAccess ? (
             topVolumeExercises.length > 0 ? (
-              topVolumeExercises.map((ex, i) => (
-                <View key={i} style={[s.prRow, i < topVolumeExercises.length - 1 && s.prRowBorder]}>
-                  <Text style={s.prRank}>#{i + 1}</Text>
-                  <Text style={[s.prName, i === 0 && { color: colors.accent }]} numberOfLines={1}>{ex.name}</Text>
-                  <Text style={[s.prKg, { color: i === 0 ? colors.accent : colors.text }]}>{fmtVol(ex.totalKg)} kg</Text>
-                </View>
-              ))
+              topVolumeExercises.map((ex, i) => {
+                const display = volUnit === 'lbs' ? Math.round(ex.totalKg * 2.20462) : ex.totalKg;
+                return (
+                  <View key={i} style={[s.prRow, i < topVolumeExercises.length - 1 && s.prRowBorder]}>
+                    <Text style={s.prRank}>#{i + 1}</Text>
+                    <Text style={[s.prName, i === 0 && { color: colors.accent }]} numberOfLines={1}>{ex.name}</Text>
+                    <Text style={[s.prKg, { color: i === 0 ? colors.accent : colors.text }]}>{fmtVol(display)} {volUnit}</Text>
+                  </View>
+                );
+              })
             ) : (
               <Text style={s.emptyText}>No exercises logged</Text>
             )
           ) : (
             <>
-              {topVolumeExercises.slice(0, 2).map((ex, i) => (
-                <View key={i} style={[s.prRow, s.prRowBorder]}>
-                  <Text style={s.prRank}>#{i + 1}</Text>
-                  <Text style={[s.prName, i === 0 && { color: colors.accent }]} numberOfLines={1}>{ex.name}</Text>
-                  <Text style={[s.prKg, { color: i === 0 ? colors.accent : colors.text }]}>{fmtVol(ex.totalKg)} kg</Text>
-                </View>
-              ))}
+              {topVolumeExercises.slice(0, 2).map((ex, i) => {
+                const display = volUnit === 'lbs' ? Math.round(ex.totalKg * 2.20462) : ex.totalKg;
+                return (
+                  <View key={i} style={[s.prRow, s.prRowBorder]}>
+                    <Text style={s.prRank}>#{i + 1}</Text>
+                    <Text style={[s.prName, i === 0 && { color: colors.accent }]} numberOfLines={1}>{ex.name}</Text>
+                    <Text style={[s.prKg, { color: i === 0 ? colors.accent : colors.text }]}>{fmtVol(display)} {volUnit}</Text>
+                  </View>
+                );
+              })}
               <TouchableOpacity activeOpacity={0.85} onPress={() => setShowPaywall(true)}>
                 {[3,4,5].map(i => (
                   <View key={i} style={[s.prRow, i < 5 && s.prRowBorder]}>
