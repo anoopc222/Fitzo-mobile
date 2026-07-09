@@ -1521,7 +1521,7 @@ const createEhS = (colors) => StyleSheet.create({
 });
 
 // ─── Plans Modal ─────────────────────────────────────────────────────────────
-function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onSelect, onSaveTemplate }) {
+function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onSelect, onSaveTemplate, allSessions }) {
   const { colors } = useTheme();
   const [newPlanName, setNewPlanName] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -1552,8 +1552,21 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onS
   };
 
   const openTemplate = (plan) => {
-    const exs = Array.isArray(plan.template_exercises) ? plan.template_exercises : [];
-    setTemplateExercises(exs.map(e => (typeof e === 'string' ? e : e.name)));
+    let exs = [];
+    if (Array.isArray(plan.template_exercises) && plan.template_exercises.length > 0) {
+      exs = plan.template_exercises.map(e => (typeof e === 'string' ? e : e.name));
+    } else {
+      // fall back to exercises from last session with this plan name
+      const match = (allSessions ?? [])
+        .filter(s => (s.notes ?? '').toLowerCase() === plan.name.toLowerCase() && (s.workout_exercises ?? []).length > 0)
+        .slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+      if (match) {
+        exs = (match.workout_exercises ?? [])
+          .slice().sort((a, b) => a.order_index - b.order_index)
+          .map(ex => ex.exercise_name);
+      }
+    }
+    setTemplateExercises(exs);
     setTemplatePlanId(plan.id);
     setNewExName('');
   };
@@ -3997,6 +4010,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onDelete={(planId) => deletePlanMut.mutate(planId)}
         onSelect={(plan) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id }); }}
         onSaveTemplate={(planId, exercises) => savePlanTemplateMut.mutate({ planId, exercises })}
+        allSessions={allSessions}
       />
 
       <EditSessionModal
