@@ -2089,9 +2089,9 @@ function EditSessionModal({
               />
             </View>
             <View style={eS.fieldCol}>
-              <Text style={eS.fieldLabel}>{t('workout.type')}</Text>
-              <TextInput style={eS.fieldInput} value={name} onChangeText={setName}
-                placeholder={t('workout.egChestAndBack')} placeholderTextColor={colors.textDim} />
+              <Text style={eS.fieldLabel}>WORKOUT PLAN</Text>
+              <TextInput style={eS.fieldInput} value={name} onChangeText={(v) => { setName(v); setSelectedPlanId(null); }}
+                placeholder="Pick a plan above or type a new one" placeholderTextColor={colors.textDim} />
             </View>
           </View>
 
