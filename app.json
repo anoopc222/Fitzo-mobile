@@ -47,6 +47,13 @@
       ],
       "expo-localization"
     ],
+    "updates": {
+      "url": "https://u.expo.dev/2f23cd2b-840c-441c-a590-34b3af3d30fb",
+      "fallbackToCacheTimeout": 3000
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "extra": {
       "eas": {
         "projectId": "2f23cd2b-840c-441c-a590-34b3af3d30fb"

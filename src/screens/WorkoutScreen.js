@@ -1541,106 +1541,94 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onS
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={onClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={{
-          backgroundColor: colors.card ?? colors.bgCard,
-          borderTopLeftRadius: 24, borderTopRightRadius: 24,
-          paddingTop: 16, paddingBottom: 36, maxHeight: '80%',
-        }}>
-          {/* Handle */}
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 16 }} />
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>MY WORKOUT PLANS</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Ionicons name="close" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>MY WORKOUT PLANS</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
+      {/* Create new plan */}
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+        <TextInput
+          style={{
+            flex: 1, backgroundColor: colors.surface,
+            borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
+            fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border,
+          }}
+          placeholder="New plan name…"
+          placeholderTextColor={colors.textDim}
+          value={newPlanName}
+          onChangeText={setNewPlanName}
+          onSubmitEditing={handleCreate}
+          returnKeyType="done"
+        />
+        <TouchableOpacity
+          onPress={handleCreate}
+          style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: colors.accentText }}>Add</Text>
+        </TouchableOpacity>
+      </View>
 
-          {/* Create new plan */}
-          <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 16 }}>
-            <TextInput
-              style={{
-                flex: 1, backgroundColor: colors.surface ?? colors.border,
-                borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
-                fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border,
-              }}
-              placeholder="New plan name…"
-              placeholderTextColor={colors.textDim}
-              value={newPlanName}
-              onChangeText={setNewPlanName}
-              onSubmitEditing={handleCreate}
-              returnKeyType="done"
-            />
-            <TouchableOpacity
-              onPress={handleCreate}
-              style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, justifyContent: 'center' }}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#000' }}>Add</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Plans list */}
-          <ScrollView style={{ paddingHorizontal: 20 }} keyboardShouldPersistTaps="handled">
-            {plans.length === 0 && (
-              <Text style={{ color: colors.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 24 }}>
-                No plans yet. Add your first plan above.
-              </Text>
-            )}
-            {plans.map(plan => (
-              <View key={plan.id}>
-                {confirmDeleteId === plan.id ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13 }}>Delete "{plan.name}"?</Text>
-                    <TouchableOpacity onPress={() => { onDelete(plan.id); setConfirmDeleteId(null); }}
-                      style={{ backgroundColor: colors.danger + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-                      <Text style={{ color: colors.danger, fontSize: 12, fontWeight: '700' }}>Delete</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setConfirmDeleteId(null)}
-                      style={{ backgroundColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-                      <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700' }}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : editingId === plan.id ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    <TextInput
-                      style={{
-                        flex: 1, backgroundColor: colors.surface ?? colors.border,
-                        borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
-                        fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.accent,
-                      }}
-                      value={editingName}
-                      onChangeText={setEditingName}
-                      onSubmitEditing={submitEdit}
-                      autoFocus
-                      returnKeyType="done"
-                    />
-                    <TouchableOpacity onPress={submitEdit}
-                      style={{ backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#000' }}>Save</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    <TouchableOpacity style={{ flex: 1 }} onPress={() => onSelect && onSelect(plan)} activeOpacity={0.7}>
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{plan.name}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => startEdit(plan)} style={{ padding: 6 }}>
-                      <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setConfirmDeleteId(plan.id)} style={{ padding: 6, marginLeft: 4 }}>
-                      <Ionicons name="trash-outline" size={16} color={colors.danger ?? '#ef4444'} />
-                    </TouchableOpacity>
-                  </View>
-                )}
+      {/* Plans list */}
+      <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {plans.length === 0 && (
+          <Text style={{ color: colors.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 24 }}>
+            No plans yet. Add your first plan above.
+          </Text>
+        )}
+        {plans.map(plan => (
+          <View key={plan.id}>
+            {confirmDeleteId === plan.id ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13 }}>Delete "{plan.name}"?</Text>
+                <TouchableOpacity onPress={() => { onDelete(plan.id); setConfirmDeleteId(null); }}
+                  style={{ backgroundColor: colors.danger + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                  <Text style={{ color: colors.danger, fontSize: 12, fontWeight: '700' }}>Delete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setConfirmDeleteId(null)}
+                  style={{ backgroundColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700' }}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-            ))}
-            <View style={{ height: 20 }} />
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+            ) : editingId === plan.id ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <TextInput
+                  style={{
+                    flex: 1, backgroundColor: colors.surface,
+                    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
+                    fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.accent,
+                  }}
+                  value={editingName}
+                  onChangeText={setEditingName}
+                  onSubmitEditing={submitEdit}
+                  autoFocus
+                  returnKeyType="done"
+                />
+                <TouchableOpacity onPress={submitEdit}
+                  style={{ backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: colors.accentText }}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <TouchableOpacity style={{ flex: 1 }} onPress={() => onSelect && onSelect(plan)} activeOpacity={0.7}>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{plan.name}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => startEdit(plan)} style={{ padding: 6 }}>
+                  <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setConfirmDeleteId(plan.id)} style={{ padding: 6, marginLeft: 4 }}>
+                  <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ))}
+        <View style={{ height: 8 }} />
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
@@ -1881,6 +1869,9 @@ function EditSessionModal({
       .slice().sort((a, b) => a.order_index - b.order_index)
       .map(ex => ({ _key: tid(), name: ex.exercise_name, sets: [blankSet()] }));
     setExercises(exs);
+    setName(match.notes ?? '');
+    const planMatch = (plans ?? []).find(p => p.name.toLowerCase() === (match.notes ?? '').toLowerCase());
+    setSelectedPlanId(planMatch?.id ?? null);
   };
 
   const loadTemplate = (tpl) => {
@@ -2038,38 +2029,30 @@ function EditSessionModal({
             </TouchableOpacity>
           </View>
 
-          {/* Session type chips — only the selected chip is highlighted */}
+          {/* Single chips row: plans first (📋), then default/recent types */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             style={eS.typeScroll} contentContainerStyle={eS.typeRow}>
-            {allChips.map(t => {
-              const active = name.toLowerCase() === t.toLowerCase();
+            {(plans ?? []).map(p => {
+              const active = selectedPlanId === p.id;
               return (
-                <TouchableOpacity key={t}
+                <TouchableOpacity key={'plan-' + p.id}
                   style={[eS.typeChip, active && eS.typeChipActive]}
-                  onPress={() => setName(t)}>
-                  <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>
-                    {t}
-                  </Text>
+                  onPress={() => { setSelectedPlanId(active ? null : p.id); if (!active) setName(p.name); }}>
+                  <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>📋 {p.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            {allChips.map(chip => {
+              const active = !selectedPlanId && name.toLowerCase() === chip.toLowerCase();
+              return (
+                <TouchableOpacity key={'chip-' + chip}
+                  style={[eS.typeChip, active && eS.typeChipActive]}
+                  onPress={() => { setSelectedPlanId(null); setName(chip); }}>
+                  <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>{chip}</Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
-
-          {plans && plans.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}
-              style={eS.typeScroll} contentContainerStyle={eS.typeRow}>
-              {plans.map(p => {
-                const active = selectedPlanId === p.id;
-                return (
-                  <TouchableOpacity key={p.id}
-                    style={[eS.typeChip, active && eS.typeChipActive]}
-                    onPress={() => { setSelectedPlanId(active ? null : p.id); if (!active) setName(p.name); }}>
-                    <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>📋 {p.name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
 
           {isNew && !isRestDay && (
             <View style={eS.toolsRow}>
@@ -2097,9 +2080,9 @@ function EditSessionModal({
               />
             </View>
             <View style={eS.fieldCol}>
-              <Text style={eS.fieldLabel}>{t('workout.type')}</Text>
-              <TextInput style={eS.fieldInput} value={name} onChangeText={setName}
-                placeholder={t('workout.egChestAndBack')} placeholderTextColor={colors.textDim} />
+              <Text style={eS.fieldLabel}>WORKOUT PLAN</Text>
+              <TextInput style={eS.fieldInput} value={name} onChangeText={(v) => { setName(v); setSelectedPlanId(null); }}
+                placeholder="Pick a plan above or type a new one" placeholderTextColor={colors.textDim} />
             </View>
           </View>
 
@@ -3895,7 +3878,23 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         recentTypes={recentTypes}
         allSessions={sessions}
         plans={plans}
-        onSave={(data) => saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null, planId: data.planId ?? editInitial?.planId ?? null })}
+        onSave={async (data) => {
+          let planId = data.planId ?? editInitial?.planId ?? null;
+          const trimmedName = (data.name ?? '').trim();
+          if (!planId && trimmedName) {
+            const match = plans.find(p => p.name.toLowerCase() === trimmedName.toLowerCase());
+            if (match) {
+              planId = match.id;
+            } else {
+              try {
+                const newPlan = await createPlan(user.id, trimmedName);
+                qc.invalidateQueries(['workoutPlans', user.id]);
+                planId = newPlan?.id ?? null;
+              } catch {}
+            }
+          }
+          saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null, planId });
+        }}
         onCancel={() => setShowEdit(false)}
         hasAccess={hasAccess}
         templates={templates}
