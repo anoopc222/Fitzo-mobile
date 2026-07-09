@@ -55,7 +55,7 @@ async function fetchPlans(userId) {
   try {
     const { data, error } = await supabase
       .from('workout_plans')
-      .select('id, name, created_at')
+      .select('id, name, created_at, template_exercises')
       .eq('user_id', userId)
       .order('name', { ascending: true });
     if (error) return [];
@@ -91,6 +91,14 @@ async function deletePlan(planId) {
   // Unlink sessions first (plan_id → null), then delete
   await supabase.from('workout_sessions').update({ plan_id: null }).eq('plan_id', planId);
   const { error } = await supabase.from('workout_plans').delete().eq('id', planId);
+  if (error) throw error;
+}
+
+async function updatePlanTemplate(planId, exercises) {
+  const { error } = await supabase
+    .from('workout_plans')
+    .update({ template_exercises: exercises })
+    .eq('id', planId);
   if (error) throw error;
 }
 
@@ -1513,12 +1521,15 @@ const createEhS = (colors) => StyleSheet.create({
 });
 
 // ─── Plans Modal ─────────────────────────────────────────────────────────────
-function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onSelect }) {
+function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onSelect, onSaveTemplate }) {
   const { colors } = useTheme();
   const [newPlanName, setNewPlanName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [templatePlanId, setTemplatePlanId] = useState(null);
+  const [templateExercises, setTemplateExercises] = useState([]);
+  const [newExName, setNewExName] = useState('');
 
   const handleCreate = () => {
     if (!newPlanName.trim()) return;
@@ -1539,6 +1550,86 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onS
     onRename(editingId, editingName.trim());
     setEditingId(null);
   };
+
+  const openTemplate = (plan) => {
+    const exs = Array.isArray(plan.template_exercises) ? plan.template_exercises : [];
+    setTemplateExercises(exs.map(e => (typeof e === 'string' ? e : e.name)));
+    setTemplatePlanId(plan.id);
+    setNewExName('');
+  };
+
+  const addTemplateEx = () => {
+    if (!newExName.trim()) return;
+    setTemplateExercises(prev => [...prev, newExName.trim()]);
+    setNewExName('');
+  };
+
+  const removeTemplateEx = (idx) => setTemplateExercises(prev => prev.filter((_, i) => i !== idx));
+
+  const saveTemplate = () => {
+    onSaveTemplate(templatePlanId, templateExercises.map(name => ({ name })));
+    setTemplatePlanId(null);
+  };
+
+  if (templatePlanId) {
+    const planName = (plans.find(p => p.id === templatePlanId) ?? {}).name ?? '';
+    return (
+      <BottomSheet visible={visible} onClose={() => setTemplatePlanId(null)}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <TouchableOpacity onPress={() => setTemplatePlanId(null)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="chevron-back" size={18} color={colors.accent} />
+            <Text style={{ fontSize: 13, color: colors.accent, fontWeight: '700' }}>BACK</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onClose}>
+            <Ionicons name="close" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text, marginBottom: 14 }}>
+          EXERCISES — {planName}
+        </Text>
+
+        <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {templateExercises.length === 0 && (
+            <Text style={{ color: colors.textDim, fontSize: 13, marginBottom: 8 }}>No exercises yet.</Text>
+          )}
+          {templateExercises.map((ex, idx) => (
+            <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <Text style={{ flex: 1, fontSize: 14, color: colors.text }}>{ex}</Text>
+              <TouchableOpacity onPress={() => removeTemplateEx(idx)} style={{ padding: 6 }}>
+                <Ionicons name="close-circle-outline" size={18} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <View style={{ height: 8 }} />
+        </ScrollView>
+
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+          <TextInput
+            style={{
+              flex: 1, backgroundColor: colors.surface,
+              borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
+              fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border,
+            }}
+            placeholder="Exercise name…"
+            placeholderTextColor={colors.textDim}
+            value={newExName}
+            onChangeText={setNewExName}
+            onSubmitEditing={addTemplateEx}
+            returnKeyType="done"
+          />
+          <TouchableOpacity onPress={addTemplateEx}
+            style={{ backgroundColor: colors.dim, borderRadius: 10, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}>
+            <Ionicons name="add" size={20} color={colors.accent} />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity onPress={saveTemplate}
+          style={{ backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 14 }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: colors.accentText }}>Save Template</Text>
+        </TouchableOpacity>
+      </BottomSheet>
+    );
+  }
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
@@ -1615,6 +1706,14 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onS
               <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                 <TouchableOpacity style={{ flex: 1 }} onPress={() => onSelect && onSelect(plan)} activeOpacity={0.7}>
                   <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{plan.name}</Text>
+                  {Array.isArray(plan.template_exercises) && plan.template_exercises.length > 0 && (
+                    <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
+                      {plan.template_exercises.length} exercise{plan.template_exercises.length !== 1 ? 's' : ''} in template
+                    </Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => openTemplate(plan)} style={{ padding: 6 }}>
+                  <Ionicons name="barbell-outline" size={16} color={colors.accent} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => startEdit(plan)} style={{ padding: 6 }}>
                   <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
@@ -2037,7 +2136,30 @@ function EditSessionModal({
               return (
                 <TouchableOpacity key={'plan-' + p.id}
                   style={[eS.typeChip, active && eS.typeChipActive]}
-                  onPress={() => { setSelectedPlanId(active ? null : p.id); if (!active) setName(p.name); }}>
+                  onPress={() => {
+                    if (active) { setSelectedPlanId(null); return; }
+                    setSelectedPlanId(p.id);
+                    setName(p.name);
+                    if (isNew) {
+                      // prefer saved template, fall back to last session
+                      const tmpl = Array.isArray(p.template_exercises) && p.template_exercises.length > 0
+                        ? p.template_exercises
+                        : null;
+                      if (tmpl) {
+                        setExercises(tmpl.map(e => ({ _key: tid(), name: typeof e === 'string' ? e : e.name, sets: [blankSet()] })));
+                      } else {
+                        const match = (allSessions ?? [])
+                          .filter(s => (s.notes ?? '').toLowerCase() === p.name.toLowerCase() && (s.workout_exercises ?? []).length > 0)
+                          .slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+                        if (match) {
+                          const exs = (match.workout_exercises ?? [])
+                            .slice().sort((a, b) => a.order_index - b.order_index)
+                            .map(ex => ({ _key: tid(), name: ex.exercise_name, sets: [blankSet()] }));
+                          setExercises(exs);
+                        }
+                      }
+                    }
+                  }}>
                   <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>📋 {p.name}</Text>
                 </TouchableOpacity>
               );
@@ -2733,6 +2855,11 @@ export default function WorkoutScreen({ embedded = false } = {}) {
       qc.invalidateQueries(['workoutPlans', user.id]);
       qc.invalidateQueries(['sessions', user.id]);
     },
+  });
+
+  const saveTemplateMut = useMutation({
+    mutationFn: ({ planId, exercises }) => updatePlanTemplate(planId, exercises),
+    onSuccess: () => qc.invalidateQueries(['workoutPlans', user.id]),
   });
 
   const [manualRefreshing, setManualRefreshing] = useState(false);
@@ -3869,6 +3996,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onRename={(planId, name) => renamePlanMut.mutate({ planId, name })}
         onDelete={(planId) => deletePlanMut.mutate(planId)}
         onSelect={(plan) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id }); }}
+        onSaveTemplate={(planId, exercises) => saveTemplateMut.mutate({ planId, exercises })}
       />
 
       <EditSessionModal
