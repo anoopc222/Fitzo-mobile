@@ -2857,7 +2857,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
     },
   });
 
-  const saveTemplateMut = useMutation({
+  const savePlanTemplateMut = useMutation({
     mutationFn: ({ planId, exercises }) => updatePlanTemplate(planId, exercises),
     onSuccess: () => qc.invalidateQueries(['workoutPlans', user.id]),
   });
@@ -3996,7 +3996,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onRename={(planId, name) => renamePlanMut.mutate({ planId, name })}
         onDelete={(planId) => deletePlanMut.mutate(planId)}
         onSelect={(plan) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id }); }}
-        onSaveTemplate={(planId, exercises) => saveTemplateMut.mutate({ planId, exercises })}
+        onSaveTemplate={(planId, exercises) => savePlanTemplateMut.mutate({ planId, exercises })}
       />
 
       <EditSessionModal
