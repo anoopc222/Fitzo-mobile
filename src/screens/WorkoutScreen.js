@@ -52,13 +52,17 @@ async function fetchSessions(userId) {
 
 // ─── Workout Plans ────────────────────────────────────────────────────────────
 async function fetchPlans(userId) {
-  const { data, error } = await supabase
-    .from('workout_plans')
-    .select('id, name, created_at')
-    .eq('user_id', userId)
-    .order('name', { ascending: true });
-  if (error) throw error;
-  return data ?? [];
+  try {
+    const { data, error } = await supabase
+      .from('workout_plans')
+      .select('id, name, created_at')
+      .eq('user_id', userId)
+      .order('name', { ascending: true });
+    if (error) return [];
+    return data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 async function createPlan(userId, name) {
@@ -2719,10 +2723,12 @@ export default function WorkoutScreen({ embedded = false } = {}) {
     enabled: !!user?.id,
   });
 
-  const { data: plans = [], refetch: refetchPlans } = useQuery({
+  const { data: plans = [] } = useQuery({
     queryKey: ['workoutPlans', user?.id],
     queryFn: () => fetchPlans(user.id),
     enabled: !!user?.id,
+    retry: false,
+    throwOnError: false,
   });
 
   const createPlanMut = useMutation({
