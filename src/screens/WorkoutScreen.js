@@ -2038,38 +2038,30 @@ function EditSessionModal({
             </TouchableOpacity>
           </View>
 
-          {/* Session type chips — only the selected chip is highlighted */}
+          {/* Single chips row: plans first (📋), then default/recent types */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             style={eS.typeScroll} contentContainerStyle={eS.typeRow}>
-            {allChips.map(t => {
-              const active = name.toLowerCase() === t.toLowerCase();
+            {(plans ?? []).map(p => {
+              const active = selectedPlanId === p.id;
               return (
-                <TouchableOpacity key={t}
+                <TouchableOpacity key={'plan-' + p.id}
                   style={[eS.typeChip, active && eS.typeChipActive]}
-                  onPress={() => setName(t)}>
-                  <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>
-                    {t}
-                  </Text>
+                  onPress={() => { setSelectedPlanId(active ? null : p.id); if (!active) setName(p.name); }}>
+                  <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>📋 {p.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            {allChips.map(chip => {
+              const active = !selectedPlanId && name.toLowerCase() === chip.toLowerCase();
+              return (
+                <TouchableOpacity key={'chip-' + chip}
+                  style={[eS.typeChip, active && eS.typeChipActive]}
+                  onPress={() => { setSelectedPlanId(null); setName(chip); }}>
+                  <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>{chip}</Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
-
-          {plans && plans.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}
-              style={eS.typeScroll} contentContainerStyle={eS.typeRow}>
-              {plans.map(p => {
-                const active = selectedPlanId === p.id;
-                return (
-                  <TouchableOpacity key={p.id}
-                    style={[eS.typeChip, active && eS.typeChipActive]}
-                    onPress={() => { setSelectedPlanId(active ? null : p.id); if (!active) setName(p.name); }}>
-                    <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>📋 {p.name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
 
           {isNew && !isRestDay && (
             <View style={eS.toolsRow}>
@@ -3895,7 +3887,23 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         recentTypes={recentTypes}
         allSessions={sessions}
         plans={plans}
-        onSave={(data) => saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null, planId: data.planId ?? editInitial?.planId ?? null })}
+        onSave={async (data) => {
+          let planId = data.planId ?? editInitial?.planId ?? null;
+          const trimmedName = (data.name ?? '').trim();
+          if (!planId && trimmedName) {
+            const match = plans.find(p => p.name.toLowerCase() === trimmedName.toLowerCase());
+            if (match) {
+              planId = match.id;
+            } else {
+              try {
+                const newPlan = await createPlan(user.id, trimmedName);
+                qc.invalidateQueries(['workoutPlans', user.id]);
+                planId = newPlan?.id ?? null;
+              } catch {}
+            }
+          }
+          saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null, planId });
+        }}
         onCancel={() => setShowEdit(false)}
         hasAccess={hasAccess}
         templates={templates}
