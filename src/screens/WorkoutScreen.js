@@ -50,6 +50,54 @@ async function fetchSessions(userId) {
   return data ?? [];
 }
 
+// ─── Workout Plans ────────────────────────────────────────────────────────────
+async function fetchPlans(userId) {
+  const { data, error } = await supabase
+    .from('workout_plans')
+    .select('id, name, created_at')
+    .eq('user_id', userId)
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function createPlan(userId, name) {
+  const { data, error } = await supabase
+    .from('workout_plans')
+    .insert({ user_id: userId, name: name.trim() })
+    .select().single();
+  if (error) throw error;
+  return data;
+}
+
+async function renamePlan(planId, newName) {
+  const { error } = await supabase
+    .from('workout_plans')
+    .update({ name: newName.trim() })
+    .eq('id', planId);
+  if (error) throw error;
+  // Also update notes on all sessions linked to this plan
+  await supabase
+    .from('workout_sessions')
+    .update({ notes: newName.trim() })
+    .eq('plan_id', planId);
+}
+
+async function deletePlan(planId) {
+  // Unlink sessions first (plan_id → null), then delete
+  await supabase.from('workout_sessions').update({ plan_id: null }).eq('plan_id', planId);
+  const { error } = await supabase.from('workout_plans').delete().eq('id', planId);
+  if (error) throw error;
+}
+
+async function linkSessionToPlan(sessionId, planId, planName) {
+  const { error } = await supabase
+    .from('workout_sessions')
+    .update({ plan_id: planId, notes: planName })
+    .eq('id', sessionId);
+  if (error) throw error;
+}
+
 async function fetchWorkoutGoal(userId) {
   const { data } = await supabase
     .from('profiles')
@@ -161,21 +209,22 @@ function buildOptimisticSession(sessionId, { date, name, exercises, duration_min
   };
 }
 
-async function saveSession(userId, { sessionId, date, name, exercises, duration_min, coachNotes }) {
+async function saveSession(userId, { sessionId, date, name, exercises, duration_min, coachNotes, planId }) {
   let sid = sessionId;
   const durPatch = duration_min != null ? { duration_min } : {};
   const notesPatch = coachNotes !== undefined ? { coach_notes: coachNotes } : {};
+  const planPatch = planId !== undefined ? { plan_id: planId } : {};
   if (!sid) {
     const { data, error } = await supabase
       .from('workout_sessions')
-      .insert({ user_id: userId, date, notes: name || 'Workout', ...durPatch, ...notesPatch })
+      .insert({ user_id: userId, date, notes: name || 'Workout', ...durPatch, ...notesPatch, ...planPatch })
       .select().single();
     if (error) throw error;
     sid = data.id;
   } else {
     const { error } = await supabase
       .from('workout_sessions')
-      .update({ date, notes: name || 'Workout', ...durPatch, ...notesPatch })
+      .update({ date, notes: name || 'Workout', ...durPatch, ...notesPatch, ...planPatch })
       .eq('id', sid);
     if (error) throw error;
   }
@@ -1459,6 +1508,138 @@ const createEhS = (colors) => StyleSheet.create({
   deltaMuted: { fontFamily: fontFamily.bodyMedium, fontSize: typography.xs, color: colors.textDim, marginTop: 8 },
 });
 
+// ─── Plans Modal ─────────────────────────────────────────────────────────────
+function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onSelect }) {
+  const { colors } = useTheme();
+  const [newPlanName, setNewPlanName] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const handleCreate = () => {
+    if (!newPlanName.trim()) return;
+    onCreate(newPlanName.trim());
+    setNewPlanName('');
+  };
+
+  const startEdit = (plan) => {
+    setEditingId(plan.id);
+    setEditingName(plan.name);
+  };
+
+  const submitEdit = () => {
+    if (!editingName.trim() || editingName.trim() === plans.find(p => p.id === editingId)?.name) {
+      setEditingId(null);
+      return;
+    }
+    onRename(editingId, editingName.trim());
+    setEditingId(null);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={onClose} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{
+          backgroundColor: colors.card ?? colors.bgCard,
+          borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          paddingTop: 16, paddingBottom: 36, maxHeight: '80%',
+        }}>
+          {/* Handle */}
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 16 }} />
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>MY WORKOUT PLANS</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Create new plan */}
+          <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 16 }}>
+            <TextInput
+              style={{
+                flex: 1, backgroundColor: colors.surface ?? colors.border,
+                borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
+                fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border,
+              }}
+              placeholder="New plan name…"
+              placeholderTextColor={colors.textDim}
+              value={newPlanName}
+              onChangeText={setNewPlanName}
+              onSubmitEditing={handleCreate}
+              returnKeyType="done"
+            />
+            <TouchableOpacity
+              onPress={handleCreate}
+              style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, justifyContent: 'center' }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#000' }}>Add</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Plans list */}
+          <ScrollView style={{ paddingHorizontal: 20 }} keyboardShouldPersistTaps="handled">
+            {plans.length === 0 && (
+              <Text style={{ color: colors.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 24 }}>
+                No plans yet. Add your first plan above.
+              </Text>
+            )}
+            {plans.map(plan => (
+              <View key={plan.id}>
+                {confirmDeleteId === plan.id ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                    <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13 }}>Delete "{plan.name}"?</Text>
+                    <TouchableOpacity onPress={() => { onDelete(plan.id); setConfirmDeleteId(null); }}
+                      style={{ backgroundColor: colors.danger + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                      <Text style={{ color: colors.danger, fontSize: 12, fontWeight: '700' }}>Delete</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setConfirmDeleteId(null)}
+                      style={{ backgroundColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                      <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700' }}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : editingId === plan.id ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                    <TextInput
+                      style={{
+                        flex: 1, backgroundColor: colors.surface ?? colors.border,
+                        borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
+                        fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.accent,
+                      }}
+                      value={editingName}
+                      onChangeText={setEditingName}
+                      onSubmitEditing={submitEdit}
+                      autoFocus
+                      returnKeyType="done"
+                    />
+                    <TouchableOpacity onPress={submitEdit}
+                      style={{ backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#000' }}>Save</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                    <TouchableOpacity style={{ flex: 1 }} onPress={() => onSelect && onSelect(plan)} activeOpacity={0.7}>
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{plan.name}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => startEdit(plan)} style={{ padding: 6 }}>
+                      <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setConfirmDeleteId(plan.id)} style={{ padding: 6, marginLeft: 4 }}>
+                      <Ionicons name="trash-outline" size={16} color={colors.danger ?? '#ef4444'} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            ))}
+            <View style={{ height: 20 }} />
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 // ─── Edit Session Modal ───────────────────────────────────────────────────────
 // Always show these two as default chip suggestions
 const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
@@ -1466,7 +1647,7 @@ const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
 function EditSessionModal({
   visible, isNew, initialData, recentTypes, allSessions, onSave, onCancel,
   hasAccess, templates, onSaveTemplate, onOpenToolsPaywall,
-  onRepeatTemplate, isRepeatingTemplate,
+  onRepeatTemplate, isRepeatingTemplate, plans,
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -1474,6 +1655,7 @@ function EditSessionModal({
   const [date, setDate] = useState('');
   const [name, setName] = useState('');
   const [coachNotes, setCoachNotes] = useState('');
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [activeExIdx, setActiveExIdx] = useState(null);
   const [acOpenIdx, setAcOpenIdx] = useState(null);
@@ -1724,6 +1906,7 @@ function EditSessionModal({
       setCoachNotes(initialData.coachNotes ?? '');
       setExercises(initialData.exercises ?? []);
       setActiveExIdx(null);
+      setSelectedPlanId(initialData.planId ?? null);
     }
   }, [visible, initialData]);
 
@@ -1824,6 +2007,7 @@ function EditSessionModal({
     onSave({
       date: date.trim(), name: name.trim() || t('workout.workout'), exercises: isRest ? [] : exercises,
       coachNotes: coachNotes.trim() || null,
+      planId: selectedPlanId,
       ...(duration_min != null ? { duration_min } : {}),
     });
   };
@@ -1866,6 +2050,22 @@ function EditSessionModal({
               );
             })}
           </ScrollView>
+
+          {plans && plans.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              style={eS.typeScroll} contentContainerStyle={eS.typeRow}>
+              {plans.map(p => {
+                const active = selectedPlanId === p.id;
+                return (
+                  <TouchableOpacity key={p.id}
+                    style={[eS.typeChip, active && eS.typeChipActive]}
+                    onPress={() => { setSelectedPlanId(active ? null : p.id); if (!active) setName(p.name); }}>
+                    <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>📋 {p.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
 
           {isNew && !isRestDay && (
             <View style={eS.toolsRow}>
@@ -2496,6 +2696,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
   const [workoutGoalInput, setWorkoutGoalInput] = useState(4);
   const [showToolsPaywall, setShowToolsPaywall] = useState(false);
   const [hideRestDays, setHideRestDays] = useState(false);
+  const [showPlans, setShowPlans] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('fitzo:hideRestDays').then(stored => {
@@ -2516,6 +2717,33 @@ export default function WorkoutScreen({ embedded = false } = {}) {
     queryKey: ['sessions', user?.id],
     queryFn: () => fetchSessions(user.id),
     enabled: !!user?.id,
+  });
+
+  const { data: plans = [], refetch: refetchPlans } = useQuery({
+    queryKey: ['workoutPlans', user?.id],
+    queryFn: () => fetchPlans(user.id),
+    enabled: !!user?.id,
+  });
+
+  const createPlanMut = useMutation({
+    mutationFn: (name) => createPlan(user.id, name),
+    onSuccess: () => { qc.invalidateQueries(['workoutPlans', user.id]); },
+  });
+
+  const renamePlanMut = useMutation({
+    mutationFn: ({ planId, name }) => renamePlan(planId, name),
+    onSuccess: () => {
+      qc.invalidateQueries(['workoutPlans', user.id]);
+      qc.invalidateQueries(['sessions', user.id]);
+    },
+  });
+
+  const deletePlanMut = useMutation({
+    mutationFn: (planId) => deletePlan(planId),
+    onSuccess: () => {
+      qc.invalidateQueries(['workoutPlans', user.id]);
+      qc.invalidateQueries(['sessions', user.id]);
+    },
   });
 
   const [manualRefreshing, setManualRefreshing] = useState(false);
@@ -3009,9 +3237,9 @@ export default function WorkoutScreen({ embedded = false } = {}) {
     setShowEdit(true);
   };
 
-  const openNew = () => {
+  const openNew = (prefill = {}) => {
     setEditIsNew(true);
-    setEditInitial({ sessionId: null, date: today.toISOString().split('T')[0], name: '', exercises: [] });
+    setEditInitial({ sessionId: null, date: today.toISOString().split('T')[0], name: prefill.name ?? '', planId: prefill.planId ?? null, exercises: [] });
     setShowEdit(true);
   };
 
@@ -3062,6 +3290,12 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onSelect={(m, y) => { setViewMonth(m + 1); setViewYear(y); }}
         onClose={() => setShowMonthPicker(false)}
       />
+
+      {/* Plans button */}
+      <TouchableOpacity style={s.plansBtn} onPress={() => setShowPlans(true)}>
+        <Ionicons name="list" size={14} color={colors.accent} />
+        <Text style={s.plansBtnText}>MY PLANS</Text>
+      </TouchableOpacity>
 
       {/* List */}
       <ScrollView
@@ -3638,13 +3872,24 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         </Modal>
       )}
 
+      <PlansModal
+        visible={showPlans}
+        plans={plans}
+        onClose={() => setShowPlans(false)}
+        onCreate={(name) => createPlanMut.mutate(name)}
+        onRename={(planId, name) => renamePlanMut.mutate({ planId, name })}
+        onDelete={(planId) => deletePlanMut.mutate(planId)}
+        onSelect={(plan) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id }); }}
+      />
+
       <EditSessionModal
         visible={showEdit}
         isNew={editIsNew}
         initialData={editInitial}
         recentTypes={recentTypes}
         allSessions={sessions}
-        onSave={(data) => saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null })}
+        plans={plans}
+        onSave={(data) => saveMut.mutate({ ...data, sessionId: editInitial?.sessionId ?? null, planId: data.planId ?? editInitial?.planId ?? null })}
         onCancel={() => setShowEdit(false)}
         hasAccess={hasAccess}
         templates={templates}
@@ -3698,6 +3943,14 @@ export default function WorkoutScreen({ embedded = false } = {}) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const createS = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+
+  plansBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start', marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+  },
+  plansBtnText: { fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 0.5 },
 
   card: {
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
