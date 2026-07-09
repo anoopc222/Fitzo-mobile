@@ -1541,106 +1541,94 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onS
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={onClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={{
-          backgroundColor: colors.card ?? colors.bgCard,
-          borderTopLeftRadius: 24, borderTopRightRadius: 24,
-          paddingTop: 16, paddingBottom: 36, maxHeight: '80%',
-        }}>
-          {/* Handle */}
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 16 }} />
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>MY WORKOUT PLANS</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Ionicons name="close" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>MY WORKOUT PLANS</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
+      {/* Create new plan */}
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+        <TextInput
+          style={{
+            flex: 1, backgroundColor: colors.surface,
+            borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
+            fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border,
+          }}
+          placeholder="New plan name…"
+          placeholderTextColor={colors.textDim}
+          value={newPlanName}
+          onChangeText={setNewPlanName}
+          onSubmitEditing={handleCreate}
+          returnKeyType="done"
+        />
+        <TouchableOpacity
+          onPress={handleCreate}
+          style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: colors.accentText }}>Add</Text>
+        </TouchableOpacity>
+      </View>
 
-          {/* Create new plan */}
-          <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 16 }}>
-            <TextInput
-              style={{
-                flex: 1, backgroundColor: colors.surface ?? colors.border,
-                borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
-                fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border,
-              }}
-              placeholder="New plan name…"
-              placeholderTextColor={colors.textDim}
-              value={newPlanName}
-              onChangeText={setNewPlanName}
-              onSubmitEditing={handleCreate}
-              returnKeyType="done"
-            />
-            <TouchableOpacity
-              onPress={handleCreate}
-              style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, justifyContent: 'center' }}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#000' }}>Add</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Plans list */}
-          <ScrollView style={{ paddingHorizontal: 20 }} keyboardShouldPersistTaps="handled">
-            {plans.length === 0 && (
-              <Text style={{ color: colors.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 24 }}>
-                No plans yet. Add your first plan above.
-              </Text>
-            )}
-            {plans.map(plan => (
-              <View key={plan.id}>
-                {confirmDeleteId === plan.id ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13 }}>Delete "{plan.name}"?</Text>
-                    <TouchableOpacity onPress={() => { onDelete(plan.id); setConfirmDeleteId(null); }}
-                      style={{ backgroundColor: colors.danger + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-                      <Text style={{ color: colors.danger, fontSize: 12, fontWeight: '700' }}>Delete</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setConfirmDeleteId(null)}
-                      style={{ backgroundColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-                      <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700' }}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : editingId === plan.id ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    <TextInput
-                      style={{
-                        flex: 1, backgroundColor: colors.surface ?? colors.border,
-                        borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
-                        fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.accent,
-                      }}
-                      value={editingName}
-                      onChangeText={setEditingName}
-                      onSubmitEditing={submitEdit}
-                      autoFocus
-                      returnKeyType="done"
-                    />
-                    <TouchableOpacity onPress={submitEdit}
-                      style={{ backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#000' }}>Save</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    <TouchableOpacity style={{ flex: 1 }} onPress={() => onSelect && onSelect(plan)} activeOpacity={0.7}>
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{plan.name}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => startEdit(plan)} style={{ padding: 6 }}>
-                      <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setConfirmDeleteId(plan.id)} style={{ padding: 6, marginLeft: 4 }}>
-                      <Ionicons name="trash-outline" size={16} color={colors.danger ?? '#ef4444'} />
-                    </TouchableOpacity>
-                  </View>
-                )}
+      {/* Plans list */}
+      <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {plans.length === 0 && (
+          <Text style={{ color: colors.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 24 }}>
+            No plans yet. Add your first plan above.
+          </Text>
+        )}
+        {plans.map(plan => (
+          <View key={plan.id}>
+            {confirmDeleteId === plan.id ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13 }}>Delete "{plan.name}"?</Text>
+                <TouchableOpacity onPress={() => { onDelete(plan.id); setConfirmDeleteId(null); }}
+                  style={{ backgroundColor: colors.danger + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                  <Text style={{ color: colors.danger, fontSize: 12, fontWeight: '700' }}>Delete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setConfirmDeleteId(null)}
+                  style={{ backgroundColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700' }}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-            ))}
-            <View style={{ height: 20 }} />
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+            ) : editingId === plan.id ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <TextInput
+                  style={{
+                    flex: 1, backgroundColor: colors.surface,
+                    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
+                    fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.accent,
+                  }}
+                  value={editingName}
+                  onChangeText={setEditingName}
+                  onSubmitEditing={submitEdit}
+                  autoFocus
+                  returnKeyType="done"
+                />
+                <TouchableOpacity onPress={submitEdit}
+                  style={{ backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: colors.accentText }}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <TouchableOpacity style={{ flex: 1 }} onPress={() => onSelect && onSelect(plan)} activeOpacity={0.7}>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{plan.name}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => startEdit(plan)} style={{ padding: 6 }}>
+                  <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setConfirmDeleteId(plan.id)} style={{ padding: 6, marginLeft: 4 }}>
+                  <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ))}
+        <View style={{ height: 8 }} />
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
