@@ -1881,6 +1881,9 @@ function EditSessionModal({
       .slice().sort((a, b) => a.order_index - b.order_index)
       .map(ex => ({ _key: tid(), name: ex.exercise_name, sets: [blankSet()] }));
     setExercises(exs);
+    setName(match.notes ?? '');
+    const planMatch = (plans ?? []).find(p => p.name.toLowerCase() === (match.notes ?? '').toLowerCase());
+    setSelectedPlanId(planMatch?.id ?? null);
   };
 
   const loadTemplate = (tpl) => {
