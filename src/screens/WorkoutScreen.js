@@ -2037,7 +2037,22 @@ function EditSessionModal({
               return (
                 <TouchableOpacity key={'plan-' + p.id}
                   style={[eS.typeChip, active && eS.typeChipActive]}
-                  onPress={() => { setSelectedPlanId(active ? null : p.id); if (!active) setName(p.name); }}>
+                  onPress={() => {
+                    if (active) { setSelectedPlanId(null); return; }
+                    setSelectedPlanId(p.id);
+                    setName(p.name);
+                    if (isNew) {
+                      const match = (allSessions ?? [])
+                        .filter(s => (s.notes ?? '').toLowerCase() === p.name.toLowerCase() && (s.workout_exercises ?? []).length > 0)
+                        .slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+                      if (match) {
+                        const exs = (match.workout_exercises ?? [])
+                          .slice().sort((a, b) => a.order_index - b.order_index)
+                          .map(ex => ({ _key: tid(), name: ex.exercise_name, sets: [blankSet()] }));
+                        setExercises(exs);
+                      }
+                    }
+                  }}>
                   <Text style={[eS.typeChipText, active && eS.typeChipTextActive]}>📋 {p.name}</Text>
                 </TouchableOpacity>
               );
