@@ -1532,6 +1532,29 @@ const createEhS = (colors) => StyleSheet.create({
 });
 
 // ─── Plans Screen (full-page) ─────────────────────────────────────────────────
+const PLAN_ORDER_KEY = 'fitzo:planOrder';
+
+function usePlanOrder(plans) {
+  const [ordered, setOrdered] = useState(plans);
+  useEffect(() => {
+    AsyncStorage.getItem(PLAN_ORDER_KEY).then(raw => {
+      if (!raw) { setOrdered(plans); return; }
+      try {
+        const ids = JSON.parse(raw);
+        const map = Object.fromEntries(plans.map(p => [p.id, p]));
+        const sorted = ids.map(id => map[id]).filter(Boolean);
+        const rest = plans.filter(p => !ids.includes(p.id));
+        setOrdered([...sorted, ...rest]);
+      } catch { setOrdered(plans); }
+    });
+  }, [plans]);
+  const saveOrder = useCallback((newOrder) => {
+    setOrdered(newOrder);
+    AsyncStorage.setItem(PLAN_ORDER_KEY, JSON.stringify(newOrder.map(p => p.id)));
+  }, []);
+  return [ordered, saveOrder];
+}
+
 function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onCopy, onSelect, onSaveTemplate, allSessions }) {
   const { colors, isDark } = useTheme();
   const [newPlanName, setNewPlanName] = useState('');
@@ -1541,6 +1564,46 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
   const [templatePlanId, setTemplatePlanId] = useState(null);
   const [templateExercises, setTemplateExercises] = useState([]);
   const [newExName, setNewExName] = useState('');
+  const [orderedPlans, saveOrder] = usePlanOrder(plans);
+
+  // ── Drag state ──
+  const dragFromIdx = useRef(-1);
+  const dragItemsRef = useRef(orderedPlans);
+  const [draggingIdx, setDraggingIdx] = useState(-1);
+  const [hoverIdx, setHoverIdx] = useState(-1);
+  const ITEM_H = 52;
+
+  useEffect(() => { dragItemsRef.current = orderedPlans; }, [orderedPlans]);
+
+  const dragPR = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderMove: (_, gs) => {
+      const from = dragFromIdx.current;
+      if (from < 0) return;
+      const to = Math.max(0, Math.min(dragItemsRef.current.length - 1, from + Math.round(gs.dy / ITEM_H)));
+      setHoverIdx(to);
+    },
+    onPanResponderRelease: (_, gs) => {
+      const from = dragFromIdx.current;
+      if (from < 0) return;
+      const items = dragItemsRef.current;
+      const to = Math.max(0, Math.min(items.length - 1, from + Math.round(gs.dy / ITEM_H)));
+      if (from !== to) {
+        const next = [...items];
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        saveOrder(next);
+      }
+      dragFromIdx.current = -1;
+      setDraggingIdx(-1);
+      setHoverIdx(-1);
+    },
+    onPanResponderTerminate: () => {
+      dragFromIdx.current = -1;
+      setDraggingIdx(-1);
+      setHoverIdx(-1);
+    },
+  })).current;
 
   const handleCreate = () => {
     if (!newPlanName.trim()) return;
@@ -1668,22 +1731,21 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
         {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: headerBg, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: headerBg, paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <TouchableOpacity onPress={onClose} style={{ marginRight: 12 }}>
             <Ionicons name="chevron-back" size={24} color={colors.accent} />
           </TouchableOpacity>
-          <Text style={{ flex: 1, fontSize: 16, fontWeight: '800', color: colors.text }}>MY WORKOUT PLANS</Text>
+          <Text style={{ flex: 1, fontSize: 15, fontWeight: '800', color: colors.text }}>MY WORKOUT PLANS</Text>
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12 }} keyboardShouldPersistTaps="handled">
 
             {/* Create new plan */}
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 10 }}>NEW PLAN</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28 }}>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
               <TextInput
-                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border }}
-                placeholder="Plan name…"
+                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border }}
+                placeholder="New plan name…"
                 placeholderTextColor={colors.textDim}
                 value={newPlanName}
                 onChangeText={setNewPlanName}
@@ -1691,100 +1753,124 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
                 returnKeyType="done"
               />
               <TouchableOpacity onPress={handleCreate}
-                style={{ backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 20, justifyContent: 'center' }}>
-                <Text style={{ fontSize: 14, fontWeight: '800', color: colors.accentText }}>Add</Text>
+                style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 16, justifyContent: 'center' }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.accentText }}>Add</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 10 }}>MY PLANS</Text>
-
-            {plans.length === 0 && (
-              <Text style={{ color: colors.textDim, fontSize: 14, paddingVertical: 24, textAlign: 'center' }}>
+            {orderedPlans.length === 0 && (
+              <Text style={{ color: colors.textDim, fontSize: 13, paddingVertical: 24, textAlign: 'center' }}>
                 No plans yet. Create your first plan above.
               </Text>
             )}
 
-            {plans.map(plan => (
-              <View key={plan.id} style={{ backgroundColor: colors.card, borderRadius: 14, marginBottom: 10, overflow: 'hidden' }}>
-                {confirmDeleteId === plan.id ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14 }}>
-                    <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13 }}>Delete "{plan.name}"?</Text>
-                    <TouchableOpacity onPress={() => { onDelete(plan.id, plan.name); setConfirmDeleteId(null); }}
-                      style={{ backgroundColor: colors.danger + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-                      <Text style={{ color: colors.danger, fontSize: 12, fontWeight: '700' }}>Delete</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setConfirmDeleteId(null)}
-                      style={{ backgroundColor: colors.dim, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-                      <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700' }}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : editingId === plan.id ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12 }}>
-                    <TextInput
-                      style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.accent }}
-                      value={editingName}
-                      onChangeText={setEditingName}
-                      onSubmitEditing={submitEdit}
-                      autoFocus
-                      returnKeyType="done"
-                    />
-                    <TouchableOpacity onPress={submitEdit}
-                      style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: colors.accentText }}>Save</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }} onPress={() => {
-                    // resolve exercises: template first, then last session fallback
-                    let exs = [];
-                    if (Array.isArray(plan.template_exercises) && plan.template_exercises.length > 0) {
-                      exs = plan.template_exercises.map(e => (typeof e === 'string' ? e : e.name));
-                    } else {
-                      const match = (allSessions ?? [])
-                        .filter(s => (s.notes ?? '').toLowerCase() === plan.name.toLowerCase() && (s.workout_exercises ?? []).length > 0)
-                        .slice().sort((a, b) => b.date.localeCompare(a.date))[0];
-                      if (match) {
-                        exs = (match.workout_exercises ?? [])
+            {/* Draggable plan rows */}
+            <View>
+              {orderedPlans.map((plan, idx) => {
+                const isDragging = draggingIdx === idx;
+                const isHover = hoverIdx === idx && draggingIdx !== -1 && hoverIdx !== draggingIdx;
+
+                if (confirmDeleteId === plan.id) {
+                  return (
+                    <View key={plan.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.card, borderRadius: 10, padding: 10, marginBottom: 6, borderWidth: 1, borderColor: colors.border }}>
+                      <Text style={{ flex: 1, color: colors.textMuted, fontSize: 12 }}>Delete "{plan.name}"?</Text>
+                      <TouchableOpacity onPress={() => { onDelete(plan.id, plan.name); setConfirmDeleteId(null); }}
+                        style={{ backgroundColor: colors.danger + '22', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}>
+                        <Text style={{ color: colors.danger, fontSize: 11, fontWeight: '700' }}>Delete</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => setConfirmDeleteId(null)}
+                        style={{ backgroundColor: colors.dim, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}>
+                        <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                }
+
+                if (editingId === plan.id) {
+                  return (
+                    <View key={plan.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.card, borderRadius: 10, padding: 8, marginBottom: 6, borderWidth: 1, borderColor: colors.accent }}>
+                      <TextInput
+                        style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: colors.text }}
+                        value={editingName}
+                        onChangeText={setEditingName}
+                        onSubmitEditing={submitEdit}
+                        autoFocus
+                        returnKeyType="done"
+                      />
+                      <TouchableOpacity onPress={submitEdit}
+                        style={{ backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: colors.accentText }}>Save</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                }
+
+                const tmplCount = Array.isArray(plan.template_exercises) ? plan.template_exercises.length : 0;
+                const lastMatch = tmplCount === 0 ? (allSessions ?? [])
+                  .filter(s => (s.notes ?? '').toLowerCase() === plan.name.toLowerCase() && (s.workout_exercises ?? []).length > 0)
+                  .slice().sort((a, b) => b.date.localeCompare(a.date))[0] : null;
+                const exCount = tmplCount > 0 ? tmplCount : lastMatch ? (lastMatch.workout_exercises ?? []).length : 0;
+
+                return (
+                  <View key={plan.id} style={{
+                    flexDirection: 'row', alignItems: 'center',
+                    backgroundColor: isDragging ? colors.accent + '18' : isHover ? colors.border : colors.card,
+                    borderRadius: 10, marginBottom: 6,
+                    borderWidth: 1,
+                    borderColor: isDragging ? colors.accent + '66' : isHover ? colors.accent + '44' : colors.border,
+                    opacity: isDragging ? 0.75 : 1,
+                    height: ITEM_H,
+                  }}>
+                    {/* Drag handle */}
+                    <View
+                      {...dragPR.panHandlers}
+                      onStartShouldSetResponder={() => false}
+                      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                      style={{ paddingHorizontal: 10, paddingVertical: 14, alignSelf: 'stretch', justifyContent: 'center' }}
+                      onTouchStart={() => { dragFromIdx.current = idx; setDraggingIdx(idx); setHoverIdx(idx); }}
+                    >
+                      <Ionicons name="reorder-three-outline" size={20} color={colors.textDim} />
+                    </View>
+
+                    {/* Plan info — tap to start */}
+                    <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingRight: 4 }} onPress={() => {
+                      let exs = [];
+                      if (tmplCount > 0) {
+                        exs = plan.template_exercises.map(e => (typeof e === 'string' ? e : e.name));
+                      } else if (lastMatch) {
+                        exs = (lastMatch.workout_exercises ?? [])
                           .slice().sort((a, b) => a.order_index - b.order_index)
                           .map(ex => ex.exercise_name);
                       }
-                    }
-                    onSelect && onSelect(plan, exs);
-                  }} activeOpacity={0.7}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{plan.name}</Text>
-                      {(() => {
-                        const tmplCount = Array.isArray(plan.template_exercises) ? plan.template_exercises.length : 0;
-                        if (tmplCount > 0) {
-                          return <Text style={{ fontSize: 12, color: colors.accent, marginTop: 3 }}>{tmplCount} exercise{tmplCount !== 1 ? 's' : ''} · tap to start</Text>;
-                        }
-                        const lastMatch = (allSessions ?? [])
-                          .filter(s => (s.notes ?? '').toLowerCase() === plan.name.toLowerCase() && (s.workout_exercises ?? []).length > 0)
-                          .slice().sort((a, b) => b.date.localeCompare(a.date))[0];
-                        const sessionCount = lastMatch ? (lastMatch.workout_exercises ?? []).length : 0;
-                        return sessionCount > 0
-                          ? <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 3 }}>{sessionCount} exercise{sessionCount !== 1 ? 's' : ''} · tap to start</Text>
-                          : <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 3 }}>Tap to start workout</Text>;
-                      })()}
-                    </View>
-                    <TouchableOpacity onPress={() => openTemplate(plan)} style={{ padding: 8 }}>
-                      <Ionicons name="barbell-outline" size={18} color={colors.accent} />
+                      onSelect && onSelect(plan, exs);
+                    }} activeOpacity={0.7}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }} numberOfLines={1}>{plan.name}</Text>
+                        {exCount > 0
+                          ? <Text style={{ fontSize: 11, color: tmplCount > 0 ? colors.accent : colors.textMuted, marginTop: 1 }}>{exCount} exercise{exCount !== 1 ? 's' : ''}</Text>
+                          : <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>No exercises</Text>}
+                      </View>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => onCopy && onCopy(plan)} style={{ padding: 8 }}>
-                      <Ionicons name="copy-outline" size={18} color={colors.textMuted} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => startEdit(plan)} style={{ padding: 8 }}>
-                      <Ionicons name="pencil-outline" size={18} color={colors.textMuted} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setConfirmDeleteId(plan.id)} style={{ padding: 8 }}>
-                      <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
 
-            <View style={{ height: 32 }} />
+                    {/* Actions */}
+                    <TouchableOpacity onPress={() => openTemplate(plan)} style={{ padding: 7 }}>
+                      <Ionicons name="barbell-outline" size={16} color={colors.accent} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => onCopy && onCopy(plan)} style={{ padding: 7 }}>
+                      <Ionicons name="copy-outline" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => startEdit(plan)} style={{ padding: 7 }}>
+                      <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setConfirmDeleteId(plan.id)} style={{ padding: 7, paddingRight: 10 }}>
+                      <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+
+            <View style={{ height: 24 }} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -2897,30 +2983,54 @@ export default function WorkoutScreen({ embedded = false } = {}) {
     throwOnError: false,
   });
 
+  const planKey = ['workoutPlans', user.id];
+
   const createPlanMut = useMutation({
     mutationFn: (name) => createPlan(user.id, name),
-    onSuccess: () => { qc.invalidateQueries(['workoutPlans', user.id]); },
+    onMutate: async (name) => {
+      await qc.cancelQueries(planKey);
+      const prev = qc.getQueryData(planKey);
+      qc.setQueryData(planKey, old => [...(old ?? []), { id: '__tmp__' + Date.now(), name, template_exercises: null, created_at: new Date().toISOString() }]);
+      return { prev };
+    },
+    onError: (_, __, ctx) => qc.setQueryData(planKey, ctx?.prev),
+    onSettled: () => qc.invalidateQueries(planKey),
   });
 
   const renamePlanMut = useMutation({
     mutationFn: ({ planId, name }) => renamePlan(planId, name),
-    onSuccess: () => {
-      qc.invalidateQueries(['workoutPlans', user.id]);
-      qc.invalidateQueries(['sessions', user.id]);
+    onMutate: async ({ planId, name }) => {
+      await qc.cancelQueries(planKey);
+      const prev = qc.getQueryData(planKey);
+      qc.setQueryData(planKey, old => (old ?? []).map(p => p.id === planId ? { ...p, name } : p));
+      return { prev };
     },
+    onError: (_, __, ctx) => qc.setQueryData(planKey, ctx?.prev),
+    onSettled: () => { qc.invalidateQueries(planKey); qc.invalidateQueries(['sessions', user.id]); },
   });
 
   const deletePlanMut = useMutation({
     mutationFn: ({ planId, planName }) => deletePlan(planId, planName),
-    onSuccess: () => {
-      qc.invalidateQueries(['workoutPlans', user.id]);
-      qc.invalidateQueries(['sessions', user.id]);
+    onMutate: async ({ planId }) => {
+      await qc.cancelQueries(planKey);
+      const prev = qc.getQueryData(planKey);
+      qc.setQueryData(planKey, old => (old ?? []).filter(p => p.id !== planId));
+      return { prev };
     },
+    onError: (_, __, ctx) => qc.setQueryData(planKey, ctx?.prev),
+    onSettled: () => { qc.invalidateQueries(planKey); qc.invalidateQueries(['sessions', user.id]); },
   });
 
   const copyPlanMut = useMutation({
     mutationFn: (plan) => copyPlan(user.id, plan),
-    onSuccess: () => qc.invalidateQueries(['workoutPlans', user.id]),
+    onMutate: async (plan) => {
+      await qc.cancelQueries(planKey);
+      const prev = qc.getQueryData(planKey);
+      qc.setQueryData(planKey, old => [...(old ?? []), { id: '__tmp__' + Date.now(), name: plan.name + '_copy', template_exercises: plan.template_exercises ?? null, created_at: new Date().toISOString() }]);
+      return { prev };
+    },
+    onError: (_, __, ctx) => qc.setQueryData(planKey, ctx?.prev),
+    onSettled: () => qc.invalidateQueries(planKey),
   });
 
   const savePlanTemplateMut = useMutation({
