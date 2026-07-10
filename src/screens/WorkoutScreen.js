@@ -1566,14 +1566,22 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
   const [newExName, setNewExName] = useState('');
   const [orderedPlans, saveOrder] = usePlanOrder(plans);
 
-  // ── Drag state ──
+  // ── Drag state (plans) ──
   const dragFromIdx = useRef(-1);
   const dragItemsRef = useRef(orderedPlans);
   const [draggingIdx, setDraggingIdx] = useState(-1);
   const [hoverIdx, setHoverIdx] = useState(-1);
   const ITEM_H = 52;
 
+  // ── Drag state (template exercises) ──
+  const exDragFromIdx = useRef(-1);
+  const exDragItemsRef = useRef([]);
+  const [exDraggingIdx, setExDraggingIdx] = useState(-1);
+  const [exHoverIdx, setExHoverIdx] = useState(-1);
+  const EX_ITEM_H = 48;
+
   useEffect(() => { dragItemsRef.current = orderedPlans; }, [orderedPlans]);
+  useEffect(() => { exDragItemsRef.current = templateExercises; }, [templateExercises]);
 
   const dragPR = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -1602,6 +1610,36 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
       dragFromIdx.current = -1;
       setDraggingIdx(-1);
       setHoverIdx(-1);
+    },
+  })).current;
+
+  const exDragPR = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderMove: (_, gs) => {
+      const from = exDragFromIdx.current;
+      if (from < 0) return;
+      const to = Math.max(0, Math.min(exDragItemsRef.current.length - 1, from + Math.round(gs.dy / EX_ITEM_H)));
+      setExHoverIdx(to);
+    },
+    onPanResponderRelease: (_, gs) => {
+      const from = exDragFromIdx.current;
+      if (from < 0) return;
+      const items = exDragItemsRef.current;
+      const to = Math.max(0, Math.min(items.length - 1, from + Math.round(gs.dy / EX_ITEM_H)));
+      if (from !== to) {
+        const next = [...items];
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        setTemplateExercises(next);
+      }
+      exDragFromIdx.current = -1;
+      setExDraggingIdx(-1);
+      setExHoverIdx(-1);
+    },
+    onPanResponderTerminate: () => {
+      exDragFromIdx.current = -1;
+      setExDraggingIdx(-1);
+      setExHoverIdx(-1);
     },
   })).current;
 
@@ -1683,17 +1721,26 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
                 <Text style={{ color: colors.textDim, fontSize: 14, paddingVertical: 16 }}>No exercises yet. Add one below.</Text>
               )}
 
-              {templateExercises.map((ex, idx) => (
-                <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, marginBottom: 8 }}>
-                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.accent + '22', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: colors.accent }}>{idx + 1}</Text>
+              {templateExercises.map((ex, idx) => {
+                const isDragging = exDraggingIdx === idx;
+                const isHover = exHoverIdx === idx && exDraggingIdx !== idx;
+                return (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', height: EX_ITEM_H, backgroundColor: isDragging ? colors.accent + '22' : isHover ? colors.card + 'ee' : colors.card, borderRadius: 10, marginBottom: 6, borderWidth: isDragging || isHover ? 1 : 0, borderColor: colors.accent + '66', opacity: isDragging ? 0.7 : 1 }}>
+                    <View
+                      {...exDragPR.panHandlers}
+                      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                      style={{ paddingHorizontal: 10, alignSelf: 'stretch', justifyContent: 'center' }}
+                      onTouchStart={() => { exDragFromIdx.current = idx; setExDraggingIdx(idx); setExHoverIdx(idx); }}
+                    >
+                      <Ionicons name="reorder-three-outline" size={20} color={colors.textDim} />
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 14, color: colors.text, fontWeight: '500' }} numberOfLines={1}>{ex}</Text>
+                    <TouchableOpacity onPress={() => removeTemplateEx(idx)} style={{ paddingHorizontal: 12, alignSelf: 'stretch', justifyContent: 'center' }}>
+                      <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                    </TouchableOpacity>
                   </View>
-                  <Text style={{ flex: 1, fontSize: 15, color: colors.text, fontWeight: '500' }}>{ex}</Text>
-                  <TouchableOpacity onPress={() => removeTemplateEx(idx)} style={{ padding: 4 }}>
-                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                  </TouchableOpacity>
-                </View>
-              ))}
+                );
+              })}
 
               <View style={{ height: 16 }} />
             </ScrollView>
