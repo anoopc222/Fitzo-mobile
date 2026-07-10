@@ -4010,7 +4010,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onDelete={(planId) => deletePlanMut.mutate(planId)}
         onSelect={(plan) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id }); }}
         onSaveTemplate={(planId, exercises) => savePlanTemplateMut.mutate({ planId, exercises })}
-        allSessions={allSessions}
+        allSessions={sessions}
       />
 
       <EditSessionModal
