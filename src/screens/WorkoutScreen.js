@@ -1700,7 +1700,8 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
   const tmplNamePool = useMemo(() => getExerciseNamePool(allSessions ?? []), [allSessions]);
   const tmplSuggestions = useMemo(() => {
     const q = newExName.trim().toLowerCase();
-    const matches = tmplNamePool.filter(n => !q || n.toLowerCase().includes(q)).slice(0, 8);
+    if (!q) return [];
+    const matches = tmplNamePool.filter(n => n.toLowerCase().includes(q)).slice(0, 8);
     if (!matches.length || matches.some(n => n.toLowerCase() === q)) return [];
     return matches;
   }, [newExName, tmplNamePool]);
