@@ -1723,16 +1723,38 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onS
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }} onPress={() => onSelect && onSelect(plan)} activeOpacity={0.7}>
+                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }} onPress={() => {
+                    // resolve exercises: template first, then last session fallback
+                    let exs = [];
+                    if (Array.isArray(plan.template_exercises) && plan.template_exercises.length > 0) {
+                      exs = plan.template_exercises.map(e => (typeof e === 'string' ? e : e.name));
+                    } else {
+                      const match = (allSessions ?? [])
+                        .filter(s => (s.notes ?? '').toLowerCase() === plan.name.toLowerCase() && (s.workout_exercises ?? []).length > 0)
+                        .slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+                      if (match) {
+                        exs = (match.workout_exercises ?? [])
+                          .slice().sort((a, b) => a.order_index - b.order_index)
+                          .map(ex => ex.exercise_name);
+                      }
+                    }
+                    onSelect && onSelect(plan, exs);
+                  }} activeOpacity={0.7}>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{plan.name}</Text>
-                      {Array.isArray(plan.template_exercises) && plan.template_exercises.length > 0 ? (
-                        <Text style={{ fontSize: 12, color: colors.accent, marginTop: 3 }}>
-                          {plan.template_exercises.length} exercise{plan.template_exercises.length !== 1 ? 's' : ''} · tap to start
-                        </Text>
-                      ) : (
-                        <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 3 }}>Tap to start workout</Text>
-                      )}
+                      {(() => {
+                        const tmplCount = Array.isArray(plan.template_exercises) ? plan.template_exercises.length : 0;
+                        if (tmplCount > 0) {
+                          return <Text style={{ fontSize: 12, color: colors.accent, marginTop: 3 }}>{tmplCount} exercise{tmplCount !== 1 ? 's' : ''} · tap to start</Text>;
+                        }
+                        const lastMatch = (allSessions ?? [])
+                          .filter(s => (s.notes ?? '').toLowerCase() === plan.name.toLowerCase() && (s.workout_exercises ?? []).length > 0)
+                          .slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+                        const sessionCount = lastMatch ? (lastMatch.workout_exercises ?? []).length : 0;
+                        return sessionCount > 0
+                          ? <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 3 }}>{sessionCount} exercise{sessionCount !== 1 ? 's' : ''} · tap to start</Text>
+                          : <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 3 }}>Tap to start workout</Text>;
+                      })()}
                     </View>
                     <TouchableOpacity onPress={() => openTemplate(plan)} style={{ padding: 8 }}>
                       <Ionicons name="barbell-outline" size={18} color={colors.accent} />
@@ -3380,7 +3402,8 @@ export default function WorkoutScreen({ embedded = false } = {}) {
 
   const openNew = (prefill = {}) => {
     setEditIsNew(true);
-    setEditInitial({ sessionId: null, date: today.toISOString().split('T')[0], name: prefill.name ?? '', planId: prefill.planId ?? null, exercises: [] });
+    const exercises = (prefill.exercises ?? []).map(name => ({ _key: tid(), name, sets: [{ _key: tid(), weight_kg: '', reps: '' }] }));
+    setEditInitial({ sessionId: null, date: today.toISOString().split('T')[0], name: prefill.name ?? '', planId: prefill.planId ?? null, exercises });
     setShowEdit(true);
   };
 
@@ -4020,7 +4043,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onCreate={(name) => createPlanMut.mutate(name)}
         onRename={(planId, name) => renamePlanMut.mutate({ planId, name })}
         onDelete={(planId) => deletePlanMut.mutate(planId)}
-        onSelect={(plan) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id }); }}
+        onSelect={(plan, exercises) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id, exercises }); }}
         onSaveTemplate={(planId, exercises) => savePlanTemplateMut.mutate({ planId, exercises })}
         allSessions={sessions}
       />
