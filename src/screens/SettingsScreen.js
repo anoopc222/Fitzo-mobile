@@ -16,6 +16,7 @@ import PaywallModal from '../components/ui/PaywallModal';
 import { navigate } from '../navigation/navigationRef';
 import { useTranslation } from 'react-i18next';
 import { setAppLanguage, ALL_LANGUAGES } from '../i18n';
+import Constants from 'expo-constants';
 
 const LANGUAGE_NAMES = ALL_LANGUAGES.reduce((acc, l) => ({ ...acc, [l.code]: l.name }), {});
 
@@ -208,7 +209,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>{t('settings.appVersion', { version: '1.0.0' })}</Text>
+        <Text style={styles.version}>{t('settings.appVersion', { version: Constants.expoConfig?.version ?? '1.2.0' })}</Text>
       </ScrollView>
 
       <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
