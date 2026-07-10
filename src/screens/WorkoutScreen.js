@@ -1697,6 +1697,14 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
 
   const removeTemplateEx = (idx) => setTemplateExercises(prev => prev.filter((_, i) => i !== idx));
 
+  const tmplNamePool = useMemo(() => getExerciseNamePool(allSessions ?? []), [allSessions]);
+  const tmplSuggestions = useMemo(() => {
+    const q = newExName.trim().toLowerCase();
+    const matches = tmplNamePool.filter(n => !q || n.toLowerCase().includes(q)).slice(0, 8);
+    if (!matches.length || matches.some(n => n.toLowerCase() === q)) return [];
+    return matches;
+  }, [newExName, tmplNamePool]);
+
   const saveTemplate = () => {
     onSaveTemplate(templatePlanId, templateExercises.map(name => ({ name })));
     setTemplatePlanId(null);
@@ -1757,8 +1765,27 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
             </ScrollView>
 
             {/* Add exercise + save */}
-            <View style={{ padding: 16, backgroundColor: headerBg, borderTopWidth: 1, borderTopColor: colors.border }}>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+            <View style={{ backgroundColor: headerBg, borderTopWidth: 1, borderTopColor: colors.border }}>
+              {tmplSuggestions.length > 0 && (
+                <View style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 220 }}>
+                  <ScrollView keyboardShouldPersistTaps="handled">
+                    {tmplSuggestions.map(n => {
+                      const ws = getWorkoutStyle(n, colors);
+                      return (
+                        <TouchableOpacity
+                          key={n}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                          onPress={() => { setNewExName(n); }}
+                        >
+                          <Text style={{ fontSize: 16 }}>{ws.icon}</Text>
+                          <Text style={{ fontSize: 14, color: colors.text }}>{n}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+              <View style={{ flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 12 }}>
                 <TextInput
                   style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border }}
                   placeholder="Add exercise…"
@@ -1774,7 +1801,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
                 </TouchableOpacity>
               </View>
               <TouchableOpacity onPress={saveTemplate}
-                style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center' }}>
+                style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginHorizontal: 16, marginBottom: 16 }}>
                 <Text style={{ fontSize: 15, fontWeight: '800', color: colors.accentText }}>Save Template</Text>
               </TouchableOpacity>
             </View>
