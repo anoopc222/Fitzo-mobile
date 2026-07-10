@@ -4337,9 +4337,9 @@ const createS = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
 
   plansBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    alignSelf: 'flex-start', marginHorizontal: 16, marginBottom: 8,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
   },
   plansBtnText: { fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 0.5 },
