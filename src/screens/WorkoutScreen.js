@@ -1904,7 +1904,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }} numberOfLines={1}>{plan.name}</Text>
                         {exCount > 0
-                          ? <Text style={{ fontSize: 11, color: tmplCount > 0 ? colors.accent : colors.textMuted, marginTop: 1 }}>{exCount} exercise{exCount !== 1 ? 's' : ''}</Text>
+                          ? <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 1 }}>{exCount} exercise{exCount !== 1 ? 's' : ''}</Text>
                           : <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>No exercises</Text>}
                       </View>
                     </TouchableOpacity>
