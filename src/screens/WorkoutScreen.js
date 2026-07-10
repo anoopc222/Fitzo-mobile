@@ -1940,7 +1940,7 @@ const DEFAULT_CHIPS = ['Rest Day', 'Cardio'];
 
 function EditSessionModal({
   visible, isNew, initialData, recentTypes, allSessions, onSave, onCancel,
-  hasAccess, templates, onSaveTemplate, onOpenToolsPaywall,
+  hasAccess, templates, onSaveTemplate, onSaveAsPlan, onOpenToolsPaywall,
   onRepeatTemplate, isRepeatingTemplate, plans,
 }) {
   const { t } = useTranslation();
@@ -2917,17 +2917,6 @@ function EditSessionModal({
                 <Text style={eS.addExText}>{isCardio ? t('workout.addActivity') : t('workout.addExercise')}</Text>
               </TouchableOpacity>
 
-              {!isCardio && exercises.length > 0 && (
-                <TouchableOpacity
-                  style={eS.saveTemplateBtn}
-                  onPress={() => hasAccess ? onSaveTemplate({ name: name.trim() || 'Workout', exercises }) : onOpenToolsPaywall?.()}
-                >
-                  <Ionicons name="bookmark-outline" size={14} color={hasAccess ? colors.purple : colors.textDim} />
-                  <Text style={eS.saveTemplateBtnText}>
-                    {hasAccess ? t('workout.saveAsTemplate') : `🔒 ${t('workout.saveAsTemplatePro')}`}
-                  </Text>
-                </TouchableOpacity>
-              )}
               <View style={{ height: 20 }} />
             </View>
           )}
@@ -2965,6 +2954,26 @@ function EditSessionModal({
           )}
 
           {/* Bottom buttons */}
+          {!isRestDay && exercises.length > 0 && (
+            <View style={eS.saveShortcutRow}>
+              <TouchableOpacity
+                style={eS.savePlanBtn}
+                onPress={() => onSaveAsPlan?.({ name: name.trim() || 'Workout', exercises })}
+              >
+                <Ionicons name="list-outline" size={14} color={colors.accent} />
+                <Text style={eS.savePlanBtnText}>Save as Plan</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={eS.saveTemplateHalfBtn}
+                onPress={() => hasAccess ? onSaveTemplate({ name: name.trim() || 'Workout', exercises }) : onOpenToolsPaywall?.()}
+              >
+                <Ionicons name="bookmark-outline" size={14} color={hasAccess ? colors.purple : colors.textDim} />
+                <Text style={[eS.saveTemplateHalfBtnText, !hasAccess && { color: colors.textDim }]}>
+                  {hasAccess ? 'Save as Template' : '🔒 Template (Pro)'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={eS.bottomRow}>
             <TouchableOpacity style={eS.cancelBtn} onPress={onCancel}>
               <Text style={eS.cancelText}>{t('common.cancel')}</Text>
@@ -4262,6 +4271,17 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         hasAccess={hasAccess}
         templates={templates}
         onSaveTemplate={(params) => saveTemplateMut.mutate(params)}
+        onSaveAsPlan={async ({ name: planName, exercises }) => {
+          try {
+            const newPlan = await createPlan(user.id, planName);
+            if (newPlan?.id) {
+              savePlanTemplateMut.mutate({ planId: newPlan.id, exercises: exercises.map(e => ({ name: e.name })) });
+            }
+            Alert.alert('Plan Saved', `"${planName}" added to My Plans with ${exercises.length} exercise${exercises.length !== 1 ? 's' : ''}.`);
+          } catch (e) {
+            Alert.alert('Error', 'Could not save plan.');
+          }
+        }}
         onRepeatTemplate={(params) => repeatTemplateMut.mutate(params)}
         isRepeatingTemplate={repeatTemplateMut.isPending}
         onOpenToolsPaywall={() => setShowToolsPaywall(true)}
@@ -4797,9 +4817,24 @@ const createES = (colors) => StyleSheet.create({
   },
   addExText: { fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent },
 
+  saveShortcutRow: {
+    flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 10,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  savePlanBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    paddingVertical: 10, borderRadius: 10,
+    backgroundColor: colors.accent + '18', borderWidth: 1, borderColor: colors.accent + '44',
+  },
+  savePlanBtnText: { fontSize: 12, fontWeight: '700', color: colors.accent },
+  saveTemplateHalfBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    paddingVertical: 10, borderRadius: 10,
+    backgroundColor: colors.purple + '18', borderWidth: 1, borderColor: colors.purple + '44',
+  },
+  saveTemplateHalfBtnText: { fontSize: 12, fontWeight: '700', color: colors.purple },
   bottomRow: {
     flexDirection: 'row', gap: 10, padding: 12,
-    borderTopWidth: 1, borderTopColor: colors.border,
   },
   cancelBtn: {
     flex: 1, padding: 12, borderRadius: 12,
