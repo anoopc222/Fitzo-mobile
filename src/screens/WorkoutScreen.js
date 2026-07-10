@@ -1584,7 +1584,12 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
   useEffect(() => { exDragItemsRef.current = templateExercises; }, [templateExercises]);
 
   const dragPR = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponder: () => dragFromIdx.current >= 0,
+    onMoveShouldSetPanResponder: () => dragFromIdx.current >= 0,
+    onPanResponderGrant: () => {
+      const from = dragFromIdx.current;
+      if (from >= 0) setDraggingIdx(from);
+    },
     onPanResponderMove: (_, gs) => {
       const from = dragFromIdx.current;
       if (from < 0) return;
@@ -1614,7 +1619,12 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
   })).current;
 
   const exDragPR = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponder: () => exDragFromIdx.current >= 0,
+    onMoveShouldSetPanResponder: () => exDragFromIdx.current >= 0,
+    onPanResponderGrant: () => {
+      const from = exDragFromIdx.current;
+      if (from >= 0) setExDraggingIdx(from);
+    },
     onPanResponderMove: (_, gs) => {
       const from = exDragFromIdx.current;
       if (from < 0) return;
@@ -1714,7 +1724,7 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
           </View>
 
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled" scrollEnabled={exDraggingIdx < 0}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 12 }}>EXERCISES IN THIS PLAN</Text>
 
               {templateExercises.length === 0 && (
@@ -1730,7 +1740,7 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
                       {...exDragPR.panHandlers}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                       style={{ paddingHorizontal: 10, alignSelf: 'stretch', justifyContent: 'center' }}
-                      onTouchStart={() => { exDragFromIdx.current = idx; setExDraggingIdx(idx); setExHoverIdx(idx); }}
+                      onTouchStart={() => { exDragFromIdx.current = idx; }}
                     >
                       <Ionicons name="reorder-three-outline" size={20} color={colors.textDim} />
                     </View>
@@ -1786,7 +1796,7 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12 }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12 }} keyboardShouldPersistTaps="handled" scrollEnabled={draggingIdx < 0}>
 
             {/* Create new plan */}
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
@@ -1871,10 +1881,9 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
                     {/* Drag handle */}
                     <View
                       {...dragPR.panHandlers}
-                      onStartShouldSetResponder={() => false}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                       style={{ paddingHorizontal: 10, paddingVertical: 14, alignSelf: 'stretch', justifyContent: 'center' }}
-                      onTouchStart={() => { dragFromIdx.current = idx; setDraggingIdx(idx); setHoverIdx(idx); }}
+                      onTouchStart={() => { dragFromIdx.current = idx; }}
                     >
                       <Ionicons name="reorder-three-outline" size={20} color={colors.textDim} />
                     </View>
