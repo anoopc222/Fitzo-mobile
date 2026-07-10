@@ -74,6 +74,16 @@ async function createPlan(userId, name) {
   return data;
 }
 
+async function copyPlan(userId, plan) {
+  const newName = (plan.name ?? '').trim() + '_copy';
+  const { data, error } = await supabase
+    .from('workout_plans')
+    .insert({ user_id: userId, name: newName, template_exercises: plan.template_exercises ?? null })
+    .select().single();
+  if (error) throw error;
+  return data;
+}
+
 async function renamePlan(planId, newName) {
   const { error } = await supabase
     .from('workout_plans')
@@ -1522,7 +1532,7 @@ const createEhS = (colors) => StyleSheet.create({
 });
 
 // ─── Plans Screen (full-page) ─────────────────────────────────────────────────
-function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onSelect, onSaveTemplate, allSessions }) {
+function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onCopy, onSelect, onSaveTemplate, allSessions }) {
   const { colors, isDark } = useTheme();
   const [newPlanName, setNewPlanName] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -1759,6 +1769,9 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onS
                     </View>
                     <TouchableOpacity onPress={() => openTemplate(plan)} style={{ padding: 8 }}>
                       <Ionicons name="barbell-outline" size={18} color={colors.accent} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => onCopy && onCopy(plan)} style={{ padding: 8 }}>
+                      <Ionicons name="copy-outline" size={18} color={colors.textMuted} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => startEdit(plan)} style={{ padding: 8 }}>
                       <Ionicons name="pencil-outline" size={18} color={colors.textMuted} />
@@ -2905,6 +2918,11 @@ export default function WorkoutScreen({ embedded = false } = {}) {
     },
   });
 
+  const copyPlanMut = useMutation({
+    mutationFn: (plan) => copyPlan(user.id, plan),
+    onSuccess: () => qc.invalidateQueries(['workoutPlans', user.id]),
+  });
+
   const savePlanTemplateMut = useMutation({
     mutationFn: ({ planId, exercises }) => updatePlanTemplate(planId, exercises),
     onSuccess: () => qc.invalidateQueries(['workoutPlans', user.id]),
@@ -4044,6 +4062,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onCreate={(name) => createPlanMut.mutate(name)}
         onRename={(planId, name) => renamePlanMut.mutate({ planId, name })}
         onDelete={(planId, planName) => deletePlanMut.mutate({ planId, planName })}
+        onCopy={(plan) => copyPlanMut.mutate(plan)}
         onSelect={(plan, exercises) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id, exercises }); }}
         onSaveTemplate={(planId, exercises) => savePlanTemplateMut.mutate({ planId, exercises })}
         allSessions={sessions}
