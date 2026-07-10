@@ -1555,7 +1555,7 @@ function usePlanOrder(plans) {
   return [ordered, saveOrder];
 }
 
-function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onCopy, onSelect, onSaveTemplate, allSessions }) {
+function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, onDelete, onCopy, onSelect, onSaveTemplate, allSessions }) {
   const { colors, isDark } = useTheme();
   const [newPlanName, setNewPlanName] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -1564,7 +1564,8 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onC
   const [templatePlanId, setTemplatePlanId] = useState(null);
   const [templateExercises, setTemplateExercises] = useState([]);
   const [newExName, setNewExName] = useState('');
-  const [orderedPlans, saveOrder] = usePlanOrder(plans);
+  const orderedPlans = plans;
+  const saveOrder = onSaveOrder ?? (() => {});
 
   // ── Drag state (plans) ──
   const dragFromIdx = useRef(-1);
@@ -2192,9 +2193,10 @@ function EditSessionModal({
 
   // All chips: defaults first, then unique recent types excluding defaults
   const allChips = useMemo(() => {
-    const extra = recentTypes.filter(t => !DEFAULT_CHIPS.some(d => d.toLowerCase() === t.toLowerCase()));
-    return [...DEFAULT_CHIPS, ...extra];
-  }, [recentTypes]);
+    const planNames = new Set((plans ?? []).map(p => p.name.toLowerCase()));
+    const extra = recentTypes.filter(t => !DEFAULT_CHIPS.some(d => d.toLowerCase() === t.toLowerCase()) && !planNames.has(t.toLowerCase()));
+    return [...DEFAULT_CHIPS.filter(d => !planNames.has(d.toLowerCase())), ...extra];
+  }, [recentTypes, plans]);
 
   useEffect(() => {
     if (visible && initialData) {
@@ -3047,6 +3049,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
     retry: false,
     throwOnError: false,
   });
+  const [orderedPlansMain, saveOrderMain] = usePlanOrder(plans);
 
   const planKey = ['workoutPlans', user.id];
 
@@ -4232,7 +4235,8 @@ export default function WorkoutScreen({ embedded = false } = {}) {
 
       <PlansModal
         visible={showPlans}
-        plans={plans}
+        plans={orderedPlansMain}
+        onSaveOrder={saveOrderMain}
         onClose={() => setShowPlans(false)}
         onCreate={(name) => createPlanMut.mutate(name)}
         onRename={(planId, name) => renamePlanMut.mutate({ planId, name })}
@@ -4249,7 +4253,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         initialData={editInitial}
         recentTypes={recentTypes}
         allSessions={sessions}
-        plans={plans}
+        plans={orderedPlansMain}
         onSave={async (data) => {
           let planId = data.planId ?? editInitial?.planId ?? null;
           const trimmedName = (data.name ?? '').trim();
