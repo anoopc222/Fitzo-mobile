@@ -87,9 +87,10 @@ async function renamePlan(planId, newName) {
     .eq('plan_id', planId);
 }
 
-async function deletePlan(planId) {
-  // Unlink sessions first (plan_id → null), then delete
-  await supabase.from('workout_sessions').update({ plan_id: null }).eq('plan_id', planId);
+async function deletePlan(planId, planName) {
+  // Tag history sessions with _Deleted suffix, then unlink and delete the plan
+  const tag = (planName ?? '').trim() + '_Deleted';
+  await supabase.from('workout_sessions').update({ notes: tag, plan_id: null }).eq('plan_id', planId);
   const { error } = await supabase.from('workout_plans').delete().eq('id', planId);
   if (error) throw error;
 }
@@ -1698,7 +1699,7 @@ function PlansModal({ visible, plans, onClose, onCreate, onRename, onDelete, onS
                 {confirmDeleteId === plan.id ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14 }}>
                     <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13 }}>Delete "{plan.name}"?</Text>
-                    <TouchableOpacity onPress={() => { onDelete(plan.id); setConfirmDeleteId(null); }}
+                    <TouchableOpacity onPress={() => { onDelete(plan.id, plan.name); setConfirmDeleteId(null); }}
                       style={{ backgroundColor: colors.danger + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
                       <Text style={{ color: colors.danger, fontSize: 12, fontWeight: '700' }}>Delete</Text>
                     </TouchableOpacity>
@@ -2897,7 +2898,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
   });
 
   const deletePlanMut = useMutation({
-    mutationFn: (planId) => deletePlan(planId),
+    mutationFn: ({ planId, planName }) => deletePlan(planId, planName),
     onSuccess: () => {
       qc.invalidateQueries(['workoutPlans', user.id]);
       qc.invalidateQueries(['sessions', user.id]);
@@ -4042,7 +4043,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onClose={() => setShowPlans(false)}
         onCreate={(name) => createPlanMut.mutate(name)}
         onRename={(planId, name) => renamePlanMut.mutate({ planId, name })}
-        onDelete={(planId) => deletePlanMut.mutate(planId)}
+        onDelete={(planId, planName) => deletePlanMut.mutate({ planId, planName })}
         onSelect={(plan, exercises) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id, exercises }); }}
         onSaveTemplate={(planId, exercises) => savePlanTemplateMut.mutate({ planId, exercises })}
         allSessions={sessions}
