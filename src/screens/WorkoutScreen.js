@@ -1126,7 +1126,11 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
     s + (ex.sets ?? []).reduce((ss, st) => ss + (st.duration_min ?? 0), 0), 0);
   const cardioKcal = exercises.reduce((s, ex) =>
     s + (ex.sets ?? []).reduce((ss, st) => ss + calcCardioEntryKcal(ex.exercise_name, st), 0), 0);
-  const kcal = session.calories_burned ?? (isCardio ? cardioKcal : 0) ?? 0;
+  const totalVolume = session.total_volume ?? exercises.reduce((s, ex) =>
+    s + (ex.sets ?? []).reduce((ss, st) => ss + ((parseFloat(st.weight_kg) || 0) * (parseFloat(st.reps) || 0)), 0), 0);
+  const strengthKcalEst = !isCardio && totalVolume > 0 ? Math.round(totalVolume / 30) : 0;
+  const durationKcalEst = !isCardio && (session.duration_min ?? 0) > 0 ? Math.round(session.duration_min * 6) : 0;
+  const kcal = session.calories_burned ?? (isCardio ? cardioKcal : (durationKcalEst || strengthKcalEst)) ?? 0;
   const pbSet = pbMap[session.id] ?? new Set();
   const muscleGroups = getMuscleGroups(exercises);
   const allExpanded = exercises.every(ex => expandedIds.has(ex.id));
