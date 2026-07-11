@@ -438,14 +438,20 @@ export default function FoodLogScreen({ embedded = false } = {}) {
       }
       const p = json.product;
       const n = p.nutriments ?? {};
-      setSheetStep('manual');
-      setForm({
-        food_name: p.product_name ?? '',
-        calories: String(Math.round(n['energy-kcal_100g'] ?? 0)),
-        protein: String(Math.round((n['proteins_100g'] ?? 0) * 10) / 10),
-        carbs: String(Math.round((n['carbohydrates_100g'] ?? 0) * 10) / 10),
-        fats: String(Math.round((n['fat_100g'] ?? 0) * 10) / 10),
+      const servingQty = p.serving_quantity ? parseFloat(p.serving_quantity) : 100;
+      setSelectedFood({
+        name: p.product_name ?? 'Unknown Product',
+        brand: p.brands ?? null,
+        calories: parseFloat(n['energy-kcal_100g'] ?? 0),
+        protein: parseFloat(n['proteins_100g'] ?? 0),
+        carbs: parseFloat(n['carbohydrates_100g'] ?? 0),
+        fats: parseFloat(n['fat_100g'] ?? 0),
+        serving_qty: servingQty,
+        serving_unit: 'g',
+        source: 'OFF',
       });
+      setAmountGrams(String(servingQty));
+      setSheetStep('detail');
     } catch (e) {
       Alert.alert('Error', 'Failed to fetch product info. Please try again.');
     }
