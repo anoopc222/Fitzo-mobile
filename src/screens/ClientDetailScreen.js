@@ -88,6 +88,14 @@ function sessionType(notes) {
   return 'strength';
 }
 
+function cleanNotes(notes) {
+  if (!notes) return null;
+  // Filter out placeholder/deleted values
+  const cleaned = notes.trim();
+  if (!cleaned || cleaned.toLowerCase().includes('deleted') || cleaned === '-') return null;
+  return cleaned;
+}
+
 function typeColor(type, colors) {
   if (type === 'rest') return colors.textDim;
   if (type === 'cardio') return '#22d3ee';
@@ -167,6 +175,7 @@ function WorkoutRow({ session, colors }) {
     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
 
   const totalSets = exercises.reduce((s, e) => s + (e.sets?.length ?? 0), 0);
+  const note = cleanNotes(session.notes);
 
   return (
     <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
@@ -183,7 +192,7 @@ function WorkoutRow({ session, colors }) {
           <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 1 }}>
             {exercises.length > 0
               ? `${exercises.length} exercise${exercises.length > 1 ? 's' : ''} · ${totalSets} sets`
-              : session.notes ?? 'Session'}
+              : note ?? 'Strength session'}
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 2 }}>
