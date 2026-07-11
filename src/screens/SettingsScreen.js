@@ -37,6 +37,29 @@ export default function SettingsScreen() {
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [joiningCoach, setJoiningCoach] = useState(false);
+
+  // Client Mode privacy visibility
+  const DEFAULT_VISIBILITY = { workouts: true, weight: true, steps: true, sleep: true, food: true };
+  const [coachVisibility, setCoachVisibility] = useState(DEFAULT_VISIBILITY);
+  const [visibilityLoaded, setVisibilityLoaded] = useState(false);
+  const [savingVisibility, setSavingVisibility] = useState(false);
+
+  React.useEffect(() => {
+    if (!user?.id) return;
+    supabase.from('profiles').select('coach_visibility').eq('id', user.id).single()
+      .then(({ data }) => {
+        if (data?.coach_visibility) setCoachVisibility({ ...DEFAULT_VISIBILITY, ...data.coach_visibility });
+        setVisibilityLoaded(true);
+      });
+  }, [user?.id]);
+
+  const handleToggleVisibility = async (key, value) => {
+    const next = { ...coachVisibility, [key]: value };
+    setCoachVisibility(next);
+    setSavingVisibility(true);
+    await supabase.from('profiles').update({ coach_visibility: next }).eq('id', user.id);
+    setSavingVisibility(false);
+  };
   const { t, i18n } = useTranslation();
 
   const handleSelectLanguage = (code) => {
@@ -216,6 +239,61 @@ export default function SettingsScreen() {
             onValueChange={(v) => handleToggleNotif('moodReminder', v)}
             last
           />
+        </View>
+
+        {/* ── Client Mode ─────────────────────────────────────────── */}
+        <SectionHeader title="Client Mode — Coach Visibility" />
+        <View style={styles.card}>
+          <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 }}>
+            <Text style={{ fontSize: 12, color: colors.textDim, lineHeight: 18, marginBottom: 10 }}>
+              Control what your coach can see. Toggle off to hide a category — your coach will see a locked placeholder instead.
+            </Text>
+            {savingVisibility && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <ActivityIndicator size="small" color={colors.accent} />
+                <Text style={{ fontSize: 11, color: colors.textDim }}>Saving…</Text>
+              </View>
+            )}
+          </View>
+          {[
+            { key: 'workouts',  label: 'Workouts & Sets',  icon: 'barbell-outline',    desc: 'Sessions, exercises, weight, reps' },
+            { key: 'weight',    label: 'Body Weight',       icon: 'scale-outline',      desc: 'Weight logs & trend' },
+            { key: 'steps',     label: 'Steps & Activity',  icon: 'footsteps-outline',  desc: 'Daily step counts' },
+            { key: 'sleep',     label: 'Sleep',             icon: 'moon-outline',       desc: 'Hours & sleep quality' },
+            { key: 'food',      label: 'Nutrition',         icon: 'restaurant-outline', desc: 'Calories & macros' },
+          ].map(({ key, label, icon, desc }, i, arr) => (
+            <View
+              key={key}
+              style={[
+                { paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+                i < arr.length - 1 && styles.rowBorder,
+              ]}
+            >
+              <View style={{
+                width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+                backgroundColor: coachVisibility[key] ? colors.accent + '20' : colors.bgElevated,
+              }}>
+                <Ionicons name={icon} size={17} color={coachVisibility[key] ? colors.accent : colors.textDim} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: coachVisibility[key] ? colors.text : colors.textDim }}>
+                  {label}
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>{desc}</Text>
+              </View>
+              {!coachVisibility[key] && (
+                <Ionicons name="lock-closed" size={13} color={colors.textDim} style={{ marginRight: 6 }} />
+              )}
+              <Switch
+                value={!!coachVisibility[key]}
+                onValueChange={v => handleToggleVisibility(key, v)}
+                trackColor={{ false: colors.bgElevated, true: colors.accent + '88' }}
+                thumbColor={coachVisibility[key] ? colors.accent : colors.textDim}
+                ios_backgroundColor={colors.bgElevated}
+                disabled={!visibilityLoaded}
+              />
+            </View>
+          ))}
         </View>
 
         {/* ── Coach Mode ──────────────────────────────────────────── */}
