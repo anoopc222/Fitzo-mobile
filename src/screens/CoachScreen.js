@@ -3,7 +3,13 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   Alert, RefreshControl, ActivityIndicator, TextInput, Switch,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+let Clipboard = null;
+try { Clipboard = require('expo-clipboard'); } catch (_) {}
+const copyToClipboard = (text) => {
+  if (Clipboard?.setStringAsync) return Clipboard.setStringAsync(text);
+  if (Clipboard?.setString) { Clipboard.setString(text); return Promise.resolve(); }
+  return Promise.resolve();
+};
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -54,7 +60,7 @@ function SectionLabel({ title, colors }) {
 function InviteOverlay({ code, onClose, colors }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(code);
+    await copyToClipboard(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
