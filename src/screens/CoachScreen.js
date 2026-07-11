@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 
@@ -265,7 +266,7 @@ const PRIVACY_ITEMS = [
 
 const DEFAULT_VIS = { workouts: true, weight: true, steps: true, sleep: true, food: true };
 
-function ClientTab({ userId, colors }) {
+function ClientTab({ userId, colors, isPro }) {
   const navigation = useNavigation();
   const [inviteCode, setInviteCode] = useState('');
   const [joining, setJoining] = useState(false);
@@ -356,11 +357,26 @@ function ClientTab({ userId, colors }) {
       {/* Privacy Controls */}
       <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
         <View style={{ padding: 18, paddingBottom: 10 }}>
-          <SectionLabel title="What Your Coach Can See" colors={colors} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <Text style={{
+              fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted,
+              textTransform: 'uppercase', letterSpacing: 1, flex: 1,
+            }}>
+              What Your Coach Can See
+            </Text>
+            {!isPro && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent + '20', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                <Ionicons name="rocket" size={11} color={colors.accent} />
+                <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.accent }}>PRO</Text>
+              </View>
+            )}
+          </View>
           <Text style={{ fontSize: typography.sm, color: colors.textDim, lineHeight: 20 }}>
-            Toggle off any category to hide it from your coach. They'll see a locked placeholder instead.
+            {isPro
+              ? "Toggle off any category to hide it from your coach. They'll see a locked placeholder instead."
+              : 'Upgrade to Pro to control exactly what your coach can see.'}
           </Text>
-          {saving && (
+          {isPro && saving && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
               <ActivityIndicator size="small" color={colors.accent} />
               <Text style={{ fontSize: 11, color: colors.textDim }}>Saving…</Text>
@@ -368,40 +384,53 @@ function ClientTab({ userId, colors }) {
           )}
         </View>
 
-        {PRIVACY_ITEMS.map(({ key, label, icon, desc }, i) => (
+        {PRIVACY_ITEMS.map(({ key, label, icon, desc }) => (
           <View
             key={key}
             style={{
               flexDirection: 'row', alignItems: 'center', gap: 12,
               paddingHorizontal: 18, paddingVertical: 14,
               borderTopWidth: 1, borderTopColor: colors.border,
+              opacity: isPro ? 1 : 0.5,
             }}
           >
             <View style={{
               width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-              backgroundColor: visibility[key] ? colors.accent + '20' : colors.bgElevated,
+              backgroundColor: (isPro && visibility[key]) ? colors.accent + '20' : colors.bgElevated,
             }}>
-              <Ionicons name={icon} size={18} color={visibility[key] ? colors.accent : colors.textDim} />
+              <Ionicons name={isPro ? icon : 'lock-closed'} size={18} color={(isPro && visibility[key]) ? colors.accent : colors.textDim} />
             </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: visibility[key] ? colors.text : colors.textDim }}>
-                  {label}
-                </Text>
-                {!visibility[key] && <Ionicons name="lock-closed" size={12} color={colors.textDim} />}
-              </View>
+              <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: colors.text }}>{label}</Text>
               <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>{desc}</Text>
             </View>
             <Switch
-              value={!!visibility[key]}
-              onValueChange={v => handleToggle(key, v)}
+              value={isPro ? !!visibility[key] : true}
+              onValueChange={v => isPro && handleToggle(key, v)}
               trackColor={{ false: colors.bgElevated, true: colors.accent + '88' }}
-              thumbColor={visibility[key] ? colors.accent : colors.textDim}
+              thumbColor={(isPro && visibility[key]) ? colors.accent : colors.textDim}
               ios_backgroundColor={colors.bgElevated}
-              disabled={!loaded}
+              disabled={!isPro || !loaded}
             />
           </View>
         ))}
+
+        {!isPro && (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Subscription')}
+            style={{
+              margin: 14, marginTop: 4,
+              backgroundColor: colors.accent, borderRadius: 14,
+              paddingVertical: 13, flexDirection: 'row',
+              alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <Ionicons name="rocket" size={16} color={colors.bg} />
+            <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg }}>
+              Upgrade to Pro to unlock privacy controls
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </ScrollView>
 
@@ -435,6 +464,7 @@ function ClientTab({ userId, colors }) {
 export default function CoachScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { isPro } = useSubscription();
   const navigation = useNavigation();
   const [tab, setTab] = useState('coach');
 
@@ -474,7 +504,7 @@ export default function CoachScreen() {
 
       {tab === 'coach'
         ? <CoachTab userId={user?.id} colors={colors} />
-        : <ClientTab userId={user?.id} colors={colors} />
+        : <ClientTab userId={user?.id} colors={colors} isPro={isPro} />
       }
     </SafeAreaView>
   );
