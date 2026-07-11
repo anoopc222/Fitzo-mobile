@@ -27,12 +27,25 @@ import ScreenHeader from '../components/ScreenHeader';
 async function fetchCoachClients(userId) {
   const { data, error } = await supabase
     .from('coach_clients')
-    .select('*, client:profiles!coach_clients_client_id_fkey(id, full_name, goal)')
+    .select('id, coach_id, client_id, invite_code, status, created_at')
     .eq('coach_id', userId)
     .neq('status', 'removed')
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  const rows = data ?? [];
+
+  // Fetch profiles for active clients separately
+  const activeIds = rows.filter(r => r.status === 'active' && r.client_id).map(r => r.client_id);
+  let profileMap = {};
+  if (activeIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, goal')
+      .in('id', activeIds);
+    (profiles ?? []).forEach(p => { profileMap[p.id] = p; });
+  }
+
+  return rows.map(r => ({ ...r, client: profileMap[r.client_id] ?? null }));
 }
 
 async function generateInvite(coachId) {

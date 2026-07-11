@@ -36,6 +36,7 @@ const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
     title: t('more.sectionTools'),
     items: [
       { label: t('more.calculators'),  icon: 'calculator',  target: ['Home', 'Calculators'],  color: colors.warning },
+      { label: 'Coach Mode',           icon: 'people',      target: ['Home', 'Coach'],         color: colors.accent },
     ],
   },
   {
