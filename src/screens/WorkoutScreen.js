@@ -7,6 +7,7 @@ import {
   PanResponder, Image,
 } from 'react-native';
 import useExerciseDemo from '../hooks/useExerciseDemo';
+import VoiceLogButton from '../components/VoiceLogButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -2988,10 +2989,20 @@ function EditSessionModal({
                 </View>
               )}
 
-              <TouchableOpacity style={eS.addExBtn} onPress={addExercise}>
-                <Ionicons name="add" size={18} color={colors.accent} />
-                <Text style={eS.addExText}>{isCardio ? t('workout.addActivity') : t('workout.addExercise')}</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <TouchableOpacity style={[eS.addExBtn, { flex: 1 }]} onPress={addExercise}>
+                  <Ionicons name="add" size={18} color={colors.accent} />
+                  <Text style={eS.addExText}>{isCardio ? t('workout.addActivity') : t('workout.addExercise')}</Text>
+                </TouchableOpacity>
+                <VoiceLogButton
+                  size="sm"
+                  onAction={(parsed) => {
+                    if (parsed.type === 'workout_set') {
+                      addExercise(parsed.exercise);
+                    }
+                  }}
+                />
+              </View>
 
               <View style={{ height: 20 }} />
             </View>

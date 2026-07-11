@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import VoiceLogButton from '../components/VoiceLogButton';
 import {
   View, Text, ScrollView, FlatList, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl, Keyboard, Modal,
@@ -924,10 +925,28 @@ export default function FoodLogScreen({ embedded = false } = {}) {
         )}
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => openSheet('Breakfast')}>
-        <Ionicons name="search" size={26} color={colors.bg} />
-      </TouchableOpacity>
+      {/* FABs */}
+      <View style={styles.fabRow}>
+        <VoiceLogButton
+          size="md"
+          style={{ backgroundColor: colors.bgElevated, borderColor: colors.border }}
+          onAction={(parsed) => {
+            if (parsed.type === 'food') {
+              addMut.mutate({
+                food_name: parsed.food_name || 'Voice Entry',
+                calories: parsed.calories || 0,
+                protein: 0, carbs: 0, fats: 0,
+                meal_type: 'Snack',
+              });
+            } else {
+              Alert.alert('Voice Log', `Detected: ${parsed.type}. Switch to the right screen to log this.`);
+            }
+          }}
+        />
+        <TouchableOpacity style={styles.fab} onPress={() => openSheet('Breakfast')}>
+          <Ionicons name="search" size={26} color={colors.bg} />
+        </TouchableOpacity>
+      </View>
 
       {/* Log Food Modal: search -> detail (serving) or manual entry — full-screen pageSheet, mirrors Workout's session modal */}
       <Modal visible={showSheet} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeSheet}>
@@ -1311,8 +1330,11 @@ const createStyles = (colors) => StyleSheet.create({
   macroBarFill: { height: '100%', borderRadius: 3 },
   macroBarPct: { fontSize: 8, color: colors.textDim, textAlign: 'right' },
 
-  fab: {
+  fabRow: {
     position: 'absolute', bottom: 24, right: 24,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  fab: {
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
     shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
