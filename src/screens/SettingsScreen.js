@@ -196,6 +196,18 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* ── Coach Mode ──────────────────────────────────────────── */}
+        <SectionHeader title="Coach Mode" />
+        <View style={styles.card}>
+          <SettingRow
+            icon="people-outline"
+            label="Manage Clients"
+            chevron
+            onPress={() => navigate('Coach')}
+            last
+          />
+        </View>
+
         {/* ── Danger Zone ─────────────────────────────────────────── */}
         <SectionHeader title={t('settings.dangerZone')} />
         <View style={[styles.card, { borderColor: colors.danger + '44' }]}>
