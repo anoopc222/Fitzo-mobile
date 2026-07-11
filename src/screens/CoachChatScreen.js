@@ -10,6 +10,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
+import { sendChatPushNotification } from '../lib/notifications';
 import { typography, weight } from '../theme/typography';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -124,6 +125,10 @@ export default function CoachChatScreen() {
         message: msg,
       });
       if (error) throw error;
+      // Notify the other person
+      const recipientId = isCoach ? clientId : coachId;
+      const senderName = isCoach ? 'Your Coach' : otherName;
+      await sendChatPushNotification({ recipientId, senderName, message: msg });
     },
     onSuccess: () => {
       setText('');

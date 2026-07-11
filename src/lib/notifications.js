@@ -1,5 +1,7 @@
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+import { supabase } from './supabase';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -68,6 +70,64 @@ export async function scheduleWeeklySummary() {
       repeats: true,
     },
   });
+}
+
+// ─── Push token registration ──────────────────────────────────────────────────
+
+export async function registerPushToken(userId) {
+  if (!Device.isDevice) return; // simulators don't get real tokens
+  try {
+    const granted = await requestNotificationPermissions();
+    if (!granted) return;
+
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('chat', {
+        name: 'Coach / Client Messages',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+      });
+    }
+
+    const { data: token } = await Notifications.getExpoPushTokenAsync({
+      projectId: '2f23cd2b-840c-441c-a590-34b3af3d30fb',
+    });
+
+    if (token && userId) {
+      await supabase.from('profiles').update({ expo_push_token: token }).eq('id', userId);
+    }
+  } catch (_) {
+    // never throw — push token is best-effort
+  }
+}
+
+// ─── Send chat push notification ─────────────────────────────────────────────
+
+export async function sendChatPushNotification({ recipientId, senderName, message }) {
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('expo_push_token')
+      .eq('id', recipientId)
+      .single();
+
+    const token = data?.expo_push_token;
+    if (!token) return;
+
+    await fetch('https://exp.host/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        to: token,
+        title: `💬 ${senderName}`,
+        body: message.length > 80 ? message.slice(0, 77) + '…' : message,
+        sound: 'default',
+        channelId: 'chat',
+        data: { tag: 'coachChat' },
+      }),
+    });
+  } catch (_) {
+    // never throw
+  }
 }
 
 export async function scheduleDateReminder(tag, date, hour, minute, title, body) {
