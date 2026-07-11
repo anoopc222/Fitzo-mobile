@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import Svg, { Rect, Text as SvgText, Line, Polyline } from 'react-native-svg';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
@@ -165,7 +165,17 @@ function WeekDayRow({ label, value, goal, color, colors }) {
   );
 }
 
-// Expandable workout session row with sets drill-down
+function RpeChip({ rpe, colors }) {
+  if (!rpe) return <Text style={{ fontSize: 11, color: colors.textDim }}>—</Text>;
+  const color = rpe >= 9 ? '#f87171' : rpe >= 7 ? '#fbbf24' : '#34d399';
+  return (
+    <View style={{ backgroundColor: color + '22', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start' }}>
+      <Text style={{ fontSize: 10, color, fontWeight: weight.bold }}>{rpe}</Text>
+    </View>
+  );
+}
+
+// Expandable workout session card
 function WorkoutRow({ session, colors }) {
   const [expanded, setExpanded] = useState(false);
   const type = sessionType(session.notes);
@@ -176,81 +186,146 @@ function WorkoutRow({ session, colors }) {
 
   const totalSets = exercises.reduce((s, e) => s + (e.sets?.length ?? 0), 0);
   const note = cleanNotes(session.notes);
+  const hasExercises = exercises.length > 0;
 
   return (
-    <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
+    <View style={{
+      backgroundColor: colors.bgCard,
+      borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+      marginBottom: 10, overflow: 'hidden',
+    }}>
       <TouchableOpacity
-        onPress={() => exercises.length > 0 && setExpanded(e => !e)}
-        activeOpacity={0.7}
-        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, gap: 10 }}
+        onPress={() => hasExercises && setExpanded(e => !e)}
+        activeOpacity={0.75}
       >
-        <View style={{ width: 3, height: 38, borderRadius: 2, backgroundColor: accent }} />
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: colors.text }}>
-            {fmtDate(session.date)}
-          </Text>
-          {exercises.length > 0 ? (
-            <>
-              <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 1 }} numberOfLines={1}>
-                {exercises.map(e => e.exercise_name).join(', ')}
-              </Text>
-              <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 1 }}>
-                {`${exercises.length} exercise${exercises.length > 1 ? 's' : ''} · ${totalSets} set${totalSets !== 1 ? 's' : ''}`}
-              </Text>
-            </>
-          ) : (
-            <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 1 }}>
-              {note ?? 'Strength session'}
+        {/* Accent top bar */}
+        <View style={{ height: 3, backgroundColor: accent }} />
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
+          {/* Date badge */}
+          <View style={{ alignItems: 'center', minWidth: 36 }}>
+            <Text style={{ fontSize: 18, fontWeight: weight.black, color: colors.text, lineHeight: 20 }}>
+              {new Date(session.date).getDate()}
             </Text>
+            <Text style={{ fontSize: 10, color: colors.textDim, fontWeight: weight.semibold, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {new Date(session.date).toLocaleDateString(undefined, { month: 'short' })}
+            </Text>
+          </View>
+
+          {/* Divider */}
+          <View style={{ width: 1, height: 36, backgroundColor: colors.border }} />
+
+          {/* Info */}
+          <View style={{ flex: 1, gap: 3 }}>
+            {hasExercises ? (
+              <Text style={{ fontSize: typography.sm, color: colors.text, fontWeight: weight.semibold }} numberOfLines={1}>
+                {exercises.map(e => e.exercise_name).join(' · ')}
+              </Text>
+            ) : (
+              <Text style={{ fontSize: typography.sm, color: colors.text, fontWeight: weight.semibold }}>
+                {note ?? (type === 'rest' ? 'Rest Day' : 'Strength Session')}
+              </Text>
+            )}
+            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+              {hasExercises && (
+                <Text style={{ fontSize: 11, color: colors.textDim }}>
+                  {exercises.length} exercise{exercises.length > 1 ? 's' : ''} · {totalSets} set{totalSets !== 1 ? 's' : ''}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Right stats */}
+          <View style={{ alignItems: 'flex-end', gap: 2 }}>
+            {session.total_volume ? (
+              <Text style={{ fontSize: 13, color: accent, fontWeight: weight.bold }}>
+                {session.total_volume >= 1000
+                  ? `${(session.total_volume / 1000).toFixed(1)}k`
+                  : session.total_volume} kg
+              </Text>
+            ) : null}
+            {session.duration_min ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Ionicons name="time-outline" size={10} color={colors.textDim} />
+                <Text style={{ fontSize: 10, color: colors.textDim }}>{session.duration_min}m</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {hasExercises && (
+            <View style={{
+              width: 26, height: 26, borderRadius: 13,
+              backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border,
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textDim} />
+            </View>
           )}
         </View>
-        <View style={{ alignItems: 'flex-end', gap: 2 }}>
-          {session.total_volume ? (
-            <Text style={{ fontSize: typography.sm, color: accent, fontWeight: weight.semibold }}>
-              {session.total_volume.toLocaleString()} kg
-            </Text>
-          ) : null}
-          {session.duration_min ? (
-            <Text style={{ fontSize: 11, color: colors.textDim }}>{session.duration_min} min</Text>
-          ) : null}
-        </View>
-        {exercises.length > 0 && (
-          <Ionicons
-            name={expanded ? 'chevron-up' : 'chevron-down'}
-            size={14} color={colors.textDim}
-          />
-        )}
       </TouchableOpacity>
 
-      {expanded && exercises.length > 0 && (
-        <View style={{ paddingLeft: 13, paddingBottom: 10, gap: 10 }}>
-          {exercises.map((ex) => {
+      {/* Expanded exercises */}
+      {expanded && hasExercises && (
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
+          {exercises.map((ex, exIdx) => {
             const sets = (ex.sets ?? []).slice().sort((a, b) => (a.set_number ?? 0) - (b.set_number ?? 0));
             return (
-              <View key={ex.id}>
-                <Text style={{ fontSize: typography.xs, fontWeight: weight.bold, color: colors.accent, marginBottom: 4 }}>
-                  {ex.exercise_name}
-                </Text>
+              <View key={ex.id} style={{
+                margin: 12, marginTop: exIdx === 0 ? 12 : 0,
+                marginBottom: exIdx < exercises.length - 1 ? 4 : 12,
+                backgroundColor: colors.bg, borderRadius: 12,
+                borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+              }}>
+                {/* Exercise name header */}
+                <LinearGradient
+                  colors={[colors.accent + '18', colors.accent + '05']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8 }}
+                >
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent }} />
+                  <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.accent, flex: 1 }}>
+                    {ex.exercise_name}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: colors.textDim }}>{sets.length} set{sets.length !== 1 ? 's' : ''}</Text>
+                </LinearGradient>
+
                 {sets.length === 0 ? (
-                  <Text style={{ fontSize: 11, color: colors.textDim }}>No sets logged</Text>
+                  <View style={{ padding: 12 }}>
+                    <Text style={{ fontSize: 11, color: colors.textDim }}>No sets logged</Text>
+                  </View>
                 ) : (
-                  <View>
-                    {/* Header */}
-                    <View style={{ flexDirection: 'row', paddingBottom: 3, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                      {['Set', 'Weight', 'Reps', 'RPE'].map(h => (
-                        <Text key={h} style={{ flex: 1, fontSize: 10, color: colors.textDim, fontWeight: weight.bold }}>
-                          {h}
-                        </Text>
-                      ))}
+                  <View style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
+                    {/* Column headers */}
+                    <View style={{ flexDirection: 'row', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                      <Text style={{ width: 32, fontSize: 10, color: colors.textDim, fontWeight: weight.bold }}>SET</Text>
+                      <Text style={{ flex: 1, fontSize: 10, color: colors.textDim, fontWeight: weight.bold }}>WEIGHT</Text>
+                      <Text style={{ flex: 1, fontSize: 10, color: colors.textDim, fontWeight: weight.bold }}>REPS</Text>
+                      <Text style={{ width: 40, fontSize: 10, color: colors.textDim, fontWeight: weight.bold, textAlign: 'right' }}>RPE</Text>
                     </View>
                     {sets.map((s, i) => (
-                      <View key={i} style={{ flexDirection: 'row', paddingVertical: 4 }}>
-                        <Text style={{ flex: 1, fontSize: 12, color: colors.textMuted }}>#{s.set_number ?? i + 1}</Text>
-                        <Text style={{ flex: 1, fontSize: 12, color: colors.text, fontWeight: weight.semibold }}>
+                      <View key={i} style={{
+                        flexDirection: 'row', alignItems: 'center', paddingVertical: 7,
+                        borderBottomWidth: i < sets.length - 1 ? 1 : 0,
+                        borderBottomColor: colors.border + '60',
+                      }}>
+                        <View style={{
+                          width: 22, height: 22, borderRadius: 11,
+                          backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border,
+                          alignItems: 'center', justifyContent: 'center', marginRight: 10,
+                        }}>
+                          <Text style={{ fontSize: 9, fontWeight: weight.bold, color: colors.textDim }}>
+                            {s.set_number ?? i + 1}
+                          </Text>
+                        </View>
+                        <Text style={{ flex: 1, fontSize: 13, color: colors.text, fontWeight: weight.semibold }}>
                           {s.weight_kg ? `${s.weight_kg} kg` : '—'}
                         </Text>
-                        <Text style={{ flex: 1, fontSize: 12, color: colors.text }}>{s.reps ?? '—'}</Text>
-                        <Text style={{ flex: 1, fontSize: 12, color: colors.textDim }}>{s.rpe ?? '—'}</Text>
+                        <Text style={{ flex: 1, fontSize: 13, color: colors.text }}>
+                          {s.reps ? `${s.reps} reps` : '—'}
+                        </Text>
+                        <View style={{ width: 40, alignItems: 'flex-end' }}>
+                          <RpeChip rpe={s.rpe} colors={colors} />
+                        </View>
                       </View>
                     ))}
                   </View>
@@ -546,9 +621,11 @@ export default function ClientDetailScreen() {
             : <Ionicons name="lock-closed" size={13} color={colors.textDim} />}
         />
         {!vis.workouts ? <LockedSection label="Workouts" colors={colors} /> :
-        <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14 }}>
+        <View>
           {workouts.length === 0 ? (
-            <Text style={{ fontSize: typography.sm, color: colors.textDim, paddingVertical: 14 }}>No workouts in last 30 days</Text>
+            <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
+              <Text style={{ fontSize: typography.sm, color: colors.textDim }}>No workouts in last 30 days</Text>
+            </View>
           ) : (
             workouts.map((session, i) => (
               <WorkoutRow key={session.id ?? i} session={session} colors={colors} />
