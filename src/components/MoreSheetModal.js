@@ -15,7 +15,7 @@ const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
   {
     title: 'Coach',
     items: [
-      { label: 'Coach Mode', icon: 'people', target: ['Home', 'Coach'], color: colors.accent },
+      { label: 'Coach / Client Zone', icon: 'people', target: ['Home', 'Coach'], color: colors.accent },
     ],
   },
   {
