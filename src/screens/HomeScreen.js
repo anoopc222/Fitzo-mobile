@@ -1505,7 +1505,7 @@ export default function HomeScreen() {
 
             <AchievementsRow home={data} />
 
-            {/* ── Game Zone banner ───────────────────────────── */}
+            {/* ── Coach / Client Zone banner ─────────────────── */}
             <TouchableOpacity
               style={{
                 backgroundColor: colors.bgCard,
@@ -1517,20 +1517,18 @@ export default function HomeScreen() {
                 borderColor: colors.border,
                 overflow: 'hidden',
               }}
-              onPress={() => navigation.navigate('GameZone')}
+              onPress={() => navigation.navigate('Coach')}
               activeOpacity={0.88}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, gap: 10 }}>
                 <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 20 }}>🎮</Text>
+                  <Ionicons name="people" size={20} color={colors.accent} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text, letterSpacing: 0.5 }}>Game Zone</Text>
-                  <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>6 fitness mini-games</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text, letterSpacing: 0.5 }}>Coach / Client Zone</Text>
+                  <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>Manage clients or connect to your coach</Text>
                 </View>
-                <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: colors.bg, letterSpacing: 0.5 }}>Play →</Text>
-                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
               </View>
             </TouchableOpacity>
 
