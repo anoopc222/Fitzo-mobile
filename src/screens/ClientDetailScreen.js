@@ -189,11 +189,20 @@ function WorkoutRow({ session, colors }) {
           <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: colors.text }}>
             {fmtDate(session.date)}
           </Text>
-          <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 1 }}>
-            {exercises.length > 0
-              ? `${exercises.length} exercise${exercises.length > 1 ? 's' : ''} · ${totalSets} sets`
-              : note ?? 'Strength session'}
-          </Text>
+          {exercises.length > 0 ? (
+            <>
+              <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 1 }} numberOfLines={1}>
+                {exercises.map(e => e.exercise_name).join(', ')}
+              </Text>
+              <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 1 }}>
+                {`${exercises.length} exercise${exercises.length > 1 ? 's' : ''} · ${totalSets} set${totalSets !== 1 ? 's' : ''}`}
+              </Text>
+            </>
+          ) : (
+            <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 1 }}>
+              {note ?? 'Strength session'}
+            </Text>
+          )}
         </View>
         <View style={{ alignItems: 'flex-end', gap: 2 }}>
           {session.total_volume ? (
