@@ -38,7 +38,6 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { useMoreMenu } from '../context/MoreMenuContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MilestoneModal from '../components/MilestoneModal';
-import MuscleRecoveryMap from '../components/MuscleRecoveryMap';
 import useSmartReminders from '../hooks/useSmartReminders';
 import useMilestones from '../hooks/useMilestones';
 
@@ -1763,12 +1762,6 @@ export default function HomeScreen() {
               );
             })()}
 
-            {/* ── Muscle Recovery Map ─────────────────────────────── */}
-            {data?.recentExercisesForMap?.length > 0 && (
-              <View style={[styles.readinessCard, { flexDirection: 'column', gap: 0 }]}>
-                <MuscleRecoveryMap recentExercises={data.recentExercisesForMap} colors={colors} />
-              </View>
-            )}
 
             {/* ── Consistency Score ───────────────────────────────── */}
             {data?.consistencyScore != null && (() => {
