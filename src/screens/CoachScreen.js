@@ -31,13 +31,13 @@ async function fetchCoachClients(userId) {
     .order('created_at', { ascending: false });
   if (error) throw error;
   const rows = data ?? [];
-  const activeIds = rows.filter(r => r.status === 'active' && r.client_id).map(r => r.client_id);
+  const clientIds = rows.filter(r => r.client_id).map(r => r.client_id);
   let profileMap = {};
-  if (activeIds.length > 0) {
+  if (clientIds.length > 0) {
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, full_name, goal')
-      .in('id', activeIds);
+      .in('id', clientIds);
     (profiles ?? []).forEach(p => { profileMap[p.id] = p; });
   }
   return rows.map(r => ({ ...r, client: profileMap[r.client_id] ?? null }));
@@ -264,6 +264,109 @@ function CoachProfileCard({ userId, colors }) {
   );
 }
 
+// ─── Search & Invite ─────────────────────────────────────────────────────────
+
+function SearchInviteSection({ userId, existingClientIds, colors, onInvited }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [inviting, setInviting] = useState(null);
+
+  const handleSearch = async (text) => {
+    setQuery(text);
+    if (text.trim().length < 2) { setResults([]); return; }
+    setSearching(true);
+    const { data } = await supabase.from('profiles')
+      .select('id, full_name, goal')
+      .ilike('full_name', `%${text.trim()}%`)
+      .neq('id', userId)
+      .limit(10);
+    setResults((data ?? []).filter(p => !existingClientIds.includes(p.id)));
+    setSearching(false);
+  };
+
+  const handleInvite = async (profile) => {
+    setInviting(profile.id);
+    const { error } = await supabase.from('coach_clients').insert({
+      coach_id: userId, client_id: profile.id, status: 'pending',
+    });
+    setInviting(null);
+    if (error) { Alert.alert('Error', error.message); return; }
+    Alert.alert('Invite Sent!', `${profile.full_name} will see your invitation and can accept it.`);
+    setResults(prev => prev.filter(p => p.id !== profile.id));
+    setQuery('');
+    onInvited();
+  };
+
+  return (
+    <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 14 }}>
+      <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text, marginBottom: 8 }}>Search & Invite Client</Text>
+      <View style={{
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        backgroundColor: colors.bg, borderRadius: 10, borderWidth: 1.5,
+        borderColor: query ? colors.accent + '60' : colors.border,
+        paddingHorizontal: 12,
+      }}>
+        <Ionicons name="search" size={16} color={colors.textDim} />
+        <TextInput
+          style={{ flex: 1, paddingVertical: 9, fontSize: typography.sm, color: colors.text }}
+          placeholder="Search by name…"
+          placeholderTextColor={colors.textDim}
+          value={query}
+          onChangeText={handleSearch}
+          autoCorrect={false}
+        />
+        {searching
+          ? <ActivityIndicator size="small" color={colors.accent} />
+          : query.length > 0
+            ? <TouchableOpacity onPress={() => { setQuery(''); setResults([]); }}>
+                <Ionicons name="close-circle" size={16} color={colors.textDim} />
+              </TouchableOpacity>
+            : null}
+      </View>
+
+      {results.length > 0 && (
+        <View style={{ marginTop: 10, gap: 0 }}>
+          {results.map((profile, i) => {
+            const initials = (profile.full_name ?? '?').split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            return (
+              <View key={profile.id} style={{
+                flexDirection: 'row', alignItems: 'center', gap: 10,
+                paddingVertical: 9,
+                borderTopWidth: i === 0 ? 1 : 0,
+                borderBottomWidth: 1,
+                borderColor: colors.border,
+              }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accent + '22', borderWidth: 1, borderColor: colors.accent + '44', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 12, fontWeight: weight.bold, color: colors.accent }}>{initials}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: colors.text }}>{profile.full_name}</Text>
+                  {profile.goal ? <Text style={{ fontSize: 11, color: colors.textDim }}>{profile.goal}</Text> : null}
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleInvite(profile)}
+                  disabled={inviting === profile.id}
+                  style={{ backgroundColor: colors.accent, borderRadius: 9, paddingHorizontal: 12, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 5, opacity: inviting === profile.id ? 0.7 : 1 }}
+                >
+                  {inviting === profile.id
+                    ? <ActivityIndicator size="small" color={colors.bg} />
+                    : <Ionicons name="person-add-outline" size={13} color={colors.bg} />}
+                  <Text style={{ fontSize: 12, fontWeight: weight.bold, color: colors.bg }}>Invite</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {query.length >= 2 && !searching && results.length === 0 && (
+        <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 10, textAlign: 'center' }}>No users found</Text>
+      )}
+    </View>
+  );
+}
+
 function CoachTab({ userId, colors }) {
   const navigation = useNavigation();
   const qc = useQueryClient();
@@ -306,10 +409,18 @@ function CoachTab({ userId, colors }) {
       {/* Coach Profile */}
       <CoachProfileCard userId={userId} colors={colors} />
 
-      {/* Generate Invite */}
+      {/* Search & Invite */}
+      <SearchInviteSection
+        userId={userId}
+        existingClientIds={clientLinks.filter(l => l.client_id).map(l => l.client_id)}
+        colors={colors}
+        onInvited={() => qc.invalidateQueries({ queryKey: ['coachClients', userId] })}
+      />
+
+      {/* Generate Invite Code */}
       <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text }}>Invite a Client</Text>
+          <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text }}>Invite via Code</Text>
           <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>Share a unique code — expires once used</Text>
         </View>
         <TouchableOpacity
@@ -319,7 +430,7 @@ function CoachTab({ userId, colors }) {
         >
           {generateMut.isPending
             ? <ActivityIndicator size="small" color={colors.bg} />
-            : <Ionicons name="add-circle-outline" size={15} color={colors.bg} />}
+            : <Ionicons name="key-outline" size={15} color={colors.bg} />}
           <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Generate</Text>
         </TouchableOpacity>
       </View>
@@ -328,18 +439,33 @@ function CoachTab({ userId, colors }) {
       {pending.length > 0 && (
         <>
           <SectionLabel title={`Pending Invites (${pending.length})`} colors={colors} />
-          {pending.map(link => (
-            <View key={link.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 12, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 3, borderLeftColor: '#fbbf24', padding: 12, marginBottom: 8, gap: 10 }}>
-              <Ionicons name="time-outline" size={18} color="#fbbf24" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, color: colors.textDim, marginBottom: 2 }}>Awaiting client</Text>
-                <Text style={{ fontWeight: weight.bold, color: colors.text, letterSpacing: 2, fontSize: typography.sm }}>{link.invite_code}</Text>
+          {pending.map(link => {
+            const isSearch = !link.invite_code && link.client_id;
+            const clientName = link.client?.full_name ?? 'Client';
+            const initials = clientName.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            return (
+              <View key={link.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 12, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 3, borderLeftColor: '#fbbf24', padding: 12, marginBottom: 8, gap: 10 }}>
+                {isSearch ? (
+                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#fbbf2422', borderWidth: 1, borderColor: '#fbbf2444', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 12, fontWeight: weight.bold, color: '#fbbf24' }}>{initials}</Text>
+                  </View>
+                ) : (
+                  <Ionicons name="time-outline" size={18} color="#fbbf24" />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: colors.textDim, marginBottom: 2 }}>
+                    {isSearch ? 'Awaiting acceptance' : 'Awaiting client'}
+                  </Text>
+                  <Text style={{ fontWeight: weight.bold, color: colors.text, letterSpacing: isSearch ? 0 : 2, fontSize: typography.sm }}>
+                    {isSearch ? clientName : link.invite_code}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => handleRemove(link)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.danger + '15', borderWidth: 1, borderColor: colors.danger + '44' }}>
+                  <Text style={{ fontSize: 11, color: colors.danger, fontWeight: weight.semibold }}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => handleRemove(link)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.danger + '15', borderWidth: 1, borderColor: colors.danger + '44' }}>
-                <Text style={{ fontSize: 11, color: colors.danger, fontWeight: weight.semibold }}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+            );
+          })}
           <View style={{ height: 10 }} />
         </>
       )}
@@ -445,27 +571,36 @@ function ClientTab({ userId, colors, isPro }) {
   const [activeCoach, setActiveCoach] = useState(null);
   const [linkedSince, setLinkedSince] = useState(null);
   const [linkId, setLinkId] = useState(null);
+  const [pendingInvites, setPendingInvites] = useState([]);
 
-  useEffect(() => {
+  const loadClientData = async () => {
     if (!userId) return;
-    supabase.from('profiles').select('coach_visibility').eq('id', userId).single()
-      .then(({ data }) => {
-        if (data?.coach_visibility) setVisibility({ ...DEFAULT_VIS, ...data.coach_visibility });
-        setLoaded(true);
-      });
-    supabase.from('coach_clients')
-      .select('id, coach_id, created_at')
-      .eq('client_id', userId).eq('status', 'active').limit(1).single()
-      .then(async ({ data }) => {
-        if (!data?.coach_id) return;
-        setLinkId(data.id);
-        setLinkedSince(data.created_at);
-        const { data: prof } = await supabase.from('profiles')
-          .select('full_name, bio, goal, sex')
-          .eq('id', data.coach_id).single();
-        setActiveCoach({ coach_id: data.coach_id, ...(prof ?? {}) });
-      });
-  }, [userId]);
+    const [visRes, activeRes, pendingRes] = await Promise.all([
+      supabase.from('profiles').select('coach_visibility').eq('id', userId).single(),
+      supabase.from('coach_clients').select('id, coach_id, created_at').eq('client_id', userId).eq('status', 'active').limit(1).single(),
+      supabase.from('coach_clients').select('id, coach_id, created_at').eq('client_id', userId).eq('status', 'pending').is('invite_code', null),
+    ]);
+
+    if (visRes.data?.coach_visibility) setVisibility({ ...DEFAULT_VIS, ...visRes.data.coach_visibility });
+    setLoaded(true);
+
+    if (activeRes.data?.coach_id) {
+      const { data: prof } = await supabase.from('profiles').select('full_name, bio, goal, sex').eq('id', activeRes.data.coach_id).single();
+      setLinkId(activeRes.data.id);
+      setLinkedSince(activeRes.data.created_at);
+      setActiveCoach({ coach_id: activeRes.data.coach_id, ...(prof ?? {}) });
+    }
+
+    const pending = pendingRes.data ?? [];
+    if (pending.length > 0) {
+      const coachIds = pending.map(r => r.coach_id);
+      const { data: profiles } = await supabase.from('profiles').select('id, full_name, bio, goal').in('id', coachIds);
+      const pMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p]));
+      setPendingInvites(pending.map(r => ({ ...r, coach: pMap[r.coach_id] ?? {} })));
+    }
+  };
+
+  useEffect(() => { loadClientData(); }, [userId]);
 
   const handleToggle = async (key, val) => {
     const next = { ...visibility, [key]: val };
@@ -516,11 +651,74 @@ function ClientTab({ userId, colors, isPro }) {
     ]);
   };
 
+  const handleAcceptInvite = async (invite) => {
+    const { error } = await supabase.from('coach_clients').update({ status: 'active' }).eq('id', invite.id);
+    if (error) { Alert.alert('Error', error.message); return; }
+    setPendingInvites(prev => prev.filter(i => i.id !== invite.id));
+    setActiveCoach({ coach_id: invite.coach_id, ...invite.coach });
+    setLinkedSince(invite.created_at);
+    setLinkId(invite.id);
+  };
+
+  const handleDeclineInvite = async (invite) => {
+    await supabase.from('coach_clients').update({ status: 'removed' }).eq('id', invite.id);
+    setPendingInvites(prev => prev.filter(i => i.id !== invite.id));
+  };
+
   return (
     <View style={{ flex: 1 }}>
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
 
       {/* Active coach card — shown when connected */}
+      {/* Pending coach invitations */}
+      {!activeCoach && pendingInvites.length > 0 && (
+        <View style={{ marginBottom: 14 }}>
+          <Text style={{ fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+            Coach Invitations ({pendingInvites.length})
+          </Text>
+          {pendingInvites.map(invite => {
+            const name = invite.coach?.full_name ?? 'Coach';
+            const initials = name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            return (
+              <View key={invite.id} style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.accent + '40', borderLeftWidth: 3, borderLeftColor: colors.accent, padding: 12, marginBottom: 8, gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent + '22', borderWidth: 1.5, borderColor: colors.accent + '55', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 14, fontWeight: weight.bold, color: colors.accent }}>{initials}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text }}>{name}</Text>
+                    <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>
+                      {invite.coach?.goal ? invite.coach.goal : 'Coach'} · wants to coach you
+                    </Text>
+                  </View>
+                </View>
+                {invite.coach?.bio ? (
+                  <Text style={{ fontSize: 12, color: colors.textDim, fontStyle: 'italic' }} numberOfLines={2}>
+                    "{invite.coach.bio}"
+                  </Text>
+                ) : null}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => handleAcceptInvite(invite)}
+                    style={{ flex: 1, backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Ionicons name="checkmark-circle" size={14} color={colors.bg} />
+                    <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDeclineInvite(invite)}
+                    style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.danger + '12', borderWidth: 1, borderColor: colors.danger + '40', flexDirection: 'row', alignItems: 'center', gap: 5 }}
+                  >
+                    <Ionicons name="close-outline" size={14} color={colors.danger} />
+                    <Text style={{ fontSize: 13, color: colors.danger, fontWeight: weight.medium }}>Decline</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       {activeCoach ? (
         <CoachCard
           coach={activeCoach}
