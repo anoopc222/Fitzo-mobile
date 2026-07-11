@@ -196,17 +196,7 @@ export default function SettingsScreen() {
           />
         </View>
 
-        {/* ── Coach / Client Mode ─────────────────────────────────── */}
-        <SectionHeader title="Coach / Client" />
-        <View style={styles.card}>
-          <SettingRow
-            icon="people-outline"
-            label="Coach Mode & Client Privacy"
-            chevron
-            last
-            onPress={() => navigate('Coach')}
-          />
-        </View>
+
 
         {/* ── Danger Zone ─────────────────────────────────────────── */}
         <SectionHeader title={t('settings.dangerZone')} />
