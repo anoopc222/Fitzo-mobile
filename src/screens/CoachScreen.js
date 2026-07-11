@@ -151,6 +151,137 @@ function ClientCard({ link, onViewStats, onRemove, colors }) {
 
 // ─── Coach tab ────────────────────────────────────────────────────────────────
 
+const SPECIALTIES = ['Strength', 'Weight Loss', 'Muscle Gain', 'Cardio', 'Flexibility', 'Nutrition', 'Athletic Performance', 'Rehabilitation'];
+
+function CoachProfileCard({ userId, colors }) {
+  const [profile, setProfile] = useState({ full_name: '', bio: '', goal: '' });
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ full_name: '', bio: '', goal: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    supabase.from('profiles').select('full_name, bio, goal').eq('id', userId).single()
+      .then(({ data }) => {
+        if (data) {
+          const p = { full_name: data.full_name ?? '', bio: data.bio ?? '', goal: data.goal ?? '' };
+          setProfile(p);
+          setDraft(p);
+        }
+      });
+  }, [userId]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await supabase.from('profiles').update({ full_name: draft.full_name, bio: draft.bio, goal: draft.goal }).eq('id', userId);
+    setProfile(draft);
+    setSaving(false);
+    setEditing(false);
+  };
+
+  const handleCancel = () => { setDraft(profile); setEditing(false); };
+
+  const initials = (profile.full_name || '?').split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+  return (
+    <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20 }}>
+      <View style={{ height: 4, backgroundColor: colors.accent }} />
+      <View style={{ padding: 18, gap: 14 }}>
+        {/* Header row */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent + '22', borderWidth: 2, borderColor: colors.accent + '55', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 20, fontWeight: weight.black, color: colors.accent }}>{initials}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: typography.base, fontWeight: weight.bold, color: colors.text }}>{profile.full_name || 'Your Name'}</Text>
+            <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
+              {profile.goal ? `Specialty: ${profile.goal}` : 'No specialty set'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => editing ? handleCancel() : setEditing(true)}
+            style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: editing ? colors.bgElevated : colors.accent + '18', borderWidth: 1, borderColor: editing ? colors.border : colors.accent + '40' }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: weight.bold, color: editing ? colors.textDim : colors.accent }}>
+              {editing ? 'Cancel' : 'Edit'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {editing ? (
+          <View style={{ gap: 10 }}>
+            {/* Name */}
+            <View>
+              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, marginBottom: 5, letterSpacing: 0.5 }}>DISPLAY NAME</Text>
+              <TextInput
+                value={draft.full_name}
+                onChangeText={v => setDraft(d => ({ ...d, full_name: v }))}
+                placeholder="Your name"
+                placeholderTextColor={colors.textDim}
+                style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: colors.accent + '50', paddingHorizontal: 14, paddingVertical: 11, fontSize: typography.sm, color: colors.text }}
+              />
+            </View>
+
+            {/* Bio */}
+            <View>
+              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, marginBottom: 5, letterSpacing: 0.5 }}>BIO / INTRO</Text>
+              <TextInput
+                value={draft.bio}
+                onChangeText={v => setDraft(d => ({ ...d, bio: v }))}
+                placeholder="Tell your clients about yourself…"
+                placeholderTextColor={colors.textDim}
+                multiline
+                numberOfLines={3}
+                style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: colors.accent + '50', paddingHorizontal: 14, paddingVertical: 11, fontSize: typography.sm, color: colors.text, minHeight: 80, textAlignVertical: 'top' }}
+              />
+            </View>
+
+            {/* Specialty chips */}
+            <View>
+              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, marginBottom: 8, letterSpacing: 0.5 }}>SPECIALTY</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                {SPECIALTIES.map(s => {
+                  const sel = draft.goal === s;
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      onPress={() => setDraft(d => ({ ...d, goal: sel ? '' : s }))}
+                      style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: sel ? colors.accent : colors.bgElevated, borderWidth: 1.5, borderColor: sel ? colors.accent : colors.border }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: weight.semibold, color: sel ? colors.bg : colors.textDim }}>{s}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Save */}
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={saving}
+              style={{ backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1, marginTop: 4 }}
+            >
+              {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
+              <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg }}>Save Profile</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          profile.bio ? (
+            <View style={{ backgroundColor: colors.bg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ fontSize: typography.sm, color: colors.text, lineHeight: 20 }}>"{profile.bio}"</Text>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setEditing(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
+              <Ionicons name="add-circle-outline" size={16} color={colors.accent} />
+              <Text style={{ fontSize: typography.sm, color: colors.accent }}>Add bio & specialty — clients will see this</Text>
+            </TouchableOpacity>
+          )
+        )}
+      </View>
+    </View>
+  );
+}
+
 function CoachTab({ userId, colors }) {
   const navigation = useNavigation();
   const qc = useQueryClient();
@@ -190,6 +321,9 @@ function CoachTab({ userId, colors }) {
       contentContainerStyle={{ padding: 16, paddingBottom: 50 }}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} colors={[colors.accent]} />}
     >
+      {/* Coach Profile */}
+      <CoachProfileCard userId={userId} colors={colors} />
+
       {/* Generate Invite */}
       <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 20 }}>
         <SectionLabel title="Invite a Client" colors={colors} />
