@@ -22,7 +22,7 @@ async function fetchClientDetail(clientId) {
 
   const [profile, workouts, weights, steps, food, sleep] = await Promise.all([
     supabase.from('profiles')
-      .select('full_name, goal, weight_goal_kg, step_goal, sleep_goal_hours, calorie_target')
+      .select('full_name, goal, weight_goal_kg, step_goal, sleep_goal_hours, calorie_target, coach_visibility')
       .eq('id', clientId).single(),
     supabase.from('workout_sessions')
       .select(`id, date, total_volume, duration_min, calories_burned, notes,
@@ -304,6 +304,32 @@ function WeightHistoryRow({ entry, prev, colors }) {
   );
 }
 
+function LockedSection({ label, colors }) {
+  return (
+    <View style={{
+      backgroundColor: colors.bgCard, borderRadius: 14,
+      borderWidth: 1, borderColor: colors.border,
+      borderStyle: 'dashed', padding: 20,
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+    }}>
+      <View style={{
+        width: 38, height: 38, borderRadius: 19,
+        backgroundColor: colors.bgElevated, alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Ionicons name="lock-closed" size={18} color={colors.textDim} />
+      </View>
+      <View>
+        <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: colors.textMuted }}>
+          {label} hidden
+        </Text>
+        <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
+          Client has restricted access to this section
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function CoachNotes({ clientId, colors }) {
   const key = `fitzo:coachNote:${clientId}`;
   const [note, setNote] = useState('');
@@ -349,6 +375,9 @@ export default function ClientDetailScreen() {
   });
 
   const { profile, workouts = [], weights = [], steps = [], food = [], sleep = [] } = data ?? {};
+
+  // Privacy visibility (defaults to all visible if client hasn't set)
+  const vis = { workouts: true, weight: true, steps: true, sleep: true, food: true, ...(profile?.coach_visibility ?? {}) };
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const last7Workouts = workouts.filter(w => {
@@ -419,33 +448,38 @@ export default function ClientDetailScreen() {
       >
         {/* ── 4 Stat Tiles ─────────────────────────────────────────── */}
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-          <StatTile label="Workouts (30d)" value={workouts.length} icon="barbell-outline" colors={colors} />
+          <StatTile
+            label="Workouts (30d)"
+            value={vis.workouts ? workouts.length : '🔒'}
+            icon="barbell-outline" colors={colors}
+            accent={vis.workouts ? colors.accent : colors.textDim}
+          />
           <StatTile
             label="Avg Steps (7d)"
-            value={avgSteps7 > 0 ? avgSteps7.toLocaleString() : '—'}
-            icon="footsteps-outline"
-            colors={colors}
-            sub={profile?.step_goal ? {
+            value={!vis.steps ? '🔒' : avgSteps7 > 0 ? avgSteps7.toLocaleString() : '—'}
+            icon="footsteps-outline" colors={colors}
+            accent={vis.steps ? colors.accent : colors.textDim}
+            sub={vis.steps && profile?.step_goal ? {
               text: `Goal: ${profile.step_goal.toLocaleString()}`,
               color: avgSteps7 >= profile.step_goal ? '#34d399' : '#f87171',
             } : null}
           />
           <StatTile
             label="Avg Sleep (7d)"
-            value={avgSleep7 > 0 ? fmt(avgSleep7) + 'h' : '—'}
-            icon="moon-outline"
-            colors={colors}
-            sub={profile?.sleep_goal_hours ? {
+            value={!vis.sleep ? '🔒' : avgSleep7 > 0 ? fmt(avgSleep7) + 'h' : '—'}
+            icon="moon-outline" colors={colors}
+            accent={vis.sleep ? colors.accent : colors.textDim}
+            sub={vis.sleep && profile?.sleep_goal_hours ? {
               text: `Goal: ${profile.sleep_goal_hours}h`,
               color: avgSleep7 >= profile.sleep_goal_hours ? '#34d399' : '#f87171',
             } : null}
           />
           <StatTile
             label="Avg Cals (30d)"
-            value={avgCals > 0 ? avgCals.toLocaleString() : '—'}
-            icon="flame-outline"
-            colors={colors}
-            sub={profile?.calorie_target ? {
+            value={!vis.food ? '🔒' : avgCals > 0 ? avgCals.toLocaleString() : '—'}
+            icon="flame-outline" colors={colors}
+            accent={vis.food ? colors.accent : colors.textDim}
+            sub={vis.food && profile?.calorie_target ? {
               text: `Target: ${profile.calorie_target}`,
               color: Math.abs(avgCals - profile.calorie_target) < 200 ? '#34d399' : '#fbbf24',
             } : null}
@@ -453,7 +487,10 @@ export default function ClientDetailScreen() {
         </View>
 
         {/* ── Weight ───────────────────────────────────────────────── */}
-        <SectionLabel title="Weight (30d)" colors={colors} />
+        <SectionLabel title="Weight (30d)" colors={colors}
+          right={!vis.weight && <Ionicons name="lock-closed" size={13} color={colors.textDim} />}
+        />
+        {!vis.weight ? <LockedSection label="Weight" colors={colors} /> :
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
             <View style={{ flex: 1 }}>
@@ -483,7 +520,7 @@ export default function ClientDetailScreen() {
           {weights.length === 0 && (
             <Text style={{ fontSize: typography.sm, color: colors.textDim }}>No weight logged</Text>
           )}
-        </View>
+        </View>}
 
         {/* ── Last 7 Days Summary ───────────────────────────────────── */}
         <SectionLabel title="Last 7 Days" colors={colors} />
@@ -503,7 +540,12 @@ export default function ClientDetailScreen() {
           </View>
 
           {/* Step bars per day */}
-          {steps.length > 0 && steps.slice(0, 7).reverse().map((s, i) => (
+          {!vis.steps ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 }}>
+              <Ionicons name="lock-closed" size={14} color={colors.textDim} />
+              <Text style={{ fontSize: 12, color: colors.textDim }}>Step data hidden by client</Text>
+            </View>
+          ) : steps.length > 0 ? steps.slice(0, 7).reverse().map((s, i) => (
             <WeekDayRow
               key={i}
               label={fmtDate(s.logged_at)}
@@ -512,15 +554,18 @@ export default function ClientDetailScreen() {
               color="#34d399"
               colors={colors}
             />
-          ))}
+          )) : null}
         </View>
 
         {/* ── Workouts (expandable) ─────────────────────────────────── */}
         <SectionLabel
           title={`Workouts · ${workouts.length} sessions`}
           colors={colors}
-          right={<Text style={{ fontSize: 10, color: colors.textDim }}>Tap to see sets</Text>}
+          right={vis.workouts
+            ? <Text style={{ fontSize: 10, color: colors.textDim }}>Tap to see sets</Text>
+            : <Ionicons name="lock-closed" size={13} color={colors.textDim} />}
         />
+        {!vis.workouts ? <LockedSection label="Workouts" colors={colors} /> :
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14 }}>
           {workouts.length === 0 ? (
             <Text style={{ fontSize: typography.sm, color: colors.textDim, paddingVertical: 14 }}>No workouts in last 30 days</Text>
@@ -529,10 +574,13 @@ export default function ClientDetailScreen() {
               <WorkoutRow key={session.id ?? i} session={session} colors={colors} />
             ))
           )}
-        </View>
+        </View>}
 
         {/* ── Sleep (last 7 nights) ─────────────────────────────────── */}
-        <SectionLabel title="Sleep · Last 7 nights" colors={colors} />
+        <SectionLabel title="Sleep · Last 7 nights" colors={colors}
+          right={!vis.sleep && <Ionicons name="lock-closed" size={13} color={colors.textDim} />}
+        />
+        {!vis.sleep ? <LockedSection label="Sleep" colors={colors} /> :
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14 }}>
           {sleep.length === 0 ? (
             <Text style={{ fontSize: typography.sm, color: colors.textDim }}>No sleep logged</Text>
@@ -547,7 +595,7 @@ export default function ClientDetailScreen() {
               <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text }}>{fmt(avgSleep7)}h</Text>
             </View>
           )}
-        </View>
+        </View>}
 
         {/* ── Coach Notes ───────────────────────────────────────────── */}
         <SectionLabel title="Coach Notes" colors={colors} />
