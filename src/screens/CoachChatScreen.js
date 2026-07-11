@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator, Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -176,6 +176,8 @@ export default function CoachChatScreen() {
   const flatRef = useRef(null);
   const [text, setText] = useState('');
   const [inputHeight, setInputHeight] = useState(40);
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 60;
 
   const isCoach = user?.id === coachId;
   const otherName = isCoach ? (clientName ?? 'Client') : (coachName ?? 'Coach');
@@ -267,7 +269,7 @@ export default function CoachChatScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        keyboardVerticalOffset={TAB_BAR_HEIGHT + insets.bottom}
       >
         {isLoading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -304,7 +306,8 @@ export default function CoachChatScreen() {
         {/* ── Input bar ───────────────────────────────────────────────── */}
         <View style={{
           flexDirection: 'row', alignItems: 'flex-end', gap: 10,
-          paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12,
+          paddingHorizontal: 14, paddingTop: 10,
+          paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 4,
           borderTopWidth: 1, borderTopColor: colors.border,
           backgroundColor: colors.bg,
         }}>
