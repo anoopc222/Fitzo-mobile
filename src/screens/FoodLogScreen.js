@@ -262,6 +262,17 @@ async function deleteFoodLog(id) {
   if (error) throw error;
 }
 
+async function updateFoodLog(id, food) {
+  const { error } = await supabase.from('food_logs').update({
+    food_name: food.food_name,
+    calories: food.calories,
+    protein: food.protein,
+    carbs: food.carbs,
+    fats: food.fats,
+  }).eq('id', id);
+  if (error) throw error;
+}
+
 async function updateMacroTargets(userId, { protein, carbs, fats, calories }) {
   const { error } = await supabase.from('profiles').update({
     protein_target: protein, carbs_target: carbs, fats_target: fats, calorie_target: calories,
@@ -398,6 +409,7 @@ export default function FoodLogScreen({ embedded = false } = {}) {
   const [selectedMeal, setSelectedMeal] = useState('Breakfast');
   const [form, setForm] = useState(EMPTY_FORM);
   const [saveToMyFoods, setSaveToMyFoods] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
   // Search step state
   const [searchQuery, setSearchQuery] = useState('');
@@ -535,6 +547,28 @@ export default function FoodLogScreen({ embedded = false } = {}) {
     },
   });
 
+  const updateMut = useMutation({
+    mutationFn: ({ id, food }) => updateFoodLog(id, food),
+    onMutate: async ({ id, food }) => {
+      await qc.cancelQueries(['food', user.id, today]);
+      const previous = qc.getQueryData(['food', user.id, today]);
+      qc.setQueryData(['food', user.id, today], (old) => {
+        if (!old) return old;
+        return { ...old, logs: old.logs.map(l => l.id === id ? { ...l, ...food } : l) };
+      });
+      closeSheet();
+      return { previous };
+    },
+    onError: (e, vars, context) => {
+      if (context?.previous) qc.setQueryData(['food', user.id, today], context.previous);
+      Alert.alert(t('foodLog.errorTitle'), e.message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries(['food', user.id, today]);
+      qc.invalidateQueries(['home', user.id]);
+    },
+  });
+
   const targetsMut = useMutation({
     mutationFn: (vals) => updateMacroTargets(user.id, vals),
     onMutate: async (vals) => {
@@ -635,6 +669,21 @@ export default function FoodLogScreen({ embedded = false } = {}) {
     Keyboard.dismiss();
     setShowSheet(false);
     setSaveToMyFoods(false);
+    setEditingItem(null);
+  };
+
+  const openEditSheet = (item) => {
+    setEditingItem(item);
+    setSelectedMeal(item.meal_type ?? 'Breakfast');
+    setForm({
+      food_name: item.food_name ?? '',
+      calories: String(item.calories ?? ''),
+      protein: String(item.protein ?? ''),
+      carbs: String(item.carbs ?? ''),
+      fats: String(item.fats ?? ''),
+    });
+    setSheetStep('manual');
+    setShowSheet(true);
   };
 
   const pickFood = (food) => {
@@ -675,6 +724,10 @@ export default function FoodLogScreen({ embedded = false } = {}) {
       fats: parseFloat(form.fats) || 0,
       meal_type: selectedMeal,
     };
+    if (editingItem) {
+      updateMut.mutate({ id: editingItem.id, food: foodData });
+      return;
+    }
     if (saveToMyFoods) {
       saveCustomFoodMut.mutate({ ...foodData, serving_size: '100g' });
     }
@@ -846,6 +899,9 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                           </View>
                         </View>
                         <Text style={styles.foodCals}>{t('foodLog.kcalAmount', { value: item.calories })}</Text>
+                        <TouchableOpacity onPress={() => openEditSheet(item)} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+                          <Ionicons name="pencil" size={14} color={colors.textMuted} />
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={() => Alert.alert(t('foodLog.deleteTitle'), t('foodLog.deleteConfirmMessage', { name: item.food_name }), [
                           { text: t('foodLog.cancel'), style: 'cancel' },
                           { text: t('foodLog.delete'), style: 'destructive', onPress: () => deleteMut.mutate(item.id) },
@@ -1033,7 +1089,7 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                   <MacroInput label={t('foodLog.fats')} value={form.fats} onChange={v => setForm(p => ({ ...p, fats: v }))} color={colors.warning} />
                 </View>
 
-                <TouchableOpacity
+                {!editingItem && <TouchableOpacity
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 }}
                   onPress={() => setSaveToMyFoods(v => !v)}
                   activeOpacity={0.7}
@@ -1047,10 +1103,10 @@ export default function FoodLogScreen({ embedded = false } = {}) {
                     {saveToMyFoods && <Ionicons name="checkmark" size={14} color={colors.bg} />}
                   </View>
                   <Text style={{ fontSize: typography.sm, color: colors.text }}>⭐ Save to My Foods</Text>
-                </TouchableOpacity>
+                </TouchableOpacity>}
 
                 <TouchableOpacity style={styles.saveBtn} onPress={handleAddManual}>
-                  <Text style={styles.saveBtnText}>{t('foodLog.saveFood')}</Text>
+                  <Text style={styles.saveBtnText}>{editingItem ? 'Update Food' : t('foodLog.saveFood')}</Text>
                 </TouchableOpacity>
               </ScrollView>
             )}
