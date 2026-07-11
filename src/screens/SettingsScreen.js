@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Platform, Share, Modal, Pressable, FlatList,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Switch, Platform, Share, Modal, Pressable, FlatList, TextInput, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +35,8 @@ export default function SettingsScreen() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [editingTimeKey, setEditingTimeKey] = useState(null);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [joiningCoach, setJoiningCoach] = useState(false);
   const { t, i18n } = useTranslation();
 
   const handleSelectLanguage = (code) => {
@@ -81,6 +83,26 @@ export default function SettingsScreen() {
         }),
       },
     ]);
+  };
+
+  const handleJoinCoach = async () => {
+    const code = inviteCode.trim().toUpperCase();
+    if (!code) return;
+    setJoiningCoach(true);
+    try {
+      const { data, error } = await supabase.rpc('accept_coach_invite', { p_code: code });
+      if (error) throw error;
+      if (data) {
+        setInviteCode('');
+        Alert.alert('Success', 'You are now connected to your coach!');
+      } else {
+        Alert.alert('Invalid Code', 'This code is invalid or has already been used.');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setJoiningCoach(false);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -201,11 +223,47 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <SettingRow
             icon="people-outline"
-            label="Manage Clients"
+            label="Manage Clients (Coach)"
             chevron
             onPress={() => navigate('Coach')}
-            last
           />
+          <View style={[styles.settingRow, { flexDirection: 'column', alignItems: 'flex-start', gap: 8, paddingVertical: 12 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="barcode-outline" size={18} color={colors.textMuted} />
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Join a Coach</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, width: '100%' }}>
+              <TextInput
+                style={{
+                  flex: 1, backgroundColor: colors.bgElevated, color: colors.text,
+                  borderRadius: 10, borderWidth: 1, borderColor: colors.border,
+                  paddingHorizontal: 12, paddingVertical: 8, fontSize: 14,
+                  fontWeight: '700', letterSpacing: 2,
+                }}
+                placeholder="Enter invite code"
+                placeholderTextColor={colors.textDim}
+                value={inviteCode}
+                onChangeText={v => setInviteCode(v.toUpperCase())}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={8}
+              />
+              <TouchableOpacity
+                onPress={handleJoinCoach}
+                disabled={joiningCoach || !inviteCode.trim()}
+                style={{
+                  backgroundColor: colors.accent, borderRadius: 10,
+                  paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center',
+                  opacity: (!inviteCode.trim() || joiningCoach) ? 0.5 : 1,
+                }}
+              >
+                {joiningCoach
+                  ? <ActivityIndicator size="small" color={colors.bg} />
+                  : <Text style={{ color: colors.bg, fontWeight: '800', fontSize: 13 }}>Join</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         {/* ── Danger Zone ─────────────────────────────────────────── */}
