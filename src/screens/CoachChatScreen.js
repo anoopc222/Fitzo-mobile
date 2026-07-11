@@ -57,27 +57,15 @@ function Bubble({ msg, isMe, prevMsg, colors, accent, otherName }) {
     <View style={{
       marginTop: prevIsMe ? 2 : 10,
       marginHorizontal: 14,
-      flexDirection: 'row',
-      alignItems: 'flex-end',
-      justifyContent: isMe ? 'flex-end' : 'flex-start',
-      gap: 8,
+      alignItems: isMe ? 'flex-end' : 'flex-start',
     }}>
-      {/* Other person's avatar */}
-      {!isMe && (
-        <View style={{ width: 28 }}>
-          {showAvatar
-            ? <Avatar name={otherName} size={28} accent={accent} />
-            : null}
-        </View>
+      {/* Sender label on first bubble of a group */}
+      {!isMe && showAvatar && (
+        <Text style={{ fontSize: 10, color: colors.textDim, marginBottom: 3, marginLeft: 4, fontWeight: '600' }}>
+          {otherName}
+        </Text>
       )}
-
-      <View style={{ maxWidth: '72%' }}>
-        {/* Sender label on first bubble */}
-        {!isMe && showAvatar && (
-          <Text style={{ fontSize: 10, color: colors.textDim, marginBottom: 3, marginLeft: 2, fontWeight: '600' }}>
-            {otherName}
-          </Text>
-        )}
+      <View style={{ maxWidth: '78%' }}>
 
         {isMe ? (
           <LinearGradient
