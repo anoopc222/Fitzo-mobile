@@ -13,6 +13,12 @@ import { fetchProfile } from '../screens/ProfileScreen';
 
 const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
   {
+    title: 'Coach',
+    items: [
+      { label: 'Coach Mode', icon: 'people', target: ['Home', 'Coach'], color: colors.accent },
+    ],
+  },
+  {
     title: t('more.sectionBodyHealth'),
     items: [
       { label: t('more.progress'),     icon: 'trending-up', target: ['Home', 'Progress'],     color: colors.good },
@@ -36,7 +42,6 @@ const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
     title: t('more.sectionTools'),
     items: [
       { label: t('more.calculators'),  icon: 'calculator',  target: ['Home', 'Calculators'],  color: colors.warning },
-      { label: 'Coach Mode',           icon: 'people',      target: ['Home', 'Coach'],         color: colors.accent },
     ],
   },
   {
