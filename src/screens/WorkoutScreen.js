@@ -4,8 +4,9 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
   Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle, UIManager, AppState,
-  PanResponder,
+  PanResponder, Image,
 } from 'react-native';
+import useExerciseDemo from '../hooks/useExerciseDemo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -948,6 +949,46 @@ function getMuscleVolumeThisWeek(sessions) {
   return Object.entries(map).map(([m, v]) => ({ muscle: m, vol: Math.round(v) })).sort((a, b) => b.vol - a.vol).slice(0, 6);
 }
 
+// ─── Exercise Demo Button ─────────────────────────────────────────────────────
+function ExerciseDemoButton({ exerciseName, colors }) {
+  const [showDemo, setShowDemo] = useState(false);
+  const { imageUrl, isLoading } = useExerciseDemo(showDemo ? exerciseName : null);
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => setShowDemo(true)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{ marginLeft: 2 }}
+      >
+        <Ionicons name="play-circle-outline" size={13} color={colors.textDim} />
+      </TouchableOpacity>
+      <Modal visible={showDemo} transparent animationType="fade" onRequestClose={() => setShowDemo(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.82)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <View style={{ width: '100%', maxWidth: 340, backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 18, alignItems: 'center' }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 14 }}>{(exerciseName ?? '').toUpperCase()}</Text>
+            {isLoading ? (
+              <ActivityIndicator color={colors.accent} style={{ height: 180 }} />
+            ) : imageUrl ? (
+              <Image source={{ uri: imageUrl }} style={{ width: 280, height: 200, borderRadius: 12 }} resizeMode="contain" />
+            ) : (
+              <View style={{ height: 140, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="barbell-outline" size={48} color={colors.textDim} />
+                <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 10 }}>No demo available</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              onPress={() => setShowDemo(false)}
+              style={{ marginTop: 16, backgroundColor: colors.bgElevated, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
 // All-time best (weight, reps, volume) for an exercise, used for PR detection — same data source as getPrevSetSummary
 function getAllTimeBest(allSessions, exerciseName, beforeDate) {
   const name = (exerciseName ?? '').trim().toLowerCase();
@@ -1359,6 +1400,7 @@ function SessionDetailModal({ session, pbMap, allSessions, visible, onClose, onE
                       <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); setHistoryEx(ex.exercise_name); }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
                         <Ionicons name="time-outline" size={12} color={colors.textDim} />
                       </TouchableOpacity>
+                      <ExerciseDemoButton exerciseName={ex.exercise_name} colors={colors} />
                     </View>
                     {sortedSets.length > 0 && (
                       <View style={dS.compactSetRow}>

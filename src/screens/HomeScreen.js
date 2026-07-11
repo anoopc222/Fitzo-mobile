@@ -37,6 +37,10 @@ import { useGatedExport } from '../hooks/useGatedExport';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useMoreMenu } from '../context/MoreMenuContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MilestoneModal from '../components/MilestoneModal';
+import MuscleRecoveryMap from '../components/MuscleRecoveryMap';
+import useSmartReminders from '../hooks/useSmartReminders';
+import useMilestones from '../hooks/useMilestones';
 
 // ─── accent palette (matches ActivityTracker web app) ──────────────────────
 const C_WEIGHT = '#fb7185'; // rose
@@ -272,6 +276,21 @@ async function fetchHome(userId) {
       .order('date', { ascending: false }).limit(7),
   ]);
 
+  // Extra queries for milestones (lightweight counts — run after main batch)
+  const [allTimeWorkoutsResp, allTimeVolumeResp, allTimeFoodResp, allTimeSleepResp] = await Promise.all([
+    supabase.from('workout_sessions').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('sets').select('weight_kg, reps, workout_exercises!inner(workout_sessions!inner(user_id))')
+      .eq('workout_exercises.workout_sessions.user_id', userId).limit(10000),
+    supabase.from('food_logs').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('sleep_logs').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+  ]);
+  const allTimeWorkoutCount = allTimeWorkoutsResp.count ?? 0;
+  const allTimeTotalVolume = (allTimeVolumeResp.data ?? []).reduce(
+    (s, r) => s + ((parseFloat(r.weight_kg) || 0) * (parseFloat(r.reps) || 0)), 0
+  );
+  const allTimeFoodCount = allTimeFoodResp.count ?? 0;
+  const allTimeSleepCount = allTimeSleepResp.count ?? 0;
+
   const weightArr = (weightHist.data ?? []).map(w => w.weight).reverse();
   const stepsArr  = (stepsHist.data ?? []).map(s => s.steps).reverse();
   const sleepArr  = (sleepHist.data ?? []).map(s => s.hours).reverse();
@@ -415,9 +434,9 @@ async function fetchHome(userId) {
     }
   }
 
-  // Readiness Score: blends sleep (40%), steps (35%), nutrition (25%)
+  // Readiness Score: blends sleep (35%), steps (25%), nutrition (20%), recovery (20%)
   let readinessScore = null;
-  let readinessSub = { sleepScore: null, stepsScore: null, nutritionScore: null };
+  let readinessSub = { sleepScore: null, stepsScore: null, nutritionScore: null, recoveryFactorScore: null };
   {
     const sleepLast = sleepHist.data?.[0];
     const sleepSc = sleepLast && Number.isFinite(sleepLast.hours)
@@ -430,16 +449,45 @@ async function fetchHome(userId) {
     const nutritionSc = todayKcal > 0
       ? Math.min(100, Math.round(Math.max(0, 100 - Math.abs(todayKcal - calorieTarget) / calorieTarget * 100))) : null;
 
-    const weights = [];
-    let weighted = 0;
-    if (sleepSc !== null)     { weighted += sleepSc * 0.40;     weights.push(0.40); }
-    if (stepsSc !== null)     { weighted += stepsSc * 0.35;     weights.push(0.35); }
-    if (nutritionSc !== null) { weighted += nutritionSc * 0.25; weights.push(0.25); }
+    // Recovery factor: based on days since last workout + consecutive training days
+    let recoveryFactorScore = null;
+    {
+      const recentDates = (past35Workouts.data ?? []).map(s => s.date).sort().reverse();
+      // Count consecutive training days (excluding rest days)
+      const nonRestDates = recentDates.filter((_, i) => {
+        const s = past35Workouts.data?.[i];
+        return s && (!s.notes || s.notes.toLowerCase() !== 'rest day');
+      });
+      let consecutive = 0;
+      for (let i = 0; i < nonRestDates.length; i++) {
+        const d = new Date(nonRestDates[i] + 'T12:00:00');
+        const prev = new Date(Date.now() - i * 86400000);
+        if (localDateStr(prev) === localDateStr(d)) consecutive++;
+        else break;
+      }
+      // 1-2 consecutive = fine (80), 3 = slight fatigue (60), 4+ = needs rest (40), 0 = rested (100)
+      if (lastWorkoutDate) {
+        if (consecutive === 0) recoveryFactorScore = 100;
+        else if (consecutive <= 2) recoveryFactorScore = 85;
+        else if (consecutive === 3) recoveryFactorScore = 65;
+        else recoveryFactorScore = 40;
+        // Bonus: if daysSinceWorkout is 1-2, good recovery window
+        if (daysSinceWorkout === 1 || daysSinceWorkout === 2) recoveryFactorScore = Math.min(100, recoveryFactorScore + 10);
+      }
+    }
 
-    if (weights.length > 0) {
-      const totalWeight = weights.reduce((a, b) => a + b, 0);
+    const wMap = [
+      [sleepSc,            0.35],
+      [stepsSc,            0.25],
+      [nutritionSc,        0.20],
+      [recoveryFactorScore, 0.20],
+    ];
+    let weighted = 0, totalWeight = 0;
+    wMap.forEach(([sc, w]) => { if (sc !== null) { weighted += sc * w; totalWeight += w; } });
+
+    if (totalWeight > 0) {
       readinessScore = Math.min(100, Math.max(0, Math.round(weighted / totalWeight)));
-      readinessSub = { sleepScore: sleepSc, stepsScore: stepsSc, nutritionScore: nutritionSc };
+      readinessSub = { sleepScore: sleepSc, stepsScore: stepsSc, nutritionScore: nutritionSc, recoveryFactorScore };
     }
   }
 
@@ -605,6 +653,13 @@ async function fetchHome(userId) {
     habitCalendar,
     consistencyScore,
     todayMood, moodArr,
+    allTimeWorkoutCount, allTimeTotalVolume, allTimeFoodCount, allTimeSleepCount,
+    recentExercisesForMap: (prExercises.data ?? [])
+      .filter(ex => {
+        const d = ex.workout_sessions?.date;
+        return d && (Date.now() - new Date(d + 'T12:00:00').getTime()) < 7 * 86400000;
+      })
+      .map(ex => ({ name: ex.exercise_name, sessionDate: ex.workout_sessions.date })),
   };
 }
 
@@ -1160,6 +1215,16 @@ export default function HomeScreen() {
     }, [user?.id, refetch])
   );
 
+  useSmartReminders(user?.id);
+
+  const { pendingMilestone, dismissMilestone } = useMilestones({
+    workoutCount: data?.allTimeWorkoutCount ?? null,
+    totalVolume: data?.allTimeTotalVolume ?? 0,
+    streak: data?.streak ?? 0,
+    foodCount: data?.allTimeFoodCount ?? 0,
+    sleepCount: data?.allTimeSleepCount ?? 0,
+  });
+
   const weightQuickMut = useMutation({
     mutationFn: (kg) => quickLogWeight(user.id, kg),
     onMutate: async (kg) => {
@@ -1645,9 +1710,10 @@ export default function HomeScreen() {
               const CIRC = 2 * Math.PI * RADIUS;
               const dash = (rs / 100) * CIRC;
               const subs = [
-                { key: 'Sleep',     score: data.readinessSub?.sleepScore,     emoji: '😴' },
-                { key: 'Steps',     score: data.readinessSub?.stepsScore,     emoji: '👟' },
-                { key: 'Nutrition', score: data.readinessSub?.nutritionScore, emoji: '🥗' },
+                { key: 'Sleep',     score: data.readinessSub?.sleepScore,           emoji: '😴' },
+                { key: 'Steps',     score: data.readinessSub?.stepsScore,           emoji: '👟' },
+                { key: 'Nutrition', score: data.readinessSub?.nutritionScore,       emoji: '🥗' },
+                { key: 'Recovery',  score: data.readinessSub?.recoveryFactorScore,  emoji: '💪' },
               ];
               return (
                 <View style={styles.readinessCard}>
@@ -1696,6 +1762,13 @@ export default function HomeScreen() {
                 </View>
               );
             })()}
+
+            {/* ── Muscle Recovery Map ─────────────────────────────── */}
+            {data?.recentExercisesForMap?.length > 0 && (
+              <View style={[styles.readinessCard, { flexDirection: 'column', gap: 0 }]}>
+                <MuscleRecoveryMap recentExercises={data.recentExercisesForMap} colors={colors} />
+              </View>
+            )}
 
             {/* ── Consistency Score ───────────────────────────────── */}
             {data?.consistencyScore != null && (() => {
@@ -2262,6 +2335,8 @@ export default function HomeScreen() {
       <PaywallModal visible={recapExport.showPaywall} onClose={() => recapExport.setShowPaywall(false)} />
       <PaywallModal visible={showForecastPaywall} onClose={() => setShowForecastPaywall(false)} />
       <PaywallModal visible={showProTeaserPaywall} onClose={() => setShowProTeaserPaywall(false)} />
+
+      <MilestoneModal milestone={pendingMilestone} visible={!!pendingMilestone} onDismiss={dismissMilestone} />
 
       {/* Quick log: Weight */}
       <BottomSheet visible={showWeightLog} onClose={() => setShowWeightLog(false)}>
