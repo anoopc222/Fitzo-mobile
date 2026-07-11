@@ -266,6 +266,93 @@ const PRIVACY_ITEMS = [
 
 const DEFAULT_VIS = { workouts: true, weight: true, steps: true, sleep: true, food: true };
 
+function CoachCard({ coach, linkedSince, colors, onChat, onDisconnect }) {
+  const name = coach.full_name ?? 'Coach';
+  const initials = name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const memberSince = linkedSince
+    ? new Date(linkedSince).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+    : null;
+
+  return (
+    <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20 }}>
+      {/* Top accent bar */}
+      <View style={{ height: 4, backgroundColor: colors.accent }} />
+
+      <View style={{ padding: 20, gap: 16 }}>
+        {/* Coach identity row */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={{
+            width: 64, height: 64, borderRadius: 32,
+            backgroundColor: colors.accent + '22',
+            borderWidth: 2, borderColor: colors.accent + '55',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Text style={{ fontSize: 22, fontWeight: weight.black, color: colors.accent }}>{initials}</Text>
+          </View>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={{ fontSize: typography.lg, fontWeight: weight.bold, color: colors.text }}>{name}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#22c55e' }} />
+              <Text style={{ fontSize: 12, color: '#22c55e', fontWeight: weight.semibold }}>Your Coach</Text>
+            </View>
+            {memberSince && (
+              <Text style={{ fontSize: 11, color: colors.textDim }}>Connected since {memberSince}</Text>
+            )}
+          </View>
+          <View style={{
+            backgroundColor: '#22c55e' + '18', borderRadius: 10,
+            paddingHorizontal: 10, paddingVertical: 5,
+            borderWidth: 1, borderColor: '#22c55e' + '40',
+          }}>
+            <Text style={{ fontSize: 10, fontWeight: weight.bold, color: '#22c55e' }}>ACTIVE</Text>
+          </View>
+        </View>
+
+        {/* Bio */}
+        {coach.bio ? (
+          <View style={{ backgroundColor: colors.bg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: typography.sm, color: colors.text, lineHeight: 20 }}>"{coach.bio}"</Text>
+          </View>
+        ) : null}
+
+        {/* Stats row */}
+        <View style={{ flexDirection: 'row', gap: 1, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
+          {[
+            { icon: 'barbell-outline',   label: 'Specialty',   value: coach.goal ?? 'Fitness' },
+            { icon: 'body-outline',      label: 'Focus',       value: coach.sex ? (coach.sex === 'male' ? 'Male Coach' : 'Female Coach') : 'General' },
+          ].map((item, i) => (
+            <View key={i} style={{ flex: 1, backgroundColor: colors.bg, padding: 12, alignItems: 'center', gap: 4, borderRightWidth: i === 0 ? 1 : 0, borderRightColor: colors.border }}>
+              <Ionicons name={item.icon} size={16} color={colors.accent} />
+              <Text style={{ fontSize: 12, fontWeight: weight.bold, color: colors.text, textAlign: 'center' }}>{item.value}</Text>
+              <Text style={{ fontSize: 10, color: colors.textDim }}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Actions */}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity
+            onPress={onChat}
+            style={{ flex: 1, backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="chatbubble-ellipses" size={16} color={colors.bg} />
+            <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg }}>Message Coach</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onDisconnect}
+            style={{ paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: colors.danger + '12', borderWidth: 1, borderColor: colors.danger + '40', flexDirection: 'row', alignItems: 'center', gap: 5 }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="unlink-outline" size={15} color={colors.danger} />
+            <Text style={{ fontSize: typography.sm, color: colors.danger, fontWeight: weight.medium }}>Leave</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function ClientTab({ userId, colors, isPro }) {
   const navigation = useNavigation();
   const [inviteCode, setInviteCode] = useState('');
@@ -273,7 +360,9 @@ function ClientTab({ userId, colors, isPro }) {
   const [visibility, setVisibility] = useState(DEFAULT_VIS);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeCoach, setActiveCoach] = useState(null); // { coach_id, coach_name }
+  const [activeCoach, setActiveCoach] = useState(null);
+  const [linkedSince, setLinkedSince] = useState(null);
+  const [linkId, setLinkId] = useState(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -282,12 +371,17 @@ function ClientTab({ userId, colors, isPro }) {
         if (data?.coach_visibility) setVisibility({ ...DEFAULT_VIS, ...data.coach_visibility });
         setLoaded(true);
       });
-    // Fetch active coach relationship
-    supabase.from('coach_clients').select('coach_id').eq('client_id', userId).eq('status', 'active').limit(1).single()
+    supabase.from('coach_clients')
+      .select('id, coach_id, created_at')
+      .eq('client_id', userId).eq('status', 'active').limit(1).single()
       .then(async ({ data }) => {
         if (!data?.coach_id) return;
-        const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', data.coach_id).single();
-        setActiveCoach({ coach_id: data.coach_id, coach_name: prof?.full_name ?? 'Coach' });
+        setLinkId(data.id);
+        setLinkedSince(data.created_at);
+        const { data: prof } = await supabase.from('profiles')
+          .select('full_name, bio, goal, sex')
+          .eq('id', data.coach_id).single();
+        setActiveCoach({ coach_id: data.coach_id, ...(prof ?? {}) });
       });
   }, [userId]);
 
@@ -306,53 +400,97 @@ function ClientTab({ userId, colors, isPro }) {
     try {
       const { data, error } = await supabase.rpc('accept_coach_invite', { p_code: code });
       if (error) throw error;
-      if (data) { setInviteCode(''); Alert.alert('Connected!', 'You are now linked to your coach.'); }
-      else Alert.alert('Invalid Code', 'This code is invalid or has already been used.');
+      if (data) {
+        setInviteCode('');
+        Alert.alert('Connected!', 'You are now linked to your coach.');
+        // Re-fetch coach details
+        const { data: link } = await supabase.from('coach_clients')
+          .select('id, coach_id, created_at').eq('client_id', userId).eq('status', 'active').limit(1).single();
+        if (link?.coach_id) {
+          setLinkId(link.id);
+          setLinkedSince(link.created_at);
+          const { data: prof } = await supabase.from('profiles')
+            .select('full_name, bio, goal, sex').eq('id', link.coach_id).single();
+          setActiveCoach({ coach_id: link.coach_id, ...(prof ?? {}) });
+        }
+      } else {
+        Alert.alert('Invalid Code', 'This code is invalid or has already been used.');
+      }
     } catch (e) { Alert.alert('Error', e.message); }
     finally { setJoining(false); }
+  };
+
+  const handleDisconnect = () => {
+    Alert.alert('Leave Coach', 'Are you sure you want to disconnect from your coach?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Leave', style: 'destructive', onPress: async () => {
+          if (linkId) await supabase.from('coach_clients').update({ status: 'removed' }).eq('id', linkId);
+          setActiveCoach(null);
+          setLinkedSince(null);
+          setLinkId(null);
+        },
+      },
+    ]);
   };
 
   return (
     <View style={{ flex: 1 }}>
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
-      {/* Join a Coach */}
-      <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 20 }}>
-        <SectionLabel title="Join a Coach" colors={colors} />
-        <Text style={{ fontSize: typography.sm, color: colors.textDim, lineHeight: 20, marginBottom: 14 }}>
-          Enter the 8-character invite code your coach shared with you.
-        </Text>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <TextInput
-            style={{
-              flex: 1, backgroundColor: colors.bgElevated, color: colors.text,
-              borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-              paddingHorizontal: 14, paddingVertical: 11, fontSize: 16,
-              fontWeight: weight.bold, letterSpacing: 3,
-            }}
-            placeholder="XXXXXXXX"
-            placeholderTextColor={colors.textDim}
-            value={inviteCode}
-            onChangeText={v => setInviteCode(v.toUpperCase())}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={8}
-          />
-          <TouchableOpacity
-            onPress={handleJoin}
-            disabled={joining || !inviteCode.trim()}
-            style={{
-              backgroundColor: colors.accent, borderRadius: 12,
-              paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center',
-              opacity: (!inviteCode.trim() || joining) ? 0.5 : 1,
-            }}
-          >
-            {joining
-              ? <ActivityIndicator size="small" color={colors.bg} />
-              : <Text style={{ color: colors.bg, fontWeight: weight.bold, fontSize: 15 }}>Join</Text>
-            }
-          </TouchableOpacity>
+
+      {/* Active coach card — shown when connected */}
+      {activeCoach ? (
+        <CoachCard
+          coach={activeCoach}
+          linkedSince={linkedSince}
+          colors={colors}
+          onChat={() => navigation.navigate('CoachChat', {
+            coachId: activeCoach.coach_id,
+            clientId: userId,
+            coachName: activeCoach.full_name ?? 'Coach',
+          })}
+          onDisconnect={handleDisconnect}
+        />
+      ) : (
+        /* Join a Coach — only shown when not yet connected */
+        <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 20 }}>
+          <SectionLabel title="Join a Coach" colors={colors} />
+          <Text style={{ fontSize: typography.sm, color: colors.textDim, lineHeight: 20, marginBottom: 14 }}>
+            Enter the 8-character invite code your coach shared with you.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TextInput
+              style={{
+                flex: 1, backgroundColor: colors.bgElevated, color: colors.text,
+                borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+                paddingHorizontal: 14, paddingVertical: 11, fontSize: 16,
+                fontWeight: weight.bold, letterSpacing: 3,
+              }}
+              placeholder="XXXXXXXX"
+              placeholderTextColor={colors.textDim}
+              value={inviteCode}
+              onChangeText={v => setInviteCode(v.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={8}
+            />
+            <TouchableOpacity
+              onPress={handleJoin}
+              disabled={joining || !inviteCode.trim()}
+              style={{
+                backgroundColor: colors.accent, borderRadius: 12,
+                paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center',
+                opacity: (!inviteCode.trim() || joining) ? 0.5 : 1,
+              }}
+            >
+              {joining
+                ? <ActivityIndicator size="small" color={colors.bg} />
+                : <Text style={{ color: colors.bg, fontWeight: weight.bold, fontSize: 15 }}>Join</Text>
+              }
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Privacy Controls */}
       <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
@@ -433,28 +571,6 @@ function ClientTab({ userId, colors, isPro }) {
         )}
       </View>
     </ScrollView>
-
-    {/* Floating chat button — only shown when linked to a coach */}
-    {activeCoach && (
-      <TouchableOpacity
-        onPress={() => navigation.navigate('CoachChat', {
-          coachId: activeCoach.coach_id,
-          clientId: userId,
-          coachName: activeCoach.coach_name,
-        })}
-        style={{
-          position: 'absolute', bottom: 28, right: 20,
-          width: 56, height: 56, borderRadius: 28,
-          backgroundColor: colors.accent,
-          alignItems: 'center', justifyContent: 'center',
-          shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.4, shadowRadius: 10, elevation: 8,
-        }}
-        activeOpacity={0.85}
-      >
-        <Ionicons name="chatbubble-ellipses" size={24} color={colors.bg} />
-      </TouchableOpacity>
-    )}
     </View>
   );
 }
