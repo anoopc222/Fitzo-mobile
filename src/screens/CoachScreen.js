@@ -570,6 +570,38 @@ function ClientTab({ userId, colors, isPro }) {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Disconnect from coach — shown only when connected */}
+      {activeCoach && (
+        <TouchableOpacity
+          onPress={handleDisconnect}
+          style={{
+            marginTop: 14,
+            backgroundColor: colors.danger + '10',
+            borderRadius: 16, borderWidth: 1, borderColor: colors.danger + '40',
+            paddingVertical: 14, paddingHorizontal: 18,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={{
+            width: 36, height: 36, borderRadius: 18,
+            backgroundColor: colors.danger + '18',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="unlink-outline" size={18} color={colors.danger} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.danger }}>
+              Remove Coach
+            </Text>
+            <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
+              Disconnect from {activeCoach.full_name ?? 'your coach'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.danger + '80'} />
+        </TouchableOpacity>
+      )}
     </ScrollView>
     </View>
   );
