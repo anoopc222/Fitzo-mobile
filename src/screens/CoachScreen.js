@@ -312,7 +312,8 @@ function ClientTab({ userId, colors }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 50 }}>
+    <View style={{ flex: 1 }}>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
       {/* Join a Coach */}
       <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 20 }}>
         <SectionLabel title="Join a Coach" colors={colors} />
@@ -351,31 +352,6 @@ function ClientTab({ userId, colors }) {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Message Coach */}
-      {activeCoach && (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('CoachChat', {
-            coachId: activeCoach.coach_id,
-            clientId: userId,
-            coachName: activeCoach.coach_name,
-          })}
-          style={{
-            flexDirection: 'row', alignItems: 'center', gap: 12,
-            backgroundColor: colors.accent, borderRadius: 16,
-            padding: 16, marginBottom: 20,
-          }}
-        >
-          <Ionicons name="chatbubble-ellipses" size={22} color={colors.bg} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg }}>
-              Message {activeCoach.coach_name}
-            </Text>
-            <Text style={{ fontSize: 11, color: colors.bg + 'cc', marginTop: 1 }}>Send a message to your coach</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.bg} />
-        </TouchableOpacity>
-      )}
 
       {/* Privacy Controls */}
       <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
@@ -428,6 +404,29 @@ function ClientTab({ userId, colors }) {
         ))}
       </View>
     </ScrollView>
+
+    {/* Floating chat button — only shown when linked to a coach */}
+    {activeCoach && (
+      <TouchableOpacity
+        onPress={() => navigation.navigate('CoachChat', {
+          coachId: activeCoach.coach_id,
+          clientId: userId,
+          coachName: activeCoach.coach_name,
+        })}
+        style={{
+          position: 'absolute', bottom: 28, right: 20,
+          width: 56, height: 56, borderRadius: 28,
+          backgroundColor: colors.accent,
+          alignItems: 'center', justifyContent: 'center',
+          shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.4, shadowRadius: 10, elevation: 8,
+        }}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="chatbubble-ellipses" size={24} color={colors.bg} />
+      </TouchableOpacity>
+    )}
+    </View>
   );
 }
 
