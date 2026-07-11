@@ -29,6 +29,7 @@ import MoodLogScreen from '../screens/MoodLogScreen';
 import YearInReviewScreen from '../screens/YearInReviewScreen';
 import CoachScreen from '../screens/CoachScreen';
 import ClientDetailScreen from '../screens/ClientDetailScreen';
+import CoachChatScreen from '../screens/CoachChatScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -64,6 +65,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="YearInReview" component={YearInReviewScreen} />
       <HomeStack.Screen name="Coach" component={CoachScreen} />
       <HomeStack.Screen name="ClientDetail" component={ClientDetailScreen} />
+      <HomeStack.Screen name="CoachChat" component={CoachChatScreen} />
     </HomeStack.Navigator>
   );
 }

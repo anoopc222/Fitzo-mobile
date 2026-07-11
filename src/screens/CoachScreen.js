@@ -266,11 +266,13 @@ const PRIVACY_ITEMS = [
 const DEFAULT_VIS = { workouts: true, weight: true, steps: true, sleep: true, food: true };
 
 function ClientTab({ userId, colors }) {
+  const navigation = useNavigation();
   const [inviteCode, setInviteCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [visibility, setVisibility] = useState(DEFAULT_VIS);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeCoach, setActiveCoach] = useState(null); // { coach_id, coach_name }
 
   useEffect(() => {
     if (!userId) return;
@@ -278,6 +280,13 @@ function ClientTab({ userId, colors }) {
       .then(({ data }) => {
         if (data?.coach_visibility) setVisibility({ ...DEFAULT_VIS, ...data.coach_visibility });
         setLoaded(true);
+      });
+    // Fetch active coach relationship
+    supabase.from('coach_clients').select('coach_id').eq('client_id', userId).eq('status', 'active').limit(1).single()
+      .then(async ({ data }) => {
+        if (!data?.coach_id) return;
+        const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', data.coach_id).single();
+        setActiveCoach({ coach_id: data.coach_id, coach_name: prof?.full_name ?? 'Coach' });
       });
   }, [userId]);
 
@@ -342,6 +351,31 @@ function ClientTab({ userId, colors }) {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Message Coach */}
+      {activeCoach && (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('CoachChat', {
+            coachId: activeCoach.coach_id,
+            clientId: userId,
+            coachName: activeCoach.coach_name,
+          })}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.accent, borderRadius: 16,
+            padding: 16, marginBottom: 20,
+          }}
+        >
+          <Ionicons name="chatbubble-ellipses" size={22} color={colors.bg} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg }}>
+              Message {activeCoach.coach_name}
+            </Text>
+            <Text style={{ fontSize: 11, color: colors.bg + 'cc', marginTop: 1 }}>Send a message to your coach</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.bg} />
+        </TouchableOpacity>
+      )}
 
       {/* Privacy Controls */}
       <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>

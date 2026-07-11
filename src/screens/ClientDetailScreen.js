@@ -1,11 +1,11 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, RefreshControl, KeyboardAvoidingView, Platform,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import Svg, { Rect, Text as SvgText, Line, Polyline } from 'react-native-svg';
@@ -339,95 +339,6 @@ function LockedSection({ label, colors }) {
   );
 }
 
-function CoachNotes({ clientId, coachId, colors }) {
-  const qc = useQueryClient();
-  const [note, setNote] = useState('');
-  const inputRef = useRef(null);
-
-  const { data: notes = [], isLoading } = useQuery({
-    queryKey: ['coachNotes', coachId, clientId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('coach_notes')
-        .select('id, note, created_at')
-        .eq('coach_id', coachId)
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false });
-      return data ?? [];
-    },
-    enabled: !!(coachId && clientId),
-    staleTime: 0, gcTime: 0,
-  });
-
-  const { mutate: saveNote, isPending: saving } = useMutation({
-    mutationFn: async (text) => {
-      const { error } = await supabase.from('coach_notes').insert({
-        coach_id: coachId, client_id: clientId, note: text,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setNote('');
-      qc.invalidateQueries({ queryKey: ['coachNotes', coachId, clientId] });
-    },
-  });
-
-  const fmtNoteDate = (iso) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
-      ' · ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  };
-
-  return (
-    <View>
-      {/* Input card */}
-      <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 10 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <Ionicons name="pencil-outline" size={16} color={colors.accent} />
-          <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: colors.text }}>Add Note</Text>
-        </View>
-        <TextInput
-          ref={inputRef}
-          value={note}
-          onChangeText={setNote}
-          placeholder="Write a private note about this client..."
-          placeholderTextColor={colors.textDim}
-          multiline
-          textAlignVertical="top"
-          style={{ fontSize: typography.sm, color: colors.text, minHeight: 70, lineHeight: 20, marginBottom: 10 }}
-        />
-        <TouchableOpacity
-          onPress={() => note.trim() && saveNote(note.trim())}
-          disabled={!note.trim() || saving}
-          style={{
-            backgroundColor: note.trim() ? colors.accent : colors.border,
-            borderRadius: 10, paddingVertical: 9, alignItems: 'center',
-          }}
-        >
-          {saving
-            ? <ActivityIndicator size="small" color={colors.bg} />
-            : <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: note.trim() ? colors.bg : colors.textDim }}>Save Note</Text>
-          }
-        </TouchableOpacity>
-      </View>
-
-      {/* Past notes */}
-      {isLoading ? (
-        <ActivityIndicator size="small" color={colors.accent} style={{ marginVertical: 8 }} />
-      ) : notes.length > 0 ? (
-        <View style={{ gap: 8 }}>
-          {notes.map(n => (
-            <View key={n.id} style={{ backgroundColor: colors.bgCard, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12 }}>
-              <Text style={{ fontSize: 10, color: colors.textDim, marginBottom: 5 }}>{fmtNoteDate(n.created_at)}</Text>
-              <Text style={{ fontSize: typography.sm, color: colors.text, lineHeight: 20 }}>{n.note}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function ClientDetailScreen() {
@@ -496,7 +407,6 @@ export default function ClientDetailScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -667,13 +577,27 @@ export default function ClientDetailScreen() {
           )}
         </View>}
 
-        {/* ── Coach Notes ───────────────────────────────────────────── */}
-        <SectionLabel title="Coach Notes" colors={colors} />
-        <CoachNotes clientId={clientId} coachId={user?.id} colors={colors} />
-
-        <View style={{ height: 40 }} />
+        <View style={{ height: 80 }} />
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      {/* Floating chat button */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate('CoachChat', {
+          coachId: user?.id,
+          clientId,
+          clientName: clientName ?? 'Client',
+        })}
+        style={{
+          position: 'absolute', bottom: 28, right: 20,
+          width: 56, height: 56, borderRadius: 28,
+          backgroundColor: colors.accent,
+          alignItems: 'center', justifyContent: 'center',
+          shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
+        }}
+      >
+        <Ionicons name="chatbubble-ellipses" size={24} color={colors.bg} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
