@@ -643,26 +643,34 @@ function ClientTab({ userId, colors, isPro }) {
       {
         text: 'Leave', style: 'destructive', onPress: async () => {
           if (linkId) await supabase.from('coach_clients').update({ status: 'removed' }).eq('id', linkId);
-          setActiveCoach(null);
-          setLinkedSince(null);
-          setLinkId(null);
+          await loadClientData();
         },
       },
     ]);
   };
 
   const handleAcceptInvite = async (invite) => {
-    const { error } = await supabase.from('coach_clients').update({ status: 'active' }).eq('id', invite.id);
-    if (error) { Alert.alert('Error', error.message); return; }
-    setPendingInvites(prev => prev.filter(i => i.id !== invite.id));
-    setActiveCoach({ coach_id: invite.coach_id, ...invite.coach });
-    setLinkedSince(invite.created_at);
-    setLinkId(invite.id);
+    // Try RPC first (SECURITY DEFINER bypasses RLS); fall back to direct update
+    let ok = false;
+    const rpcRes = await supabase.rpc('accept_or_decline_coach_invite', { p_link_id: invite.id, p_action: 'accept' });
+    if (rpcRes.error) {
+      const { error } = await supabase.from('coach_clients').update({ status: 'active' }).eq('id', invite.id);
+      if (error) { Alert.alert('Error', error.message); return; }
+      ok = true;
+    } else {
+      ok = rpcRes.data;
+    }
+    if (!ok) { Alert.alert('Error', 'Could not accept invite. Please try again.'); return; }
+    // Re-fetch from DB so state matches actual DB state after any tab switch
+    await loadClientData();
   };
 
   const handleDeclineInvite = async (invite) => {
-    await supabase.from('coach_clients').update({ status: 'removed' }).eq('id', invite.id);
-    setPendingInvites(prev => prev.filter(i => i.id !== invite.id));
+    const rpcRes = await supabase.rpc('accept_or_decline_coach_invite', { p_link_id: invite.id, p_action: 'decline' });
+    if (rpcRes.error) {
+      await supabase.from('coach_clients').update({ status: 'removed' }).eq('id', invite.id);
+    }
+    await loadClientData();
   };
 
   return (
