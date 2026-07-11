@@ -262,8 +262,6 @@ export default function CoachChatScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
 
-        <Avatar name={otherName} size={40} accent={accent} />
-
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text, letterSpacing: 0.2 }}>
             {otherName}
@@ -275,17 +273,6 @@ export default function CoachChatScreen() {
             </Text>
           </View>
         </View>
-
-        <TouchableOpacity
-          style={{
-            width: 36, height: 36, borderRadius: 18,
-            backgroundColor: colors.bgCard,
-            borderWidth: 1, borderColor: colors.border,
-            alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="ellipsis-horizontal" size={18} color={colors.textDim} />
-        </TouchableOpacity>
       </View>
 
       {/* ── Messages ───────────────────────────────────────────────────── */}
