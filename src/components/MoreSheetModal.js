@@ -13,9 +13,9 @@ import { fetchProfile } from '../screens/ProfileScreen';
 
 const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
   {
-    title: 'Coach',
+    title: 'Games',
     items: [
-      { label: 'Coach / Client Zone', icon: 'people', target: ['Home', 'Coach'], color: colors.accent },
+      { label: 'Game Zone', icon: 'game-controller', target: ['Home', 'GameZone'], color: colors.accent },
     ],
   },
   {
