@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Switch,
-  Alert, ActivityIndicator, TextInput,
+  Alert, ActivityIndicator, TextInput, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,25 @@ const PRIVACY_ITEMS = [
   { key: 'food',     label: 'Nutrition',         icon: 'restaurant-outline', desc: 'Calories & macro breakdown' },
 ];
 const DEFAULT_VIS = { workouts: true, weight: true, steps: true, sleep: true, food: true };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function timeAgo(ts) {
+  if (!ts) return null;
+  const secs = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (secs < 60) return 'just now';
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  const days = Math.floor(secs / 86400);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function avgArr(arr, key) {
+  if (!arr || arr.length === 0) return 0;
+  return Math.round(arr.reduce((s, x) => s + (x[key] ?? 0), 0) / arr.length);
+}
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
@@ -47,29 +66,72 @@ export default function ClientModeScreen() {
   const [joining, setJoining] = useState(false);
   const [visibility, setVisibility] = useState(DEFAULT_VIS);
   const [loaded, setLoaded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeCoach, setActiveCoach] = useState(null);
   const [linkedSince, setLinkedSince] = useState(null);
   const [linkId, setLinkId] = useState(null);
   const [pendingInvites, setPendingInvites] = useState([]);
+  const [lastMessage, setLastMessage] = useState(null);
+  const [coachNote, setCoachNote] = useState(null);
+  const [weeklySummary, setWeeklySummary] = useState(null);
 
   const loadClientData = async () => {
     if (!userId) return;
-    const [visRes, activeRes, pendingRes] = await Promise.all([
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+
+    const [visRes, activeRes, pendingRes, wkRes, stRes, slRes] = await Promise.all([
       supabase.from('profiles').select('coach_visibility').eq('id', userId).single(),
-      supabase.from('coach_clients').select('id, coach_id, created_at').eq('client_id', userId).eq('status', 'active').limit(1).single(),
+      supabase.from('coach_clients').select('*').eq('client_id', userId).eq('status', 'active').limit(1).single(),
       supabase.from('coach_clients').select('id, coach_id, created_at').eq('client_id', userId).eq('status', 'pending').is('invite_code', null),
+      supabase.from('workout_sessions').select('id').eq('user_id', userId).gte('date', sevenDaysAgo),
+      supabase.from('step_logs').select('steps').eq('user_id', userId).gte('logged_at', sevenDaysAgo + 'T00:00:00'),
+      supabase.from('sleep_logs').select('hours').eq('user_id', userId).gte('logged_at', sevenDaysAgo + 'T00:00:00'),
     ]);
+
     if (visRes.data?.coach_visibility) setVisibility({ ...DEFAULT_VIS, ...visRes.data.coach_visibility });
+
+    // Weekly summary
+    setWeeklySummary({
+      workouts: wkRes.data?.length ?? 0,
+      avgSteps: avgArr(stRes.data, 'steps'),
+      avgSleep: avgArr(slRes.data, 'hours'),
+    });
+
     setLoaded(true);
+
     if (activeRes.data?.coach_id) {
-      const { data: prof } = await supabase.from('profiles').select('full_name, bio, goal, sex').eq('id', activeRes.data.coach_id).single();
-      setLinkId(activeRes.data.id);
-      setLinkedSince(activeRes.data.created_at);
-      setActiveCoach({ coach_id: activeRes.data.coach_id, ...(prof ?? {}) });
+      const link = activeRes.data;
+      setLinkId(link.id);
+      setLinkedSince(link.created_at);
+      setCoachNote(link.coach_note ?? null);
+
+      const [profRes, msgRes] = await Promise.all([
+        supabase.from('profiles').select('full_name, bio, goal, sex').eq('id', link.coach_id).single(),
+        supabase.from('coach_messages')
+          .select('sender_id, message, created_at')
+          .eq('coach_id', link.coach_id)
+          .eq('client_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single(),
+      ]);
+
+      setActiveCoach({ coach_id: link.coach_id, ...(profRes.data ?? {}) });
+      setLastMessage(msgRes.data ?? null);
+
+      // Mark client's last read time
+      supabase.from('coach_clients')
+        .update({ client_last_read: new Date().toISOString() })
+        .eq('id', link.id)
+        .then(() => {});
     } else {
       setActiveCoach(null);
+      setLastMessage(null);
+      setCoachNote(null);
     }
+
     const pending = pendingRes.data ?? [];
     if (pending.length > 0) {
       const coachIds = pending.map(r => r.coach_id);
@@ -83,6 +145,12 @@ export default function ClientModeScreen() {
 
   useEffect(() => { loadClientData(); }, [userId]);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadClientData();
+    setRefreshing(false);
+  };
+
   const handleToggle = async (key, val) => {
     const next = { ...visibility, [key]: val };
     setVisibility(next);
@@ -92,7 +160,11 @@ export default function ClientModeScreen() {
   };
 
   const handleJoin = async () => {
-    const code = inviteCode.trim().toUpperCase();
+    let code = inviteCode.trim();
+    // Handle deep link format: fitzo://join?code=XXXX or https://fitzo.app/join?code=XXXX
+    const match = code.match(/[?&]code=([A-Za-z0-9]+)/i);
+    if (match) code = match[1];
+    code = code.toUpperCase();
     if (!code) return;
     setJoining(true);
     try {
@@ -101,13 +173,7 @@ export default function ClientModeScreen() {
       if (data) {
         setInviteCode('');
         Alert.alert('Connected!', 'You are now linked to your coach.');
-        const { data: link } = await supabase.from('coach_clients').select('id, coach_id, created_at').eq('client_id', userId).eq('status', 'active').limit(1).single();
-        if (link?.coach_id) {
-          setLinkId(link.id);
-          setLinkedSince(link.created_at);
-          const { data: prof } = await supabase.from('profiles').select('full_name, bio, goal, sex').eq('id', link.coach_id).single();
-          setActiveCoach({ coach_id: link.coach_id, ...(prof ?? {}) });
-        }
+        await loadClientData();
       } else {
         Alert.alert('Invalid Code', 'This code is invalid or has already been used.');
       }
@@ -120,7 +186,7 @@ export default function ClientModeScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Leave', style: 'destructive', onPress: async () => {
         if (linkId) await supabase.from('coach_clients').update({ status: 'removed' }).eq('id', linkId);
-        setActiveCoach(null); setLinkedSince(null); setLinkId(null);
+        setActiveCoach(null); setLinkedSince(null); setLinkId(null); setLastMessage(null); setCoachNote(null);
         await loadClientData();
       }},
     ]);
@@ -170,7 +236,6 @@ export default function ClientModeScreen() {
           <Text style={{ fontSize: 20, fontWeight: weight.black, color: colors.text }}>Coach Zone</Text>
           <Text style={{ fontSize: 11, fontWeight: weight.bold, color: '#22c55e', letterSpacing: 1.2 }}>CLIENT VIEW</Text>
         </View>
-        {/* Avatar icon */}
         <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#22c55e18', borderWidth: 1, borderColor: '#22c55e35', alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="person-outline" size={18} color="#22c55e" />
         </View>
@@ -179,6 +244,7 @@ export default function ClientModeScreen() {
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 60 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22c55e" colors={['#22c55e']} />}
       >
 
         {/* ── Pending invitations ──────────────────────────────────── */}
@@ -225,74 +291,144 @@ export default function ClientModeScreen() {
 
         {/* ── Active coach card ─────────────────────────────────────── */}
         {activeCoach ? (
-          <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: colors.border }}>
-            <View style={{ height: 5, backgroundColor: '#22c55e' }} />
-            <View style={{ padding: 18, gap: 14 }}>
-              {/* Identity */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                <Avatar name={activeCoach.full_name || 'Coach'} size={56} fontSize={18} bg={colors.accent + '25'} color={colors.accent} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 17, fontWeight: weight.black, color: colors.text }}>
-                      {activeCoach.full_name || 'Your Coach'}
-                    </Text>
-                    <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-                  </View>
-                  <Text style={{ fontSize: 12, color: colors.textDim }}>
-                    {activeCoach.goal || 'Coach'}
-                  </Text>
-                  {activeCoach.goal ? (
-                    <View style={{ alignSelf: 'flex-start', marginTop: 4, backgroundColor: colors.accent + '18', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.accent + '35' }}>
-                      <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent }}>{activeCoach.goal}</Text>
+          <>
+            <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, overflow: 'hidden', marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
+              <View style={{ height: 5, backgroundColor: '#22c55e' }} />
+              <View style={{ padding: 18, gap: 14 }}>
+                {/* Identity */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <Avatar name={activeCoach.full_name || 'Coach'} size={56} fontSize={18} bg={colors.accent + '25'} color={colors.accent} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontSize: 17, fontWeight: weight.black, color: colors.text }}>
+                        {activeCoach.full_name || 'Your Coach'}
+                      </Text>
+                      <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
                     </View>
-                  ) : null}
+                    <Text style={{ fontSize: 12, color: colors.textDim }}>
+                      {activeCoach.goal || 'Coach'}
+                    </Text>
+                    {activeCoach.goal ? (
+                      <View style={{ alignSelf: 'flex-start', marginTop: 4, backgroundColor: colors.accent + '18', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.accent + '35' }}>
+                        <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent }}>{activeCoach.goal}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <View style={{ backgroundColor: '#22c55e18', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#22c55e35' }}>
+                    <Text style={{ fontSize: 11, fontWeight: weight.bold, color: '#22c55e', letterSpacing: 0.5 }}>ACTIVE</Text>
+                  </View>
                 </View>
-                <View style={{ backgroundColor: '#22c55e18', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#22c55e35' }}>
-                  <Text style={{ fontSize: 11, fontWeight: weight.bold, color: '#22c55e', letterSpacing: 0.5 }}>ACTIVE</Text>
+
+                {activeCoach.bio ? (
+                  <Text style={{ fontSize: 13, color: colors.textDim, fontStyle: 'italic', lineHeight: 20 }} numberOfLines={2}>
+                    "{activeCoach.bio}"
+                  </Text>
+                ) : null}
+
+                {/* Stats row */}
+                <View style={{ height: 1, backgroundColor: colors.border }} />
+                <View style={{ flexDirection: 'row' }}>
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.accent + '15', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="calendar-outline" size={16} color={colors.accent} />
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 13, fontWeight: weight.black, color: colors.text }}>{coachingSince}</Text>
+                      <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 }}>COACHING SINCE</Text>
+                    </View>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 12 }} />
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.accent + '15', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="time-outline" size={16} color={colors.accent} />
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 13, fontWeight: weight.black, color: colors.text }}>{'< 24 hrs'}</Text>
+                      <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 }}>REPLY TIME</Text>
+                    </View>
+                  </View>
                 </View>
+
+                {/* Last message preview */}
+                {lastMessage && (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('CoachChat', { coachId: activeCoach.coach_id, clientId: userId, coachName: activeCoach.full_name ?? 'Coach' })}
+                    activeOpacity={0.75}
+                    style={{ backgroundColor: colors.bg, borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.border }}
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.textDim} />
+                    <Text style={{ flex: 1, fontSize: 12, color: colors.textDim }} numberOfLines={1}>
+                      {lastMessage.sender_id === userId ? 'You: ' : `${activeCoach.full_name?.split(' ')[0] ?? 'Coach'}: `}
+                      {lastMessage.message}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: colors.textDim }}>{timeAgo(lastMessage.created_at)}</Text>
+                    <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
+                  </TouchableOpacity>
+                )}
+
+                {/* Message button */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('CoachChat', { coachId: activeCoach.coach_id, clientId: userId, coachName: activeCoach.full_name ?? 'Coach' })}
+                  activeOpacity={0.8}
+                  style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                >
+                  <Ionicons name="chatbubble-ellipses" size={17} color={colors.bg} />
+                  <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>Message Coach</Text>
+                </TouchableOpacity>
               </View>
-
-              {activeCoach.bio ? (
-                <Text style={{ fontSize: 13, color: colors.textDim, fontStyle: 'italic', lineHeight: 20 }} numberOfLines={2}>
-                  "{activeCoach.bio}"
-                </Text>
-              ) : null}
-
-              {/* Stats row */}
-              <View style={{ height: 1, backgroundColor: colors.border }} />
-              <View style={{ flexDirection: 'row', gap: 0 }}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.accent + '15', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="calendar-outline" size={16} color={colors.accent} />
-                  </View>
-                  <View>
-                    <Text style={{ fontSize: 13, fontWeight: weight.black, color: colors.text }}>{coachingSince}</Text>
-                    <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 }}>COACHING SINCE</Text>
-                  </View>
-                </View>
-                <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 12 }} />
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.accent + '15', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="time-outline" size={16} color={colors.accent} />
-                  </View>
-                  <View>
-                    <Text style={{ fontSize: 13, fontWeight: weight.black, color: colors.text }}>{'< 24 hrs'}</Text>
-                    <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 }}>REPLY TIME</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Message button */}
-              <TouchableOpacity
-                onPress={() => navigation.navigate('CoachChat', { coachId: activeCoach.coach_id, clientId: userId, coachName: activeCoach.full_name ?? 'Coach' })}
-                activeOpacity={0.8}
-                style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              >
-                <Ionicons name="chatbubble-ellipses" size={17} color={colors.bg} />
-                <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>Message Coach</Text>
-              </TouchableOpacity>
             </View>
-          </View>
+
+            {/* ── Coach's Note for You ──────────────────────────────── */}
+            {coachNote ? (
+              <View style={{ backgroundColor: colors.accent + '10', borderRadius: 16, borderWidth: 1, borderColor: colors.accent + '35', borderLeftWidth: 3, borderLeftColor: colors.accent, padding: 16, marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <Ionicons name="chatbubble-outline" size={13} color={colors.accent} />
+                  <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 0.8 }}>NOTE FROM YOUR COACH</Text>
+                </View>
+                <Text style={{ fontSize: 14, color: colors.text, lineHeight: 21 }}>{coachNote}</Text>
+              </View>
+            ) : null}
+
+            {/* ── Your Week at a Glance ─────────────────────────────── */}
+            {weeklySummary && (
+              <View style={{ backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+                  <Ionicons name="stats-chart" size={14} color="#22c55e" />
+                  <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>YOUR WEEK AT A GLANCE</Text>
+                  <Text style={{ fontSize: 10, color: colors.textDim, marginLeft: 2 }}>· what your coach sees</Text>
+                </View>
+                <View style={{ flexDirection: 'row' }}>
+                  <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                      <Ionicons name="barbell-outline" size={17} color={colors.accent} />
+                    </View>
+                    <Text style={{ fontSize: 22, fontWeight: weight.black, color: colors.text }}>{weeklySummary.workouts}</Text>
+                    <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 }}>WORKOUTS</Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 8 }} />
+                  <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#22c55e18', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                      <Ionicons name="footsteps-outline" size={17} color="#22c55e" />
+                    </View>
+                    <Text style={{ fontSize: 22, fontWeight: weight.black, color: colors.text }}>
+                      {weeklySummary.avgSteps >= 1000 ? `${(weeklySummary.avgSteps / 1000).toFixed(1)}k` : weeklySummary.avgSteps || '—'}
+                    </Text>
+                    <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 }}>AVG STEPS</Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 8 }} />
+                  <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#6366f118', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                      <Ionicons name="moon-outline" size={17} color="#6366f1" />
+                    </View>
+                    <Text style={{ fontSize: 22, fontWeight: weight.black, color: colors.text }}>
+                      {weeklySummary.avgSleep ? `${weeklySummary.avgSleep}h` : '—'}
+                    </Text>
+                    <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 }}>AVG SLEEP</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </>
         ) : (
           /* ── No Coach — Join form ─────────────────────────────────── */
           <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 24, marginBottom: 20, alignItems: 'center', gap: 16 }}>
@@ -302,19 +438,18 @@ export default function ClientModeScreen() {
             <View style={{ alignItems: 'center', gap: 4 }}>
               <Text style={{ fontSize: 17, fontWeight: weight.black, color: colors.text }}>No Coach Yet</Text>
               <Text style={{ fontSize: 13, color: colors.textDim, textAlign: 'center', lineHeight: 19 }}>
-                Enter a coach's invite code{'\n'}to get started
+                Enter a coach's invite code or paste an invite link
               </Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
               <TextInput
-                style={{ flex: 1, backgroundColor: colors.bg, color: colors.text, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, fontWeight: weight.bold, letterSpacing: 4, textAlign: 'center' }}
-                placeholder="XXXXXXXX"
+                style={{ flex: 1, backgroundColor: colors.bg, color: colors.text, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, fontWeight: weight.bold, letterSpacing: 2, textAlign: 'center' }}
+                placeholder="Code or invite link"
                 placeholderTextColor={colors.textDim}
                 value={inviteCode}
-                onChangeText={v => setInviteCode(v.toUpperCase())}
-                autoCapitalize="characters"
+                onChangeText={setInviteCode}
+                autoCapitalize="none"
                 autoCorrect={false}
-                maxLength={8}
               />
               <TouchableOpacity onPress={handleJoin} disabled={joining || !inviteCode.trim()} activeOpacity={0.8}
                 style={{ backgroundColor: colors.accent, borderRadius: 14, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center', opacity: (!inviteCode.trim() || joining) ? 0.5 : 1 }}>

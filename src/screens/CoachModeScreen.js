@@ -19,27 +19,88 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { weight } from '../theme/typography';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function timeAgo(ts) {
+  if (!ts) return null;
+  const secs = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (secs < 60) return 'just now';
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  const days = Math.floor(secs / 86400);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 async function fetchCoachClients(userId) {
   const { data, error } = await supabase
     .from('coach_clients')
-    .select('id, coach_id, client_id, invite_code, status, created_at')
+    .select('*')
     .eq('coach_id', userId)
     .neq('status', 'removed')
     .order('created_at', { ascending: false });
   if (error) throw error;
   const rows = data ?? [];
-  const clientIds = rows.filter(r => r.client_id).map(r => r.client_id);
+  const clientIds = rows.filter(r => r.client_id && r.status === 'active').map(r => r.client_id);
+
   let profileMap = {};
   if (clientIds.length > 0) {
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, full_name, goal')
+      .select('id, full_name, goal, step_goal')
       .in('id', clientIds);
     (profiles ?? []).forEach(p => { profileMap[p.id] = p; });
   }
-  return rows.map(r => ({ ...r, client: profileMap[r.client_id] ?? null }));
+
+  // Unread messages: messages sent by clients after coach_last_read
+  let unreadMap = {};
+  if (clientIds.length > 0) {
+    const { data: msgs } = await supabase
+      .from('coach_messages')
+      .select('client_id, created_at')
+      .eq('coach_id', userId)
+      .neq('sender_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(500);
+    for (const msg of msgs ?? []) {
+      const link = rows.find(r => r.client_id === msg.client_id);
+      if (!link) continue;
+      if (!link.coach_last_read || new Date(msg.created_at) > new Date(link.coach_last_read)) {
+        unreadMap[msg.client_id] = (unreadMap[msg.client_id] ?? 0) + 1;
+      }
+    }
+  }
+
+  // Last activity: latest across workouts / weight / steps per client
+  let lastActivityMap = {};
+  if (clientIds.length > 0) {
+    const lim = clientIds.length * 5;
+    const [wkRes, wgRes, stRes] = await Promise.all([
+      supabase.from('workout_sessions').select('user_id, date').in('user_id', clientIds)
+        .order('date', { ascending: false }).limit(lim),
+      supabase.from('weight_logs').select('user_id, logged_at').in('user_id', clientIds)
+        .order('logged_at', { ascending: false }).limit(lim),
+      supabase.from('step_logs').select('user_id, logged_at').in('user_id', clientIds)
+        .order('logged_at', { ascending: false }).limit(lim),
+    ]);
+    const bump = (uid, ts) => {
+      if (!lastActivityMap[uid] || ts > lastActivityMap[uid]) lastActivityMap[uid] = ts;
+    };
+    for (const r of wkRes.data ?? []) bump(r.user_id, new Date(r.date + 'T12:00:00').getTime());
+    for (const r of wgRes.data ?? []) bump(r.user_id, new Date(r.logged_at).getTime());
+    for (const r of stRes.data ?? []) bump(r.user_id, new Date(r.logged_at).getTime());
+  }
+
+  return rows.map(r => ({
+    ...r,
+    client: profileMap[r.client_id] ?? null,
+    unreadCount: unreadMap[r.client_id] ?? 0,
+    lastActivityTs: lastActivityMap[r.client_id] ?? null,
+  }));
 }
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
@@ -57,11 +118,20 @@ function Avatar({ name, size = 44, fontSize = 16, bg, color }) {
 
 function InviteOverlay({ code, onClose, colors }) {
   const [copied, setCopied] = useState(false);
-  const handleCopy = async () => {
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyCode = async () => {
     await copyToClipboard(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handleCopyLink = async () => {
+    await copyToClipboard(`fitzo://join?code=${code}`);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
   return (
     <View style={{
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -69,7 +139,7 @@ function InviteOverlay({ code, onClose, colors }) {
     }}>
       <View style={{
         backgroundColor: colors.bgCard, borderRadius: 28, padding: 32,
-        width: '88%', alignItems: 'center', gap: 20,
+        width: '88%', alignItems: 'center', gap: 16,
         borderWidth: 1, borderColor: colors.border,
       }}>
         <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accent + '20', alignItems: 'center', justifyContent: 'center' }}>
@@ -80,17 +150,33 @@ function InviteOverlay({ code, onClose, colors }) {
           <Text style={{ fontSize: 38, fontWeight: weight.black, color: colors.accent, letterSpacing: 10 }}>{code}</Text>
           <Text style={{ fontSize: 12, color: colors.textDim, textAlign: 'center', lineHeight: 18 }}>Share with your client · expires once used</Text>
         </View>
-        <TouchableOpacity onPress={handleCopy} activeOpacity={0.75} style={{
+
+        {/* Copy code */}
+        <TouchableOpacity onPress={handleCopyCode} activeOpacity={0.75} style={{
           flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
           backgroundColor: copied ? '#22c55e20' : colors.accent + '18',
           borderWidth: 1.5, borderColor: copied ? '#22c55e' : colors.accent,
-          paddingVertical: 14, borderRadius: 16, width: '100%',
+          paddingVertical: 13, borderRadius: 14, width: '100%',
         }}>
           <Ionicons name={copied ? 'checkmark-circle' : 'copy-outline'} size={18} color={copied ? '#22c55e' : colors.accent} />
           <Text style={{ fontSize: 15, fontWeight: weight.bold, color: copied ? '#22c55e' : colors.accent }}>
-            {copied ? 'Copied!' : 'Copy Code'}
+            {copied ? 'Code Copied!' : 'Copy Code'}
           </Text>
         </TouchableOpacity>
+
+        {/* Copy link */}
+        <TouchableOpacity onPress={handleCopyLink} activeOpacity={0.75} style={{
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+          backgroundColor: copiedLink ? '#22c55e20' : colors.bg,
+          borderWidth: 1.5, borderColor: copiedLink ? '#22c55e' : colors.border,
+          paddingVertical: 13, borderRadius: 14, width: '100%',
+        }}>
+          <Ionicons name={copiedLink ? 'checkmark-circle' : 'link-outline'} size={18} color={copiedLink ? '#22c55e' : colors.textDim} />
+          <Text style={{ fontSize: 15, fontWeight: weight.bold, color: copiedLink ? '#22c55e' : colors.textDim }}>
+            {copiedLink ? 'Link Copied!' : 'Copy Invite Link'}
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={{ paddingVertical: 6 }}>
           <Text style={{ fontSize: 14, color: colors.textDim }}>Done</Text>
         </TouchableOpacity>
@@ -141,7 +227,6 @@ function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGener
         backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
         borderTopWidth: 1, borderColor: colors.border, paddingBottom: 40,
       }}>
-        {/* Grabber */}
         <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
         </View>
@@ -169,7 +254,6 @@ function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGener
                 : null}
           </View>
 
-          {/* Search results */}
           {searchResults.length > 0 && (
             <View style={{ backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
               {searchResults.map((p, i) => (
@@ -203,8 +287,8 @@ function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGener
                 : <Ionicons name="key-outline" size={20} color={colors.accent} />}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.text }}>Invite code</Text>
-              <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 1 }}>One-time · expires after use</Text>
+              <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.text }}>One-time invite code</Text>
+              <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 1 }}>Generate → copy code or link to share</Text>
             </View>
             <View style={{ backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}>
               <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Generate</Text>
@@ -232,10 +316,8 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
         <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
         </View>
-
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }}>
           <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>Edit Profile</Text>
-
           <View style={{ gap: 6 }}>
             <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>DISPLAY NAME</Text>
             <TextInput
@@ -246,7 +328,6 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
               style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: colors.accent + '40', paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: colors.text }}
             />
           </View>
-
           <View style={{ gap: 6 }}>
             <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>BIO</Text>
             <TextInput
@@ -258,7 +339,6 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
               style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: colors.accent + '40', paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: colors.text, minHeight: 76, textAlignVertical: 'top' }}
             />
           </View>
-
           <View style={{ gap: 8 }}>
             <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>SPECIALTY</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -273,11 +353,118 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
               })}
             </View>
           </View>
-
           <TouchableOpacity onPress={onSave} disabled={saving} activeOpacity={0.8}
             style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1 }}>
             {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
             <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>Save Profile</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Client Notes Sheet ───────────────────────────────────────────────────────
+
+function ClientNotesSheet({ visible, onClose, link, colors, onSaved }) {
+  const [privateNote, setPrivateNote] = useState('');
+  const [clientNote, setClientNote] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (visible && link) {
+      setPrivateNote(link.notes ?? '');
+      setClientNote(link.coach_note ?? '');
+    }
+  }, [visible, link?.id]);
+
+  const handleSave = async () => {
+    if (!link) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from('coach_clients')
+      .update({ notes: privateNote || null, coach_note: clientNote || null })
+      .eq('id', link.id);
+    setSaving(false);
+    if (error) { Alert.alert('Error', error.message); return; }
+    onSaved(link.id, { notes: privateNote || null, coach_note: clientNote || null });
+    onClose();
+  };
+
+  const clientName = link?.client?.full_name ?? 'Client';
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={onClose} />
+      <View style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0,
+        backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+        borderTopWidth: 1, borderColor: colors.border, paddingBottom: 44,
+      }}>
+        <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+        </View>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>Notes</Text>
+              <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 2 }}>{clientName}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
+              <Ionicons name="close" size={22} color={colors.textDim} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Private notes — only coach sees */}
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="lock-closed-outline" size={13} color={colors.textDim} />
+              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>YOUR PRIVATE NOTES</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: colors.textDim, lineHeight: 17 }}>
+              Only you can see this — personal observations, reminders, strategies.
+            </Text>
+            <TextInput
+              value={privateNote}
+              onChangeText={setPrivateNote}
+              placeholder="e.g. Recovering from knee injury, avoid squats for now…"
+              placeholderTextColor={colors.textDim}
+              multiline
+              style={{
+                backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1.5,
+                borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 12,
+                fontSize: 14, color: colors.text, minHeight: 100, textAlignVertical: 'top', lineHeight: 20,
+              }}
+            />
+          </View>
+
+          {/* Coach note for client — client can read */}
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="eye-outline" size={13} color={colors.accent} />
+              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 1 }}>NOTE FOR CLIENT</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: colors.textDim, lineHeight: 17 }}>
+              Visible to {clientName} on their Coach Zone page — use for weekly focus, motivation, or feedback.
+            </Text>
+            <TextInput
+              value={clientNote}
+              onChangeText={setClientNote}
+              placeholder="e.g. Focus on protein this week. Great progress on deadlifts!"
+              placeholderTextColor={colors.textDim}
+              multiline
+              style={{
+                backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1.5,
+                borderColor: colors.accent + '40', paddingHorizontal: 14, paddingVertical: 12,
+                fontSize: 14, color: colors.text, minHeight: 80, textAlignVertical: 'top', lineHeight: 20,
+              }}
+            />
+          </View>
+
+          <TouchableOpacity onPress={handleSave} disabled={saving} activeOpacity={0.8}
+            style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1 }}>
+            {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
+            <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>Save Notes</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -297,6 +484,7 @@ export default function CoachModeScreen() {
   const [inviteCode, setInviteCode] = useState(null);
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   const [editSheetVisible, setEditSheetVisible] = useState(false);
+  const [notesLink, setNotesLink] = useState(null);
   const [profile, setProfile] = useState({ full_name: '', bio: '', goal: '', created_at: null });
   const [draft, setDraft] = useState({ full_name: '', bio: '', goal: '' });
   const [saving, setSaving] = useState(false);
@@ -320,6 +508,7 @@ export default function CoachModeScreen() {
 
   const pending = clientLinks.filter(l => l.status === 'pending');
   const active = clientLinks.filter(l => l.status === 'active');
+  const totalUnread = active.reduce((sum, l) => sum + (l.unreadCount ?? 0), 0);
 
   const generateMut = useMutation({
     mutationFn: () => supabase.rpc('generate_coach_invite', { p_coach_id: userId }).then(r => { if (r.error) throw r.error; return r.data; }),
@@ -353,6 +542,13 @@ export default function CoachModeScreen() {
     ]);
   };
 
+  // Optimistically update notes in the list without refetch
+  const handleNotesSaved = (linkId, { notes, coach_note }) => {
+    qc.setQueryData(['coachClients', userId], prev =>
+      (prev ?? []).map(l => l.id === linkId ? { ...l, notes, coach_note } : l)
+    );
+  };
+
   const coachingSince = profile.created_at
     ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
     : '—';
@@ -378,6 +574,11 @@ export default function CoachModeScreen() {
           <Text style={{ fontSize: 20, fontWeight: weight.black, color: colors.text }}>Coach Zone</Text>
           <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 1.2 }}>COACH VIEW</Text>
         </View>
+        {totalUnread > 0 && (
+          <View style={{ backgroundColor: colors.danger, borderRadius: 12, minWidth: 24, height: 24, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 }}>
+            <Text style={{ fontSize: 12, fontWeight: weight.black, color: '#fff' }}>{totalUnread}</Text>
+          </View>
+        )}
         <TouchableOpacity onPress={() => { setDraft({ full_name: profile.full_name, bio: profile.bio, goal: profile.goal }); setEditSheetVisible(true); }} activeOpacity={0.75}
           style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: colors.accent + '18', borderWidth: 1, borderColor: colors.accent + '50' }}>
           <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.accent }}>Edit</Text>
@@ -394,13 +595,12 @@ export default function CoachModeScreen() {
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: colors.border }}>
           <View style={{ height: 5, backgroundColor: colors.accent }} />
           <View style={{ padding: 16, gap: 14 }}>
-            {/* Identity row */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <Avatar name={profile.full_name || '?'} size={56} fontSize={18} bg={colors.accent + '25'} color={colors.accent} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={{ fontSize: 18, fontWeight: weight.black, color: colors.text }}>{profile.full_name || 'Your Name'}</Text>
                 <Text style={{ fontSize: 12, color: colors.textDim }}>
-                  {profile.goal || 'No specialty set'}{profile.bio ? ` · Coach` : ' · Coach'}
+                  {profile.goal || 'No specialty set'}{' · Coach'}
                 </Text>
                 {profile.goal ? (
                   <View style={{ alignSelf: 'flex-start', marginTop: 4, backgroundColor: colors.accent + '18', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.accent + '35' }}>
@@ -409,12 +609,8 @@ export default function CoachModeScreen() {
                 ) : null}
               </View>
             </View>
-
-            {/* Divider */}
             <View style={{ height: 1, backgroundColor: colors.border }} />
-
-            {/* Stats row */}
-            <View style={{ flexDirection: 'row', gap: 0 }}>
+            <View style={{ flexDirection: 'row' }}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.accent + '15', alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name="people-outline" size={16} color={colors.accent} />
@@ -493,19 +689,61 @@ export default function CoachModeScreen() {
           <View style={{ marginBottom: 4 }}>
             {active.map(link => {
               const name = link.client?.full_name ?? 'Client';
+              const unread = link.unreadCount ?? 0;
+              const lastActivity = link.lastActivityTs ? timeAgo(link.lastActivityTs) : null;
+              const hasNotes = !!(link.notes || link.coach_note);
               return (
                 <TouchableOpacity
                   key={link.id}
                   onPress={() => navigation.navigate('ClientDetail', { clientId: link.client?.id, clientName: name })}
+                  onLongPress={() => setNotesLink(link)}
+                  delayLongPress={400}
                   activeOpacity={0.75}
-                  style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 14 }}
+                  style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: unread > 0 ? colors.danger + '60' : colors.border, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 14 }}
                 >
-                  <Avatar name={name} size={46} fontSize={15} bg={colors.accent + '22'} color={colors.accent} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.text }}>{name}</Text>
-                    {link.client?.goal ? <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 2 }}>{link.client.goal}</Text> : null}
+                  {/* Avatar */}
+                  <View style={{ position: 'relative' }}>
+                    <Avatar name={name} size={46} fontSize={15} bg={colors.accent + '22'} color={colors.accent} />
+                    {unread > 0 && (
+                      <View style={{ position: 'absolute', top: -2, right: -2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.bgCard }}>
+                        <Text style={{ fontSize: 10, fontWeight: weight.black, color: '#fff' }}>{unread > 9 ? '9+' : unread}</Text>
+                      </View>
+                    )}
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+
+                  {/* Info */}
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.text }}>{name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {link.client?.goal ? (
+                        <Text style={{ fontSize: 12, color: colors.textDim }}>{link.client.goal}</Text>
+                      ) : null}
+                      {link.client?.goal && lastActivity ? (
+                        <Text style={{ fontSize: 12, color: colors.textDim }}>·</Text>
+                      ) : null}
+                      {lastActivity ? (
+                        <Text style={{ fontSize: 12, color: colors.accent }}>Active {lastActivity}</Text>
+                      ) : (
+                        <Text style={{ fontSize: 12, color: colors.textDim }}>No recent activity</Text>
+                      )}
+                    </View>
+                    {link.notes ? (
+                      <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
+                        📝 {link.notes}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  {/* Right side */}
+                  <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+                    {hasNotes && (
+                      <TouchableOpacity onPress={() => setNotesLink(link)} activeOpacity={0.7}
+                        style={{ backgroundColor: colors.accent + '18', borderRadius: 8, padding: 4 }}>
+                        <Ionicons name="document-text-outline" size={13} color={colors.accent} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -549,6 +787,14 @@ export default function CoachModeScreen() {
         onSave={handleSave}
         saving={saving}
         colors={colors}
+      />
+
+      <ClientNotesSheet
+        visible={!!notesLink}
+        onClose={() => setNotesLink(null)}
+        link={notesLink}
+        colors={colors}
+        onSaved={handleNotesSaved}
       />
 
       {inviteCode && <InviteOverlay code={inviteCode} onClose={() => setInviteCode(null)} colors={colors} />}

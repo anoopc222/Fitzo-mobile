@@ -127,6 +127,19 @@ export default function CoachChatScreen() {
   const otherName = isCoach ? (clientName ?? 'Client') : (coachName ?? 'Coach');
   const accent = colors.accent;
 
+  // Mark messages as read when this chat is opened
+  useEffect(() => {
+    if (!coachId || !clientId) return;
+    const field = isCoach ? 'coach_last_read' : 'client_last_read';
+    supabase
+      .from('coach_clients')
+      .update({ [field]: new Date().toISOString() })
+      .eq('coach_id', coachId)
+      .eq('client_id', clientId)
+      .eq('status', 'active')
+      .then(() => {});
+  }, [coachId, clientId, isCoach]);
+
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['coachMessages', coachId, clientId],
     queryFn: () => fetchMessages(coachId, clientId),
