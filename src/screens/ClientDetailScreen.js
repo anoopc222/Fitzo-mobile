@@ -412,20 +412,20 @@ export default function ClientDetailScreen() {
         {/* ── Quick summary chips ─────────────────────────────────────── */}
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
           {[
-            { icon: 'barbell-outline',   color: colors.accent, label: 'Workouts', value: vis.workouts ? String(workoutCount) : null },
-            { icon: 'footsteps-outline', color: '#22c55e',     label: 'Avg Steps', value: vis.steps && avgSteps7 > 0 ? (avgSteps7 >= 1000 ? `${(avgSteps7/1000).toFixed(1)}k` : String(avgSteps7)) : null },
-            { icon: 'moon-outline',      color: '#6366f1',     label: 'Avg Sleep', value: vis.sleep && avgSleep7 > 0 ? `${avgSleep7}h` : null },
-            { icon: 'flame-outline',     color: '#ef4444',     label: 'Avg Kcal',  value: vis.food && avgCals > 0 ? (avgCals >= 1000 ? `${(avgCals/1000).toFixed(1)}k` : String(avgCals)) : null },
-          ].map(({ icon, color, label, value }) => (
+            { icon: 'barbell-outline',   color: colors.accent, label: 'Workouts',  restricted: !vis.workouts,  value: vis.workouts ? String(workoutCount) : null },
+            { icon: 'footsteps-outline', color: '#22c55e',     label: 'Avg Steps', restricted: !vis.steps,     value: vis.steps ? (avgSteps7 > 0 ? (avgSteps7 >= 1000 ? `${(avgSteps7/1000).toFixed(1)}k` : String(avgSteps7)) : '—') : null },
+            { icon: 'moon-outline',      color: '#6366f1',     label: 'Avg Sleep', restricted: !vis.sleep,     value: vis.sleep ? (avgSleep7 > 0 ? `${avgSleep7}h` : '—') : null },
+            { icon: 'flame-outline',     color: '#ef4444',     label: 'Avg Kcal',  restricted: !vis.food,      value: vis.food ? (avgCals > 0 ? (avgCals >= 1000 ? `${(avgCals/1000).toFixed(1)}k` : String(avgCals)) : '—') : null },
+          ].map(({ icon, color, label, value, restricted }) => (
             <View key={label} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 10, alignItems: 'center', gap: 5 }}>
-              <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: value != null ? color + '18' : colors.border + '40', alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name={value != null ? icon : 'lock-closed'} size={14} color={value != null ? color : '#f97316'} />
+              <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: restricted ? colors.border + '40' : color + '18', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={restricted ? 'lock-closed' : icon} size={14} color={restricted ? '#f97316' : color} />
               </View>
-              <Text style={{ fontSize: 14, fontWeight: weight.black, color: value != null ? colors.text : colors.textDim }}>
-                {value ?? '—'}
+              <Text style={{ fontSize: 14, fontWeight: weight.black, color: restricted ? colors.textDim : colors.text }}>
+                {restricted ? '—' : value}
               </Text>
-              <Text style={{ fontSize: 9, color: value != null ? colors.textDim : '#f97316', textAlign: 'center', fontWeight: value != null ? '400' : weight.bold }}>
-                {value != null ? label : 'Restricted'}
+              <Text style={{ fontSize: 9, color: restricted ? '#f97316' : colors.textDim, textAlign: 'center', fontWeight: restricted ? weight.bold : '400' }}>
+                {restricted ? 'Restricted' : label}
               </Text>
             </View>
           ))}
