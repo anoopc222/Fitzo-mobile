@@ -903,7 +903,7 @@ export default function SleepScreen({ embedded = false } = {}) {
           <>
             {/* ── Recovery card ── */}
             <View style={styles.recoveryCard}>
-              <View style={styles.recoveryGradientBar} />
+
               <View style={styles.recoveryTopRow}>
                 <TouchableOpacity
                   onPress={recoveryExport.onExportPress}
