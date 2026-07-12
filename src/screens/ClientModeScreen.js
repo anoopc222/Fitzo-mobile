@@ -91,7 +91,17 @@ export default function ClientModeScreen() {
       supabase.from('food_logs').select('calories').eq('user_id', userId).gte('logged_at', sevenDaysAgo + 'T00:00:00'),
     ]);
 
-    if (visRes.data?.coach_visibility) setVisibility({ ...DEFAULT_VIS, ...visRes.data.coach_visibility });
+    const storedVis = visRes.data?.coach_visibility ? { ...DEFAULT_VIS, ...visRes.data.coach_visibility } : DEFAULT_VIS;
+    // Free users: ensure all categories are visible to coach; reset DB if any were restricted
+    if (!isPro) {
+      const anyRestricted = Object.values(storedVis).some(v => v === false);
+      if (anyRestricted) {
+        await supabase.from('profiles').update({ coach_visibility: DEFAULT_VIS }).eq('id', userId);
+      }
+      setVisibility(DEFAULT_VIS);
+    } else {
+      setVisibility(storedVis);
+    }
 
     // Weekly summary
     setWeeklySummary({
@@ -212,7 +222,7 @@ export default function ClientModeScreen() {
     await loadClientData();
   };
 
-  const enabledCount = Object.values(visibility).filter(Boolean).length;
+  const enabledCount = isPro ? Object.values(visibility).filter(Boolean).length : PRIVACY_ITEMS.length;
   const coachingSince = linkedSince
     ? new Date(linkedSince).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
     : null;
