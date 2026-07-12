@@ -421,9 +421,10 @@ export default function MeasurementsScreen({ navigation, embedded = false } = {}
   const entryNew = logs[compareNewIdx];
 
   const Wrap = embedded ? View : SafeAreaView;
+  const wrapProps = embedded ? {} : { edges: ['top'] };
 
   return (
-    <Wrap style={styles.safe}>
+    <Wrap {...wrapProps} style={styles.safe}>
       {!embedded && (
         <ScreenHeader
           title={t('measurements.headerTitle', 'MEASUREMENTS')}
