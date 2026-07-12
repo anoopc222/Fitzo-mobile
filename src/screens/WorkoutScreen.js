@@ -1766,7 +1766,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
     const planName = (plans.find(p => p.id === templatePlanId) ?? {}).name ?? '';
     return (
       <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setTemplatePlanId(null)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+        <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: bg }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: headerBg, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             <TouchableOpacity onPress={() => setTemplatePlanId(null)} style={{ marginRight: 12 }}>
@@ -1862,7 +1862,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
   // ── Main plans list (full-screen) ──
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: bg }}>
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: headerBg, paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <TouchableOpacity onPress={onClose} style={{ marginRight: 12 }}>

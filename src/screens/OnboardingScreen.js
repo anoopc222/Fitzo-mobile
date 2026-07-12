@@ -156,7 +156,7 @@ export default function OnboardingScreen({ onComplete }) {
   }
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: colors.bg }]}>
+    <SafeAreaView edges={['top']} style={[s.safe, { backgroundColor: colors.bg }]}>
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

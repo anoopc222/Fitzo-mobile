@@ -161,7 +161,7 @@ export default function ProfileScreen({ navigation }) {
     : null;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       <ScreenHeader
         title={t('profile.title')}
         colors={colors}

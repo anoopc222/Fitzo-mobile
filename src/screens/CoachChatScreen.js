@@ -175,7 +175,7 @@ export default function CoachChatScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: 'transparent' }}>
 
         {/* ── Header ──────────────────────────────────────────────────── */}
         <View style={{

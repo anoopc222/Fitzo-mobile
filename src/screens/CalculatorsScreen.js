@@ -474,7 +474,7 @@ export default function CalculatorsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       <ScreenHeader
         title={t('calculators.screenTitle')}
         colors={colors}

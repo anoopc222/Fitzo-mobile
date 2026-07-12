@@ -345,7 +345,7 @@ export default function YearInReviewScreen({ navigation }) {
   const canGoForward = selectedYear < currentYear;
 
   if (isLoading || !data) return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView edges={['top']} style={s.safe}>
       <ScreenHeader title="Year in Review" onBack={() => navigation.goBack()} />
       <ActivityIndicator color={colors.accent} style={{ flex: 1 }} />
     </SafeAreaView>

@@ -28,7 +28,7 @@ export default function SocialScreen({ navigation }) {
   const incomingCount = friendsData?.incoming?.length ?? 0;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       <View style={styles.topBar}>
         <View style={styles.backBtn} />
         <Text style={styles.logo}>Fitzo<Text style={styles.logoDot}>•</Text></Text>

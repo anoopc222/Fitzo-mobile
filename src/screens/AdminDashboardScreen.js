@@ -168,7 +168,7 @@ export default function AdminDashboardScreen({ navigation }) {
 
   if (!isSuperAdmin) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView edges={['top']} style={styles.safe}>
         <ScreenHeader title={t('admin.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />
         <Text style={styles.emptyText}>{t('admin.accessDenied')}</Text>
       </SafeAreaView>
@@ -176,7 +176,7 @@ export default function AdminDashboardScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       <ScreenHeader
         title={t('admin.headerTitle')}
         colors={colors}
