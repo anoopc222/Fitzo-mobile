@@ -93,7 +93,7 @@ async function fetchCoachClients(userId) {
     const lim = clientIds.length * 5;
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
     const [wkRes, wgRes, stRes, slRes] = await Promise.all([
-      supabase.from('workout_sessions').select('user_id, date').in('user_id', clientIds)
+      supabase.from('workout_sessions').select('user_id, date, notes').in('user_id', clientIds)
         .order('date', { ascending: false }).limit(lim),
       supabase.from('weight_logs').select('user_id, weight, logged_at').in('user_id', clientIds)
         .gte('logged_at', weekAgo + 'T00:00:00'),
@@ -115,7 +115,11 @@ async function fetchCoachClients(userId) {
       return Math.round((sum / arr.length) * 10) / 10;
     };
     for (const clientId of clientIds) {
-      const wkWeek = (wkRes.data ?? []).filter(r => r.user_id === clientId && r.date >= weekAgo);
+      const isStrength = r => {
+        const n = (r.notes ?? '').toLowerCase();
+        return !n.includes('rest') && !n.includes('cardio') && !n.includes('run') && !n.includes('cycle');
+      };
+      const wkWeek = (wkRes.data ?? []).filter(r => r.user_id === clientId && r.date >= weekAgo && isStrength(r));
       const weights = (wgRes.data ?? []).filter(r => r.user_id === clientId);
       const steps   = (stRes.data ?? []).filter(r => r.user_id === clientId);
       const sleep   = (slRes.data ?? []).filter(r => r.user_id === clientId);
@@ -729,7 +733,7 @@ export default function CoachModeScreen() {
               // Respect client's coach_visibility — if a key is false, show '—' for that stat
               const vis = { workouts: true, weight: true, steps: true, sleep: true, food: true, ...(link.client?.coach_visibility ?? {}) };
               const STATS = [
-                { icon: 'barbell-outline',  color: colors.accent, visKey: 'workouts', label: 'WORKOUTS',   sublabel: 'this week',  value: ws?.workouts ?? 0,  fmt: v => String(v) },
+                { icon: 'barbell-outline',  color: colors.accent, visKey: 'workouts', label: 'WORKOUTS',   sublabel: 'strength only',  value: ws?.workouts ?? 0,  fmt: v => String(v) },
                 { icon: 'footsteps-outline',color: '#22c55e',     visKey: 'steps',    label: 'AVG STEPS',  sublabel: '7-day avg',  value: ws?.avgSteps ?? 0,  fmt: v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : (v || '—') },
                 { icon: 'moon-outline',     color: '#6366f1',     visKey: 'sleep',    label: 'AVG SLEEP',  sublabel: '7-day avg',  value: ws?.avgSleep ?? 0,  fmt: v => v ? `${v}h` : '—' },
                 { icon: 'scale-outline',    color: '#f97316',     visKey: 'weight',   label: 'AVG WEIGHT', sublabel: '7-day avg',  value: ws?.avgWeight ?? 0, fmt: v => v ? `${v}kg` : '—' },
