@@ -631,7 +631,7 @@ export default function CoachModeScreen() {
 
         {/* ── Profile card ─────────────────────────────────────────── */}
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: colors.border }}>
-          <View style={{ height: 5, backgroundColor: colors.accent }} />
+
           <View style={{ padding: 16, gap: 14 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <Avatar name={profile.full_name || '?'} size={56} fontSize={18} bg={colors.accent + '25'} color={colors.accent} />
