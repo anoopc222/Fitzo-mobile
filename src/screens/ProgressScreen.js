@@ -233,9 +233,10 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
   const toggleExpand = (name) => setExpandedEx(prev => prev === name ? null : name);
 
   const Wrap = embedded ? View : SafeAreaView;
+  const wrapProps = embedded ? {} : { edges: ['top'] };
 
   return (
-    <Wrap style={styles.safe}>
+    <Wrap {...wrapProps} style={styles.safe}>
       {!embedded && <ScreenHeader title={t('progress.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />}
       <Text style={styles.subtitle}>{t('progress.exercisesTracked', { count: grouped.length })}</Text>
 
