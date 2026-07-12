@@ -1066,9 +1066,10 @@ export default function WeightScreen({ embedded = false } = {}) {
   };
 
   const Wrap = embedded ? View : SafeAreaView;
+  const wrapProps = embedded ? {} : { edges: ['top'] };
 
   return (
-    <Wrap style={styles.safe}>
+    <Wrap {...wrapProps} style={styles.safe}>
       {!embedded && <ScreenHeader title={t('weight.screenTitle')} colors={colors} />}
 
       {/* Month nav + unit toggle */}

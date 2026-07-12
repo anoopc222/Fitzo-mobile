@@ -753,9 +753,10 @@ export default function FoodLogScreen({ embedded = false } = {}) {
   }, [calPct]);
 
   const Wrap = embedded ? View : SafeAreaView;
+  const wrapProps = embedded ? {} : { edges: ['top'] };
 
   return (
-    <Wrap style={styles.safe}>
+    <Wrap {...wrapProps} style={styles.safe}>
       {!embedded && <ScreenHeader title="LOG" colors={colors} />}
       {/* Date nav */}
       <View style={styles.dateNav}>

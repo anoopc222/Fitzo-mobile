@@ -863,9 +863,10 @@ export default function SleepScreen({ embedded = false } = {}) {
   };
 
   const Wrap = embedded ? View : SafeAreaView;
+  const wrapProps = embedded ? {} : { edges: ['top'] };
 
   return (
-    <Wrap style={styles.safe}>
+    <Wrap {...wrapProps} style={styles.safe}>
       {!embedded && <ScreenHeader title={t('sleep.headerTitle')} colors={colors} />}
 
       {/* Month nav */}
