@@ -66,28 +66,6 @@ function Bubble({ msg, isMe, prevSame, nextSame, colors }) {
   const receivedTxt = colors.text;
   const timeSent    = colors.bg + 'aa';
   const timeRecv    = colors.textDim;
-  const showTail    = !prevSame;
-
-  const tailSent = (
-    <View style={{ position: 'absolute', bottom: 0, right: -7 }}>
-      <View style={{
-        width: 0, height: 0,
-        borderLeftWidth: 8, borderLeftColor: 'transparent',
-        borderBottomWidth: 10, borderBottomColor: sentBg,
-      }} />
-    </View>
-  );
-
-  const tailRecv = (
-    <View style={{ position: 'absolute', bottom: 0, left: -7 }}>
-      <View style={{
-        width: 0, height: 0,
-        borderRightWidth: 8, borderRightColor: 'transparent',
-        borderBottomWidth: 10, borderBottomColor: receivedBg,
-      }} />
-    </View>
-  );
-
   return (
     <View style={{
       marginTop: prevSame ? 2 : 8,
@@ -98,30 +76,18 @@ function Bubble({ msg, isMe, prevSame, nextSame, colors }) {
       <View style={{
         maxWidth: '80%',
         backgroundColor: isMe ? sentBg : receivedBg,
-        borderRadius: 8,
-        borderBottomRightRadius: isMe && showTail ? 2 : 8,
-        borderBottomLeftRadius: !isMe && showTail ? 2 : 8,
-        borderWidth: 0,
+        borderRadius: 12,
         paddingHorizontal: 10,
         paddingTop: 7,
         paddingBottom: 6,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
-        position: 'relative',
+        elevation: 1,
       }}>
-        {/* Message text */}
         <Text style={{ fontSize: 14.5, color: isMe ? sentText : receivedTxt, lineHeight: 20 }}>
           {msg.message}
         </Text>
-
-        {/* Time on its own right-aligned row */}
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 2 }}>
           <Text style={{ fontSize: 10.5, color: isMe ? timeSent : timeRecv }}>{time}</Text>
         </View>
-
-        {/* Bubble tail */}
-        {showTail && (isMe ? tailSent : tailRecv)}
       </View>
     </View>
   );
@@ -238,9 +204,6 @@ export default function CoachChatScreen() {
             </Text>
           </View>
 
-          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="ellipsis-vertical" size={20} color={colors.text} />
-          </TouchableOpacity>
         </View>
 
         {/* ── Messages ────────────────────────────────────────────────── */}
@@ -294,9 +257,8 @@ export default function CoachChatScreen() {
                 {/* Text input pill */}
                 <View style={{
                   flex: 1, flexDirection: 'row', alignItems: 'center',
-                  backgroundColor: colors.bg, borderRadius: 24,
-                  borderWidth: 1, borderColor: colors.border,
-                  paddingHorizontal: 14,
+                  backgroundColor: 'transparent',
+                  paddingHorizontal: 4,
                   minHeight: 44,
                 }}>
                   <TextInput
