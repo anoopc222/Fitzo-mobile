@@ -184,8 +184,11 @@ export default function CoachChatScreen() {
           backgroundColor: colors.bgCard,
           borderBottomWidth: 1, borderBottomColor: colors.border,
         }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
 
           {/* Avatar */}

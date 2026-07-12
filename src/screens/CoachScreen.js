@@ -890,8 +890,11 @@ export default function CoachScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingTop: 6, paddingBottom: 4, gap: 12 }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: typography.xl, fontWeight: weight.bold, color: colors.text }}>Coach Mode</Text>
         <Ionicons name="people" size={22} color={colors.accent} />

@@ -348,10 +348,9 @@ export default function ClientDetailScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 10 }}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
         >
-          <Ionicons name="chevron-back" size={18} color={colors.text} />
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent + '22', borderWidth: 1.5, borderColor: colors.accent + '55', alignItems: 'center', justifyContent: 'center' }}>
