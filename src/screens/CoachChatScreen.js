@@ -101,8 +101,7 @@ function Bubble({ msg, isMe, prevSame, nextSame, colors }) {
         borderRadius: 8,
         borderBottomRightRadius: isMe && showTail ? 2 : 8,
         borderBottomLeftRadius: !isMe && showTail ? 2 : 8,
-        borderWidth: isMe ? 0 : 1,
-        borderColor: colors.border,
+        borderWidth: 0,
         paddingHorizontal: 10,
         paddingTop: 7,
         paddingBottom: 6,
@@ -294,10 +293,10 @@ export default function CoachChatScreen() {
               <>
                 {/* Text input pill */}
                 <View style={{
-                  flex: 1, flexDirection: 'row', alignItems: 'flex-end',
+                  flex: 1, flexDirection: 'row', alignItems: 'center',
                   backgroundColor: colors.bg, borderRadius: 24,
                   borderWidth: 1, borderColor: colors.border,
-                  paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 10 : 4,
+                  paddingHorizontal: 14,
                   minHeight: 44,
                 }}>
                   <TextInput
@@ -311,33 +310,32 @@ export default function CoachChatScreen() {
                       fontSize: 15,
                       color: colors.text,
                       maxHeight: 120,
-                      paddingTop: 0,
-                      paddingBottom: 0,
+                      paddingVertical: Platform.OS === 'ios' ? 10 : 8,
                       lineHeight: 20,
                     }}
                   />
                 </View>
 
-                {/* Send / Mic button */}
-                <TouchableOpacity
-                  onPress={() => canSend && send(text.trim())}
-                  activeOpacity={0.8}
-                  style={{
-                    width: 46, height: 46, borderRadius: 23,
-                    backgroundColor: accent,
-                    alignItems: 'center', justifyContent: 'center',
-                    shadowColor: accent,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.4, shadowRadius: 6, elevation: 4,
-                  }}
-                >
-                  {sending
-                    ? <ActivityIndicator size="small" color={colors.bg} />
-                    : canSend
-                      ? <Ionicons name="send" size={18} color={colors.bg} style={{ marginLeft: 2 }} />
-                      : <Ionicons name="mic" size={20} color={colors.bg} />
-                  }
-                </TouchableOpacity>
+                {/* Send button — only shown when there is text */}
+                {canSend && (
+                  <TouchableOpacity
+                    onPress={() => send(text.trim())}
+                    activeOpacity={0.8}
+                    style={{
+                      width: 46, height: 46, borderRadius: 23,
+                      backgroundColor: accent,
+                      alignItems: 'center', justifyContent: 'center',
+                      shadowColor: accent,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.4, shadowRadius: 6, elevation: 4,
+                    }}
+                  >
+                    {sending
+                      ? <ActivityIndicator size="small" color={colors.bg} />
+                      : <Ionicons name="send" size={18} color={colors.bg} style={{ marginLeft: 2 }} />
+                    }
+                  </TouchableOpacity>
+                )}
               </>
             ) : (
               /* Locked for free users */
