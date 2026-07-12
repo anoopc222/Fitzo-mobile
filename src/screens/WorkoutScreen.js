@@ -2392,7 +2392,7 @@ function EditSessionModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <SafeAreaView style={eS.container}>
+        <SafeAreaView edges={['top']} style={eS.container}>
           <ScrollView ref={scrollRef} style={{ flex: 1 }} keyboardShouldPersistTaps="handled" scrollEnabled={!dragKey}>
           {/* Header */}
           <View style={eS.header}>
@@ -3711,9 +3711,10 @@ export default function WorkoutScreen({ embedded = false } = {}) {
   };
 
   const Wrap = embedded ? View : SafeAreaView;
+  const wrapProps = embedded ? {} : { edges: ['top'] };
 
   return (
-    <Wrap style={s.safe}>
+    <Wrap {...wrapProps} style={s.safe}>
       {!embedded && <ScreenHeader title={t('workout.workoutTitleUpper')} colors={colors} right={<Text style={s.sessionCount}>{t('workout.sessionsCountUpper', { count: sessions.length })}</Text>} />}
 
       {/* Month nav */}
