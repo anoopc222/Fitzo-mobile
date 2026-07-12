@@ -295,7 +295,7 @@ export default function ClientModeScreen() {
         {activeCoach ? (
           <>
             <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, overflow: 'hidden', marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
-              <View style={{ height: 5, backgroundColor: '#22c55e' }} />
+
               <View style={{ padding: 18, gap: 14 }}>
                 {/* Identity */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
