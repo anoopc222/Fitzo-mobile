@@ -401,6 +401,13 @@ export default function ClientDetailScreen() {
   const highWeight7 = weights7.length ? Math.max(...weights7.map(w => w.weight)) : null;
   const lowWeight7  = weights7.length ? Math.min(...weights7.map(w => w.weight)) : null;
 
+  // Weight sparkline: 7-day window, ascending by date
+  const weightSparkPoints = useMemo(() => {
+    return [...weights7]
+      .sort((a, b) => (a.logged_at ?? '').localeCompare(b.logged_at ?? ''))
+      .map(w => ({ label: fmtDay(w.logged_at), weight: w.weight }));
+  }, [weights7]);
+
   // Step bars: one per day
   const stepBars = useMemo(() => steps.map(s => ({
     label: fmtDay(s.logged_at),
@@ -529,6 +536,17 @@ export default function ClientDetailScreen() {
                   </View>
                 )}
               </View>
+
+              {/* 7-day sparkline */}
+              {weightSparkPoints.length > 1 && (
+                <View style={{ marginBottom: 14 }}>
+                  <SparklineChart
+                    points={weightSparkPoints} color="#f97316"
+                    labelKey="label" valueKey="weight" valueSuffix=" kg"
+                    chartId="weight" colors={colors}
+                  />
+                </View>
+              )}
 
               {/* 2×2 stats grid */}
               <View style={{ flexDirection: 'row', gap: 8 }}>
