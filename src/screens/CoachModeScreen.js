@@ -58,13 +58,16 @@ async function fetchCoachClients(userId) {
   if (error) throw error;
   const rows = data ?? [];
   const clientIds = rows.filter(r => r.client_id && r.status === 'active').map(r => r.client_id);
+  // Also fetch profiles for pending search-based invites so names show correctly
+  const pendingClientIds = rows.filter(r => r.client_id && r.status === 'pending').map(r => r.client_id);
+  const allProfileIds = [...new Set([...clientIds, ...pendingClientIds])];
 
   let profileMap = {};
-  if (clientIds.length > 0) {
+  if (allProfileIds.length > 0) {
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, full_name, goal, step_goal, coach_visibility')
-      .in('id', clientIds);
+      .in('id', allProfileIds);
     (profiles ?? []).forEach(p => { profileMap[p.id] = p; });
   }
 
