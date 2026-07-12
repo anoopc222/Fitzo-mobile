@@ -256,21 +256,6 @@ function BarChart({ bars, color, goalLine, maxOverride, labelKey, valueKey, valu
 
 // ─── Stat tile row ────────────────────────────────────────────────────────────
 
-function StatRow({ icon, iconColor, label, value, sub, colors }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
-      <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: iconColor + '18', alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name={icon} size={14} color={iconColor} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 13, color: colors.text, fontWeight: weight.semibold }}>{label}</Text>
-        {sub ? <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 1 }}>{sub}</Text> : null}
-      </View>
-      <Text style={{ fontSize: 14, fontWeight: weight.black, color: colors.text }}>{value}</Text>
-    </View>
-  );
-}
-
 // ─── Workout row (expandable card) ────────────────────────────────────────────
 
 function WorkoutRow({ session, colors }) {
@@ -497,61 +482,42 @@ export default function ClientDetailScreen() {
         {/* ── Weight ──────────────────────────────────────────────────── */}
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 14 }}>
           <SectionHeader icon="scale-outline" iconColor="#f97316" title="Body Weight"
-            badge={currentWeight ? `${currentWeight} kg` : undefined}
             sub="30 days" colors={colors}
           />
-          {!vis.weight ? <LockedSection colors={colors} /> : (
+          {!vis.weight ? <LockedSection colors={colors} /> : weights.length === 0 ? (
+            <Text style={{ fontSize: 13, color: colors.textDim }}>No weight logged in 30 days</Text>
+          ) : (
             <>
-              {/* Delta + goal */}
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 14 }}>
-                {weightDelta !== null && (
-                  <View style={{ flex: 1, backgroundColor: parseFloat(weightDelta) <= 0 ? '#34d39918' : '#f8717118', borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 16, fontWeight: weight.black, color: parseFloat(weightDelta) <= 0 ? '#34d399' : '#f87171' }}>
-                      {parseFloat(weightDelta) > 0 ? '+' : ''}{weightDelta} kg
+              {/* Compact summary row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <Text style={{ fontSize: 28, fontWeight: weight.black, color: colors.text }}>
+                  {currentWeight ? `${currentWeight} kg` : '—'}
+                </Text>
+                <View style={{ flex: 1 }}>
+                  {weightDelta !== null && (
+                    <Text style={{ fontSize: 12, fontWeight: weight.semibold, color: parseFloat(weightDelta) <= 0 ? '#34d399' : '#f87171' }}>
+                      {parseFloat(weightDelta) > 0 ? '+' : ''}{weightDelta} kg vs 30d ago
                     </Text>
-                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>vs 30d ago</Text>
-                  </View>
-                )}
-                {profile?.weight_goal_kg && currentWeight && (
-                  <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 10, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 16, fontWeight: weight.black, color: colors.text }}>{profile.weight_goal_kg} kg</Text>
-                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>
-                      Goal · {Math.abs(currentWeight - profile.weight_goal_kg).toFixed(1)} kg to go
+                  )}
+                  {profile?.weight_goal_kg && currentWeight && (
+                    <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>
+                      Goal {profile.weight_goal_kg} kg · {Math.abs(currentWeight - profile.weight_goal_kg).toFixed(1)} kg to go
                     </Text>
-                  </View>
-                )}
+                  )}
+                </View>
               </View>
-
               {/* Line chart */}
               {weights.length >= 2 && (
-                <View style={{ marginBottom: 14 }}>
+                <>
                   <WeightChart data={weights} color="#f97316" goalKg={profile?.weight_goal_kg} colors={colors} />
                   {profile?.weight_goal_kg && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 }}>
                       <View style={{ width: 16, height: 1.5, backgroundColor: '#34d399' }} />
                       <Text style={{ fontSize: 9, color: colors.textDim }}>Goal {profile.weight_goal_kg} kg</Text>
                     </View>
                   )}
-                </View>
+                </>
               )}
-
-              {/* Recent entries */}
-              {weights.slice(0, 7).map((entry, i) => {
-                const prev = weights[i + 1];
-                const delta = prev ? (entry.weight - prev.weight).toFixed(1) : null;
-                const dc = delta === null ? colors.textDim : parseFloat(delta) < 0 ? '#34d399' : parseFloat(delta) > 0 ? '#f87171' : colors.textDim;
-                return (
-                  <StatRow
-                    key={i}
-                    icon="ellipse" iconColor={i === 0 ? '#f97316' : colors.border}
-                    label={fmtDate(entry.logged_at)}
-                    value={`${entry.weight} kg`}
-                    sub={delta !== null ? `${parseFloat(delta) > 0 ? '+' : ''}${delta} kg from prev` : undefined}
-                    colors={{ ...colors, textDim: dc, text: colors.text }}
-                  />
-                );
-              })}
-              {weights.length === 0 && <Text style={{ fontSize: 13, color: colors.textDim }}>No weight logged in 30 days</Text>}
             </>
           )}
         </View>
@@ -572,25 +538,11 @@ export default function ClientDetailScreen() {
                 labelKey="label" valueKey="steps" colors={colors}
               />
               {profile?.step_goal && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 }}>
                   <View style={{ width: 16, height: 1.5, backgroundColor: '#34d399' }} />
-                  <Text style={{ fontSize: 9, color: colors.textDim }}>Goal {profile.step_goal.toLocaleString()} steps</Text>
+                  <Text style={{ fontSize: 9, color: colors.textDim }}>Goal {profile.step_goal.toLocaleString()} steps/day</Text>
                 </View>
               )}
-              {steps.slice().reverse().map((s, i) => {
-                const pct = profile?.step_goal ? s.steps / profile.step_goal : null;
-                const met = pct != null ? pct >= 1 : null;
-                return (
-                  <StatRow key={i}
-                    icon={met === true ? 'checkmark-circle' : met === false ? 'close-circle' : 'ellipse'}
-                    iconColor={met === true ? '#34d399' : met === false ? '#f87171' : '#22c55e'}
-                    label={fmtDate(s.logged_at)}
-                    value={s.steps >= 1000 ? `${(s.steps/1000).toFixed(1)}k` : String(s.steps)}
-                    sub={profile?.step_goal ? `${(pct * 100).toFixed(0)}% of ${profile.step_goal.toLocaleString()} goal` : undefined}
-                    colors={colors}
-                  />
-                );
-              })}
             </>
           )}
         </View>
@@ -613,25 +565,11 @@ export default function ClientDetailScreen() {
                 colors={colors}
               />
               {profile?.sleep_goal_hours && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 }}>
                   <View style={{ width: 16, height: 1.5, backgroundColor: '#34d399' }} />
                   <Text style={{ fontSize: 9, color: colors.textDim }}>Goal {profile.sleep_goal_hours}h per night</Text>
                 </View>
               )}
-              {sleep.slice().reverse().map((entry, i) => {
-                const met = profile?.sleep_goal_hours ? entry.hours >= profile.sleep_goal_hours : null;
-                const qColor = sleepQualityColor(entry.quality);
-                return (
-                  <StatRow key={i}
-                    icon={met === true ? 'checkmark-circle' : met === false ? 'close-circle' : 'moon'}
-                    iconColor={met === true ? '#34d399' : met === false ? '#f87171' : '#6366f1'}
-                    label={fmtDate(entry.logged_at)}
-                    value={entry.hours ? `${entry.hours}h` : '—'}
-                    sub={entry.quality ? `Quality: ${entry.quality <= 2 ? 'Poor' : entry.quality === 3 ? 'Fair' : 'Good'}` : undefined}
-                    colors={{ ...colors, textDim: entry.quality ? qColor : colors.textDim }}
-                  />
-                );
-              })}
             </>
           )}
         </View>
@@ -652,23 +590,11 @@ export default function ClientDetailScreen() {
                 labelKey="label" valueKey="calories" colors={colors}
               />
               {profile?.calorie_target && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 }}>
                   <View style={{ width: 16, height: 1.5, backgroundColor: '#34d399' }} />
                   <Text style={{ fontSize: 9, color: colors.textDim }}>Target {profile.calorie_target} kcal/day</Text>
                 </View>
               )}
-              {calBars.map((b, i) => {
-                const met = profile?.calorie_target ? b.calories <= profile.calorie_target * 1.1 : null;
-                return (
-                  <StatRow key={i}
-                    icon="flame" iconColor="#ef4444"
-                    label={b.label}
-                    value={b.calories >= 1000 ? `${(b.calories/1000).toFixed(1)}k kcal` : `${b.calories} kcal`}
-                    sub={profile?.calorie_target ? `${((b.calories / profile.calorie_target) * 100).toFixed(0)}% of target` : undefined}
-                    colors={colors}
-                  />
-                );
-              })}
             </>
           )}
         </View>
