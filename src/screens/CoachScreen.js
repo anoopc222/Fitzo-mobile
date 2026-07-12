@@ -48,8 +48,12 @@ async function fetchCoachClients(userId) {
 function SectionLabel({ title, colors }) {
   return (
     <Text style={{
-      fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted,
-      textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10,
+      fontSize: 11,
+      fontWeight: weight.bold,
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 1.2,
+      marginBottom: 10,
     }}>
       {title}
     </Text>
@@ -68,29 +72,42 @@ function InviteOverlay({ code, onClose, colors }) {
   return (
     <View style={{
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.8)', alignItems: 'center', justifyContent: 'center', zIndex: 999,
+      backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', zIndex: 999,
     }}>
       <View style={{
-        backgroundColor: colors.bgCard, borderRadius: 24, padding: 28,
-        width: '85%', borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: 16,
+        backgroundColor: colors.bgCard, borderRadius: 24, padding: 30,
+        width: '88%', borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: 18,
       }}>
-        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent + '22', alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="link" size={26} color={colors.accent} />
+        <View style={{
+          width: 60, height: 60, borderRadius: 30,
+          backgroundColor: colors.accent + '22',
+          alignItems: 'center', justifyContent: 'center',
+          borderWidth: 1.5, borderColor: colors.accent + '44',
+        }}>
+          <Ionicons name="link" size={28} color={colors.accent} />
         </View>
-        <View style={{ alignItems: 'center', gap: 4 }}>
-          <Text style={{ fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase' }}>Invite Code</Text>
-          <Text style={{ fontSize: 34, fontWeight: weight.bold, color: colors.accent, letterSpacing: 8 }}>{code}</Text>
-          <Text style={{ fontSize: typography.xs, color: colors.textDim, textAlign: 'center', lineHeight: 18 }}>
+        <View style={{ alignItems: 'center', gap: 6 }}>
+          <Text style={{
+            fontSize: 11, fontWeight: weight.bold, color: colors.textMuted,
+            letterSpacing: 1.2, textTransform: 'uppercase',
+          }}>
+            Invite Code
+          </Text>
+          <Text style={{ fontSize: 36, fontWeight: weight.bold, color: colors.accent, letterSpacing: 9 }}>
+            {code}
+          </Text>
+          <Text style={{ fontSize: typography.xs, color: colors.textDim, textAlign: 'center', lineHeight: 19 }}>
             Share this with your client.{'\n'}It expires once used.
           </Text>
         </View>
         <TouchableOpacity
+          activeOpacity={0.75}
           onPress={handleCopy}
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 8,
-            backgroundColor: copied ? '#34d399' + '22' : colors.accent + '22',
+            backgroundColor: copied ? '#34d399' + '20' : colors.accent + '20',
             borderWidth: 1, borderColor: copied ? '#34d399' : colors.accent,
-            paddingHorizontal: 24, paddingVertical: 11, borderRadius: 14, width: '100%', justifyContent: 'center',
+            paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, width: '100%', justifyContent: 'center',
           }}
         >
           <Ionicons name={copied ? 'checkmark-circle' : 'copy-outline'} size={18} color={copied ? '#34d399' : colors.accent} />
@@ -98,7 +115,7 @@ function InviteOverlay({ code, onClose, colors }) {
             {copied ? 'Copied!' : 'Copy Code'}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={onClose} style={{ paddingVertical: 8 }}>
+        <TouchableOpacity activeOpacity={0.75} onPress={onClose} style={{ paddingVertical: 8 }}>
           <Text style={{ fontSize: typography.sm, color: colors.textDim }}>Done</Text>
         </TouchableOpacity>
       </View>
@@ -114,26 +131,48 @@ function ClientCard({ link, onViewStats, onRemove, colors }) {
   const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   return (
     <View style={{
-      backgroundColor: colors.bgCard, borderRadius: 14,
+      backgroundColor: colors.bgCard, borderRadius: 18,
       borderWidth: 1, borderColor: colors.border,
-      marginBottom: 8, flexDirection: 'row', alignItems: 'center',
-      paddingVertical: 10, paddingHorizontal: 12, gap: 10,
+      marginBottom: 12, flexDirection: 'row', alignItems: 'center',
+      paddingVertical: 13, paddingHorizontal: 14, gap: 12,
     }}>
-      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent + '22', borderWidth: 1.5, borderColor: colors.accent + '44', alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.accent }}>{initials}</Text>
+      <View style={{
+        width: 46, height: 46, borderRadius: 23,
+        backgroundColor: colors.accent + '22',
+        borderWidth: 1.5, borderColor: colors.accent + '55',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.accent }}>{initials}</Text>
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text }}>{name}</Text>
         {client?.goal && (
-          <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>{client.goal}</Text>
+          <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>{client.goal}</Text>
         )}
       </View>
-      <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-        <TouchableOpacity onPress={onViewStats} style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={onViewStats}
+          style={{
+            backgroundColor: colors.accent, borderRadius: 12,
+            paddingHorizontal: 14, paddingVertical: 8,
+            flexDirection: 'row', alignItems: 'center', gap: 5,
+          }}
+        >
           <Ionicons name="bar-chart-outline" size={13} color={colors.bg} />
           <Text style={{ fontSize: 12, fontWeight: weight.bold, color: colors.bg }}>Stats</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={onRemove} style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.danger + '12', borderWidth: 1, borderColor: colors.danger + '40', alignItems: 'center', justifyContent: 'center' }}>
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={onRemove}
+          style={{
+            width: 34, height: 34, borderRadius: 12,
+            backgroundColor: colors.danger + '12',
+            borderWidth: 1, borderColor: colors.danger + '40',
+            alignItems: 'center', justifyContent: 'center',
+          }}
+        >
           <Ionicons name="person-remove-outline" size={14} color={colors.danger} />
         </TouchableOpacity>
       </View>
@@ -176,24 +215,42 @@ function CoachProfileCard({ userId, colors }) {
   const initials = (profile.full_name || '?').split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 14 }}>
-      <View style={{ height: 3, backgroundColor: colors.accent }} />
-      <View style={{ padding: 12, gap: editing ? 12 : 0 }}>
+    <View style={{
+      backgroundColor: colors.bgCard, borderRadius: 18,
+      borderWidth: 1, borderColor: colors.border,
+      overflow: 'hidden', marginBottom: 12,
+    }}>
+      {/* Accent top bar */}
+      <View style={{ height: 4, backgroundColor: colors.accent, borderTopLeftRadius: 18, borderTopRightRadius: 18 }} />
+
+      <View style={{ padding: 16 }}>
         {/* Header row */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.accent + '22', borderWidth: 1.5, borderColor: colors.accent + '55', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 15, fontWeight: weight.black, color: colors.accent }}>{initials}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{
+            width: 52, height: 52, borderRadius: 26,
+            backgroundColor: colors.accent + '22',
+            borderWidth: 2, borderColor: colors.accent + '55',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: weight.black, color: colors.accent }}>{initials}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text }}>{profile.full_name || 'Your Name'}</Text>
-            <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>
+            <Text style={{ fontSize: 17, fontWeight: weight.bold, color: colors.text, lineHeight: 22 }}>
+              {profile.full_name || 'Your Name'}
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 2 }}>
               {profile.goal ? profile.goal : 'No specialty set'}
-              {profile.bio ? ` · ${profile.bio.slice(0, 30)}${profile.bio.length > 30 ? '…' : ''}` : ''}
+              {profile.bio ? ` · ${profile.bio.slice(0, 32)}${profile.bio.length > 32 ? '…' : ''}` : ''}
             </Text>
           </View>
           <TouchableOpacity
+            activeOpacity={0.75}
             onPress={() => editing ? handleCancel() : setEditing(true)}
-            style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9, backgroundColor: editing ? colors.bgElevated : colors.accent + '18', borderWidth: 1, borderColor: editing ? colors.border : colors.accent + '40' }}
+            style={{
+              paddingHorizontal: 12, paddingVertical: 7, borderRadius: 24,
+              backgroundColor: editing ? colors.bgElevated : colors.accent + '18',
+              borderWidth: 1, borderColor: editing ? colors.border : colors.accent + '40',
+            }}
           >
             <Text style={{ fontSize: 12, fontWeight: weight.bold, color: editing ? colors.textDim : colors.accent }}>
               {editing ? 'Cancel' : 'Edit'}
@@ -202,22 +259,31 @@ function CoachProfileCard({ userId, colors }) {
         </View>
 
         {editing ? (
-          <View style={{ gap: 10 }}>
+          <View style={{ gap: 14, marginTop: 16 }}>
             {/* Name */}
             <View>
-              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, marginBottom: 5, letterSpacing: 0.5 }}>DISPLAY NAME</Text>
+              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, marginBottom: 6, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                Display Name
+              </Text>
               <TextInput
                 value={draft.full_name}
                 onChangeText={v => setDraft(d => ({ ...d, full_name: v }))}
                 placeholder="Your name"
                 placeholderTextColor={colors.textDim}
-                style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: colors.accent + '50', paddingHorizontal: 14, paddingVertical: 11, fontSize: typography.sm, color: colors.text }}
+                style={{
+                  backgroundColor: colors.bg, borderRadius: 14,
+                  borderWidth: 1.5, borderColor: colors.accent + '50',
+                  paddingHorizontal: 14, paddingVertical: 12,
+                  fontSize: typography.sm, color: colors.text,
+                }}
               />
             </View>
 
             {/* Bio */}
             <View>
-              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, marginBottom: 5, letterSpacing: 0.5 }}>BIO / INTRO</Text>
+              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, marginBottom: 6, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                Bio / Intro
+              </Text>
               <TextInput
                 value={draft.bio}
                 onChangeText={v => setDraft(d => ({ ...d, bio: v }))}
@@ -225,23 +291,38 @@ function CoachProfileCard({ userId, colors }) {
                 placeholderTextColor={colors.textDim}
                 multiline
                 numberOfLines={3}
-                style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: colors.accent + '50', paddingHorizontal: 14, paddingVertical: 11, fontSize: typography.sm, color: colors.text, minHeight: 80, textAlignVertical: 'top' }}
+                style={{
+                  backgroundColor: colors.bg, borderRadius: 14,
+                  borderWidth: 1.5, borderColor: colors.accent + '50',
+                  paddingHorizontal: 14, paddingVertical: 12,
+                  fontSize: typography.sm, color: colors.text,
+                  minHeight: 82, textAlignVertical: 'top',
+                }}
               />
             </View>
 
             {/* Specialty chips */}
             <View>
-              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, marginBottom: 8, letterSpacing: 0.5 }}>SPECIALTY</Text>
+              <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, marginBottom: 8, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                Specialty
+              </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
                 {SPECIALTIES.map(s => {
                   const sel = draft.goal === s;
                   return (
                     <TouchableOpacity
                       key={s}
+                      activeOpacity={0.75}
                       onPress={() => setDraft(d => ({ ...d, goal: sel ? '' : s }))}
-                      style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: sel ? colors.accent : colors.bgElevated, borderWidth: 1.5, borderColor: sel ? colors.accent : colors.border }}
+                      style={{
+                        paddingHorizontal: 13, paddingVertical: 7, borderRadius: 24,
+                        backgroundColor: sel ? colors.accent : colors.bgElevated,
+                        borderWidth: 1.5, borderColor: sel ? colors.accent : colors.border,
+                      }}
                     >
-                      <Text style={{ fontSize: 12, fontWeight: weight.semibold, color: sel ? colors.bg : colors.textDim }}>{s}</Text>
+                      <Text style={{ fontSize: 12, fontWeight: weight.semibold, color: sel ? colors.bg : colors.textDim }}>
+                        {s}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -250,11 +331,18 @@ function CoachProfileCard({ userId, colors }) {
 
             {/* Save */}
             <TouchableOpacity
+              activeOpacity={0.75}
               onPress={handleSave}
               disabled={saving}
-              style={{ backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1, marginTop: 4 }}
+              style={{
+                backgroundColor: colors.accent, borderRadius: 12,
+                paddingVertical: 13, flexDirection: 'row', alignItems: 'center',
+                justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1, marginTop: 2,
+              }}
             >
-              {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
+              {saving
+                ? <ActivityIndicator size="small" color={colors.bg} />
+                : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
               <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg }}>Save Profile</Text>
             </TouchableOpacity>
           </View>
@@ -299,17 +387,35 @@ function SearchInviteSection({ userId, existingClientIds, colors, onInvited }) {
   };
 
   return (
-    <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 14 }}>
-      <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text, marginBottom: 8 }}>Search & Invite Client</Text>
+    <View style={{
+      backgroundColor: colors.bgCard, borderRadius: 18,
+      borderWidth: 1, borderColor: colors.border,
+      padding: 16, marginBottom: 12,
+    }}>
+      {/* Section header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <View style={{
+          width: 30, height: 30, borderRadius: 15,
+          backgroundColor: colors.accent + '18',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ionicons name="search" size={15} color={colors.accent} />
+        </View>
+        <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+          Find & Invite
+        </Text>
+      </View>
+
+      {/* Search input */}
       <View style={{
         flexDirection: 'row', alignItems: 'center', gap: 8,
-        backgroundColor: colors.bg, borderRadius: 10, borderWidth: 1.5,
-        borderColor: query ? colors.accent + '60' : colors.border,
+        backgroundColor: colors.bg, borderRadius: 14,
+        borderWidth: 1.5, borderColor: query ? colors.accent + '70' : colors.border,
         paddingHorizontal: 12,
       }}>
         <Ionicons name="search" size={16} color={colors.textDim} />
         <TextInput
-          style={{ flex: 1, paddingVertical: 9, fontSize: typography.sm, color: colors.text }}
+          style={{ flex: 1, paddingVertical: 11, fontSize: typography.sm, color: colors.text }}
           placeholder="Search by name…"
           placeholderTextColor={colors.textDim}
           value={query}
@@ -319,35 +425,46 @@ function SearchInviteSection({ userId, existingClientIds, colors, onInvited }) {
         {searching
           ? <ActivityIndicator size="small" color={colors.accent} />
           : query.length > 0
-            ? <TouchableOpacity onPress={() => { setQuery(''); setResults([]); }}>
-                <Ionicons name="close-circle" size={16} color={colors.textDim} />
+            ? <TouchableOpacity activeOpacity={0.75} onPress={() => { setQuery(''); setResults([]); }}>
+                <Ionicons name="close-circle" size={17} color={colors.textDim} />
               </TouchableOpacity>
             : null}
       </View>
 
       {results.length > 0 && (
-        <View style={{ marginTop: 10, gap: 0 }}>
+        <View style={{ marginTop: 10, gap: 2 }}>
           {results.map((profile, i) => {
             const initials = (profile.full_name ?? '?').split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
             return (
               <View key={profile.id} style={{
                 flexDirection: 'row', alignItems: 'center', gap: 10,
-                paddingVertical: 9,
+                paddingVertical: 10,
                 borderTopWidth: i === 0 ? 1 : 0,
                 borderBottomWidth: 1,
                 borderColor: colors.border,
               }}>
-                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accent + '22', borderWidth: 1, borderColor: colors.accent + '44', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{
+                  width: 38, height: 38, borderRadius: 19,
+                  backgroundColor: colors.accent + '22',
+                  borderWidth: 1, borderColor: colors.accent + '44',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
                   <Text style={{ fontSize: 12, fontWeight: weight.bold, color: colors.accent }}>{initials}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: colors.text }}>{profile.full_name}</Text>
-                  {profile.goal ? <Text style={{ fontSize: 11, color: colors.textDim }}>{profile.goal}</Text> : null}
+                  {profile.goal ? <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>{profile.goal}</Text> : null}
                 </View>
                 <TouchableOpacity
+                  activeOpacity={0.75}
                   onPress={() => handleInvite(profile)}
                   disabled={inviting === profile.id}
-                  style={{ backgroundColor: colors.accent, borderRadius: 9, paddingHorizontal: 12, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 5, opacity: inviting === profile.id ? 0.7 : 1 }}
+                  style={{
+                    backgroundColor: colors.accent, borderRadius: 24,
+                    paddingHorizontal: 14, paddingVertical: 7,
+                    flexDirection: 'row', alignItems: 'center', gap: 5,
+                    opacity: inviting === profile.id ? 0.7 : 1,
+                  }}
                 >
                   {inviting === profile.id
                     ? <ActivityIndicator size="small" color={colors.bg} />
@@ -361,7 +478,9 @@ function SearchInviteSection({ userId, existingClientIds, colors, onInvited }) {
       )}
 
       {query.length >= 2 && !searching && results.length === 0 && (
-        <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 10, textAlign: 'center' }}>No users found</Text>
+        <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 12, textAlign: 'center' }}>
+          No users found
+        </Text>
       )}
     </View>
   );
@@ -403,7 +522,7 @@ function CoachTab({ userId, colors }) {
 
   return (
     <ScrollView
-      contentContainerStyle={{ padding: 16, paddingBottom: 50 }}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 50 }}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.accent} colors={[colors.accent]} />}
     >
       {/* Coach Profile */}
@@ -417,20 +536,43 @@ function CoachTab({ userId, colors }) {
         onInvited={() => qc.invalidateQueries({ queryKey: ['coachClients', userId] })}
       />
 
-      {/* Generate Invite Code */}
-      <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      {/* Invite via Code */}
+      <View style={{
+        backgroundColor: colors.bgCard, borderRadius: 18,
+        borderWidth: 1, borderColor: colors.border,
+        padding: 16, marginBottom: 12,
+        flexDirection: 'row', alignItems: 'center', gap: 14,
+      }}>
+        <View style={{
+          width: 44, height: 44, borderRadius: 22,
+          backgroundColor: colors.accent + '20',
+          borderWidth: 1.5, borderColor: colors.accent + '40',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ionicons name="key-outline" size={20} color={colors.accent} />
+        </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text }}>Invite via Code</Text>
-          <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>Share a unique code — expires once used</Text>
+          <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text }}>
+            Invite via Code
+          </Text>
+          <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
+            One-time code, expires after use
+          </Text>
         </View>
         <TouchableOpacity
+          activeOpacity={0.75}
           onPress={() => generateMut.mutate()}
           disabled={generateMut.isPending}
-          style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: generateMut.isPending ? 0.7 : 1 }}
+          style={{
+            backgroundColor: colors.accent, borderRadius: 24,
+            paddingHorizontal: 16, paddingVertical: 9,
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+            opacity: generateMut.isPending ? 0.7 : 1,
+          }}
         >
           {generateMut.isPending
             ? <ActivityIndicator size="small" color={colors.bg} />
-            : <Ionicons name="key-outline" size={15} color={colors.bg} />}
+            : <Ionicons name="flash-outline" size={14} color={colors.bg} />}
           <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Generate</Text>
         </TouchableOpacity>
       </View>
@@ -444,23 +586,50 @@ function CoachTab({ userId, colors }) {
             const clientName = link.client?.full_name ?? 'Client';
             const initials = clientName.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
             return (
-              <View key={link.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: 12, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 3, borderLeftColor: '#fbbf24', padding: 12, marginBottom: 8, gap: 10 }}>
+              <View key={link.id} style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: '#fbbf2408',
+                borderRadius: 14, borderWidth: 1, borderColor: '#fbbf2430',
+                borderLeftWidth: 3, borderLeftColor: '#fbbf24',
+                padding: 13, marginBottom: 8, gap: 10,
+              }}>
                 {isSearch ? (
-                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#fbbf2422', borderWidth: 1, borderColor: '#fbbf2444', alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{
+                    width: 36, height: 36, borderRadius: 18,
+                    backgroundColor: '#fbbf2420', borderWidth: 1, borderColor: '#fbbf2444',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
                     <Text style={{ fontSize: 12, fontWeight: weight.bold, color: '#fbbf24' }}>{initials}</Text>
                   </View>
                 ) : (
-                  <Ionicons name="time-outline" size={18} color="#fbbf24" />
+                  <View style={{
+                    width: 36, height: 36, borderRadius: 18,
+                    backgroundColor: '#fbbf2420',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Ionicons name="time-outline" size={18} color="#fbbf24" />
+                  </View>
                 )}
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 11, color: colors.textDim, marginBottom: 2 }}>
                     {isSearch ? 'Awaiting acceptance' : 'Awaiting client'}
                   </Text>
-                  <Text style={{ fontWeight: weight.bold, color: colors.text, letterSpacing: isSearch ? 0 : 2, fontSize: typography.sm }}>
+                  <Text style={{
+                    fontWeight: weight.bold, color: colors.text,
+                    letterSpacing: isSearch ? 0 : 2, fontSize: typography.sm,
+                  }}>
                     {isSearch ? clientName : link.invite_code}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => handleRemove(link)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.danger + '15', borderWidth: 1, borderColor: colors.danger + '44' }}>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={() => handleRemove(link)}
+                  style={{
+                    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+                    backgroundColor: colors.danger + '12',
+                    borderWidth: 1, borderColor: colors.danger + '40',
+                  }}
+                >
                   <Text style={{ fontSize: 11, color: colors.danger, fontWeight: weight.semibold }}>Cancel</Text>
                 </TouchableOpacity>
               </View>
@@ -475,8 +644,12 @@ function CoachTab({ userId, colors }) {
       {isLoading ? (
         <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
       ) : active.length === 0 ? (
-        <View style={{ alignItems: 'center', paddingVertical: 40, gap: 12, backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' }}>
-          <Ionicons name="people-outline" size={40} color={colors.textDim} />
+        <View style={{
+          alignItems: 'center', paddingVertical: 44, gap: 12,
+          backgroundColor: colors.bgCard, borderRadius: 18,
+          borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
+        }}>
+          <Ionicons name="people-outline" size={44} color={colors.textDim} />
           <Text style={{ fontSize: typography.sm, color: colors.textDim, textAlign: 'center', lineHeight: 20 }}>
             No active clients yet.{'\n'}Generate an invite code above to get started.
           </Text>
@@ -518,41 +691,73 @@ function CoachCard({ coach, linkedSince, colors, onChat, onDisconnect }) {
     : null;
 
   return (
-    <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 14 }}>
-      <View style={{ height: 3, backgroundColor: colors.accent }} />
-      <View style={{ padding: 12, gap: 10 }}>
+    <View style={{
+      backgroundColor: colors.bgCard, borderRadius: 18,
+      borderWidth: 1, borderColor: colors.border,
+      overflow: 'hidden', marginBottom: 12,
+    }}>
+      {/* Hero accent stripe */}
+      <View style={{ height: 4, backgroundColor: colors.accent, borderTopLeftRadius: 18, borderTopRightRadius: 18 }} />
+
+      <View style={{ padding: 16, gap: 12 }}>
         {/* Identity row */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accent + '22', borderWidth: 1.5, borderColor: colors.accent + '55', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 16, fontWeight: weight.black, color: colors.accent }}>{initials}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{
+            width: 52, height: 52, borderRadius: 26,
+            backgroundColor: colors.accent + '22',
+            borderWidth: 2, borderColor: colors.accent + '55',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: weight.black, color: colors.accent }}>{initials}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: typography.base, fontWeight: weight.bold, color: colors.text }}>{name}</Text>
-            <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>
+            <Text style={{ fontSize: 17, fontWeight: weight.bold, color: colors.text, lineHeight: 22 }}>{name}</Text>
+            <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 2 }}>
               {coach.goal ? coach.goal : 'Your Coach'}
               {memberSince ? ` · since ${memberSince}` : ''}
             </Text>
           </View>
-          <View style={{ backgroundColor: '#22c55e18', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: '#22c55e40' }}>
-            <Text style={{ fontSize: 10, fontWeight: weight.bold, color: '#22c55e' }}>ACTIVE</Text>
+          <View style={{
+            backgroundColor: '#22c55e18', borderRadius: 24,
+            paddingHorizontal: 9, paddingVertical: 4,
+            borderWidth: 1, borderColor: '#22c55e40',
+          }}>
+            <Text style={{ fontSize: 10, fontWeight: weight.bold, color: '#22c55e', letterSpacing: 0.8 }}>ACTIVE</Text>
           </View>
         </View>
 
-        {/* Bio — single line truncated */}
+        {/* Bio */}
         {coach.bio ? (
-          <Text style={{ fontSize: 12, color: colors.textDim, fontStyle: 'italic' }} numberOfLines={1}>
+          <Text style={{ fontSize: 12, color: colors.textDim, fontStyle: 'italic', lineHeight: 18 }} numberOfLines={2}>
             "{coach.bio}"
           </Text>
         ) : null}
 
         {/* Actions */}
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity onPress={onChat} style={{ flex: 1, backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }} activeOpacity={0.8}>
-            <Ionicons name="chatbubble-ellipses" size={14} color={colors.bg} />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={onChat}
+            style={{
+              flex: 1, backgroundColor: colors.accent, borderRadius: 12,
+              paddingVertical: 11, flexDirection: 'row',
+              alignItems: 'center', justifyContent: 'center', gap: 7,
+            }}
+          >
+            <Ionicons name="chatbubble-ellipses" size={15} color={colors.bg} />
             <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Message Coach</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={onDisconnect} style={{ paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.danger + '12', borderWidth: 1, borderColor: colors.danger + '40', flexDirection: 'row', alignItems: 'center', gap: 5 }} activeOpacity={0.8}>
-            <Ionicons name="unlink-outline" size={14} color={colors.danger} />
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={onDisconnect}
+            style={{
+              paddingHorizontal: 14, paddingVertical: 11, borderRadius: 12,
+              backgroundColor: colors.danger + '12',
+              borderWidth: 1, borderColor: colors.danger + '40',
+              flexDirection: 'row', alignItems: 'center', gap: 6,
+            }}
+          >
+            <Ionicons name="unlink-outline" size={15} color={colors.danger} />
             <Text style={{ fontSize: 13, color: colors.danger, fontWeight: weight.medium }}>Leave</Text>
           </TouchableOpacity>
         </View>
@@ -675,49 +880,67 @@ function ClientTab({ userId, colors, isPro }) {
 
   return (
     <View style={{ flex: 1 }}>
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 100 }}>
 
-      {/* Active coach card — shown when connected */}
       {/* Pending coach invitations */}
       {!activeCoach && pendingInvites.length > 0 && (
-        <View style={{ marginBottom: 14 }}>
-          <Text style={{ fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-            Coach Invitations ({pendingInvites.length})
-          </Text>
+        <View style={{ marginBottom: 12 }}>
+          <SectionLabel title={`Coach Invitations (${pendingInvites.length})`} colors={colors} />
           {pendingInvites.map(invite => {
             const name = invite.coach?.full_name ?? 'Coach';
             const initials = name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
             return (
-              <View key={invite.id} style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.accent + '40', borderLeftWidth: 3, borderLeftColor: colors.accent, padding: 12, marginBottom: 8, gap: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent + '22', borderWidth: 1.5, borderColor: colors.accent + '55', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 14, fontWeight: weight.bold, color: colors.accent }}>{initials}</Text>
+              <View key={invite.id} style={{
+                backgroundColor: colors.bgCard, borderRadius: 18,
+                borderWidth: 1, borderColor: colors.accent + '40',
+                borderLeftWidth: 3, borderLeftColor: colors.accent,
+                padding: 14, marginBottom: 10, gap: 12,
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{
+                    width: 46, height: 46, borderRadius: 23,
+                    backgroundColor: colors.accent + '22',
+                    borderWidth: 1.5, borderColor: colors.accent + '55',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.accent }}>{initials}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text }}>{name}</Text>
-                    <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>
+                    <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
                       {invite.coach?.goal ? invite.coach.goal : 'Coach'} · wants to coach you
                     </Text>
                   </View>
                 </View>
                 {invite.coach?.bio ? (
-                  <Text style={{ fontSize: 12, color: colors.textDim, fontStyle: 'italic' }} numberOfLines={2}>
+                  <Text style={{ fontSize: 12, color: colors.textDim, fontStyle: 'italic', lineHeight: 17 }} numberOfLines={2}>
                     "{invite.coach.bio}"
                   </Text>
                 ) : null}
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
                   <TouchableOpacity
+                    activeOpacity={0.75}
                     onPress={() => handleAcceptInvite(invite)}
-                    style={{ flex: 1, backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    style={{
+                      flex: 1, backgroundColor: colors.accent, borderRadius: 12,
+                      paddingVertical: 10, flexDirection: 'row',
+                      alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}
                   >
-                    <Ionicons name="checkmark-circle" size={14} color={colors.bg} />
+                    <Ionicons name="checkmark-circle" size={15} color={colors.bg} />
                     <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Accept</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
+                    activeOpacity={0.75}
                     onPress={() => handleDeclineInvite(invite)}
-                    style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.danger + '12', borderWidth: 1, borderColor: colors.danger + '40', flexDirection: 'row', alignItems: 'center', gap: 5 }}
+                    style={{
+                      paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12,
+                      backgroundColor: colors.danger + '12',
+                      borderWidth: 1, borderColor: colors.danger + '40',
+                      flexDirection: 'row', alignItems: 'center', gap: 5,
+                    }}
                   >
-                    <Ionicons name="close-outline" size={14} color={colors.danger} />
+                    <Ionicons name="close-outline" size={15} color={colors.danger} />
                     <Text style={{ fontSize: 13, color: colors.danger, fontWeight: weight.medium }}>Decline</Text>
                   </TouchableOpacity>
                 </View>
@@ -727,6 +950,7 @@ function ClientTab({ userId, colors, isPro }) {
         </View>
       )}
 
+      {/* Active coach card OR Join a Coach */}
       {activeCoach ? (
         <CoachCard
           coach={activeCoach}
@@ -740,15 +964,30 @@ function ClientTab({ userId, colors, isPro }) {
           onDisconnect={handleDisconnect}
         />
       ) : (
-        /* Join a Coach — only shown when not yet connected */
-        <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 14 }}>
-          <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.text, marginBottom: 8 }}>Join a Coach</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{
+          backgroundColor: colors.bgCard, borderRadius: 18,
+          borderWidth: 1, borderColor: colors.border,
+          padding: 20, marginBottom: 12, alignItems: 'center', gap: 14,
+        }}>
+          <View style={{
+            width: 72, height: 72, borderRadius: 36,
+            backgroundColor: colors.accent + '14',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="people-circle-outline" size={44} color={colors.accent + 'aa'} />
+          </View>
+          <View style={{ alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontSize: 17, fontWeight: weight.bold, color: colors.text }}>No Coach Yet</Text>
+            <Text style={{ fontSize: 13, color: colors.textDim, textAlign: 'center', lineHeight: 19 }}>
+              Enter an invite code from your coach{'\n'}to get connected and start tracking together.
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
             <TextInput
               style={{
                 flex: 1, backgroundColor: colors.bgElevated, color: colors.text,
-                borderRadius: 10, borderWidth: 1, borderColor: colors.border,
-                paddingHorizontal: 12, paddingVertical: 9, fontSize: 15,
+                borderRadius: 12, borderWidth: 1.5, borderColor: colors.border,
+                paddingHorizontal: 14, paddingVertical: 11, fontSize: 15,
                 fontWeight: weight.bold, letterSpacing: 3,
               }}
               placeholder="XXXXXXXX"
@@ -760,11 +999,12 @@ function ClientTab({ userId, colors, isPro }) {
               maxLength={8}
             />
             <TouchableOpacity
+              activeOpacity={0.75}
               onPress={handleJoin}
               disabled={joining || !inviteCode.trim()}
               style={{
-                backgroundColor: colors.accent, borderRadius: 10,
-                paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center',
+                backgroundColor: colors.accent, borderRadius: 12,
+                paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center',
                 opacity: (!inviteCode.trim() || joining) ? 0.5 : 1,
               }}
             >
@@ -777,40 +1017,70 @@ function ClientTab({ userId, colors, isPro }) {
         </View>
       )}
 
-      {/* Privacy Controls */}
-      <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <Text style={{ flex: 1, fontSize: typography.xs, fontWeight: weight.bold, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>
-            Coach Visibility
-          </Text>
+      {/* Privacy / Visibility */}
+      <View style={{
+        backgroundColor: colors.bgCard, borderRadius: 18,
+        borderWidth: 1, borderColor: colors.border,
+        overflow: 'hidden', marginBottom: 12,
+      }}>
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 10,
+          paddingHorizontal: 16, paddingVertical: 13,
+          borderBottomWidth: 1, borderBottomColor: colors.border,
+        }}>
+          <View style={{
+            width: 32, height: 32, borderRadius: 16,
+            backgroundColor: colors.accent + '18',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textMuted, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+              Privacy & Visibility
+            </Text>
+            <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>
+              Choose what your coach can see
+            </Text>
+          </View>
           {!isPro && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent + '20', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 }}>
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              backgroundColor: colors.accent + '20', borderRadius: 24,
+              paddingHorizontal: 8, paddingVertical: 3,
+            }}>
               <Ionicons name="rocket" size={10} color={colors.accent} />
               <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.accent }}>PRO</Text>
             </View>
           )}
-          {isPro && saving && <ActivityIndicator size="small" color={colors.accent} style={{ marginLeft: 8 }} />}
+          {isPro && saving && <ActivityIndicator size="small" color={colors.accent} style={{ marginLeft: 4 }} />}
         </View>
 
         {PRIVACY_ITEMS.map(({ key, label, icon, desc }) => (
           <View
             key={key}
             style={{
-              flexDirection: 'row', alignItems: 'center', gap: 10,
-              paddingHorizontal: 14, paddingVertical: 10,
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              paddingHorizontal: 16, paddingVertical: 12,
               borderBottomWidth: 1, borderBottomColor: colors.border,
               opacity: isPro ? 1 : 0.5,
             }}
           >
             <View style={{
-              width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center',
+              width: 34, height: 34, borderRadius: 10,
+              alignItems: 'center', justifyContent: 'center',
               backgroundColor: (isPro && visibility[key]) ? colors.accent + '18' : colors.bgElevated,
             }}>
-              <Ionicons name={isPro ? icon : 'lock-closed'} size={15} color={(isPro && visibility[key]) ? colors.accent : colors.textDim} />
+              <Ionicons
+                name={isPro ? icon : 'lock-closed'}
+                size={16}
+                color={(isPro && visibility[key]) ? colors.accent : colors.textDim}
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: typography.sm, fontWeight: weight.semibold, color: colors.text }}>{label}</Text>
-              <Text style={{ fontSize: 10, color: colors.textDim }}>{desc}</Text>
+              <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 1 }}>{desc}</Text>
             </View>
             <Switch
               value={isPro ? !!visibility[key] : true}
@@ -825,15 +1095,16 @@ function ClientTab({ userId, colors, isPro }) {
 
         {!isPro && (
           <TouchableOpacity
+            activeOpacity={0.75}
             onPress={() => navigation.navigate('Subscription')}
             style={{
-              margin: 14, marginTop: 4,
+              margin: 14, marginTop: 6,
               backgroundColor: colors.accent, borderRadius: 14,
               paddingVertical: 13, flexDirection: 'row',
               alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            <Ionicons name="rocket" size={16} color={colors.bg} />
+            <Ionicons name="rocket" size={15} color={colors.bg} />
             <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.bg }}>
               Upgrade to Pro to unlock privacy controls
             </Text>
@@ -841,35 +1112,16 @@ function ClientTab({ userId, colors, isPro }) {
         )}
       </View>
 
-      {/* Disconnect from coach — shown only when connected */}
+      {/* Danger zone — disconnect link */}
       {activeCoach && (
         <TouchableOpacity
+          activeOpacity={0.75}
           onPress={handleDisconnect}
-          style={{
-            marginTop: 14,
-            backgroundColor: colors.danger + '10',
-            borderRadius: 16, borderWidth: 1, borderColor: colors.danger + '40',
-            paddingVertical: 14, paddingHorizontal: 18,
-            flexDirection: 'row', alignItems: 'center', gap: 12,
-          }}
-          activeOpacity={0.7}
+          style={{ alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 4, marginTop: 4 }}
         >
-          <View style={{
-            width: 36, height: 36, borderRadius: 18,
-            backgroundColor: colors.danger + '18',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Ionicons name="unlink-outline" size={18} color={colors.danger} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: colors.danger }}>
-              Remove Coach
-            </Text>
-            <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>
-              Disconnect from {activeCoach.full_name ?? 'your coach'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.danger + '80'} />
+          <Text style={{ fontSize: 12, color: colors.danger, fontWeight: weight.medium }}>
+            Disconnect from coach
+          </Text>
         </TouchableOpacity>
       )}
     </ScrollView>
@@ -889,34 +1141,56 @@ export default function CoachScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingTop: 6, paddingBottom: 4, gap: 12 }}>
+      <View style={{
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6,
+      }}>
         <TouchableOpacity
+          activeOpacity={0.75}
           onPress={() => navigation.goBack()}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
+          style={{
+            width: 36, height: 36, borderRadius: 18,
+            backgroundColor: colors.bgCard,
+            borderWidth: 1, borderColor: colors.border,
+            alignItems: 'center', justifyContent: 'center',
+          }}
         >
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={{ flex: 1, fontSize: typography.xl, fontWeight: weight.bold, color: colors.text }}>Coach Mode</Text>
-        <Ionicons name="people" size={22} color={colors.accent} />
+        <Text style={{
+          flex: 1, textAlign: 'center',
+          fontSize: typography.lg, fontWeight: weight.bold, color: colors.text,
+        }}>
+          Coach Zone
+        </Text>
+        <View style={{ width: 36, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="people" size={22} color={colors.accent} />
+        </View>
       </View>
 
-      {/* Tab switcher */}
-      <View style={{ flexDirection: 'row', marginHorizontal: 16, marginTop: 10, marginBottom: 6, backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 4, gap: 4 }}>
+      {/* Segmented pill tab switcher */}
+      <View style={{
+        flexDirection: 'row', marginHorizontal: 16, marginTop: 8, marginBottom: 8,
+        backgroundColor: colors.bgCard, borderRadius: 24,
+        borderWidth: 1, borderColor: colors.border,
+        padding: 4, gap: 4,
+      }}>
         {[
-          { key: 'coach', label: 'I\'m a Coach', icon: 'people' },
-          { key: 'client', label: 'I\'m a Client', icon: 'person' },
+          { key: 'coach', label: "I'm a Coach", icon: 'trophy-outline' },
+          { key: 'client', label: "I'm a Client", icon: 'person-outline' },
         ].map(t => (
           <TouchableOpacity
             key={t.key}
+            activeOpacity={0.75}
             onPress={() => setTab(t.key)}
             style={{
               flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-              gap: 6, paddingVertical: 9, borderRadius: 10,
+              gap: 6, paddingVertical: 10, borderRadius: 24,
               backgroundColor: tab === t.key ? colors.accent : 'transparent',
             }}
           >
-            <Ionicons name={t.icon} size={15} color={tab === t.key ? colors.bg : colors.textMuted} />
-            <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: tab === t.key ? colors.bg : colors.textMuted }}>
+            <Ionicons name={t.icon} size={15} color={tab === t.key ? colors.bg : colors.textDim} />
+            <Text style={{ fontSize: typography.sm, fontWeight: weight.bold, color: tab === t.key ? colors.bg : colors.textDim }}>
               {t.label}
             </Text>
           </TouchableOpacity>
