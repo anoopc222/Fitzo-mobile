@@ -117,7 +117,7 @@ function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGener
     if (text.trim().length < 2) { setSearchResults([]); return; }
     setSearching(true);
     const existingIds = clientLinks.filter(l => l.client_id).map(l => l.client_id);
-    const { data } = await supabase.from('profiles').select('id, full_name, goal').ilike('full_name', `%${text.trim()}%`).neq('id', userId).limit(10);
+    const { data } = await supabase.from('profiles').select('id, full_name, goal, email').ilike('full_name', `%${text.trim()}%`).neq('id', userId).limit(10);
     setSearchResults((data ?? []).filter(p => !existingIds.includes(p.id)));
     setSearching(false);
   };
@@ -177,7 +177,7 @@ function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGener
                   <Avatar name={p.full_name} size={40} fontSize={13} bg={colors.accent + '20'} color={colors.accent} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14, fontWeight: weight.semibold, color: colors.text }}>{p.full_name}</Text>
-                    {p.goal ? <Text style={{ fontSize: 11, color: colors.textDim }}>{p.goal}</Text> : null}
+                    {p.email ? <Text style={{ fontSize: 11, color: colors.textDim }} numberOfLines={1}>{p.email}</Text> : p.goal ? <Text style={{ fontSize: 11, color: colors.textDim }}>{p.goal}</Text> : null}
                   </View>
                   <TouchableOpacity onPress={() => handleInvite(p)} disabled={inviting === p.id} activeOpacity={0.8}
                     style={{ backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 7, opacity: inviting === p.id ? 0.6 : 1 }}>
