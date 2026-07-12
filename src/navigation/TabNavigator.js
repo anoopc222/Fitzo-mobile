@@ -28,6 +28,8 @@ import GameZoneScreen from '../screens/GameZoneScreen';
 import MoodLogScreen from '../screens/MoodLogScreen';
 import YearInReviewScreen from '../screens/YearInReviewScreen';
 import CoachScreen from '../screens/CoachScreen';
+import CoachModeScreen from '../screens/CoachModeScreen';
+import ClientModeScreen from '../screens/ClientModeScreen';
 import ClientDetailScreen from '../screens/ClientDetailScreen';
 import CoachChatScreen from '../screens/CoachChatScreen';
 
@@ -64,6 +66,8 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="MoodLog" component={MoodLogScreen} />
       <HomeStack.Screen name="YearInReview" component={YearInReviewScreen} />
       <HomeStack.Screen name="Coach" component={CoachScreen} />
+      <HomeStack.Screen name="CoachMode" component={CoachModeScreen} />
+      <HomeStack.Screen name="ClientMode" component={ClientModeScreen} />
       <HomeStack.Screen name="ClientDetail" component={ClientDetailScreen} />
       <HomeStack.Screen name="CoachChat" component={CoachChatScreen} />
     </HomeStack.Navigator>
