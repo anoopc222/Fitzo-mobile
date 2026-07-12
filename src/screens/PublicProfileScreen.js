@@ -68,7 +68,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   const displayName = data?.profile?.full_name || name || t('friends.unnamed');
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       <ScreenHeader title={t('publicProfile.title')} colors={colors} onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
         {isLoading ? (

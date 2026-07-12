@@ -55,7 +55,7 @@ export default function SubscriptionScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       <ScreenHeader title={t('subscription.goPro')} colors={colors} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>

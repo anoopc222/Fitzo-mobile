@@ -398,7 +398,7 @@ export default function MoodLogScreen({ navigation }) {
   }
 
   if (isLoading) return (
-    <SafeAreaView style={s.safe}><ActivityIndicator color={colors.accent} style={{ flex: 1 }} /></SafeAreaView>
+    <SafeAreaView edges={['top']} style={s.safe}><ActivityIndicator color={colors.accent} style={{ flex: 1 }} /></SafeAreaView>
   );
 
   return (

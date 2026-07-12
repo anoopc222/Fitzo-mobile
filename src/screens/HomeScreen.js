@@ -1429,7 +1429,7 @@ export default function HomeScreen() {
   }, [subReady, user?.id, isPro, navigation]);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       {/* ── App Header ─────────────────────────────────────────── */}
       <ScreenHeader title={t('home.homeTitle')} colors={colors} />
 

@@ -105,7 +105,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['top']} style={styles.safe}>
       <ScreenHeader title={t('settings.screenTitle')} colors={colors} />
 
       <ScrollView contentContainerStyle={styles.content}>

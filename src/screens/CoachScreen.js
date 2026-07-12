@@ -887,7 +887,7 @@ export default function CoachScreen() {
   const [tab, setTab] = useState('coach');
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingTop: 6, paddingBottom: 4, gap: 12 }}>
         <TouchableOpacity
