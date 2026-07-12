@@ -48,7 +48,7 @@ export default function OnboardingScreen({ onComplete }) {
       // Fetch existing profile so we never overwrite settings the user already configured
       const { data: existing } = await supabase
         .from('profiles')
-        .select('step_goal, sleep_goal_hours, calorie_target, protein_target, weight_goal_kg, height_cm, sex, goal')
+        .select('step_goal, sleep_goal_hours, calorie_target, protein_target, carbs_target, fats_target, workout_weekly_goal, weight_goal_kg, height_cm, sex, goal')
         .eq('id', user.id)
         .single();
 
@@ -60,10 +60,15 @@ export default function OnboardingScreen({ onComplete }) {
       if (sex) updates.sex = sex;
       if (weight) updates.weight_goal_kg = parseFloat(weight);
 
-      // Only set defaults for fields not already configured in Supabase
-      if (!existing?.step_goal)        updates.step_goal        = 10000;
-      if (!existing?.sleep_goal_hours) updates.sleep_goal_hours = 8;
-      if (!existing?.calorie_target)   updates.calorie_target   = 2000;
+      // For each field: use the DB value if it exists, otherwise set a sensible default.
+      // Use == null (not falsy) so a legitimate value of 0 is never overwritten.
+      if (existing?.step_goal          == null) updates.step_goal          = 10000;
+      if (existing?.sleep_goal_hours   == null) updates.sleep_goal_hours   = 8;
+      if (existing?.calorie_target     == null) updates.calorie_target     = 2000;
+      if (existing?.protein_target     == null) updates.protein_target     = 150;
+      if (existing?.carbs_target       == null) updates.carbs_target       = 250;
+      if (existing?.fats_target        == null) updates.fats_target        = 65;
+      if (existing?.workout_weekly_goal == null) updates.workout_weekly_goal = 4;
 
       await supabase.from('profiles').upsert(updates);
 
