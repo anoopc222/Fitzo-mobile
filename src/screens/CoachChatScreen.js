@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, LayoutAnimation, UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +14,48 @@ import { supabase } from '../lib/supabase';
 import { sendChatPushNotification } from '../lib/notifications';
 import { typography, weight } from '../theme/typography';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 // ─── Data ─────────────────────────────────────────────────────────────────────
+
+async function fetchClientStats(clientId) {
+  if (!clientId) return null;
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  const [wRes, stRes, slRes, flRes, wkRes] = await Promise.all([
+    supabase.from('weight_logs').select('weight, logged_at').eq('user_id', clientId)
+      .order('logged_at', { ascending: false }).limit(7),
+    supabase.from('step_logs').select('steps, logged_at').eq('user_id', clientId)
+      .gte('logged_at', weekAgo + 'T00:00:00').order('logged_at', { ascending: false }).limit(7),
+    supabase.from('sleep_logs').select('hours, logged_at').eq('user_id', clientId)
+      .gte('logged_at', weekAgo + 'T00:00:00').order('logged_at', { ascending: false }).limit(7),
+    supabase.from('food_logs').select('calories, logged_at').eq('user_id', clientId)
+      .gte('logged_at', weekAgo + 'T00:00:00').order('logged_at', { ascending: false }).limit(50),
+    supabase.from('workout_sessions').select('date').eq('user_id', clientId)
+      .gte('date', weekAgo).order('date', { ascending: false }).limit(7),
+  ]);
+  const avg = (arr, key) => {
+    if (!arr?.length) return null;
+    return Math.round((arr.reduce((s, x) => s + (x[key] ?? 0), 0) / arr.length) * 10) / 10;
+  };
+  // calories: group by date then average daily totals
+  const calByDay = {};
+  for (const r of flRes.data ?? []) {
+    const d = r.logged_at.split('T')[0];
+    calByDay[d] = (calByDay[d] ?? 0) + (r.calories ?? 0);
+  }
+  const calVals = Object.values(calByDay);
+  const avgCal = calVals.length ? Math.round(calVals.reduce((s, v) => s + v, 0) / calVals.length) : null;
+
+  return {
+    latestWeight: wRes.data?.[0]?.weight ?? null,
+    avgSteps: avg(stRes.data, 'steps'),
+    avgSleep: avg(slRes.data, 'hours'),
+    avgCalories: avgCal,
+    workouts: wkRes.data?.length ?? 0,
+  };
+}
 
 async function fetchMessages(coachId, clientId) {
   const { data, error } = await supabase
@@ -107,6 +148,68 @@ function EmptyChat({ otherName, colors }) {
           🔒 Messages are end-to-end encrypted.{'\n'}Start the conversation with {otherName}.
         </Text>
       </View>
+    </View>
+  );
+}
+
+// ─── Stats Bar ────────────────────────────────────────────────────────────────
+
+function StatsBar({ clientId, colors }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['chatClientStats', clientId],
+    queryFn: () => fetchClientStats(clientId),
+    enabled: !!clientId,
+    staleTime: 60000,
+  });
+
+  const toggle = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded(e => !e);
+  };
+
+  const ITEMS = [
+    { icon: 'scale-outline',     color: '#f97316', label: 'Weight',   sublabel: 'Latest',      value: stats?.latestWeight  != null ? `${stats.latestWeight}kg` : '—' },
+    { icon: 'footsteps-outline', color: '#22c55e', label: 'Avg Steps',sublabel: '7-day avg',   value: stats?.avgSteps      != null ? (stats.avgSteps >= 1000 ? `${(stats.avgSteps/1000).toFixed(1)}k` : String(stats.avgSteps)) : '—' },
+    { icon: 'moon-outline',      color: '#6366f1', label: 'Avg Sleep', sublabel: '7-day avg',  value: stats?.avgSleep      != null ? `${stats.avgSleep}h` : '—' },
+    { icon: 'flame-outline',     color: '#ef4444', label: 'Avg Kcal', sublabel: '7-day avg',   value: stats?.avgCalories   != null ? `${stats.avgCalories}` : '—' },
+    { icon: 'barbell-outline',   color: colors.accent, label: 'Workouts', sublabel: 'This week', value: String(stats?.workouts ?? 0) },
+  ];
+
+  return (
+    <View style={{ backgroundColor: colors.bgCard, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      {/* Toggle row */}
+      <TouchableOpacity onPress={toggle} activeOpacity={0.7}
+        style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, gap: 8 }}>
+        <Ionicons name="stats-chart-outline" size={14} color={colors.accent} />
+        <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: colors.accent, letterSpacing: 0.5 }}>
+          CLIENT STATS · 7 DAYS
+        </Text>
+        {isLoading && <ActivityIndicator size="small" color={colors.accent} />}
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textDim} />
+      </TouchableOpacity>
+
+      {/* Expanded rows */}
+      {expanded && (
+        <View style={{ paddingHorizontal: 14, paddingBottom: 10, gap: 0 }}>
+          {ITEMS.map(({ icon, color, label, sublabel, value }, idx) => (
+            <View key={label} style={{
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              paddingVertical: 8,
+              borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: colors.border,
+            }}>
+              <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: color + '18', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={icon} size={15} color={color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{label}</Text>
+                <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>{sublabel}</Text>
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>{value}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -221,6 +324,9 @@ export default function CoachChatScreen() {
           </View>
 
         </View>
+
+        {/* ── Stats bar (coach only) ──────────────────────────────────── */}
+        {isCoach && <StatsBar clientId={clientId} colors={colors} />}
 
         {/* ── Messages ────────────────────────────────────────────────── */}
         <KeyboardAvoidingView
