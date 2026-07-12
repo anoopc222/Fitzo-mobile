@@ -792,14 +792,16 @@ export default function CoachModeScreen() {
                       return (
                         <React.Fragment key={label}>
                           <View style={{ flex: 1, alignItems: 'center', gap: 4 }}>
-                            <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: allowed ? color + '18' : colors.border + '50', alignItems: 'center', justifyContent: 'center' }}>
-                              <Ionicons name={icon} size={15} color={allowed ? color : colors.textDim} />
+                            <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: allowed ? color + '18' : colors.border + '40', alignItems: 'center', justifyContent: 'center' }}>
+                              <Ionicons name={allowed ? icon : 'lock-closed'} size={14} color={allowed ? color : colors.textDim} />
                             </View>
                             <Text style={{ fontSize: 15, fontWeight: weight.black, color: allowed ? colors.text : colors.textDim }}>
                               {allowed ? fmt(value) : '—'}
                             </Text>
                             <Text style={{ fontSize: 9, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.3, textAlign: 'center' }}>{label}</Text>
-                            <Text style={{ fontSize: 9, color: colors.textDim, textAlign: 'center', marginTop: -2 }}>{sublabel}</Text>
+                            <Text style={{ fontSize: 9, color: allowed ? colors.textDim : '#f97316', textAlign: 'center', marginTop: -2 }}>
+                              {allowed ? sublabel : 'Restricted'}
+                            </Text>
                           </View>
                           {idx < arr.length - 1 && <View style={{ width: 1, backgroundColor: colors.border }} />}
                         </React.Fragment>
