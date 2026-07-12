@@ -1505,32 +1505,41 @@ export default function HomeScreen() {
 
             <AchievementsRow home={data} />
 
-            {/* ── Coach / Client Zone banner ─────────────────── */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: colors.bgCard,
-                marginHorizontal: 16,
-                marginTop: 10,
-                marginBottom: 10,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: colors.border,
-                overflow: 'hidden',
-              }}
-              onPress={() => navigation.navigate('Coach')}
-              activeOpacity={0.88}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, gap: 10 }}>
-                <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="people" size={20} color={colors.accent} />
+            {/* ── Coach Zone / Client Zone cards ──────────────── */}
+            <View style={{ flexDirection: 'row', marginHorizontal: 16, marginTop: 10, marginBottom: 10, gap: 10 }}>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}
+                onPress={() => navigation.navigate('CoachMode')}
+                activeOpacity={0.85}
+              >
+                <View style={{ height: 3, backgroundColor: colors.accent }} />
+                <View style={{ padding: 12, gap: 8 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="ribbon" size={18} color={colors.accent} />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>Coach Zone</Text>
+                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2, lineHeight: 14 }}>Manage your clients</Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text, letterSpacing: 0.5 }}>Coach / Client Zone</Text>
-                  <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>Manage clients or connect to your coach</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}
+                onPress={() => navigation.navigate('ClientMode')}
+                activeOpacity={0.85}
+              >
+                <View style={{ height: 3, backgroundColor: '#22c55e' }} />
+                <View style={{ padding: 12, gap: 8 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#22c55e18', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="person-circle-outline" size={18} color="#22c55e" />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>Client Zone</Text>
+                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2, lineHeight: 14 }}>Connect to your coach</Text>
+                  </View>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
 
 
             {/* ── Quick Nav: Mood Log + Year in Review ──────────── */}
