@@ -412,7 +412,7 @@ export default function YearInReviewScreen({ navigation }) {
   }, 0);
 
   return (
-    <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       <ScreenHeader title="Year in Review" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={s.scroll}>
 
