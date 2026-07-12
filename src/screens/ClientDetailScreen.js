@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Svg, Polyline, Line, Circle, Text as SvgText, Rect } from 'react-native-svg';
+import { Svg, Line, Text as SvgText, Rect } from 'react-native-svg';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -149,59 +149,6 @@ function LockedSection({ colors }) {
         <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>Client has hidden this data from coaches</Text>
       </View>
     </View>
-  );
-}
-
-// ─── Weight line chart ────────────────────────────────────────────────────────
-
-function WeightChart({ data, color, goalKg, colors }) {
-  // data: [{weight, logged_at}] oldest→newest
-  const pts = useMemo(() => [...data].reverse(), [data]);
-  if (pts.length < 2) return null;
-
-  const cW = W - 64; // card padding 16*2, inner padding 16*2
-  const cH = 120;
-  const pad = { l: 36, r: 10, t: 12, b: 24 };
-  const vals = pts.map(p => p.weight);
-  const mn = Math.min(...vals) - 0.5;
-  const mx = Math.max(...vals) + 0.5;
-  const toX = i => pad.l + (i / (pts.length - 1)) * (cW - pad.l - pad.r);
-  const toY = v => pad.t + ((mx - v) / (mx - mn)) * (cH - pad.t - pad.b);
-
-  const points = pts.map((p, i) => `${toX(i)},${toY(p.weight)}`).join(' ');
-  const goalY = goalKg != null ? toY(goalKg) : null;
-
-  // label indices: first, last, and 2 in between
-  const labelIdxs = new Set([0, pts.length - 1]);
-  if (pts.length > 3) {
-    const mid = Math.floor(pts.length / 3);
-    labelIdxs.add(mid); labelIdxs.add(mid * 2);
-  }
-
-  return (
-    <Svg width={cW} height={cH}>
-      {/* Y-axis labels */}
-      {[mn + 0.5, (mn + mx) / 2, mx - 0.5].map((v, i) => (
-        <SvgText key={i} x={pad.l - 4} y={toY(v) + 4} fontSize={9} fill={colors.textDim} textAnchor="end">{v.toFixed(1)}</SvgText>
-      ))}
-      {/* Goal line */}
-      {goalY != null && (
-        <Line x1={pad.l} y1={goalY} x2={cW - pad.r} y2={goalY} stroke="#34d399" strokeWidth={1} strokeDasharray="4,3" />
-      )}
-      {/* Trend line */}
-      <Polyline points={points} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-      {/* Dots + x-labels */}
-      {pts.map((p, i) => (
-        <React.Fragment key={i}>
-          <Circle cx={toX(i)} cy={toY(p.weight)} r={3} fill={color} />
-          {labelIdxs.has(i) && (
-            <SvgText x={toX(i)} y={cH - 4} fontSize={9} fill={colors.textDim} textAnchor="middle">
-              {fmtDate(p.logged_at)}
-            </SvgText>
-          )}
-        </React.Fragment>
-      ))}
-    </Svg>
   );
 }
 
@@ -375,9 +322,14 @@ export default function ClientDetailScreen() {
   const avgSteps7 = Math.round(avg(steps, 'steps'));
   const avgSleep7 = Math.round(avg(sleep, 'hours') * 10) / 10;
   const currentWeight = weights[0]?.weight;
-  const oldestWeight = weights[weights.length - 1]?.weight;
-  const weightDelta = currentWeight && oldestWeight && weights.length > 1
-    ? (currentWeight - oldestWeight).toFixed(1) : null;
+  // 7-day weight stats
+  const sevenDaysAgoStr = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  const weights7 = weights.filter(w => (w.logged_at ?? '').slice(0, 10) >= sevenDaysAgoStr);
+  const avgWeight7 = weights7.length ? Math.round(avg(weights7, 'weight') * 10) / 10 : null;
+  const weightWeekAgo = weights.find(w => (w.logged_at ?? '').slice(0, 10) <= sevenDaysAgoStr)?.weight ?? null;
+  const weeklyChange = currentWeight && weightWeekAgo ? (currentWeight - weightWeekAgo).toFixed(1) : null;
+  const highWeight7 = weights7.length ? Math.max(...weights7.map(w => w.weight)) : null;
+  const lowWeight7  = weights7.length ? Math.min(...weights7.map(w => w.weight)) : null;
 
   // Step bars: one per day
   const stepBars = useMemo(() => steps.map(s => ({
@@ -482,41 +434,68 @@ export default function ClientDetailScreen() {
         {/* ── Weight ──────────────────────────────────────────────────── */}
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 14 }}>
           <SectionHeader icon="scale-outline" iconColor="#f97316" title="Body Weight"
-            sub="30 days" colors={colors}
+            sub="7-day stats" colors={colors}
           />
           {!vis.weight ? <LockedSection colors={colors} /> : weights.length === 0 ? (
-            <Text style={{ fontSize: 13, color: colors.textDim }}>No weight logged in 30 days</Text>
+            <Text style={{ fontSize: 13, color: colors.textDim }}>No weight logged</Text>
           ) : (
             <>
-              {/* Compact summary row */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <Text style={{ fontSize: 28, fontWeight: weight.black, color: colors.text }}>
-                  {currentWeight ? `${currentWeight} kg` : '—'}
+              {/* Current weight hero */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 14 }}>
+                <Text style={{ fontSize: 32, fontWeight: weight.black, color: colors.text, lineHeight: 34 }}>
+                  {currentWeight != null ? `${currentWeight}` : '—'}
                 </Text>
-                <View style={{ flex: 1 }}>
-                  {weightDelta !== null && (
-                    <Text style={{ fontSize: 12, fontWeight: weight.semibold, color: parseFloat(weightDelta) <= 0 ? '#34d399' : '#f87171' }}>
-                      {parseFloat(weightDelta) > 0 ? '+' : ''}{weightDelta} kg vs 30d ago
+                <Text style={{ fontSize: 16, color: colors.textDim, marginBottom: 3 }}>kg</Text>
+                {weeklyChange !== null && (
+                  <View style={{ marginLeft: 4, marginBottom: 3, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Ionicons
+                      name={parseFloat(weeklyChange) > 0 ? 'arrow-up' : parseFloat(weeklyChange) < 0 ? 'arrow-down' : 'remove'}
+                      size={12}
+                      color={parseFloat(weeklyChange) <= 0 ? '#34d399' : '#f87171'}
+                    />
+                    <Text style={{ fontSize: 13, fontWeight: weight.bold, color: parseFloat(weeklyChange) <= 0 ? '#34d399' : '#f87171' }}>
+                      {parseFloat(weeklyChange) > 0 ? '+' : ''}{weeklyChange} kg this week
                     </Text>
-                  )}
-                  {profile?.weight_goal_kg && currentWeight && (
-                    <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>
-                      Goal {profile.weight_goal_kg} kg · {Math.abs(currentWeight - profile.weight_goal_kg).toFixed(1)} kg to go
-                    </Text>
-                  )}
-                </View>
+                  </View>
+                )}
               </View>
-              {/* Line chart */}
-              {weights.length >= 2 && (
-                <>
-                  <WeightChart data={weights} color="#f97316" goalKg={profile?.weight_goal_kg} colors={colors} />
-                  {profile?.weight_goal_kg && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 }}>
-                      <View style={{ width: 16, height: 1.5, backgroundColor: '#34d399' }} />
-                      <Text style={{ fontSize: 9, color: colors.textDim }}>Goal {profile.weight_goal_kg} kg</Text>
-                    </View>
-                  )}
-                </>
+
+              {/* 2×2 stats grid */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {[
+                  { label: '7-DAY AVG',  value: avgWeight7  != null ? `${avgWeight7} kg`  : '—', color: '#f97316' },
+                  { label: 'WEEKLY ΔCHG', value: weeklyChange != null ? `${parseFloat(weeklyChange) > 0 ? '+' : ''}${weeklyChange} kg` : '—', color: parseFloat(weeklyChange) <= 0 ? '#34d399' : '#f87171' },
+                  { label: '7-DAY HIGH',  value: highWeight7 != null ? `${highWeight7} kg` : '—', color: '#f87171' },
+                  { label: '7-DAY LOW',   value: lowWeight7  != null ? `${lowWeight7} kg`  : '—', color: '#34d399' },
+                ].map(({ label, value, color }) => (
+                  <View key={label} style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 10, alignItems: 'center', gap: 4 }}>
+                    <Text style={{ fontSize: 14, fontWeight: weight.black, color }}>{value}</Text>
+                    <Text style={{ fontSize: 8, color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.4, textAlign: 'center' }}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Goal progress */}
+              {profile?.weight_goal_kg && currentWeight != null && (
+                <View style={{ marginTop: 12, backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 10 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <Text style={{ fontSize: 11, color: colors.textDim }}>Goal: {profile.weight_goal_kg} kg</Text>
+                    <Text style={{ fontSize: 11, fontWeight: weight.semibold, color: Math.abs(currentWeight - profile.weight_goal_kg) < 1 ? '#34d399' : colors.textDim }}>
+                      {Math.abs(currentWeight - profile.weight_goal_kg).toFixed(1)} kg to go
+                    </Text>
+                  </View>
+                  {(() => {
+                    const start = weightWeekAgo ?? currentWeight;
+                    const goal = profile.weight_goal_kg;
+                    const total = Math.abs(start - goal);
+                    const done = total > 0 ? Math.min(1, Math.abs(start - currentWeight) / total) : (currentWeight === goal ? 1 : 0);
+                    return (
+                      <View style={{ height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: 'hidden' }}>
+                        <View style={{ height: 4, width: `${Math.round(done * 100)}%`, backgroundColor: '#34d399', borderRadius: 2 }} />
+                      </View>
+                    );
+                  })()}
+                </View>
               )}
             </>
           )}
