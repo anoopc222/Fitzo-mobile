@@ -21,6 +21,17 @@ import { weight } from '../theme/typography';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function currentWeekLabel() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return `${fmt(mon)} – ${fmt(sun)}`;
+}
+
 function timeAgo(ts) {
   if (!ts) return null;
   const secs = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
@@ -51,7 +62,7 @@ async function fetchCoachClients(userId) {
   if (clientIds.length > 0) {
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, full_name, goal, step_goal')
+      .select('id, full_name, goal, step_goal, coach_visibility')
       .in('id', clientIds);
     (profiles ?? []).forEach(p => { profileMap[p.id] = p; });
   }
@@ -81,16 +92,14 @@ async function fetchCoachClients(userId) {
   if (clientIds.length > 0) {
     const lim = clientIds.length * 5;
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-    const [wkRes, wgRes, stRes, slRes, flRes] = await Promise.all([
+    const [wkRes, wgRes, stRes, slRes] = await Promise.all([
       supabase.from('workout_sessions').select('user_id, date').in('user_id', clientIds)
         .order('date', { ascending: false }).limit(lim),
-      supabase.from('weight_logs').select('user_id, logged_at').in('user_id', clientIds)
-        .order('logged_at', { ascending: false }).limit(lim),
+      supabase.from('weight_logs').select('user_id, weight, logged_at').in('user_id', clientIds)
+        .gte('logged_at', weekAgo + 'T00:00:00'),
       supabase.from('step_logs').select('user_id, steps, logged_at').in('user_id', clientIds)
         .gte('logged_at', weekAgo + 'T00:00:00'),
       supabase.from('sleep_logs').select('user_id, hours').in('user_id', clientIds)
-        .gte('logged_at', weekAgo + 'T00:00:00'),
-      supabase.from('food_logs').select('user_id, calories').in('user_id', clientIds)
         .gte('logged_at', weekAgo + 'T00:00:00'),
     ]);
     const bump = (uid, ts) => {
@@ -100,21 +109,21 @@ async function fetchCoachClients(userId) {
     for (const r of wgRes.data ?? []) bump(r.user_id, new Date(r.logged_at).getTime());
     for (const r of stRes.data ?? []) bump(r.user_id, new Date(r.logged_at).getTime());
 
-    // Weekly stats per client
     const avgOf = (arr, key) => {
       if (!arr.length) return 0;
-      return Math.round(arr.reduce((s, x) => s + (x[key] ?? 0), 0) / arr.length);
+      const sum = arr.reduce((s, x) => s + (x[key] ?? 0), 0);
+      return Math.round((sum / arr.length) * 10) / 10;
     };
     for (const clientId of clientIds) {
       const wkWeek = (wkRes.data ?? []).filter(r => r.user_id === clientId && r.date >= weekAgo);
-      const steps  = (stRes.data ?? []).filter(r => r.user_id === clientId);
-      const sleep  = (slRes.data ?? []).filter(r => r.user_id === clientId);
-      const food   = (flRes.data ?? []).filter(r => r.user_id === clientId);
+      const weights = (wgRes.data ?? []).filter(r => r.user_id === clientId);
+      const steps   = (stRes.data ?? []).filter(r => r.user_id === clientId);
+      const sleep   = (slRes.data ?? []).filter(r => r.user_id === clientId);
       weeklyStatsMap[clientId] = {
-        workouts:     wkWeek.length,
-        avgSteps:     avgOf(steps, 'steps'),
-        avgSleep:     avgOf(sleep, 'hours'),
-        avgCalories:  avgOf(food,  'calories'),
+        workouts:  wkWeek.length,
+        avgWeight: avgOf(weights, 'weight'),
+        avgSteps:  Math.round(avgOf(steps, 'steps')),
+        avgSleep:  avgOf(sleep, 'hours'),
       };
     }
   }
@@ -717,17 +726,23 @@ export default function CoachModeScreen() {
               const unread = link.unreadCount ?? 0;
               const lastActivity = link.lastActivityTs ? timeAgo(link.lastActivityTs) : null;
               const ws = link.weeklyStats;
+              // Respect client's coach_visibility — if a key is false, show '—' for that stat
+              const vis = { workouts: true, weight: true, steps: true, sleep: true, food: true, ...(link.client?.coach_visibility ?? {}) };
+              const STATS = [
+                { icon: 'barbell-outline',  color: colors.accent, visKey: 'workouts', label: 'Workouts',   sublabel: 'Sessions this week',    value: ws?.workouts ?? 0,  fmt: v => String(v) },
+                { icon: 'footsteps-outline',color: '#22c55e',     visKey: 'steps',    label: 'Avg Steps',  sublabel: 'Daily average, 7 days', value: ws?.avgSteps ?? 0,  fmt: v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : (v || '—') },
+                { icon: 'moon-outline',     color: '#6366f1',     visKey: 'sleep',    label: 'Avg Sleep',  sublabel: 'Hours per night, 7 days',value: ws?.avgSleep ?? 0,  fmt: v => v ? `${v}h` : '—' },
+                { icon: 'scale-outline',    color: '#f97316',     visKey: 'weight',   label: 'Avg Weight', sublabel: 'Body weight, 7 days',   value: ws?.avgWeight ?? 0, fmt: v => v ? `${v}kg` : '—' },
+              ];
               return (
                 <TouchableOpacity
                   key={link.id}
                   onPress={() => navigation.navigate('ClientDetail', { clientId: link.client?.id, clientName: name })}
-                  onLongPress={() => setNotesLink(link)}
-                  delayLongPress={400}
                   activeOpacity={0.75}
                   style={{ backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: unread > 0 ? colors.danger + '60' : colors.border, padding: 14, marginBottom: 12 }}
                 >
-                  {/* ── Top row: avatar + name + unread + chevron ── */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  {/* ── Top row: avatar + name + unread + notes btn + chevron ── */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                     <View style={{ position: 'relative' }}>
                       <Avatar name={name} size={44} fontSize={14} bg={colors.accent + '22'} color={colors.accent} />
                       {unread > 0 && (
@@ -745,37 +760,52 @@ export default function CoachModeScreen() {
                           ? <Text style={{ fontSize: 11, color: colors.accent }}>Active {lastActivity}</Text>
                           : <Text style={{ fontSize: 11, color: colors.textDim }}>No recent activity</Text>}
                       </View>
-                      {link.notes ? (
-                        <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>📝 {link.notes}</Text>
-                      ) : null}
                     </View>
-                    <TouchableOpacity onPress={() => setNotesLink(link)} activeOpacity={0.7}
-                      style={{ backgroundColor: colors.accent + '18', borderRadius: 8, padding: 5, marginRight: 4 }}>
-                      <Ionicons name="document-text-outline" size={14} color={colors.accent} />
+                    <TouchableOpacity
+                      onPress={() => setNotesLink(link)}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: link.notes || link.coach_note ? colors.accent + '20' : colors.bg, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 6, borderWidth: 1, borderColor: link.notes || link.coach_note ? colors.accent + '50' : colors.border }}
+                    >
+                      <Ionicons name="document-text-outline" size={13} color={link.notes || link.coach_note ? colors.accent : colors.textDim} />
+                      <Text style={{ fontSize: 11, fontWeight: weight.bold, color: link.notes || link.coach_note ? colors.accent : colors.textDim }}>Notes</Text>
                     </TouchableOpacity>
                     <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
                   </View>
 
+                  {link.notes ? (
+                    <Text style={{ fontSize: 11, color: colors.textDim, marginBottom: 8, fontStyle: 'italic' }} numberOfLines={1}>📝 {link.notes}</Text>
+                  ) : null}
+
                   {/* ── Week at a glance ── */}
-                  <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 12 }} />
-                  <View style={{ flexDirection: 'row' }}>
-                    {[
-                      { icon: 'barbell-outline',    color: colors.accent,  value: ws?.workouts ?? 0,        label: 'WORKOUTS',  fmt: v => String(v) },
-                      { icon: 'footsteps-outline',  color: '#22c55e',      value: ws?.avgSteps ?? 0,         label: 'AVG STEPS', fmt: v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : (v || '—') },
-                      { icon: 'moon-outline',       color: '#6366f1',      value: ws?.avgSleep ?? 0,         label: 'AVG SLEEP', fmt: v => v ? `${v}h` : '—' },
-                      { icon: 'flame-outline',      color: '#f97316',      value: ws?.avgCalories ?? 0,      label: 'AVG KCAL',  fmt: v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : (v || '—') },
-                    ].map(({ icon, color, value, label, fmt }, idx, arr) => (
-                      <React.Fragment key={label}>
-                        <View style={{ flex: 1, alignItems: 'center', gap: 3 }}>
-                          <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: color + '18', alignItems: 'center', justifyContent: 'center' }}>
-                            <Ionicons name={icon} size={14} color={color} />
+                  <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 10 }} />
+                  {/* Single stats card */}
+                  <View style={{ backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+                    {/* Card header */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                      <Ionicons name="calendar-outline" size={12} color={colors.textDim} />
+                      <Text style={{ fontSize: 10, color: colors.textDim, fontWeight: weight.bold, letterSpacing: 0.5 }}>
+                        THIS WEEK · {currentWeekLabel()}
+                      </Text>
+                    </View>
+                    {/* Stat rows */}
+                    {STATS.map(({ icon, color, visKey, label, sublabel, value, fmt }, idx, arr) => {
+                      const allowed = vis[visKey] !== false;
+                      const displayVal = allowed ? fmt(value) : '—';
+                      return (
+                        <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: colors.border }}>
+                          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: allowed ? color + '18' : colors.border + '50', alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name={icon} size={16} color={allowed ? color : colors.textDim} />
                           </View>
-                          <Text style={{ fontSize: 16, fontWeight: weight.black, color: colors.text }}>{fmt(value)}</Text>
-                          <Text style={{ fontSize: 9, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.4 }}>{label}</Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 13, fontWeight: weight.semibold, color: colors.text }}>{label}</Text>
+                            <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>{sublabel}</Text>
+                          </View>
+                          <Text style={{ fontSize: 16, fontWeight: weight.black, color: allowed ? colors.text : colors.textDim }}>
+                            {displayVal}
+                          </Text>
                         </View>
-                        {idx < arr.length - 1 && <View style={{ width: 1, backgroundColor: colors.border }} />}
-                      </React.Fragment>
-                    ))}
+                      );
+                    })}
                   </View>
                 </TouchableOpacity>
               );
