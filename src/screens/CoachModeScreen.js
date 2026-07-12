@@ -226,12 +226,14 @@ function InviteOverlay({ code, onClose, colors }) {
 
 // ─── Add Client Sheet ─────────────────────────────────────────────────────────
 
-function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGenerate, generating }) {
+function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGenerate, generating, isPro, activeCount, onUpgrade }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [inviting, setInviting] = useState(null);
   const qc = useQueryClient();
+
+  const limitReached = !isPro && activeCount >= 2;
 
   useEffect(() => {
     if (!visible) { setSearchQuery(''); setSearchResults([]); }
@@ -271,68 +273,130 @@ function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGener
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 16 }}>
-          <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>Add a client</Text>
-
-          {/* Search */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1.5, borderColor: searchQuery ? colors.accent + '60' : colors.border, paddingHorizontal: 14, paddingVertical: 4 }}>
-            <Ionicons name="search" size={17} color={colors.textDim} />
-            <TextInput
-              style={{ flex: 1, paddingVertical: 11, fontSize: 15, color: colors.text }}
-              placeholder="Search client by name…"
-              placeholderTextColor={colors.textDim}
-              value={searchQuery}
-              onChangeText={handleSearch}
-              autoCorrect={false}
-            />
-            {searching
-              ? <ActivityIndicator size="small" color={colors.accent} />
-              : searchQuery.length > 0
-                ? <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }} activeOpacity={0.7}>
-                    <Ionicons name="close-circle" size={18} color={colors.textDim} />
-                  </TouchableOpacity>
-                : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ flex: 1, fontSize: 19, fontWeight: weight.black, color: colors.text }}>Add a client</Text>
+            {!isPro && (
+              <View style={{ backgroundColor: colors.accent + '18', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: colors.accent + '35' }}>
+                <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent }}>{activeCount}/2 FREE</Text>
+              </View>
+            )}
           </View>
 
-          {searchResults.length > 0 && (
-            <View style={{ backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
-              {searchResults.map((p, i) => (
-                <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border }}>
-                  <Avatar name={p.full_name} size={40} fontSize={13} bg={colors.accent + '20'} color={colors.accent} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: weight.semibold, color: colors.text }}>{p.full_name}</Text>
-                    {p.email ? <Text style={{ fontSize: 11, color: colors.textDim }} numberOfLines={1}>{p.email}</Text> : p.goal ? <Text style={{ fontSize: 11, color: colors.textDim }}>{p.goal}</Text> : null}
-                  </View>
-                  <TouchableOpacity onPress={() => handleInvite(p)} disabled={inviting === p.id} activeOpacity={0.8}
-                    style={{ backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 7, opacity: inviting === p.id ? 0.6 : 1 }}>
-                    {inviting === p.id
-                      ? <ActivityIndicator size="small" color={colors.bg} />
-                      : <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Invite</Text>}
-                  </TouchableOpacity>
+          {limitReached ? (
+            /* ── Paywall state ── */
+            <View style={{ gap: 16, paddingVertical: 8 }}>
+              <View style={{ alignItems: 'center', paddingVertical: 20, gap: 12 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="lock-closed" size={28} color={colors.accent} />
                 </View>
-              ))}
-            </View>
-          )}
+                <Text style={{ fontSize: 17, fontWeight: weight.black, color: colors.text, textAlign: 'center' }}>
+                  Free plan limit reached
+                </Text>
+                <Text style={{ fontSize: 13, color: colors.textDim, textAlign: 'center', lineHeight: 20 }}>
+                  You've used both free client slots.{'\n'}Upgrade to Pro to coach unlimited clients.
+                </Text>
+              </View>
 
-          {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
-            <Text style={{ fontSize: 13, color: colors.textDim, textAlign: 'center' }}>No users found</Text>
-          )}
+              {/* What you get */}
+              <View style={{ backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 10 }}>
+                {[
+                  { icon: 'people', text: 'Unlimited clients' },
+                  { icon: 'eye-off-outline', text: 'Clients can restrict data visibility' },
+                  { icon: 'analytics-outline', text: 'Advanced client insights' },
+                  { icon: 'ribbon-outline', text: 'Pro coach badge on profile' },
+                ].map(({ icon, text }) => (
+                  <View key={text} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={icon} size={14} color={colors.accent} />
+                    </View>
+                    <Text style={{ fontSize: 13, color: colors.text }}>{text}</Text>
+                  </View>
+                ))}
+              </View>
 
-          {/* Invite code */}
-          <TouchableOpacity onPress={onGenerate} disabled={generating} activeOpacity={0.8}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.bg, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
-            <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
-              {generating
-                ? <ActivityIndicator size="small" color={colors.accent} />
-                : <Ionicons name="key-outline" size={20} color={colors.accent} />}
+              <TouchableOpacity onPress={() => { onClose(); onUpgrade(); }} activeOpacity={0.85}
+                style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, fontWeight: weight.black, color: colors.bg }}>Upgrade to Pro →</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 13, color: colors.textDim }}>Not now</Text>
+              </TouchableOpacity>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.text }}>One-time invite code</Text>
-              <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 1 }}>Generate → copy code or link to share</Text>
-            </View>
-            <View style={{ backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}>
-              <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Generate</Text>
-            </View>
-          </TouchableOpacity>
+          ) : (
+            /* ── Normal add state ── */
+            <>
+              {!isPro && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.accent + '10', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: colors.accent + '25' }}>
+                  <Ionicons name="information-circle-outline" size={15} color={colors.accent} />
+                  <Text style={{ flex: 1, fontSize: 11, color: colors.textDim, lineHeight: 16 }}>
+                    Free plan: you can add <Text style={{ fontWeight: weight.bold, color: colors.text }}>up to 2 clients</Text>. You have {2 - activeCount} slot{2 - activeCount !== 1 ? 's' : ''} remaining.
+                  </Text>
+                </View>
+              )}
+
+              {/* Search */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1.5, borderColor: searchQuery ? colors.accent + '60' : colors.border, paddingHorizontal: 14, paddingVertical: 4 }}>
+                <Ionicons name="search" size={17} color={colors.textDim} />
+                <TextInput
+                  style={{ flex: 1, paddingVertical: 11, fontSize: 15, color: colors.text }}
+                  placeholder="Search client by name…"
+                  placeholderTextColor={colors.textDim}
+                  value={searchQuery}
+                  onChangeText={handleSearch}
+                  autoCorrect={false}
+                />
+                {searching
+                  ? <ActivityIndicator size="small" color={colors.accent} />
+                  : searchQuery.length > 0
+                    ? <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }} activeOpacity={0.7}>
+                        <Ionicons name="close-circle" size={18} color={colors.textDim} />
+                      </TouchableOpacity>
+                    : null}
+              </View>
+
+              {searchResults.length > 0 && (
+                <View style={{ backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+                  {searchResults.map((p, i) => (
+                    <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border }}>
+                      <Avatar name={p.full_name} size={40} fontSize={13} bg={colors.accent + '20'} color={colors.accent} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: weight.semibold, color: colors.text }}>{p.full_name}</Text>
+                        {p.email ? <Text style={{ fontSize: 11, color: colors.textDim }} numberOfLines={1}>{p.email}</Text> : p.goal ? <Text style={{ fontSize: 11, color: colors.textDim }}>{p.goal}</Text> : null}
+                      </View>
+                      <TouchableOpacity onPress={() => handleInvite(p)} disabled={inviting === p.id} activeOpacity={0.8}
+                        style={{ backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 7, opacity: inviting === p.id ? 0.6 : 1 }}>
+                        {inviting === p.id
+                          ? <ActivityIndicator size="small" color={colors.bg} />
+                          : <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Invite</Text>}
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+                <Text style={{ fontSize: 13, color: colors.textDim, textAlign: 'center' }}>No users found</Text>
+              )}
+
+              {/* Invite code */}
+              <TouchableOpacity onPress={onGenerate} disabled={generating} activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.bg, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
+                <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: colors.accent + '18', alignItems: 'center', justifyContent: 'center' }}>
+                  {generating
+                    ? <ActivityIndicator size="small" color={colors.accent} />
+                    : <Ionicons name="key-outline" size={20} color={colors.accent} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.text }}>One-time invite code</Text>
+                  <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 1 }}>Generate → copy code or link to share</Text>
+                </View>
+                <View style={{ backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Generate</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -846,31 +910,18 @@ export default function CoachModeScreen() {
 
       {/* ── FAB ─────────────────────────────────────────────────────── */}
       <TouchableOpacity
-        onPress={() => {
-          if (!isPro && active.length >= 2) {
-            Alert.alert(
-              'Client Limit Reached',
-              'Free coaches can manage up to 2 clients. Upgrade to Pro for unlimited clients.',
-              [
-                { text: 'Not Now', style: 'cancel' },
-                { text: 'Upgrade to Pro', onPress: () => navigation.navigate('Subscription') },
-              ]
-            );
-            return;
-          }
-          setAddSheetVisible(true);
-        }}
+        onPress={() => setAddSheetVisible(true)}
         activeOpacity={0.85}
         style={{
           position: 'absolute', bottom: 28, right: 20,
           width: 58, height: 58, borderRadius: 29,
-          backgroundColor: !isPro && active.length >= 2 ? colors.textDim : colors.accent,
+          backgroundColor: colors.accent,
           alignItems: 'center', justifyContent: 'center',
           shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.45, shadowRadius: 10, elevation: 8,
         }}
       >
-        <Ionicons name={!isPro && active.length >= 2 ? 'lock-closed' : 'add'} size={!isPro && active.length >= 2 ? 22 : 30} color={colors.bg} />
+        <Ionicons name="add" size={30} color={colors.bg} />
       </TouchableOpacity>
 
       {/* ── Modals ──────────────────────────────────────────────────── */}
@@ -882,6 +933,9 @@ export default function CoachModeScreen() {
         colors={colors}
         onGenerate={() => generateMut.mutate()}
         generating={generateMut.isPending}
+        isPro={isPro}
+        activeCount={active.length}
+        onUpgrade={() => navigation.navigate('Subscription')}
       />
 
       <EditProfileSheet
