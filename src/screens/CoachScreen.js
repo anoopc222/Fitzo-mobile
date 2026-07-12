@@ -520,6 +520,14 @@ function CoachTab({ userId, colors }) {
     ]);
   };
 
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 50 }}
@@ -877,6 +885,14 @@ function ClientTab({ userId, colors, isPro }) {
     }
     await loadClientData();
   };
+
+  if (!loaded) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
