@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { sendChatPushNotification } from '../lib/notifications';
 import { typography, weight } from '../theme/typography';
@@ -170,6 +171,7 @@ function EmptyChat({ otherName, colors, accent }) {
 export default function CoachChatScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { isPro } = useSubscription();
   const navigation = useNavigation();
   const { coachId, clientId, clientName, coachName } = useRoute().params ?? {};
   const qc = useQueryClient();
@@ -266,7 +268,8 @@ export default function CoachChatScreen() {
       {/* ── Messages ───────────────────────────────────────────────────── */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {isLoading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -300,74 +303,104 @@ export default function CoachChatScreen() {
           />
         )}
 
-        {/* ── Input bar ───────────────────────────────────────────────── */}
-        <View style={{
-          flexDirection: 'row', alignItems: 'flex-end', gap: 10,
-          paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12,
-          borderTopWidth: 1, borderTopColor: colors.border,
-          backgroundColor: colors.bg,
-        }}>
+        {/* ── Input bar / Pro gate ────────────────────────────────────── */}
+        {isPro ? (
           <View style={{
-            flex: 1,
-            backgroundColor: colors.bgCard,
-            borderRadius: 24,
-            borderWidth: 1.5,
-            borderColor: text.trim() ? accent + '60' : colors.border,
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            minHeight: 44,
-            justifyContent: 'center',
+            flexDirection: 'row', alignItems: 'flex-end', gap: 10,
+            paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12,
+            borderTopWidth: 1, borderTopColor: colors.border,
+            backgroundColor: colors.bg,
           }}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder="Type a message..."
-              placeholderTextColor={colors.textDim}
-              multiline
-              onContentSizeChange={e => setInputHeight(Math.min(e.nativeEvent.contentSize.height, 110))}
-              style={{
-                height: Math.max(inputHeight, 28),
-                fontSize: typography.sm,
-                color: colors.text,
-                lineHeight: 21,
-                padding: 0,
-              }}
-            />
-          </View>
-
-          <TouchableOpacity
-            onPress={() => canSend && send(text.trim())}
-            disabled={!canSend}
-            activeOpacity={0.8}
-          >
-            {canSend ? (
-              <LinearGradient
-                colors={[accent, accent + 'bb']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            <View style={{
+              flex: 1,
+              backgroundColor: colors.bgCard,
+              borderRadius: 24,
+              borderWidth: 1.5,
+              borderColor: text.trim() ? accent + '60' : colors.border,
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              minHeight: 44,
+              justifyContent: 'center',
+            }}>
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder="Type a message..."
+                placeholderTextColor={colors.textDim}
+                multiline
+                onContentSizeChange={e => setInputHeight(Math.min(e.nativeEvent.contentSize.height, 110))}
                 style={{
-                  width: 44, height: 44, borderRadius: 22,
-                  alignItems: 'center', justifyContent: 'center',
-                  shadowColor: accent, shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.4, shadowRadius: 8, elevation: 4,
+                  height: Math.max(inputHeight, 28),
+                  fontSize: typography.sm,
+                  color: colors.text,
+                  lineHeight: 21,
+                  padding: 0,
                 }}
-              >
-                {sending
-                  ? <ActivityIndicator size="small" color={colors.bg} />
-                  : <Ionicons name="send" size={18} color={colors.bg} />
-                }
-              </LinearGradient>
-            ) : (
-              <View style={{
-                width: 44, height: 44, borderRadius: 22,
-                backgroundColor: colors.bgCard,
-                borderWidth: 1, borderColor: colors.border,
-                alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Ionicons name="send" size={18} color={colors.textDim} />
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={() => canSend && send(text.trim())}
+              disabled={!canSend}
+              activeOpacity={0.8}
+            >
+              {canSend ? (
+                <LinearGradient
+                  colors={[accent, accent + 'bb']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  style={{
+                    width: 44, height: 44, borderRadius: 22,
+                    alignItems: 'center', justifyContent: 'center',
+                    shadowColor: accent, shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.4, shadowRadius: 8, elevation: 4,
+                  }}
+                >
+                  {sending
+                    ? <ActivityIndicator size="small" color={colors.bg} />
+                    : <Ionicons name="send" size={18} color={colors.bg} />
+                  }
+                </LinearGradient>
+              ) : (
+                <View style={{
+                  width: 44, height: 44, borderRadius: 22,
+                  backgroundColor: colors.bgCard,
+                  borderWidth: 1, borderColor: colors.border,
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Ionicons name="send" size={18} color={colors.textDim} />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          /* Free / trial users — locked input */
+          <View style={{
+            borderTopWidth: 1, borderTopColor: colors.border,
+            backgroundColor: colors.bg,
+            paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12,
+            gap: 8,
+          }}>
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              backgroundColor: colors.bgCard, borderRadius: 14,
+              borderWidth: 1, borderColor: accent + '30',
+              paddingHorizontal: 14, paddingVertical: 10,
+            }}>
+              <Ionicons name="lock-closed" size={16} color={accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: typography.sm, fontWeight: '700', color: colors.text }}>Pro feature</Text>
+                <Text style={{ fontSize: 11, color: colors.textDim }}>Upgrade to send messages</Text>
               </View>
-            )}
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Home', { screen: 'Subscription' })}
+                style={{ backgroundColor: accent, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.bg }}>Upgrade</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
