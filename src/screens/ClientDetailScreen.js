@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Dimensions,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,8 +13,6 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import Sparkline from '../components/Sparkline';
-import MonthHeatmap from '../components/MonthHeatmap';
-
 const W = Dimensions.get('window').width;
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -380,7 +378,19 @@ export default function ClientDetailScreen() {
 
         {/* ── Stat chips ──────────────────────────────────────────────── */}
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-          <MetricChip icon="barbell-outline" value={vis.workouts ? workouts.length : '🔒'} label="Workouts 30d" accent={colors.accent} colors={colors} />
+          <MetricChip
+            icon="barbell-outline"
+            value={vis.workouts
+              ? (() => {
+                  const s = workouts.filter(w => sessionType(w.notes) === 'strength').length;
+                  const c = workouts.filter(w => sessionType(w.notes) === 'cardio').length;
+                  return `${s}S · ${c}C`;
+                })()
+              : '🔒'}
+            label="Workout · Cardio"
+            accent={colors.accent}
+            colors={colors}
+          />
           <MetricChip icon="footsteps-outline"
             value={!vis.steps ? '🔒' : avgSteps7 > 0 ? (avgSteps7 >= 1000 ? `${(avgSteps7/1000).toFixed(1)}k` : avgSteps7) : '—'}
             label="Avg Steps 7d" accent="#34d399" colors={colors}
@@ -395,38 +405,6 @@ export default function ClientDetailScreen() {
           />
         </View>
 
-        {/* ── Activity heatmap ────────────────────────────────────────── */}
-        {vis.workouts && (
-          <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 14 }}>
-            <SectionHeader icon="calendar-outline" title="Activity Heatmap"
-              sub={`${workouts.filter(w => sessionType(w.notes) !== 'rest').length} sessions`}
-              colors={colors}
-            />
-            <MonthHeatmap
-              data={heatmapData}
-              typeColors={heatmapTypeColors}
-              color={colors.accent}
-              month={now.getMonth()}
-              year={now.getFullYear()}
-              containerPad={64}
-              emptyCellColor={colors.bg}
-              mutedTextColor={colors.textDim}
-            />
-            {/* Legend */}
-            <View style={{ flexDirection: 'row', gap: 14, marginTop: 10, justifyContent: 'center' }}>
-              {[
-                { color: colors.accent, label: 'Strength' },
-                { color: '#22d3ee', label: 'Cardio' },
-                { color: colors.textDim, label: 'Rest' },
-              ].map(item => (
-                <View key={item.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: item.color + '99' }} />
-                  <Text style={{ fontSize: 10, color: colors.textDim }}>{item.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
 
         {/* ── Weight ──────────────────────────────────────────────────── */}
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 14 }}>
@@ -537,20 +515,28 @@ export default function ClientDetailScreen() {
           )}
         </View>
 
-        {/* ── Workouts ────────────────────────────────────────────────── */}
-        <View style={{ marginBottom: 14 }}>
-          <SectionHeader icon="barbell-outline" title={`Workouts`}
-            sub={vis.workouts ? `${workouts.length} sessions · tap to expand` : undefined}
-            colors={colors}
-          />
-          {!vis.workouts ? <LockedSection colors={colors} /> : workouts.length === 0 ? (
-            <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
-              <Text style={{ fontSize: typography.sm, color: colors.textDim }}>No workouts in last 30 days</Text>
+        {/* ── Workouts (last 14 days, rest excluded) ──────────────────── */}
+        {(() => {
+          const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0];
+          const recent = workouts.filter(w => w.date >= fourteenDaysAgo && sessionType(w.notes) !== 'rest');
+          const sCount = recent.filter(w => sessionType(w.notes) === 'strength').length;
+          const cCount = recent.filter(w => sessionType(w.notes) === 'cardio').length;
+          const subLabel = vis.workouts
+            ? `${sCount} strength · ${cCount} cardio · tap to expand`
+            : undefined;
+          return (
+            <View style={{ marginBottom: 14 }}>
+              <SectionHeader icon="barbell-outline" title="Workouts" sub={subLabel} colors={colors} />
+              {!vis.workouts ? <LockedSection colors={colors} /> : recent.length === 0 ? (
+                <View style={{ backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
+                  <Text style={{ fontSize: typography.sm, color: colors.textDim }}>No workouts in last 14 days</Text>
+                </View>
+              ) : recent.map((session, i) => (
+                <WorkoutRow key={session.id ?? i} session={session} colors={colors} />
+              ))}
             </View>
-          ) : workouts.map((session, i) => (
-            <WorkoutRow key={session.id ?? i} session={session} colors={colors} />
-          ))}
-        </View>
+          );
+        })()}
 
       </ScrollView>
     </SafeAreaView>
