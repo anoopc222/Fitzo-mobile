@@ -1518,8 +1518,8 @@ export default function HomeScreen() {
                     <Ionicons name="ribbon" size={18} color={colors.accent} />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>Coach Zone</Text>
-                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2, lineHeight: 14 }}>Manage your clients</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>I'm a Coach</Text>
+                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2, lineHeight: 14 }}>Track & manage clients</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -1534,8 +1534,8 @@ export default function HomeScreen() {
                     <Ionicons name="person-circle-outline" size={18} color="#22c55e" />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>Client Zone</Text>
-                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2, lineHeight: 14 }}>Connect to your coach</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>I'm a Client</Text>
+                    <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2, lineHeight: 14 }}>Stay on track with your coach</Text>
                   </View>
                 </View>
               </TouchableOpacity>
