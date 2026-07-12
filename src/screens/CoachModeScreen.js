@@ -75,17 +75,23 @@ async function fetchCoachClients(userId) {
     }
   }
 
-  // Last activity: latest across workouts / weight / steps per client
+  // Last activity + weekly stats per client
   let lastActivityMap = {};
+  let weeklyStatsMap = {};
   if (clientIds.length > 0) {
     const lim = clientIds.length * 5;
-    const [wkRes, wgRes, stRes] = await Promise.all([
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+    const [wkRes, wgRes, stRes, slRes, flRes] = await Promise.all([
       supabase.from('workout_sessions').select('user_id, date').in('user_id', clientIds)
         .order('date', { ascending: false }).limit(lim),
       supabase.from('weight_logs').select('user_id, logged_at').in('user_id', clientIds)
         .order('logged_at', { ascending: false }).limit(lim),
-      supabase.from('step_logs').select('user_id, logged_at').in('user_id', clientIds)
-        .order('logged_at', { ascending: false }).limit(lim),
+      supabase.from('step_logs').select('user_id, steps, logged_at').in('user_id', clientIds)
+        .gte('logged_at', weekAgo + 'T00:00:00'),
+      supabase.from('sleep_logs').select('user_id, hours').in('user_id', clientIds)
+        .gte('logged_at', weekAgo + 'T00:00:00'),
+      supabase.from('food_logs').select('user_id, calories').in('user_id', clientIds)
+        .gte('logged_at', weekAgo + 'T00:00:00'),
     ]);
     const bump = (uid, ts) => {
       if (!lastActivityMap[uid] || ts > lastActivityMap[uid]) lastActivityMap[uid] = ts;
@@ -93,6 +99,24 @@ async function fetchCoachClients(userId) {
     for (const r of wkRes.data ?? []) bump(r.user_id, new Date(r.date + 'T12:00:00').getTime());
     for (const r of wgRes.data ?? []) bump(r.user_id, new Date(r.logged_at).getTime());
     for (const r of stRes.data ?? []) bump(r.user_id, new Date(r.logged_at).getTime());
+
+    // Weekly stats per client
+    const avgOf = (arr, key) => {
+      if (!arr.length) return 0;
+      return Math.round(arr.reduce((s, x) => s + (x[key] ?? 0), 0) / arr.length);
+    };
+    for (const clientId of clientIds) {
+      const wkWeek = (wkRes.data ?? []).filter(r => r.user_id === clientId && r.date >= weekAgo);
+      const steps  = (stRes.data ?? []).filter(r => r.user_id === clientId);
+      const sleep  = (slRes.data ?? []).filter(r => r.user_id === clientId);
+      const food   = (flRes.data ?? []).filter(r => r.user_id === clientId);
+      weeklyStatsMap[clientId] = {
+        workouts:     wkWeek.length,
+        avgSteps:     avgOf(steps, 'steps'),
+        avgSleep:     avgOf(sleep, 'hours'),
+        avgCalories:  avgOf(food,  'calories'),
+      };
+    }
   }
 
   return rows.map(r => ({
@@ -100,6 +124,7 @@ async function fetchCoachClients(userId) {
     client: profileMap[r.client_id] ?? null,
     unreadCount: unreadMap[r.client_id] ?? 0,
     lastActivityTs: lastActivityMap[r.client_id] ?? null,
+    weeklyStats: weeklyStatsMap[r.client_id] ?? null,
   }));
 }
 
@@ -691,7 +716,7 @@ export default function CoachModeScreen() {
               const name = link.client?.full_name ?? 'Client';
               const unread = link.unreadCount ?? 0;
               const lastActivity = link.lastActivityTs ? timeAgo(link.lastActivityTs) : null;
-              const hasNotes = !!(link.notes || link.coach_note);
+              const ws = link.weeklyStats;
               return (
                 <TouchableOpacity
                   key={link.id}
@@ -699,50 +724,58 @@ export default function CoachModeScreen() {
                   onLongPress={() => setNotesLink(link)}
                   delayLongPress={400}
                   activeOpacity={0.75}
-                  style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: unread > 0 ? colors.danger + '60' : colors.border, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 14 }}
+                  style={{ backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: unread > 0 ? colors.danger + '60' : colors.border, padding: 14, marginBottom: 12 }}
                 >
-                  {/* Avatar */}
-                  <View style={{ position: 'relative' }}>
-                    <Avatar name={name} size={46} fontSize={15} bg={colors.accent + '22'} color={colors.accent} />
-                    {unread > 0 && (
-                      <View style={{ position: 'absolute', top: -2, right: -2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.bgCard }}>
-                        <Text style={{ fontSize: 10, fontWeight: weight.black, color: '#fff' }}>{unread > 9 ? '9+' : unread}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Info */}
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.text }}>{name}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      {link.client?.goal ? (
-                        <Text style={{ fontSize: 12, color: colors.textDim }}>{link.client.goal}</Text>
-                      ) : null}
-                      {link.client?.goal && lastActivity ? (
-                        <Text style={{ fontSize: 12, color: colors.textDim }}>·</Text>
-                      ) : null}
-                      {lastActivity ? (
-                        <Text style={{ fontSize: 12, color: colors.accent }}>Active {lastActivity}</Text>
-                      ) : (
-                        <Text style={{ fontSize: 12, color: colors.textDim }}>No recent activity</Text>
+                  {/* ── Top row: avatar + name + unread + chevron ── */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                    <View style={{ position: 'relative' }}>
+                      <Avatar name={name} size={44} fontSize={14} bg={colors.accent + '22'} color={colors.accent} />
+                      {unread > 0 && (
+                        <View style={{ position: 'absolute', top: -2, right: -2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.bgCard }}>
+                          <Text style={{ fontSize: 10, fontWeight: weight.black, color: '#fff' }}>{unread > 9 ? '9+' : unread}</Text>
+                        </View>
                       )}
                     </View>
-                    {link.notes ? (
-                      <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
-                        📝 {link.notes}
-                      </Text>
-                    ) : null}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.text }}>{name}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                        {link.client?.goal ? <Text style={{ fontSize: 11, color: colors.textDim }}>{link.client.goal}</Text> : null}
+                        {link.client?.goal && lastActivity ? <Text style={{ fontSize: 11, color: colors.textDim }}>·</Text> : null}
+                        {lastActivity
+                          ? <Text style={{ fontSize: 11, color: colors.accent }}>Active {lastActivity}</Text>
+                          : <Text style={{ fontSize: 11, color: colors.textDim }}>No recent activity</Text>}
+                      </View>
+                      {link.notes ? (
+                        <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>📝 {link.notes}</Text>
+                      ) : null}
+                    </View>
+                    <TouchableOpacity onPress={() => setNotesLink(link)} activeOpacity={0.7}
+                      style={{ backgroundColor: colors.accent + '18', borderRadius: 8, padding: 5, marginRight: 4 }}>
+                      <Ionicons name="document-text-outline" size={14} color={colors.accent} />
+                    </TouchableOpacity>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
                   </View>
 
-                  {/* Right side */}
-                  <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                    <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-                    {hasNotes && (
-                      <TouchableOpacity onPress={() => setNotesLink(link)} activeOpacity={0.7}
-                        style={{ backgroundColor: colors.accent + '18', borderRadius: 8, padding: 4 }}>
-                        <Ionicons name="document-text-outline" size={13} color={colors.accent} />
-                      </TouchableOpacity>
-                    )}
+                  {/* ── Week at a glance ── */}
+                  <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 12 }} />
+                  <View style={{ flexDirection: 'row' }}>
+                    {[
+                      { icon: 'barbell-outline',    color: colors.accent,  value: ws?.workouts ?? 0,        label: 'WORKOUTS',  fmt: v => String(v) },
+                      { icon: 'footsteps-outline',  color: '#22c55e',      value: ws?.avgSteps ?? 0,         label: 'AVG STEPS', fmt: v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : (v || '—') },
+                      { icon: 'moon-outline',       color: '#6366f1',      value: ws?.avgSleep ?? 0,         label: 'AVG SLEEP', fmt: v => v ? `${v}h` : '—' },
+                      { icon: 'flame-outline',      color: '#f97316',      value: ws?.avgCalories ?? 0,      label: 'AVG KCAL',  fmt: v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : (v || '—') },
+                    ].map(({ icon, color, value, label, fmt }, idx, arr) => (
+                      <React.Fragment key={label}>
+                        <View style={{ flex: 1, alignItems: 'center', gap: 3 }}>
+                          <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: color + '18', alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name={icon} size={14} color={color} />
+                          </View>
+                          <Text style={{ fontSize: 16, fontWeight: weight.black, color: colors.text }}>{fmt(value)}</Text>
+                          <Text style={{ fontSize: 9, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.4 }}>{label}</Text>
+                        </View>
+                        {idx < arr.length - 1 && <View style={{ width: 1, backgroundColor: colors.border }} />}
+                      </React.Fragment>
+                    ))}
                   </View>
                 </TouchableOpacity>
               );

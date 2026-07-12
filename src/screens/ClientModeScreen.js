@@ -81,13 +81,14 @@ export default function ClientModeScreen() {
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
 
-    const [visRes, activeRes, pendingRes, wkRes, stRes, slRes] = await Promise.all([
+    const [visRes, activeRes, pendingRes, wkRes, stRes, slRes, flRes] = await Promise.all([
       supabase.from('profiles').select('coach_visibility').eq('id', userId).single(),
       supabase.from('coach_clients').select('*').eq('client_id', userId).eq('status', 'active').limit(1).single(),
       supabase.from('coach_clients').select('id, coach_id, created_at').eq('client_id', userId).eq('status', 'pending').is('invite_code', null),
       supabase.from('workout_sessions').select('id').eq('user_id', userId).gte('date', sevenDaysAgo),
       supabase.from('step_logs').select('steps').eq('user_id', userId).gte('logged_at', sevenDaysAgo + 'T00:00:00'),
       supabase.from('sleep_logs').select('hours').eq('user_id', userId).gte('logged_at', sevenDaysAgo + 'T00:00:00'),
+      supabase.from('food_logs').select('calories').eq('user_id', userId).gte('logged_at', sevenDaysAgo + 'T00:00:00'),
     ]);
 
     if (visRes.data?.coach_visibility) setVisibility({ ...DEFAULT_VIS, ...visRes.data.coach_visibility });
@@ -97,6 +98,7 @@ export default function ClientModeScreen() {
       workouts: wkRes.data?.length ?? 0,
       avgSteps: avgArr(stRes.data, 'steps'),
       avgSleep: avgArr(slRes.data, 'hours'),
+      avgCalories: avgArr(flRes.data, 'calories'),
     });
 
     setLoaded(true);
@@ -424,6 +426,16 @@ export default function ClientModeScreen() {
                       {weeklySummary.avgSleep ? `${weeklySummary.avgSleep}h` : '—'}
                     </Text>
                     <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 }}>AVG SLEEP</Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 8 }} />
+                  <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#f97316' + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                      <Ionicons name="flame-outline" size={17} color="#f97316" />
+                    </View>
+                    <Text style={{ fontSize: 22, fontWeight: weight.black, color: colors.text }}>
+                      {weeklySummary.avgCalories ? `${(weeklySummary.avgCalories / 1000).toFixed(1)}k` : '—'}
+                    </Text>
+                    <Text style={{ fontSize: 10, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.5 }}>AVG KCAL</Text>
                   </View>
                 </View>
               </View>
