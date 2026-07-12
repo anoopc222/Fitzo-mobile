@@ -746,20 +746,22 @@ export default function CoachModeScreen() {
             </Text>
             {pending.map(link => {
               const isSearch = !link.invite_code && link.client_id;
-              const clientName = link.client?.full_name ?? 'Awaiting client';
+              const clientName = link.client?.full_name;
               return (
                 <View key={link.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fbbf2408', borderRadius: 14, borderWidth: 1, borderColor: '#fbbf2430', borderLeftWidth: 3, borderLeftColor: '#fbbf24', padding: 14, marginBottom: 8 }}>
-                  {isSearch
+                  {isSearch && clientName
                     ? <Avatar name={clientName} size={40} fontSize={13} bg={'#fbbf2420'} color={'#fbbf24'} />
                     : <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#fbbf2418', alignItems: 'center', justifyContent: 'center' }}>
-                        <Ionicons name="time-outline" size={20} color="#fbbf24" />
+                        <Ionicons name={isSearch ? 'person-outline' : 'key-outline'} size={18} color="#fbbf24" />
                       </View>}
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14, fontWeight: weight.bold, color: colors.text }}>
-                      {isSearch ? clientName : link.invite_code}
+                      {isSearch
+                        ? (clientName ?? 'Unknown client')
+                        : `Code: ${link.invite_code}`}
                     </Text>
                     <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 1 }}>
-                      {isSearch ? 'Awaiting acceptance' : 'Awaiting client · code'}
+                      {isSearch ? 'Sent invite · awaiting acceptance' : 'Invite link not yet used'}
                     </Text>
                   </View>
                   <TouchableOpacity onPress={() => handleRemove(link)} activeOpacity={0.75}
