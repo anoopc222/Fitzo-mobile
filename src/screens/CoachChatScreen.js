@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -28,21 +27,9 @@ async function fetchMessages(coachId, clientId) {
   return data ?? [];
 }
 
-// ─── Wallpaper background ─────────────────────────────────────────────────────
-
-function WallpaperBg({ dark }) {
-  const bg = dark ? '#0B141A' : '#E8E4DC';
-  return (
-    <View style={{
-      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: bg,
-    }} />
-  );
-}
-
 // ─── Date divider ─────────────────────────────────────────────────────────────
 
-function DateDivider({ date, dark }) {
+function DateDivider({ date, colors }) {
   const label = (() => {
     const d = new Date(date);
     const today = new Date();
@@ -55,12 +42,11 @@ function DateDivider({ date, dark }) {
   return (
     <View style={{ alignItems: 'center', marginVertical: 10 }}>
       <View style={{
-        backgroundColor: dark ? '#182229' : '#D1F4CC',
-        borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08, shadowRadius: 2, elevation: 1,
+        backgroundColor: colors.bgCard, borderRadius: 8,
+        paddingHorizontal: 12, paddingVertical: 4,
+        borderWidth: 1, borderColor: colors.border,
       }}>
-        <Text style={{ fontSize: 11, color: dark ? '#8696A0' : '#54656F', fontWeight: '600', letterSpacing: 0.3 }}>
+        <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '600', letterSpacing: 0.3 }}>
           {label}
         </Text>
       </View>
@@ -70,28 +56,29 @@ function DateDivider({ date, dark }) {
 
 // ─── Bubble ───────────────────────────────────────────────────────────────────
 
-function Bubble({ msg, isMe, prevSame, nextSame, accent, dark }) {
+function Bubble({ msg, isMe, prevSame, nextSame, colors }) {
   const time = new Date(msg.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-  const receivedBg  = dark ? '#202C33' : '#FFFFFF';
-  const receivedText = dark ? '#E9EDEF' : '#111B21';
-  const sentText    = '#FFFFFF';
-  const timeColor   = dark ? (isMe ? '#9BB0B8' : '#8696A0') : (isMe ? 'rgba(255,255,255,0.72)' : '#667781');
-
-  // tail: only on the first bubble of a group
-  const showTail = !prevSame;
+  const accent      = colors.accent;
+  const sentBg      = accent;
+  const sentText    = colors.bg;           // dark bg on light accent
+  const receivedBg  = colors.bgCard;
+  const receivedTxt = colors.text;
+  const timeSent    = colors.bg + 'aa';
+  const timeRecv    = colors.textDim;
+  const showTail    = !prevSame;
 
   const tailSent = (
     <View style={{ position: 'absolute', bottom: 0, right: -7 }}>
       <View style={{
         width: 0, height: 0,
         borderLeftWidth: 8, borderLeftColor: 'transparent',
-        borderBottomWidth: 10, borderBottomColor: isMe ? accent : receivedBg,
+        borderBottomWidth: 10, borderBottomColor: sentBg,
       }} />
     </View>
   );
 
-  const tailReceived = (
+  const tailRecv = (
     <View style={{ position: 'absolute', bottom: 0, left: -7 }}>
       <View style={{
         width: 0, height: 0,
@@ -110,46 +97,32 @@ function Bubble({ msg, isMe, prevSame, nextSame, accent, dark }) {
     }}>
       <View style={{
         maxWidth: '80%',
-        backgroundColor: isMe ? accent : receivedBg,
+        backgroundColor: isMe ? sentBg : receivedBg,
         borderRadius: 8,
         borderBottomRightRadius: isMe && showTail ? 2 : 8,
         borderBottomLeftRadius: !isMe && showTail ? 2 : 8,
-        paddingTop: 6,
-        paddingLeft: 9,
-        paddingRight: 9,
-        paddingBottom: 4,
+        borderWidth: isMe ? 0 : 1,
+        borderColor: colors.border,
+        paddingHorizontal: 10,
+        paddingTop: 7,
+        paddingBottom: 6,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: dark ? 0.25 : 0.08,
-        shadowRadius: 1,
-        elevation: 1,
+        shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
         position: 'relative',
       }}>
-        {/* Message text + inline time spacer */}
-        <Text style={{
-          fontSize: 14.5,
-          color: isMe ? sentText : receivedText,
-          lineHeight: 20,
-          flexShrink: 1,
-        }}>
+        {/* Message text */}
+        <Text style={{ fontSize: 14.5, color: isMe ? sentText : receivedTxt, lineHeight: 20 }}>
           {msg.message}
-          {/* invisible spacer so text doesn't overlap the time */}
-          <Text style={{ fontSize: 14.5, color: 'transparent' }}>{'  ' + time + '  '}</Text>
         </Text>
 
-        {/* Time + tick — absolute bottom-right */}
-        <View style={{
-          position: 'absolute', bottom: 4, right: 8,
-          flexDirection: 'row', alignItems: 'center', gap: 2,
-        }}>
-          <Text style={{ fontSize: 10.5, color: timeColor }}>{time}</Text>
-          {isMe && (
-            <Ionicons name="checkmark-done" size={14} color={dark ? '#53BDEB' : 'rgba(255,255,255,0.85)'} />
-          )}
+        {/* Time on its own right-aligned row */}
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 2 }}>
+          <Text style={{ fontSize: 10.5, color: isMe ? timeSent : timeRecv }}>{time}</Text>
         </View>
 
         {/* Bubble tail */}
-        {showTail && (isMe ? tailSent : tailReceived)}
+        {showTail && (isMe ? tailSent : tailRecv)}
       </View>
     </View>
   );
@@ -157,14 +130,15 @@ function Bubble({ msg, isMe, prevSame, nextSame, accent, dark }) {
 
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
-function EmptyChat({ otherName, dark }) {
+function EmptyChat({ otherName, colors }) {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 12 }}>
       <View style={{
-        backgroundColor: dark ? '#182229' : '#D1F4CC',
-        borderRadius: 8, paddingHorizontal: 18, paddingVertical: 10,
+        backgroundColor: colors.bgCard, borderRadius: 10,
+        paddingHorizontal: 18, paddingVertical: 12,
+        borderWidth: 1, borderColor: colors.border,
       }}>
-        <Text style={{ fontSize: 12.5, color: dark ? '#8696A0' : '#54656F', textAlign: 'center' }}>
+        <Text style={{ fontSize: 12.5, color: colors.textDim, textAlign: 'center', lineHeight: 19 }}>
           🔒 Messages are end-to-end encrypted.{'\n'}Start the conversation with {otherName}.
         </Text>
       </View>
@@ -187,8 +161,6 @@ export default function CoachChatScreen() {
   const isCoach = user?.id === coachId;
   const otherName = isCoach ? (clientName ?? 'Client') : (coachName ?? 'Coach');
   const accent = colors.accent;
-  // detect dark mode from bg color
-  const dark = colors.bg === '#080810' || colors.bg?.startsWith('#0');
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['coachMessages', coachId, clientId],
@@ -236,48 +208,39 @@ export default function CoachChatScreen() {
   const canSend = text.trim().length > 0 && !sending;
   const initials = otherName.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  const headerBg  = dark ? '#202C33' : '#008069';
-  const headerText = '#FFFFFF';
-  const inputBarBg = dark ? '#1F2C34' : '#F0F2F5';
-  const inputBg    = dark ? '#2A3942' : '#FFFFFF';
-  const inputText  = dark ? '#E9EDEF' : '#111B21';
-  const inputPlaceholder = dark ? '#8696A0' : '#667781';
-
   return (
-    <View style={{ flex: 1 }}>
-      <WallpaperBg dark={dark} />
-
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
 
         {/* ── Header ──────────────────────────────────────────────────── */}
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 10,
           paddingHorizontal: 10, paddingVertical: 10,
-          backgroundColor: headerBg,
+          backgroundColor: colors.bgCard,
+          borderBottomWidth: 1, borderBottomColor: colors.border,
         }}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="arrow-back" size={22} color={headerText} />
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
 
           {/* Avatar */}
           <View style={{
             width: 40, height: 40, borderRadius: 20,
-            backgroundColor: accent + '44',
+            backgroundColor: accent + '33',
             alignItems: 'center', justifyContent: 'center',
           }}>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>{initials}</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: accent }}>{initials}</Text>
           </View>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: headerText }}>{otherName}</Text>
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 0 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>{otherName}</Text>
+            <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 0 }}>
               {isCoach ? 'Client' : 'Your Coach'}
             </Text>
           </View>
 
-          {/* Right icons — video/call removed per request */}
           <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="ellipsis-vertical" size={20} color={headerText} />
+            <Ionicons name="ellipsis-vertical" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -291,7 +254,7 @@ export default function CoachChatScreen() {
               <ActivityIndicator size="large" color={accent} />
             </View>
           ) : messages.length === 0 ? (
-            <EmptyChat otherName={otherName} dark={dark} />
+            <EmptyChat otherName={otherName} colors={colors} />
           ) : (
             <FlatList
               ref={flatRef}
@@ -300,7 +263,7 @@ export default function CoachChatScreen() {
               contentContainerStyle={{ paddingVertical: 6, paddingBottom: 6 }}
               showsVerticalScrollIndicator={false}
               renderItem={({ item, index }) => {
-                if (item.type === 'date') return <DateDivider date={item.date} dark={dark} />;
+                if (item.type === 'date') return <DateDivider date={item.date} colors={colors} />;
                 const msgItems = items.filter(i => i.type === 'msg');
                 const idx = msgItems.findIndex(m => m.key === item.key);
                 const prev = msgItems[idx - 1];
@@ -313,8 +276,7 @@ export default function CoachChatScreen() {
                     isMe={item.sender_id === user?.id}
                     prevSame={prevSame}
                     nextSame={nextSame}
-                    accent={accent}
-                    dark={dark}
+                    colors={colors}
                   />
                 );
               }}
@@ -325,30 +287,29 @@ export default function CoachChatScreen() {
           <View style={{
             flexDirection: 'row', alignItems: 'flex-end',
             paddingHorizontal: 8, paddingVertical: 6, gap: 8,
-            backgroundColor: inputBarBg,
+            backgroundColor: colors.bgCard,
+            borderTopWidth: 1, borderTopColor: colors.border,
           }}>
             {isPro ? (
               <>
                 {/* Text input pill */}
                 <View style={{
                   flex: 1, flexDirection: 'row', alignItems: 'flex-end',
-                  backgroundColor: inputBg, borderRadius: 24,
+                  backgroundColor: colors.bg, borderRadius: 24,
+                  borderWidth: 1, borderColor: colors.border,
                   paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 10 : 4,
                   minHeight: 44,
                 }}>
-                  <TouchableOpacity style={{ paddingBottom: Platform.OS === 'ios' ? 0 : 4, marginRight: 8 }}>
-                    <Ionicons name="happy-outline" size={22} color={inputPlaceholder} />
-                  </TouchableOpacity>
                   <TextInput
                     value={text}
                     onChangeText={setText}
                     placeholder="Message"
-                    placeholderTextColor={inputPlaceholder}
+                    placeholderTextColor={colors.textDim}
                     multiline
                     style={{
                       flex: 1,
                       fontSize: 15,
-                      color: inputText,
+                      color: colors.text,
                       maxHeight: 120,
                       paddingTop: 0,
                       paddingBottom: 0,
@@ -371,10 +332,10 @@ export default function CoachChatScreen() {
                   }}
                 >
                   {sending
-                    ? <ActivityIndicator size="small" color={dark ? colors.bg : '#fff'} />
+                    ? <ActivityIndicator size="small" color={colors.bg} />
                     : canSend
-                      ? <Ionicons name="send" size={18} color={dark ? colors.bg : '#fff'} style={{ marginLeft: 2 }} />
-                      : <Ionicons name="mic" size={20} color={dark ? colors.bg : '#fff'} />
+                      ? <Ionicons name="send" size={18} color={colors.bg} style={{ marginLeft: 2 }} />
+                      : <Ionicons name="mic" size={20} color={colors.bg} />
                   }
                 </TouchableOpacity>
               </>
@@ -382,19 +343,20 @@ export default function CoachChatScreen() {
               /* Locked for free users */
               <View style={{
                 flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
-                backgroundColor: inputBg, borderRadius: 24,
+                backgroundColor: colors.bg, borderRadius: 24,
+                borderWidth: 1, borderColor: colors.border,
                 paddingHorizontal: 14, paddingVertical: 11,
               }}>
                 <Ionicons name="lock-closed" size={16} color={accent} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: inputText }}>Pro feature</Text>
-                  <Text style={{ fontSize: 11, color: inputPlaceholder }}>Upgrade to send messages</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>Pro feature</Text>
+                  <Text style={{ fontSize: 11, color: colors.textDim }}>Upgrade to send messages</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('Home', { screen: 'Subscription' })}
                   style={{ backgroundColor: accent, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: dark ? colors.bg : '#fff' }}>Upgrade</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.bg }}>Upgrade</Text>
                 </TouchableOpacity>
               </View>
             )}
