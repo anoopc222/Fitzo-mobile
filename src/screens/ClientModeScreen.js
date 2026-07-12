@@ -327,7 +327,7 @@ export default function ClientModeScreen() {
         )}
 
         {/* ── Shared with Coach toggles ─────────────────────────────── */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
           <Text style={{ flex: 1, fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase' }}>
             Shared with Coach
           </Text>
@@ -335,6 +335,9 @@ export default function ClientModeScreen() {
             {enabledCount}/{PRIVACY_ITEMS.length}
           </Text>
         </View>
+        <Text style={{ fontSize: 12, color: colors.textDim, marginBottom: 10, lineHeight: 17 }}>
+          Choose which health data your coach can view. You stay in full control — toggle off anything you'd prefer to keep private.
+        </Text>
 
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20 }}>
           {PRIVACY_ITEMS.map(({ key, label, icon, desc }, i) => (
