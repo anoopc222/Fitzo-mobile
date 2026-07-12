@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Image,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,116 +28,128 @@ async function fetchMessages(coachId, clientId) {
   return data ?? [];
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
+// ─── Wallpaper background ─────────────────────────────────────────────────────
 
-function Avatar({ name, size = 36, accent }) {
-  const initials = (name ?? '?').split(/[\s_]+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+function WallpaperBg({ dark }) {
+  const bg = dark ? '#0B141A' : '#E8E4DC';
   return (
     <View style={{
-      width: size, height: size, borderRadius: size / 2,
-      backgroundColor: accent + '28',
-      borderWidth: 1.5, borderColor: accent + '50',
-      alignItems: 'center', justifyContent: 'center',
-    }}>
-      <Text style={{ fontSize: size * 0.38, fontWeight: '800', color: accent }}>{initials}</Text>
-    </View>
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: bg,
+    }} />
   );
 }
 
-// ─── Bubble ───────────────────────────────────────────────────────────────────
+// ─── Date divider ─────────────────────────────────────────────────────────────
 
-function Bubble({ msg, isMe, prevMsg, colors, accent, otherName }) {
-  const time = new Date(msg.created_at).toLocaleTimeString(undefined, {
-    hour: '2-digit', minute: '2-digit',
-  });
-
-  const prevIsMe = prevMsg ? prevMsg.sender_id === msg.sender_id : false;
-  const showAvatar = !isMe && !prevIsMe;
-
+function DateDivider({ date, dark }) {
+  const label = (() => {
+    const d = new Date(date);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'TODAY';
+    if (d.toDateString() === yesterday.toDateString()) return 'YESTERDAY';
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
+  })();
   return (
-    <View style={{
-      marginTop: prevIsMe ? 2 : 10,
-      marginHorizontal: 14,
-      alignItems: isMe ? 'flex-end' : 'flex-start',
-    }}>
-      {/* Sender label on first bubble of a group */}
-      {!isMe && showAvatar && (
-        <Text style={{ fontSize: 10, color: colors.textDim, marginBottom: 3, marginLeft: 4, fontWeight: '600' }}>
-          {otherName}
-        </Text>
-      )}
-      <View style={{ maxWidth: '78%' }}>
-
-        {isMe ? (
-          <LinearGradient
-            colors={[accent, accent + 'cc']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={{
-              borderRadius: 20,
-              borderBottomRightRadius: 5,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              shadowColor: accent,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
-              shadowRadius: 6,
-              elevation: 3,
-            }}
-          >
-            <Text style={{ fontSize: typography.sm, lineHeight: 21, color: colors.bg, fontWeight: '500' }}>
-              {msg.message}
-            </Text>
-          </LinearGradient>
-        ) : (
-          <View style={{
-            backgroundColor: colors.bgCard,
-            borderRadius: 20,
-            borderBottomLeftRadius: 5,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}>
-            <Text style={{ fontSize: typography.sm, lineHeight: 21, color: colors.text, fontWeight: '400' }}>
-              {msg.message}
-            </Text>
-          </View>
-        )}
-
-        <Text style={{
-          fontSize: 10,
-          color: colors.textDim,
-          marginTop: 3,
-          marginHorizontal: 4,
-          alignSelf: isMe ? 'flex-end' : 'flex-start',
-        }}>
-          {time}
+    <View style={{ alignItems: 'center', marginVertical: 10 }}>
+      <View style={{
+        backgroundColor: dark ? '#182229' : '#D1F4CC',
+        borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08, shadowRadius: 2, elevation: 1,
+      }}>
+        <Text style={{ fontSize: 11, color: dark ? '#8696A0' : '#54656F', fontWeight: '600', letterSpacing: 0.3 }}>
+          {label}
         </Text>
       </View>
     </View>
   );
 }
 
-// ─── Date Divider ─────────────────────────────────────────────────────────────
+// ─── Bubble ───────────────────────────────────────────────────────────────────
 
-function DateDivider({ date, colors }) {
-  const label = (() => {
-    const d = new Date(date);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    if (d.toDateString() === today.toDateString()) return 'Today';
-    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-  })();
-  return (
-    <View style={{ alignItems: 'center', marginVertical: 14 }}>
+function Bubble({ msg, isMe, prevSame, nextSame, accent, dark }) {
+  const time = new Date(msg.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+  const receivedBg  = dark ? '#202C33' : '#FFFFFF';
+  const receivedText = dark ? '#E9EDEF' : '#111B21';
+  const sentText    = '#FFFFFF';
+  const timeColor   = dark ? (isMe ? '#9BB0B8' : '#8696A0') : (isMe ? 'rgba(255,255,255,0.72)' : '#667781');
+
+  // tail: only on the first bubble of a group
+  const showTail = !prevSame;
+
+  const tailSent = (
+    <View style={{ position: 'absolute', bottom: 0, right: -7 }}>
       <View style={{
-        backgroundColor: colors.bgCard, borderRadius: 20,
-        paddingHorizontal: 14, paddingVertical: 5,
-        borderWidth: 1, borderColor: colors.border,
+        width: 0, height: 0,
+        borderLeftWidth: 8, borderLeftColor: 'transparent',
+        borderBottomWidth: 10, borderBottomColor: isMe ? accent : receivedBg,
+      }} />
+    </View>
+  );
+
+  const tailReceived = (
+    <View style={{ position: 'absolute', bottom: 0, left: -7 }}>
+      <View style={{
+        width: 0, height: 0,
+        borderRightWidth: 8, borderRightColor: 'transparent',
+        borderBottomWidth: 10, borderBottomColor: receivedBg,
+      }} />
+    </View>
+  );
+
+  return (
+    <View style={{
+      marginTop: prevSame ? 2 : 8,
+      marginBottom: nextSame ? 0 : 2,
+      marginHorizontal: 10,
+      alignItems: isMe ? 'flex-end' : 'flex-start',
+    }}>
+      <View style={{
+        maxWidth: '80%',
+        backgroundColor: isMe ? accent : receivedBg,
+        borderRadius: 8,
+        borderBottomRightRadius: isMe && showTail ? 2 : 8,
+        borderBottomLeftRadius: !isMe && showTail ? 2 : 8,
+        paddingTop: 6,
+        paddingLeft: 9,
+        paddingRight: 9,
+        paddingBottom: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: dark ? 0.25 : 0.08,
+        shadowRadius: 1,
+        elevation: 1,
+        position: 'relative',
       }}>
-        <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '600', letterSpacing: 0.3 }}>{label}</Text>
+        {/* Message text + inline time spacer */}
+        <Text style={{
+          fontSize: 14.5,
+          color: isMe ? sentText : receivedText,
+          lineHeight: 20,
+          flexShrink: 1,
+        }}>
+          {msg.message}
+          {/* invisible spacer so text doesn't overlap the time */}
+          <Text style={{ fontSize: 14.5, color: 'transparent' }}>{'  ' + time + '  '}</Text>
+        </Text>
+
+        {/* Time + tick — absolute bottom-right */}
+        <View style={{
+          position: 'absolute', bottom: 4, right: 8,
+          flexDirection: 'row', alignItems: 'center', gap: 2,
+        }}>
+          <Text style={{ fontSize: 10.5, color: timeColor }}>{time}</Text>
+          {isMe && (
+            <Ionicons name="checkmark-done" size={14} color={dark ? '#53BDEB' : 'rgba(255,255,255,0.85)'} />
+          )}
+        </View>
+
+        {/* Bubble tail */}
+        {showTail && (isMe ? tailSent : tailReceived)}
       </View>
     </View>
   );
@@ -145,21 +157,15 @@ function DateDivider({ date, colors }) {
 
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
-function EmptyChat({ otherName, colors, accent }) {
+function EmptyChat({ otherName, dark }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 14 }}>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 12 }}>
       <View style={{
-        width: 80, height: 80, borderRadius: 40,
-        backgroundColor: accent + '15',
-        borderWidth: 1.5, borderColor: accent + '30',
-        alignItems: 'center', justifyContent: 'center',
+        backgroundColor: dark ? '#182229' : '#D1F4CC',
+        borderRadius: 8, paddingHorizontal: 18, paddingVertical: 10,
       }}>
-        <Ionicons name="chatbubbles-outline" size={34} color={accent} />
-      </View>
-      <View style={{ alignItems: 'center', gap: 6 }}>
-        <Text style={{ fontSize: 17, fontWeight: '800', color: colors.text }}>Start the conversation</Text>
-        <Text style={{ fontSize: typography.sm, color: colors.textDim, textAlign: 'center', lineHeight: 20 }}>
-          Send a message to {otherName} — they'll get a notification instantly.
+        <Text style={{ fontSize: 12.5, color: dark ? '#8696A0' : '#54656F', textAlign: 'center' }}>
+          🔒 Messages are end-to-end encrypted.{'\n'}Start the conversation with {otherName}.
         </Text>
       </View>
     </View>
@@ -177,11 +183,12 @@ export default function CoachChatScreen() {
   const qc = useQueryClient();
   const flatRef = useRef(null);
   const [text, setText] = useState('');
-  const [inputHeight, setInputHeight] = useState(40);
 
   const isCoach = user?.id === coachId;
   const otherName = isCoach ? (clientName ?? 'Client') : (coachName ?? 'Coach');
   const accent = colors.accent;
+  // detect dark mode from bg color
+  const dark = colors.bg === '#080810' || colors.bg?.startsWith('#0');
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['coachMessages', coachId, clientId],
@@ -209,13 +216,12 @@ export default function CoachChatScreen() {
     },
     onSuccess: () => {
       setText('');
-      setInputHeight(40);
       qc.invalidateQueries({ queryKey: ['coachMessages', coachId, clientId] });
       setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
     },
   });
 
-  // Build items with date dividers
+  // Build items list with date dividers
   const items = [];
   let lastDate = null;
   for (const msg of messages) {
@@ -225,183 +231,176 @@ export default function CoachChatScreen() {
       lastDate = d;
     }
     items.push({ type: 'msg', ...msg, key: msg.id });
-  }
+}
 
   const canSend = text.trim().length > 0 && !sending;
+  const initials = otherName.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+  const headerBg  = dark ? '#202C33' : '#008069';
+  const headerText = '#FFFFFF';
+  const inputBarBg = dark ? '#1F2C34' : '#F0F2F5';
+  const inputBg    = dark ? '#2A3942' : '#FFFFFF';
+  const inputText  = dark ? '#E9EDEF' : '#111B21';
+  const inputPlaceholder = dark ? '#8696A0' : '#667781';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1 }}>
+      <WallpaperBg dark={dark} />
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <View style={{
-        flexDirection: 'row', alignItems: 'center', gap: 12,
-        paddingHorizontal: 14, paddingVertical: 10,
-        borderBottomWidth: 1, borderBottomColor: colors.border,
-        backgroundColor: colors.bg,
-      }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={{
-            width: 36, height: 36, borderRadius: 18,
-            backgroundColor: colors.bgCard,
-            borderWidth: 1, borderColor: colors.border,
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+
+        {/* ── Header ──────────────────────────────────────────────────── */}
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 10,
+          paddingHorizontal: 10, paddingVertical: 10,
+          backgroundColor: headerBg,
+        }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="arrow-back" size={22} color={headerText} />
+          </TouchableOpacity>
+
+          {/* Avatar */}
+          <View style={{
+            width: 40, height: 40, borderRadius: 20,
+            backgroundColor: accent + '44',
             alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
-        </TouchableOpacity>
+          }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>{initials}</Text>
+          </View>
 
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text, letterSpacing: 0.2 }}>
-            {otherName}
-          </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
-            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#22c55e' }} />
-            <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '500' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: headerText }}>{otherName}</Text>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 0 }}>
               {isCoach ? 'Client' : 'Your Coach'}
             </Text>
           </View>
+
+          {/* Right icons — video/call removed per request */}
+          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="ellipsis-vertical" size={20} color={headerText} />
+          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* ── Messages ───────────────────────────────────────────────────── */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
-        {isLoading ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator size="large" color={accent} />
-          </View>
-        ) : messages.length === 0 ? (
-          <EmptyChat otherName={otherName} colors={colors} accent={accent} />
-        ) : (
-          <FlatList
-            ref={flatRef}
-            data={items}
-            keyExtractor={item => item.key}
-            contentContainerStyle={{ paddingVertical: 8, paddingBottom: 12 }}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item, index }) => {
-              if (item.type === 'date') return <DateDivider date={item.date} colors={colors} />;
-              const msgItems = items.filter(i => i.type === 'msg');
-              const msgIdx = msgItems.findIndex(m => m.key === item.key);
-              const prevMsg = msgIdx > 0 ? msgItems[msgIdx - 1] : null;
-              return (
-                <Bubble
-                  msg={item}
-                  isMe={item.sender_id === user?.id}
-                  prevMsg={prevMsg}
-                  colors={colors}
-                  accent={accent}
-                  otherName={otherName}
-                />
-              );
-            }}
-          />
-        )}
-
-        {/* ── Input bar / Pro gate ────────────────────────────────────── */}
-        {isPro ? (
-          <View style={{
-            flexDirection: 'row', alignItems: 'flex-end', gap: 10,
-            paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12,
-            borderTopWidth: 1, borderTopColor: colors.border,
-            backgroundColor: colors.bg,
-          }}>
-            <View style={{
-              flex: 1,
-              backgroundColor: colors.bgCard,
-              borderRadius: 24,
-              borderWidth: 1.5,
-              borderColor: text.trim() ? accent + '60' : colors.border,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              minHeight: 44,
-              justifyContent: 'center',
-            }}>
-              <TextInput
-                value={text}
-                onChangeText={setText}
-                placeholder="Type a message..."
-                placeholderTextColor={colors.textDim}
-                multiline
-                onContentSizeChange={e => setInputHeight(Math.min(e.nativeEvent.contentSize.height, 110))}
-                style={{
-                  height: Math.max(inputHeight, 28),
-                  fontSize: typography.sm,
-                  color: colors.text,
-                  lineHeight: 21,
-                  padding: 0,
-                }}
-              />
+        {/* ── Messages ────────────────────────────────────────────────── */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior="padding"
+        >
+          {isLoading ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator size="large" color={accent} />
             </View>
+          ) : messages.length === 0 ? (
+            <EmptyChat otherName={otherName} dark={dark} />
+          ) : (
+            <FlatList
+              ref={flatRef}
+              data={items}
+              keyExtractor={item => item.key}
+              contentContainerStyle={{ paddingVertical: 6, paddingBottom: 6 }}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item, index }) => {
+                if (item.type === 'date') return <DateDivider date={item.date} dark={dark} />;
+                const msgItems = items.filter(i => i.type === 'msg');
+                const idx = msgItems.findIndex(m => m.key === item.key);
+                const prev = msgItems[idx - 1];
+                const next = msgItems[idx + 1];
+                const prevSame = prev && prev.sender_id === item.sender_id;
+                const nextSame = next && next.sender_id === item.sender_id;
+                return (
+                  <Bubble
+                    msg={item}
+                    isMe={item.sender_id === user?.id}
+                    prevSame={prevSame}
+                    nextSame={nextSame}
+                    accent={accent}
+                    dark={dark}
+                  />
+                );
+              }}
+            />
+          )}
 
-            <TouchableOpacity
-              onPress={() => canSend && send(text.trim())}
-              disabled={!canSend}
-              activeOpacity={0.8}
-            >
-              {canSend ? (
-                <LinearGradient
-                  colors={[accent, accent + 'bb']}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          {/* ── Input bar ─────────────────────────────────────────────── */}
+          <View style={{
+            flexDirection: 'row', alignItems: 'flex-end',
+            paddingHorizontal: 8, paddingVertical: 6, gap: 8,
+            backgroundColor: inputBarBg,
+          }}>
+            {isPro ? (
+              <>
+                {/* Text input pill */}
+                <View style={{
+                  flex: 1, flexDirection: 'row', alignItems: 'flex-end',
+                  backgroundColor: inputBg, borderRadius: 24,
+                  paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 10 : 4,
+                  minHeight: 44,
+                }}>
+                  <TouchableOpacity style={{ paddingBottom: Platform.OS === 'ios' ? 0 : 4, marginRight: 8 }}>
+                    <Ionicons name="happy-outline" size={22} color={inputPlaceholder} />
+                  </TouchableOpacity>
+                  <TextInput
+                    value={text}
+                    onChangeText={setText}
+                    placeholder="Message"
+                    placeholderTextColor={inputPlaceholder}
+                    multiline
+                    style={{
+                      flex: 1,
+                      fontSize: 15,
+                      color: inputText,
+                      maxHeight: 120,
+                      paddingTop: 0,
+                      paddingBottom: 0,
+                      lineHeight: 20,
+                    }}
+                  />
+                </View>
+
+                {/* Send / Mic button */}
+                <TouchableOpacity
+                  onPress={() => canSend && send(text.trim())}
+                  activeOpacity={0.8}
                   style={{
-                    width: 44, height: 44, borderRadius: 22,
+                    width: 46, height: 46, borderRadius: 23,
+                    backgroundColor: accent,
                     alignItems: 'center', justifyContent: 'center',
-                    shadowColor: accent, shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.4, shadowRadius: 8, elevation: 4,
+                    shadowColor: accent,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.4, shadowRadius: 6, elevation: 4,
                   }}
                 >
                   {sending
-                    ? <ActivityIndicator size="small" color={colors.bg} />
-                    : <Ionicons name="send" size={18} color={colors.bg} />
+                    ? <ActivityIndicator size="small" color={dark ? colors.bg : '#fff'} />
+                    : canSend
+                      ? <Ionicons name="send" size={18} color={dark ? colors.bg : '#fff'} style={{ marginLeft: 2 }} />
+                      : <Ionicons name="mic" size={20} color={dark ? colors.bg : '#fff'} />
                   }
-                </LinearGradient>
-              ) : (
-                <View style={{
-                  width: 44, height: 44, borderRadius: 22,
-                  backgroundColor: colors.bgCard,
-                  borderWidth: 1, borderColor: colors.border,
-                  alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Ionicons name="send" size={18} color={colors.textDim} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              /* Locked for free users */
+              <View style={{
+                flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
+                backgroundColor: inputBg, borderRadius: 24,
+                paddingHorizontal: 14, paddingVertical: 11,
+              }}>
+                <Ionicons name="lock-closed" size={16} color={accent} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: inputText }}>Pro feature</Text>
+                  <Text style={{ fontSize: 11, color: inputPlaceholder }}>Upgrade to send messages</Text>
                 </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        ) : (
-          /* Free / trial users — locked input */
-          <View style={{
-            borderTopWidth: 1, borderTopColor: colors.border,
-            backgroundColor: colors.bg,
-            paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12,
-            gap: 8,
-          }}>
-            <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: 10,
-              backgroundColor: colors.bgCard, borderRadius: 14,
-              borderWidth: 1, borderColor: accent + '30',
-              paddingHorizontal: 14, paddingVertical: 10,
-            }}>
-              <Ionicons name="lock-closed" size={16} color={accent} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: typography.sm, fontWeight: '700', color: colors.text }}>Pro feature</Text>
-                <Text style={{ fontSize: 11, color: colors.textDim }}>Upgrade to send messages</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Home', { screen: 'Subscription' })}
+                  style={{ backgroundColor: accent, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: dark ? colors.bg : '#fff' }}>Upgrade</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Home', { screen: 'Subscription' })}
-                style={{ backgroundColor: accent, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 }}
-                activeOpacity={0.8}
-              >
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.bg }}>Upgrade</Text>
-              </TouchableOpacity>
-            </View>
+            )}
           </View>
-        )}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
