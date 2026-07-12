@@ -509,22 +509,8 @@ export default function CoachModeScreen() {
                 </TouchableOpacity>
               );
             })}
-            <Text style={{ fontSize: 11, color: colors.textDim, textAlign: 'center', marginBottom: 16 }}>
-              Tap a client to view stats
-            </Text>
           </View>
         )}
-
-        {/* ── Bottom link ──────────────────────────────────────────── */}
-        <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 20 }} />
-        <TouchableOpacity
-          onPress={() => navigation.navigate('ClientMode')}
-          activeOpacity={0.75}
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 }}
-        >
-          <Text style={{ fontSize: 13, color: colors.textDim }}>Viewing as a client?</Text>
-          <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.accent }}>Open Client page →</Text>
-        </TouchableOpacity>
 
       </ScrollView>
 
