@@ -45,16 +45,27 @@ export default function OnboardingScreen({ onComplete }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user');
 
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        goal,
-        height_cm: height ? parseFloat(height) : null,
-        sex,
-        weight_goal_kg: weight ? parseFloat(weight) : null,
-        step_goal: 10000,
-        sleep_goal_hours: 8,
-        calorie_target: 2000,
-      });
+      // Fetch existing profile so we never overwrite settings the user already configured
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('step_goal, sleep_goal_hours, calorie_target, protein_target, weight_goal_kg, height_cm, sex, goal')
+        .eq('id', user.id)
+        .single();
+
+      const updates = { id: user.id };
+
+      // Only apply onboarding values if the user actually entered them
+      if (goal) updates.goal = goal;
+      if (height) updates.height_cm = parseFloat(height);
+      if (sex) updates.sex = sex;
+      if (weight) updates.weight_goal_kg = parseFloat(weight);
+
+      // Only set defaults for fields not already configured in Supabase
+      if (!existing?.step_goal)        updates.step_goal        = 10000;
+      if (!existing?.sleep_goal_hours) updates.sleep_goal_hours = 8;
+      if (!existing?.calorie_target)   updates.calorie_target   = 2000;
+
+      await supabase.from('profiles').upsert(updates);
 
       if (weight) {
         await supabase.from('weight_logs').insert({
@@ -64,7 +75,11 @@ export default function OnboardingScreen({ onComplete }) {
         });
       }
 
-      await AsyncStorage.setItem('fitzo:onboarded', 'true');
+      // Mark both onboarding and paywall as seen so neither triggers again
+      await AsyncStorage.multiSet([
+        ['fitzo:onboarded', 'true'],
+        [`fitzo:seenOnboardingPaywall:${user.id}`, 'true'],
+      ]);
       onComplete();
     } catch (err) {
       console.error('Onboarding save error:', err);
