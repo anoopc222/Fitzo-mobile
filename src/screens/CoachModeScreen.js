@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { weight } from '../theme/typography';
 
@@ -515,6 +516,7 @@ function ClientNotesSheet({ visible, onClose, link, colors, onSaved }) {
 export default function CoachModeScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { isPro } = useSubscription();
   const navigation = useNavigation();
   const qc = useQueryClient();
   const userId = user?.id;
@@ -711,6 +713,11 @@ export default function CoachModeScreen() {
           <Text style={{ flex: 1, fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase' }}>
             Active Clients
           </Text>
+          {!isPro && (
+            <Text style={{ fontSize: 10, color: colors.textDim, marginRight: 6 }}>
+              {active.length}/2 free
+            </Text>
+          )}
           <Text style={{ fontSize: 13, fontWeight: weight.black, color: colors.accent }}>
             {String(active.length).padStart(2, '0')}
           </Text>
@@ -818,22 +825,52 @@ export default function CoachModeScreen() {
           </View>
         )}
 
+        {/* ── Free tier limit banner ───────────────────────────────── */}
+        {!isPro && active.length >= 2 && (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Subscription')}
+            activeOpacity={0.85}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.accent + '15', borderRadius: 16, borderWidth: 1, borderColor: colors.accent + '40', padding: 14, marginBottom: 20 }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.accent + '25', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="lock-closed" size={16} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.text }}>Free plan: 2 client limit reached</Text>
+              <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 2 }}>Upgrade to Pro for unlimited clients →</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
       </ScrollView>
 
       {/* ── FAB ─────────────────────────────────────────────────────── */}
       <TouchableOpacity
-        onPress={() => setAddSheetVisible(true)}
+        onPress={() => {
+          if (!isPro && active.length >= 2) {
+            Alert.alert(
+              'Client Limit Reached',
+              'Free coaches can manage up to 2 clients. Upgrade to Pro for unlimited clients.',
+              [
+                { text: 'Not Now', style: 'cancel' },
+                { text: 'Upgrade to Pro', onPress: () => navigation.navigate('Subscription') },
+              ]
+            );
+            return;
+          }
+          setAddSheetVisible(true);
+        }}
         activeOpacity={0.85}
         style={{
           position: 'absolute', bottom: 28, right: 20,
           width: 58, height: 58, borderRadius: 29,
-          backgroundColor: colors.accent,
+          backgroundColor: !isPro && active.length >= 2 ? colors.textDim : colors.accent,
           alignItems: 'center', justifyContent: 'center',
           shadowColor: colors.accent, shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.45, shadowRadius: 10, elevation: 8,
         }}
       >
-        <Ionicons name="add" size={30} color={colors.bg} />
+        <Ionicons name={!isPro && active.length >= 2 ? 'lock-closed' : 'add'} size={!isPro && active.length >= 2 ? 22 : 30} color={colors.bg} />
       </TouchableOpacity>
 
       {/* ── Modals ──────────────────────────────────────────────────── */}
