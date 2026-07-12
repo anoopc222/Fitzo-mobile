@@ -336,35 +336,43 @@ export default function ClientModeScreen() {
           </Text>
         </View>
         <Text style={{ fontSize: 12, color: colors.textDim, marginBottom: 10, lineHeight: 17 }}>
-          Choose which health data your coach can view. You stay in full control — toggle off anything you'd prefer to keep private.
+          {isPro
+            ? 'Control exactly what your coach can see. Toggle off anything you\'d prefer to keep private.'
+            : 'Your coach can see all your health data. Upgrade to Pro to restrict specific categories.'}
         </Text>
 
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20 }}>
-          {PRIVACY_ITEMS.map(({ key, label, icon, desc }, i) => (
-            <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: i < PRIVACY_ITEMS.length - 1 ? 1 : 0, borderBottomColor: colors.border, opacity: isPro ? 1 : 0.45 }}>
-              <View style={{ width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: (isPro && visibility[key]) ? colors.accent + '18' : colors.bg }}>
-                <Ionicons name={isPro ? icon : 'lock-closed-outline'} size={18} color={(isPro && visibility[key]) ? colors.accent : colors.textDim} />
+          {PRIVACY_ITEMS.map(({ key, label, icon, desc }, i) => {
+            const isOn = isPro ? !!visibility[key] : true;
+            return (
+              <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: i < PRIVACY_ITEMS.length - 1 ? 1 : 0, borderBottomColor: colors.border }}>
+                <View style={{ width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: isOn ? colors.accent + '18' : colors.bg }}>
+                  <Ionicons name={icon} size={18} color={isOn ? colors.accent : colors.textDim} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: weight.semibold, color: colors.text }}>{label}</Text>
+                  <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>{desc}</Text>
+                </View>
+                <Switch
+                  value={isOn}
+                  onValueChange={v => isPro && handleToggle(key, v)}
+                  trackColor={{ false: colors.border, true: colors.accent + '88' }}
+                  thumbColor={isOn ? colors.accent : colors.textDim}
+                  ios_backgroundColor={colors.border}
+                  disabled={!isPro || !loaded}
+                />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: weight.semibold, color: colors.text }}>{label}</Text>
-                <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>{desc}</Text>
-              </View>
-              <Switch
-                value={isPro ? !!visibility[key] : true}
-                onValueChange={v => isPro && handleToggle(key, v)}
-                trackColor={{ false: colors.border, true: colors.accent + '88' }}
-                thumbColor={(isPro && visibility[key]) ? colors.accent : colors.textDim}
-                ios_backgroundColor={colors.border}
-                disabled={!isPro || !loaded}
-              />
-            </View>
-          ))}
+            );
+          })}
 
           {!isPro && (
             <TouchableOpacity onPress={() => navigation.navigate('Subscription')} activeOpacity={0.8}
-              style={{ margin: 14, backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <Ionicons name="rocket" size={16} color={colors.bg} />
-              <Text style={{ fontSize: 14, fontWeight: weight.bold, color: colors.bg }}>Upgrade to Pro to unlock</Text>
+              style={{ margin: 14, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.accent + '12', borderRadius: 12, paddingVertical: 11, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.accent + '30' }}>
+              <Ionicons name="lock-open-outline" size={15} color={colors.accent} />
+              <Text style={{ flex: 1, fontSize: 13, color: colors.textDim, lineHeight: 17 }}>
+                <Text style={{ fontWeight: weight.bold, color: colors.text }}>Upgrade to Pro</Text> to control what your coach can see
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.accent} />
             </TouchableOpacity>
           )}
         </View>
