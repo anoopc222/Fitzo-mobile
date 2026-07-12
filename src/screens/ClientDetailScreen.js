@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Svg, Line, Text as SvgText, Rect } from 'react-native-svg';
+import { Svg, Line, Text as SvgText, Rect, Circle, Polyline, Path, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -152,48 +152,118 @@ function LockedSection({ colors }) {
   );
 }
 
-// ─── Bar chart (steps / sleep / calories) ────────────────────────────────────
+// ─── Slim Pill chart (steps / calories) ──────────────────────────────────────
 
-function BarChart({ bars, color, goalLine, maxOverride, labelKey, valueKey, valueSuffix, colors }) {
+function SlimPillChart({ bars, color, goalLine, maxOverride, labelKey, valueKey, valueSuffix, colors }) {
   if (!bars.length) return null;
   const cW = W - 64;
-  const cH = 100;
+  const cH = 110;
   const padB = 22;
-  const padT = 8;
-  const padLR = 4;
+  const padT = 20;
+  const padLR = 6;
   const chartH = cH - padB - padT;
+  const n = bars.length;
   const vals = bars.map(b => b[valueKey] ?? 0);
   const maxVal = maxOverride ?? Math.max(...vals, 1);
-  const barW = Math.max(8, (cW - padLR * 2) / bars.length - 4);
-  const spacing = (cW - padLR * 2 - barW * bars.length) / Math.max(bars.length - 1, 1);
+  const slotW = (cW - padLR * 2) / n;
+  const barW = Math.min(13, slotW * 0.42);
   const goalY = goalLine != null ? padT + (1 - Math.min(1, goalLine / maxVal)) * chartH : null;
+  const fmtVal = v => valueSuffix ? `${v}${valueSuffix}` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
 
   return (
     <Svg width={cW} height={cH}>
-      {/* Goal dashed line */}
       {goalY != null && (
         <Line x1={padLR} y1={goalY} x2={cW - padLR} y2={goalY} stroke="#34d399" strokeWidth={1} strokeDasharray="4,3" />
       )}
       {bars.map((b, i) => {
         const val = b[valueKey] ?? 0;
         const pct = Math.min(1, val / maxVal);
-        const barH = Math.max(3, pct * chartH);
-        const x = padLR + i * (barW + spacing);
+        const barH = Math.max(4, pct * chartH);
+        const cx = padLR + slotW * i + slotW / 2;
+        const x = cx - barW / 2;
         const y = padT + chartH - barH;
         const met = goalLine != null ? val >= goalLine : null;
-        const barColor = met === null ? color : met ? '#34d399' : '#f87171';
+        const barColor = met === true ? '#34d399' : color;
         return (
           <React.Fragment key={i}>
-            <Rect x={x} y={padT} width={barW} height={chartH} rx={4} fill={colors.border + '40'} />
-            <Rect x={x} y={y} width={barW} height={barH} rx={4} fill={barColor} />
-            <SvgText x={x + barW / 2} y={cH - 4} fontSize={9} fill={colors.textDim} textAnchor="middle">
-              {b[labelKey]}
-            </SvgText>
+            <Rect x={x} y={padT} width={barW} height={chartH} rx={barW / 2} fill={barColor + '22'} />
+            <Rect x={x} y={y} width={barW} height={barH} rx={barW / 2} fill={barColor} />
             {val > 0 && (
-              <SvgText x={x + barW / 2} y={y - 3} fontSize={9} fill={barColor} textAnchor="middle" fontWeight="bold">
-                {valueSuffix ? `${val}${valueSuffix}` : val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
+              <SvgText x={cx} y={Math.max(y - 5, padT - 3)} fontSize={8.5} fill={barColor} textAnchor="middle" fontWeight="bold">
+                {fmtVal(val)}
               </SvgText>
             )}
+            <SvgText x={cx} y={cH - 4} fontSize={8.5} fill={colors.textDim} textAnchor="middle">
+              {b[labelKey]}
+            </SvgText>
+          </React.Fragment>
+        );
+      })}
+    </Svg>
+  );
+}
+
+// ─── Sparkline + dots chart (sleep) ──────────────────────────────────────────
+
+function SparklineChart({ points, color, goalLine, maxOverride, labelKey, valueKey, valueSuffix, chartId, colors }) {
+  if (!points.length) return null;
+  const cW = W - 64;
+  const cH = 115;
+  const padB = 22;
+  const padT = 18;
+  const padLR = 16;
+  const chartH = cH - padB - padT;
+  const n = points.length;
+  const vals = points.map(p => p[valueKey] ?? 0);
+  const mn = Math.min(...vals) * 0.88;
+  const rawMax = Math.max(...vals, goalLine ?? 0);
+  const mx = maxOverride ?? rawMax * 1.06;
+  const range = mx - mn || 1;
+
+  const toX = i => padLR + i * (cW - padLR * 2) / Math.max(n - 1, 1);
+  const toY = v => padT + chartH * (1 - (v - mn) / range);
+  const fmtVal = v => valueSuffix ? `${v}${valueSuffix}` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
+
+  const ptStr = points.map((p, i) => `${toX(i)},${toY(p[valueKey] ?? 0)}`).join(' ');
+  const areaPath = `M${toX(0)},${toY(vals[0])} ` +
+    points.map((p, i) => `L${toX(i)},${toY(p[valueKey] ?? 0)}`).join(' ') +
+    ` L${toX(n - 1)},${padT + chartH} L${toX(0)},${padT + chartH} Z`;
+  const goalY = goalLine != null ? toY(goalLine) : null;
+  const gradId = `spk_${chartId}`;
+
+  return (
+    <Svg width={cW} height={cH}>
+      <Defs>
+        <SvgLinearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor={color} stopOpacity={0.28} />
+          <Stop offset="100%" stopColor={color} stopOpacity={0} />
+        </SvgLinearGradient>
+      </Defs>
+      <Path d={areaPath} fill={`url(#${gradId})`} />
+      {goalY != null && (
+        <Line x1={padLR} y1={goalY} x2={cW - padLR} y2={goalY} stroke="#34d399" strokeWidth={1} strokeDasharray="4,3" />
+      )}
+      <Polyline points={ptStr} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((p, i) => {
+        const val = p[valueKey] ?? 0;
+        const x = toX(i);
+        const y = toY(val);
+        const met = goalLine != null ? val >= goalLine : null;
+        const dotColor = met === true ? '#34d399' : color;
+        const isLast = i === n - 1;
+        const above = y > padT + 14;
+        const ly = above ? y - 8 : y + 13;
+        return (
+          <React.Fragment key={i}>
+            {isLast && <Circle cx={x} cy={y} r={7.5} fill={dotColor} opacity={0.15} />}
+            <Circle cx={x} cy={y} r={isLast ? 4.5 : 3.5} fill={colors.bgCard} stroke={dotColor} strokeWidth={2} />
+            {isLast && <Circle cx={x} cy={y} r={2} fill={dotColor} />}
+            <SvgText x={x} y={ly} fontSize={8.5} fill={dotColor} textAnchor="middle" fontWeight="bold">
+              {fmtVal(val)}
+            </SvgText>
+            <SvgText x={x} y={cH - 4} fontSize={8.5} fill={colors.textDim} textAnchor="middle">
+              {p[labelKey]}
+            </SvgText>
           </React.Fragment>
         );
       })}
@@ -511,7 +581,7 @@ export default function ClientDetailScreen() {
             <Text style={{ fontSize: 13, color: colors.textDim }}>No step data</Text>
           ) : (
             <>
-              <BarChart
+              <SlimPillChart
                 bars={stepBars} color="#22c55e"
                 goalLine={profile?.step_goal} maxOverride={profile?.step_goal ? Math.max(profile.step_goal * 1.1, Math.max(...stepBars.map(b => b.steps))) : undefined}
                 labelKey="label" valueKey="steps" colors={colors}
@@ -536,12 +606,12 @@ export default function ClientDetailScreen() {
             <Text style={{ fontSize: 13, color: colors.textDim }}>No sleep logged</Text>
           ) : (
             <>
-              <BarChart
-                bars={sleepBars} color="#6366f1"
+              <SparklineChart
+                points={sleepBars} color="#6366f1"
                 goalLine={profile?.sleep_goal_hours}
                 labelKey="label" valueKey="hours" valueSuffix="h"
                 maxOverride={Math.max(10, ...sleepBars.map(b => b.hours))}
-                colors={colors}
+                chartId="sleep" colors={colors}
               />
               {profile?.sleep_goal_hours && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 }}>
@@ -563,7 +633,7 @@ export default function ClientDetailScreen() {
             <Text style={{ fontSize: 13, color: colors.textDim }}>No food logged</Text>
           ) : (
             <>
-              <BarChart
+              <SlimPillChart
                 bars={calBars} color="#ef4444"
                 goalLine={profile?.calorie_target}
                 labelKey="label" valueKey="calories" colors={colors}
