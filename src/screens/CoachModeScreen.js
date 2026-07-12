@@ -729,10 +729,10 @@ export default function CoachModeScreen() {
               // Respect client's coach_visibility — if a key is false, show '—' for that stat
               const vis = { workouts: true, weight: true, steps: true, sleep: true, food: true, ...(link.client?.coach_visibility ?? {}) };
               const STATS = [
-                { icon: 'barbell-outline',  color: colors.accent, visKey: 'workouts', label: 'Workouts',   sublabel: 'Sessions this week',    value: ws?.workouts ?? 0,  fmt: v => String(v) },
-                { icon: 'footsteps-outline',color: '#22c55e',     visKey: 'steps',    label: 'Avg Steps',  sublabel: 'Daily average, 7 days', value: ws?.avgSteps ?? 0,  fmt: v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : (v || '—') },
-                { icon: 'moon-outline',     color: '#6366f1',     visKey: 'sleep',    label: 'Avg Sleep',  sublabel: 'Hours per night, 7 days',value: ws?.avgSleep ?? 0,  fmt: v => v ? `${v}h` : '—' },
-                { icon: 'scale-outline',    color: '#f97316',     visKey: 'weight',   label: 'Avg Weight', sublabel: 'Body weight, 7 days',   value: ws?.avgWeight ?? 0, fmt: v => v ? `${v}kg` : '—' },
+                { icon: 'barbell-outline',  color: colors.accent, visKey: 'workouts', label: 'WORKOUTS',   sublabel: 'this week',  value: ws?.workouts ?? 0,  fmt: v => String(v) },
+                { icon: 'footsteps-outline',color: '#22c55e',     visKey: 'steps',    label: 'AVG STEPS',  sublabel: '7-day avg',  value: ws?.avgSteps ?? 0,  fmt: v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : (v || '—') },
+                { icon: 'moon-outline',     color: '#6366f1',     visKey: 'sleep',    label: 'AVG SLEEP',  sublabel: '7-day avg',  value: ws?.avgSleep ?? 0,  fmt: v => v ? `${v}h` : '—' },
+                { icon: 'scale-outline',    color: '#f97316',     visKey: 'weight',   label: 'AVG WEIGHT', sublabel: '7-day avg',  value: ws?.avgWeight ?? 0, fmt: v => v ? `${v}kg` : '—' },
               ];
               return (
                 <TouchableOpacity
@@ -778,32 +778,31 @@ export default function CoachModeScreen() {
 
                   {/* ── Week at a glance ── */}
                   <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 10 }} />
-                  {/* Single stats card */}
-                  <View style={{ backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
-                    {/* Card header */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                      <Ionicons name="calendar-outline" size={12} color={colors.textDim} />
-                      <Text style={{ fontSize: 10, color: colors.textDim, fontWeight: weight.bold, letterSpacing: 0.5 }}>
-                        THIS WEEK · {currentWeekLabel()}
-                      </Text>
-                    </View>
-                    {/* Stat rows */}
+                  {/* Week header */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10 }}>
+                    <Ionicons name="calendar-outline" size={11} color={colors.textDim} />
+                    <Text style={{ fontSize: 10, color: colors.textDim, fontWeight: weight.bold, letterSpacing: 0.4 }}>
+                      THIS WEEK · {currentWeekLabel()}
+                    </Text>
+                  </View>
+                  {/* 4-column grid */}
+                  <View style={{ flexDirection: 'row' }}>
                     {STATS.map(({ icon, color, visKey, label, sublabel, value, fmt }, idx, arr) => {
                       const allowed = vis[visKey] !== false;
-                      const displayVal = allowed ? fmt(value) : '—';
                       return (
-                        <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: colors.border }}>
-                          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: allowed ? color + '18' : colors.border + '50', alignItems: 'center', justifyContent: 'center' }}>
-                            <Ionicons name={icon} size={16} color={allowed ? color : colors.textDim} />
+                        <React.Fragment key={label}>
+                          <View style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                            <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: allowed ? color + '18' : colors.border + '50', alignItems: 'center', justifyContent: 'center' }}>
+                              <Ionicons name={icon} size={15} color={allowed ? color : colors.textDim} />
+                            </View>
+                            <Text style={{ fontSize: 15, fontWeight: weight.black, color: allowed ? colors.text : colors.textDim }}>
+                              {allowed ? fmt(value) : '—'}
+                            </Text>
+                            <Text style={{ fontSize: 9, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 0.3, textAlign: 'center' }}>{label}</Text>
+                            <Text style={{ fontSize: 9, color: colors.textDim, textAlign: 'center', marginTop: -2 }}>{sublabel}</Text>
                           </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 13, fontWeight: weight.semibold, color: colors.text }}>{label}</Text>
-                            <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>{sublabel}</Text>
-                          </View>
-                          <Text style={{ fontSize: 16, fontWeight: weight.black, color: allowed ? colors.text : colors.textDim }}>
-                            {displayVal}
-                          </Text>
-                        </View>
+                          {idx < arr.length - 1 && <View style={{ width: 1, backgroundColor: colors.border }} />}
+                        </React.Fragment>
                       );
                     })}
                   </View>
