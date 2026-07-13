@@ -21,7 +21,6 @@ const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
   {
     title: t('more.sectionBodyHealth'),
     items: [
-      { label: t('more.progress'),          icon: 'trending-up',   target: ['Home', 'Progress'],           color: colors.good },
       { label: t('more.measurements'),      icon: 'body',           target: ['Home', 'Measurements'],       color: colors.purple },
       { label: t('more.dietPlan'),          icon: 'nutrition',      target: ['Home', 'Diet'],               color: colors.accent2 },
     ],
