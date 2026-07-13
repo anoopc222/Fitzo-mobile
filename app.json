@@ -45,7 +45,8 @@
           "backgroundColor": "#0c0c0f"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-audio"
     ],
     "updates": {
       "url": "https://u.expo.dev/2f23cd2b-840c-441c-a590-34b3af3d30fb",
