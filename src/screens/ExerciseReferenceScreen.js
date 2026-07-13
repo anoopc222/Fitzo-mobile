@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import { EXERCISE_IMAGES } from '../lib/exerciseImages';
@@ -24,7 +25,7 @@ const ALL_EXERCISES = Object.keys(EXERCISE_IMAGES)
   }))
   .sort((a, b) => a.key.localeCompare(b.key));
 
-function ExerciseModal({ item, onClose, colors }) {
+function ExerciseModal({ item, onClose, colors, t }) {
   if (!item) return null;
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -41,13 +42,13 @@ function ExerciseModal({ item, onClose, colors }) {
             resizeMode="contain"
           />
           <Text style={[styles.modalCredit, { color: colors.textDim }]}>
-            Image: wger.de (CC BY 4.0)
+            {t('exerciseRef.imageCredit')}
           </Text>
           <TouchableOpacity
             onPress={onClose}
             style={[styles.modalClose, { backgroundColor: colors.accent }]}
           >
-            <Text style={{ color: '#000', fontWeight: weight.bold, fontSize: 13 }}>Close</Text>
+            <Text style={{ color: '#000', fontWeight: weight.bold, fontSize: 13 }}>{t('exerciseRef.close')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -57,6 +58,7 @@ function ExerciseModal({ item, onClose, colors }) {
 
 export default function ExerciseReferenceScreen({ navigation }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
 
@@ -127,14 +129,14 @@ export default function ExerciseReferenceScreen({ navigation }) {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.bg }]}>
-      <ScreenHeader title="Exercise Reference" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('exerciseRef.title')} onBack={() => navigation.goBack()} />
 
       {/* Search — matches ProgressScreen style */}
       <View style={[styles.searchWrap, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <Ionicons name="search" size={16} color={colors.textDim} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search exercises…"
+          placeholder={t('exerciseRef.searchPlaceholder')}
           placeholderTextColor={colors.textDim}
           value={query}
           onChangeText={setQuery}
@@ -149,7 +151,7 @@ export default function ExerciseReferenceScreen({ navigation }) {
       </View>
 
       <Text style={[styles.countLabel, { color: colors.textDim }]}>
-        {filtered.length} exercise{filtered.length !== 1 ? 's' : ''}
+        {t('exerciseRef.exerciseCount', { count: filtered.length })}
       </Text>
 
       <FlatList
@@ -161,7 +163,7 @@ export default function ExerciseReferenceScreen({ navigation }) {
         style={{ flex: 1 }}
       />
 
-      <ExerciseModal item={selected} onClose={() => setSelected(null)} colors={colors} />
+      <ExerciseModal item={selected} onClose={() => setSelected(null)} colors={colors} t={t} />
     </SafeAreaView>
   );
 }

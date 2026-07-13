@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { weight } from '../theme/typography';
+import { useTranslation } from 'react-i18next';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ function Avatar({ name, size = 44, fontSize = 16, bg, color }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ClientModeScreen() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { user } = useAuth();
   const { isPro } = useSubscription();
@@ -245,8 +247,8 @@ export default function ClientModeScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 20, fontWeight: weight.black, color: colors.text }}>Coach Zone</Text>
-          <Text style={{ fontSize: 11, fontWeight: weight.bold, color: '#22c55e', letterSpacing: 1.2 }}>CLIENT VIEW</Text>
+          <Text style={{ fontSize: 20, fontWeight: weight.black, color: colors.text }}>{t('coach.title')}</Text>
+          <Text style={{ fontSize: 11, fontWeight: weight.bold, color: '#22c55e', letterSpacing: 1.2 }}>{t('coach.clientView')}</Text>
         </View>
         <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#22c55e18', borderWidth: 1, borderColor: '#22c55e35', alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="person-outline" size={18} color="#22c55e" />
@@ -263,7 +265,7 @@ export default function ClientModeScreen() {
         {!activeCoach && pendingInvites.length > 0 && (
           <View style={{ marginBottom: 20 }}>
             <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
-              Coach Invitations ({pendingInvites.length})
+              {t('coach.coachInvitations', { count: pendingInvites.length })}
             </Text>
             {pendingInvites.map(invite => {
               const name = invite.coach?.full_name ?? 'Coach';
@@ -287,12 +289,12 @@ export default function ClientModeScreen() {
                     <TouchableOpacity onPress={() => handleAcceptInvite(invite)} activeOpacity={0.8}
                       style={{ flex: 1, backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
                       <Ionicons name="checkmark-circle" size={16} color={colors.bg} />
-                      <Text style={{ fontSize: 14, fontWeight: weight.bold, color: colors.bg }}>Accept</Text>
+                      <Text style={{ fontSize: 14, fontWeight: weight.bold, color: colors.bg }}>{t('coach.accept')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => handleDeclineInvite(invite)} activeOpacity={0.8}
                       style={{ paddingHorizontal: 20, borderRadius: 14, backgroundColor: colors.danger + '10', borderWidth: 1, borderColor: colors.danger + '35', flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                       <Ionicons name="close-circle-outline" size={16} color={colors.danger} />
-                      <Text style={{ fontSize: 14, fontWeight: weight.semibold, color: colors.danger }}>Decline</Text>
+                      <Text style={{ fontSize: 14, fontWeight: weight.semibold, color: colors.danger }}>{t('coach.decline')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -385,7 +387,7 @@ export default function ClientModeScreen() {
                   style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                 >
                   <Ionicons name="chatbubble-ellipses" size={17} color={colors.bg} />
-                  <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>Message Coach</Text>
+                  <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>{t('coach.messageCoach')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -395,7 +397,7 @@ export default function ClientModeScreen() {
               <View style={{ backgroundColor: colors.accent + '10', borderRadius: 16, borderWidth: 1, borderColor: colors.accent + '35', borderLeftWidth: 3, borderLeftColor: colors.accent, padding: 16, marginBottom: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                   <Ionicons name="chatbubble-outline" size={13} color={colors.accent} />
-                  <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 0.8 }}>NOTE FROM YOUR COACH</Text>
+                  <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 0.8 }}>{t('coach.noteFromCoach')}</Text>
                 </View>
                 <Text style={{ fontSize: 14, color: colors.text, lineHeight: 21 }}>{coachNote}</Text>
               </View>
@@ -406,7 +408,7 @@ export default function ClientModeScreen() {
               <View style={{ backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
                   <Ionicons name="stats-chart" size={14} color="#22c55e" />
-                  <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>YOUR WEEK AT A GLANCE</Text>
+                  <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>{t('coach.weekAtGlance')}</Text>
                   <Text style={{ fontSize: 10, color: colors.textDim, marginLeft: 2 }}>· what your coach sees</Text>
                 </View>
                 <View style={{ flexDirection: 'row' }}>
@@ -458,7 +460,7 @@ export default function ClientModeScreen() {
               <Ionicons name="people-circle-outline" size={40} color={colors.accent} />
             </View>
             <View style={{ alignItems: 'center', gap: 4 }}>
-              <Text style={{ fontSize: 17, fontWeight: weight.black, color: colors.text }}>No Coach Yet</Text>
+              <Text style={{ fontSize: 17, fontWeight: weight.black, color: colors.text }}>{t('coach.noCoachYet')}</Text>
               <Text style={{ fontSize: 13, color: colors.textDim, textAlign: 'center', lineHeight: 19 }}>
                 Enter a coach's invite code or paste an invite link
               </Text>
@@ -486,7 +488,7 @@ export default function ClientModeScreen() {
         {/* ── Shared with Coach toggles ─────────────────────────────── */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
           <Text style={{ flex: 1, fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase' }}>
-            Shared with Coach
+            {t('coach.sharedWithCoach')}
           </Text>
           <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.textDim }}>
             {enabledCount}/{PRIVACY_ITEMS.length}
@@ -537,7 +539,7 @@ export default function ClientModeScreen() {
         {/* ── Disconnect ───────────────────────────────────────────── */}
         {activeCoach && (
           <TouchableOpacity onPress={handleDisconnect} activeOpacity={0.75} style={{ alignItems: 'center', paddingVertical: 12, marginBottom: 8 }}>
-            <Text style={{ fontSize: 13, color: colors.danger, fontWeight: weight.semibold }}>Disconnect from coach</Text>
+            <Text style={{ fontSize: 13, color: colors.danger, fontWeight: weight.semibold }}>{t('coach.disconnect')}</Text>
           </TouchableOpacity>
         )}
       </ScrollView>

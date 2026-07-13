@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import PaywallModal from '../components/ui/PaywallModal';
+import { useTranslation } from 'react-i18next';
 
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -325,6 +326,7 @@ function energyEmoji(val) {
 }
 
 export default function YearInReviewScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { user }   = useAuth();
   const { hasAccess } = useSubscription();
@@ -346,7 +348,7 @@ export default function YearInReviewScreen({ navigation }) {
 
   if (isLoading || !data) return (
     <SafeAreaView edges={['top']} style={s.safe}>
-      <ScreenHeader title="Year in Review" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('yearInReview.title')} onBack={() => navigation.goBack()} />
       <ActivityIndicator color={colors.accent} style={{ flex: 1 }} />
     </SafeAreaView>
   );
@@ -413,7 +415,7 @@ export default function YearInReviewScreen({ navigation }) {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <ScreenHeader title="Year in Review" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('yearInReview.title')} onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={s.scroll}>
 
         {/* ── 1. Year picker ── */}
@@ -429,7 +431,7 @@ export default function YearInReviewScreen({ navigation }) {
             <Text style={s.yearText}>{selectedYear}</Text>
             {selectedYear === currentYear && (
               <View style={s.currentBadge}>
-                <Text style={s.currentBadgeText}>THIS YEAR</Text>
+                <Text style={s.currentBadgeText}>{t('yearInReview.thisYear')}</Text>
               </View>
             )}
           </View>
@@ -465,7 +467,7 @@ export default function YearInReviewScreen({ navigation }) {
 
         {/* ── 3. Quick wins row (FREE) ── */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>QUICK WINS</Text>
+          <Text style={s.cardTitle}>{t('yearInReview.quickWins')}</Text>
           <View style={s.quickWinsRow}>
             <View style={s.quickWinTile}>
               <Text style={s.quickWinEmoji}>⏱️</Text>
@@ -489,7 +491,7 @@ export default function YearInReviewScreen({ navigation }) {
 
         {/* ── 4. Monthly workouts bar chart ── */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>WORKOUTS PER MONTH</Text>
+          <Text style={s.cardTitle}>{t('yearInReview.workoutsPerMonth')}</Text>
           <View style={s.barChart}>
             {monthly.map((m, i) => {
               const pct = maxWorkouts > 0 ? m.workouts / maxWorkouts : 0;
@@ -526,7 +528,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* ── Body transformation (FREE) ── */}
         {data.bodyTransform && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>BODY TRANSFORMATION</Text>
+            <Text style={s.cardTitle}>{t('yearInReview.bodyTransformation')}</Text>
             <Text style={[s.cardSubtitle]}>From Jan to Dec</Text>
             <View style={s.transformRow}>
               <View style={s.transformSide}>
@@ -552,7 +554,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* ── Year-over-year comparison (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>YEAR-OVER-YEAR COMPARISON</Text>
+            <Text style={s.cardTitle}>{t('yearInReview.yoyComparison')}</Text>
           </View>
           <View style={[s.yoyRow, { backgroundColor: colors.dim ?? colors.border }]}>
             <Text style={[s.yoyCell, s.yoyLabelCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Metric</Text>
@@ -599,7 +601,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* ── Monthly breakdown table (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>MONTHLY BREAKDOWN</Text>
+            <Text style={s.cardTitle}>{t('yearInReview.monthlyBreakdown')}</Text>
           </View>
           <View style={[s.tableRow, { backgroundColor: colors.dim ?? colors.border }]}>
             <Text style={[s.tableCell, s.tableMonthCol, { color: colors.textDim, fontFamily: fontFamily.bodyBold }]}>Month</Text>
@@ -653,7 +655,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* ── 7. Activity split (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>ACTIVITY SPLIT</Text>
+            <Text style={s.cardTitle}>{t('yearInReview.activitySplit')}</Text>
           </View>
           {hasAccess ? (
             totalActivity > 0 ? (
@@ -721,7 +723,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* ── 9. Nutrition summary (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>NUTRITION SUMMARY</Text>
+            <Text style={s.cardTitle}>{t('yearInReview.nutritionSummary')}</Text>
           </View>
           {hasAccess ? (
             data.nutritionDays > 0 ? (
@@ -772,7 +774,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* ── 10. Top 5 exercises by volume (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>TOP EXERCISES BY VOLUME</Text>
+            <Text style={s.cardTitle}>{t('yearInReview.topExercises')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               {/* kg / lbs toggle */}
               <View style={{ flexDirection: 'row', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
@@ -829,7 +831,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* ── 11. Sleep quality trend (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>SLEEP TREND</Text>
+            <Text style={s.cardTitle}>{t('yearInReview.sleepTrend')}</Text>
           </View>
           {hasAccess ? (
             data.sleepDays > 0 ? (
@@ -886,7 +888,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* ── 12. Mood year summary (PRO) ── */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>MOOD YEAR SUMMARY</Text>
+            <Text style={s.cardTitle}>{t('yearInReview.moodSummary')}</Text>
           </View>
           {hasAccess ? (
             data.moodDays > 0 ? (
@@ -944,7 +946,7 @@ export default function YearInReviewScreen({ navigation }) {
         {/* ── 13. Achievements (PRO) ── */}
         <View style={s.card}>
           <View style={s.achieveHeader}>
-            <Text style={s.cardTitle}>ACHIEVEMENTS</Text>
+            <Text style={s.cardTitle}>{t('yearInReview.achievements')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {hasAccess && <Text style={[s.achieveCount, { color: colors.textDim }]}>{achievements.length} / 14 unlocked</Text>}
             </View>
@@ -994,7 +996,7 @@ export default function YearInReviewScreen({ navigation }) {
         {data.totalWorkouts === 0 && (
           <View style={s.emptyBox}>
             <Text style={s.emptyIcon}>🗓️</Text>
-            <Text style={s.emptyText}>No workout data found for {selectedYear}</Text>
+            <Text style={s.emptyText}>{t('yearInReview.noData', { year: selectedYear })}</Text>
           </View>
         )}
 
