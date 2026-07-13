@@ -1,14 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, FlatList, Image, Modal,
-  TouchableOpacity, StyleSheet,
+  TouchableOpacity, StyleSheet, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
-import { EXERCISE_IMAGES, getExerciseImageUrl } from '../lib/exerciseImages';
+import { EXERCISE_IMAGES } from '../lib/exerciseImages';
 import ScreenHeader from '../components/ScreenHeader';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const COLS = 3;
+const GAP = 10;
+const H_PAD = 14;
+const CARD_W = (SCREEN_W - H_PAD * 2 - GAP * (COLS - 1)) / COLS;
 
 const ALL_EXERCISES = Object.keys(EXERCISE_IMAGES)
   .map(key => ({
@@ -17,26 +23,6 @@ const ALL_EXERCISES = Object.keys(EXERCISE_IMAGES)
     imageUrl: EXERCISE_IMAGES[key],
   }))
   .sort((a, b) => a.key.localeCompare(b.key));
-
-function ExerciseCard({ item, onPress }) {
-  const { colors } = useTheme();
-  return (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
-      onPress={() => onPress(item)}
-      activeOpacity={0.75}
-    >
-      <Image
-        source={{ uri: item.imageUrl }}
-        style={[styles.thumb, { backgroundColor: colors.bg }]}
-        resizeMode="contain"
-      />
-      <Text style={[styles.cardName, { color: colors.text }]} numberOfLines={2}>
-        {item.name}
-      </Text>
-    </TouchableOpacity>
-  );
-}
 
 function ExerciseModal({ item, onClose, colors }) {
   if (!item) return null;
@@ -47,7 +33,7 @@ function ExerciseModal({ item, onClose, colors }) {
         activeOpacity={1}
         onPress={onClose}
       >
-        <View style={[styles.modalCard, { backgroundColor: colors.bgCard }]}>
+        <View style={[styles.modalCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           <Text style={[styles.modalTitle, { color: colors.text }]}>{item.name}</Text>
           <Image
             source={{ uri: item.imageUrl }}
@@ -80,21 +66,25 @@ export default function ExerciseReferenceScreen({ navigation }) {
     return ALL_EXERCISES.filter(e => e.key.includes(q));
   }, [query]);
 
-  // Build rows: each row is either a letter header or a pair of exercise items
+  // Build rows: letter header | triple of cards
   const rows = useMemo(() => {
     const result = [];
     let lastLetter = null;
-    let pair = [];
-    const flush = () => { if (pair.length) { result.push({ type: 'pair', items: pair, key: `pair-${pair[0].key}` }); pair = []; } };
+    let group = [];
+    const flush = () => {
+      if (!group.length) return;
+      result.push({ type: 'row', items: group, key: `row-${group[0].key}` });
+      group = [];
+    };
     for (const item of filtered) {
       const letter = item.key[0].toUpperCase();
       if (letter !== lastLetter) {
         flush();
-        result.push({ type: 'header', letter, key: `header-${letter}` });
+        result.push({ type: 'header', letter, key: `hdr-${letter}` });
         lastLetter = letter;
       }
-      pair.push(item);
-      if (pair.length === 2) flush();
+      group.push(item);
+      if (group.length === COLS) flush();
     }
     flush();
     return result;
@@ -103,15 +93,34 @@ export default function ExerciseReferenceScreen({ navigation }) {
   const renderItem = ({ item }) => {
     if (item.type === 'header') {
       return (
-        <Text style={[styles.sectionHeader, { color: colors.textDim, borderBottomColor: colors.border }]}>
+        <Text style={[styles.sectionHeader, { color: colors.accent, borderBottomColor: colors.border }]}>
           {item.letter}
         </Text>
       );
     }
     return (
-      <View style={styles.columnWrapper}>
-        {item.items.map(ex => <ExerciseCard key={ex.key} item={ex} onPress={setSelected} />)}
-        {item.items.length === 1 && <View style={{ flex: 1 }} />}
+      <View style={styles.row}>
+        {item.items.map(ex => (
+          <TouchableOpacity
+            key={ex.key}
+            style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border, width: CARD_W }]}
+            onPress={() => setSelected(ex)}
+            activeOpacity={0.75}
+          >
+            <Image
+              source={{ uri: ex.imageUrl }}
+              style={[styles.thumb, { backgroundColor: colors.bg, width: CARD_W }]}
+              resizeMode="contain"
+            />
+            <Text style={[styles.cardName, { color: colors.text }]} numberOfLines={2}>
+              {ex.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+        {/* Fill empty slots so last row aligns left */}
+        {item.items.length < COLS && Array.from({ length: COLS - item.items.length }).map((_, i) => (
+          <View key={`empty-${i}`} style={{ width: CARD_W }} />
+        ))}
       </View>
     );
   };
@@ -120,9 +129,9 @@ export default function ExerciseReferenceScreen({ navigation }) {
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.bg }]}>
       <ScreenHeader title="Exercise Reference" onBack={() => navigation.goBack()} />
 
-      {/* Search */}
-      <View style={[styles.searchRow, { backgroundColor: colors.bgCard, borderBottomColor: colors.border }]}>
-        <Ionicons name="search" size={16} color={colors.textDim} style={{ marginRight: 8 }} />
+      {/* Search — matches ProgressScreen style */}
+      <View style={[styles.searchWrap, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+        <Ionicons name="search" size={16} color={colors.textDim} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
           placeholder="Search exercises…"
@@ -133,7 +142,7 @@ export default function ExerciseReferenceScreen({ navigation }) {
           clearButtonMode="while-editing"
         />
         {query.length > 0 && (
-          <TouchableOpacity onPress={() => setQuery('')}>
+          <TouchableOpacity onPress={() => setQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close-circle" size={16} color={colors.textDim} />
           </TouchableOpacity>
         )}
@@ -148,7 +157,7 @@ export default function ExerciseReferenceScreen({ navigation }) {
         keyExtractor={item => item.key}
         renderItem={renderItem}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: H_PAD, paddingBottom: 40 }}
         style={{ flex: 1 }}
       />
 
@@ -159,46 +168,62 @@ export default function ExerciseReferenceScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1,
+
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 14, marginTop: 10, marginBottom: 4,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9,
+    borderWidth: 1,
   },
   searchInput: { flex: 1, fontSize: typography.sm },
+
   countLabel: {
     fontSize: 11, fontWeight: weight.medium,
-    paddingHorizontal: 16, paddingVertical: 6,
+    paddingHorizontal: 16, paddingVertical: 5,
   },
+
   sectionHeader: {
-    width: '100%', fontSize: 13, fontWeight: weight.bold,
-    paddingHorizontal: 4, paddingVertical: 6,
-    borderBottomWidth: 1, marginBottom: 6,
-    letterSpacing: 0.5,
+    width: '100%',
+    fontSize: 12, fontWeight: weight.black,
+    paddingHorizontal: 2, paddingTop: 14, paddingBottom: 6,
+    borderBottomWidth: 1,
+    letterSpacing: 1.2,
+    marginBottom: 8,
   },
-  columnWrapper: { gap: 10, marginBottom: 10 },
+
+  row: {
+    flexDirection: 'row',
+    gap: GAP,
+    marginBottom: GAP,
+  },
+
   card: {
-    flex: 1, borderRadius: 12, borderWidth: 1,
-    overflow: 'hidden', alignItems: 'center', paddingBottom: 10,
+    borderRadius: 12, borderWidth: 1,
+    overflow: 'hidden', alignItems: 'center',
+    paddingBottom: 8,
   },
-  thumb: { width: '100%', height: 110, borderRadius: 10 },
+  thumb: { height: 90 },
   cardName: {
-    fontSize: 12, fontWeight: weight.medium,
-    textAlign: 'center', marginTop: 6, paddingHorizontal: 6,
+    fontSize: 11, fontWeight: weight.medium,
+    textAlign: 'center', marginTop: 6,
+    paddingHorizontal: 5, lineHeight: 15,
   },
+
   modalBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.82)',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.85)',
     alignItems: 'center', justifyContent: 'center',
   },
   modalCard: {
-    borderRadius: 16, padding: 16, width: 300, alignItems: 'center',
+    borderRadius: 18, padding: 18, width: 300, alignItems: 'center',
+    borderWidth: 1,
   },
   modalTitle: {
     fontWeight: weight.bold, fontSize: 15,
     marginBottom: 12, textAlign: 'center',
   },
-  modalImage: { width: 268, height: 210, borderRadius: 10 },
+  modalImage: { width: 264, height: 210, borderRadius: 10 },
   modalCredit: { fontSize: 10, marginTop: 8 },
   modalClose: {
-    marginTop: 12, paddingVertical: 8, paddingHorizontal: 24, borderRadius: 8,
+    marginTop: 14, paddingVertical: 9, paddingHorizontal: 28, borderRadius: 9,
   },
 });
