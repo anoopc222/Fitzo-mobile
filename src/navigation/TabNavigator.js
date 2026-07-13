@@ -36,6 +36,7 @@ import ExerciseReferenceScreen from '../screens/ExerciseReferenceScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
+const WorkoutStack = createNativeStackNavigator();
 
 const TAB_CONFIG = {
   Home:    ['home',      'home-outline'],
@@ -76,6 +77,16 @@ function HomeStackNavigator() {
   );
 }
 
+function WorkoutStackNavigator() {
+  return (
+    <WorkoutStack.Navigator screenOptions={{ headerShown: false }}>
+      <WorkoutStack.Screen name="WorkoutMain" component={WorkoutScreen} />
+      <WorkoutStack.Screen name="Progress" component={ProgressScreen} />
+      <WorkoutStack.Screen name="ExerciseReference" component={ExerciseReferenceScreen} />
+    </WorkoutStack.Navigator>
+  );
+}
+
 export default function TabNavigator() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -108,7 +119,7 @@ export default function TabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeStackNavigator} options={{ tabBarLabel: t('tabs.home') }} />
-      <Tab.Screen name="Workout" component={WorkoutScreen} options={{ tabBarLabel: t('tabs.workout') }} />
+      <Tab.Screen name="Workout" component={WorkoutStackNavigator} options={{ tabBarLabel: t('tabs.workout') }} />
       <Tab.Screen name="Steps" component={StepsScreen} options={{ tabBarLabel: t('tabs.steps') }} />
       <Tab.Screen name="Weight" component={WeightScreen} options={{ tabBarLabel: t('tabs.weight') }} />
       <Tab.Screen name="Sleep" component={SleepScreen} options={{ tabBarLabel: t('tabs.sleep') }} />
