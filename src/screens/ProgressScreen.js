@@ -15,7 +15,7 @@ import { typography, weight } from '../theme/typography';
 import PaywallModal from '../components/ui/PaywallModal';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
-import { EXERCISE_IMAGES } from '../lib/exerciseImages';
+import { getExerciseImageUrl } from '../lib/exerciseImages';
 
 export async function fetchProgress(userId) {
   const oneYearAgo = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
@@ -126,12 +126,7 @@ function avgDaysBetweenSessions(sessions) {
 
 function ExerciseDemoButton({ exerciseName, colors }) {
   const [visible, setVisible] = useState(false);
-  const key = (exerciseName ?? '').toLowerCase().trim();
-  const imageUrl = EXERCISE_IMAGES[key] ?? (() => {
-    const entry = Object.entries(EXERCISE_IMAGES).find(([k]) => k.includes(key) || key.includes(k));
-    return entry ? entry[1] : null;
-  })();
-
+  const imageUrl = getExerciseImageUrl(exerciseName);
   if (!imageUrl) return null;
 
   return (
