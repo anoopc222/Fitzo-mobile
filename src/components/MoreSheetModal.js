@@ -13,35 +13,26 @@ import { fetchProfile } from '../screens/ProfileScreen';
 
 const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
   {
-    title: 'Games',
+    title: t('more.sectionLog'),
     items: [
-      { label: 'Game Zone', icon: 'game-controller', target: ['Home', 'GameZone'], color: colors.accent },
+      { label: t('more.foodLog'), icon: 'restaurant', target: ['Log'], color: colors.accent },
     ],
   },
   {
     title: t('more.sectionBodyHealth'),
     items: [
-      { label: t('more.progress'),     icon: 'trending-up', target: ['Home', 'Progress'],     color: colors.good },
-      { label: t('more.measurements'), icon: 'body',         target: ['Home', 'Measurements'], color: colors.purple },
-      { label: t('more.dietPlan'),     icon: 'restaurant',   target: ['Home', 'Diet'],         color: colors.accent2 },
+      { label: t('more.progress'),          icon: 'trending-up',   target: ['Home', 'Progress'],           color: colors.good },
+      { label: t('more.measurements'),      icon: 'body',           target: ['Home', 'Measurements'],       color: colors.purple },
+      { label: 'Exercise Reference',        icon: 'barbell',        target: ['Home', 'ExerciseReference'],  color: colors.warning },
+      { label: t('more.dietPlan'),          icon: 'nutrition',      target: ['Home', 'Diet'],               color: colors.accent2 },
     ],
   },
   {
-    title: t('more.sectionLog'),
+    title: 'Entertainment & Tools',
     items: [
-      { label: t('more.foodLog'), icon: 'clipboard', target: ['Log'], color: colors.accent },
-    ],
-  },
-  {
-    title: t('more.sectionSocial'),
-    items: [
-      { label: t('tabs.social'), icon: 'people', target: ['Social'], color: colors.danger },
-    ],
-  },
-  {
-    title: t('more.sectionTools'),
-    items: [
-      { label: t('more.calculators'),  icon: 'calculator',  target: ['Home', 'Calculators'],  color: colors.warning },
+      { label: 'Game Zone',              icon: 'game-controller', target: ['Home', 'GameZone'],    color: colors.accent },
+      { label: t('tabs.social'),         icon: 'people',          target: ['Social'],              color: colors.danger },
+      { label: t('more.calculators'),    icon: 'calculator',      target: ['Home', 'Calculators'], color: colors.warning },
     ],
   },
   {
@@ -50,8 +41,8 @@ const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
       ...(subReady && !isPro ? [
         { label: t('more.goPro'), icon: 'rocket', target: ['Home', 'Subscription'], color: colors.accent },
       ] : []),
-      { label: t('more.profile'),  icon: 'person',      target: ['Home', 'Profile'],      color: colors.blue },
-      { label: t('more.settings'), icon: 'settings',    target: ['Home', 'Settings'],     color: colors.textDim },
+      { label: t('more.profile'),  icon: 'person',   target: ['Home', 'Profile'],  color: colors.blue },
+      { label: t('more.settings'), icon: 'settings', target: ['Home', 'Settings'], color: colors.textDim },
     ],
   },
   ...(isSuperAdmin ? [{
