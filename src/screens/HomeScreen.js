@@ -128,8 +128,11 @@ const CAL_DAY_MON      = ['Mo','Tu','We','Th','Fr','Sa','Su'];
 // ─── quick-log helpers (nudge cards) ───────────────────────────────────────
 async function quickLogWeight(userId, weightKg) {
   const date = localDateStr(new Date());
+  // Use date-range to match timestamptz entries on this calendar day
   const existing = await supabase
-    .from('weight_logs').select('id').eq('user_id', userId).eq('logged_at', date).limit(1).maybeSingle();
+    .from('weight_logs').select('id').eq('user_id', userId)
+    .gte('logged_at', `${date}T00:00:00`).lte('logged_at', `${date}T23:59:59`)
+    .order('logged_at', { ascending: false }).limit(1).maybeSingle();
   if (existing.error) throw existing.error;
   if (existing.data) {
     const { error } = await supabase.from('weight_logs').update({ weight: weightKg }).eq('id', existing.data.id);
@@ -205,6 +208,7 @@ async function fetchHome(userId) {
       .eq('id', userId).single(),
     supabase.from('weight_logs')
       .select('weight, logged_at').eq('user_id', userId)
+      .gte('logged_at', new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0] + 'T00:00:00')
       .order('logged_at', { ascending: false }).limit(10),
     supabase.from('step_logs')
       .select('steps, goal, logged_at').eq('user_id', userId)
@@ -305,7 +309,9 @@ async function fetchHome(userId) {
   const sleepGoal  = profile.data?.sleep_goal_hours ?? 8;
   const weeklyGoal = profile.data?.workout_weekly_goal ?? 4;
 
-  const weightDeltaVsYday = (latestWeight && prevWeight)
+  const weightDeltaVsYday = (latestWeight && prevWeight &&
+    latestWeight.weight > 0 && latestWeight.weight < 500 &&
+    prevWeight.weight > 0 && prevWeight.weight < 500)
     ? +(latestWeight.weight - prevWeight.weight).toFixed(1) : null;
   const stepGoalMet  = latestSteps ? latestSteps.steps >= (latestSteps.goal ?? stepGoal) : false;
   const sleepGoalMet = latestSleep ? latestSleep.hours >= sleepGoal : false;
