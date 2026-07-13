@@ -15,7 +15,15 @@ import { typography, weight } from '../theme/typography';
 import PaywallModal from '../components/ui/PaywallModal';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
-import { getExerciseImageUrl } from '../lib/exerciseImages';
+import { EXERCISE_IMAGES } from '../lib/exerciseImages';
+
+function lookupExImage(name) {
+  const key = (name ?? '').toLowerCase().trim();
+  if (!key) return null;
+  if (EXERCISE_IMAGES[key]) return EXERCISE_IMAGES[key];
+  const entry = Object.entries(EXERCISE_IMAGES).find(([k]) => k.includes(key) || key.includes(k));
+  return entry ? entry[1] : null;
+}
 
 export async function fetchProgress(userId) {
   const oneYearAgo = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
@@ -126,7 +134,7 @@ function avgDaysBetweenSessions(sessions) {
 
 function ExerciseDemoButton({ exerciseName, colors }) {
   const [visible, setVisible] = useState(false);
-  const imageUrl = getExerciseImageUrl(exerciseName);
+  const imageUrl = lookupExImage(exerciseName);
   if (!imageUrl) return null;
 
   return (
