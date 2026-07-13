@@ -950,6 +950,45 @@ function getMuscleVolumeThisWeek(sessions) {
   return Object.entries(map).map(([m, v]) => ({ muscle: m, vol: Math.round(v) })).sort((a, b) => b.vol - a.vol).slice(0, 6);
 }
 
+// ─── Autocomplete row demo button (keeps modal state; won't close dropdown) ──
+function AcDemoButton({ name, imageUrl, colors }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+      >
+        <Ionicons name="images-outline" size={15} color={colors.textDim} />
+      </TouchableOpacity>
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.82)', alignItems: 'center', justifyContent: 'center' }}
+          activeOpacity={1}
+          onPress={() => setVisible(false)}
+        >
+          <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, width: 300, alignItems: 'center' }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 12, textAlign: 'center' }}>{name}</Text>
+            <Image
+              source={{ uri: imageUrl }}
+              style={{ width: 268, height: 200, borderRadius: 10, backgroundColor: colors.bg }}
+              resizeMode="contain"
+            />
+            <Text style={{ color: colors.textDim, fontSize: 10, marginTop: 8 }}>Image: wger.de (CC BY 4.0)</Text>
+            <TouchableOpacity
+              onPress={() => setVisible(false)}
+              style={{ marginTop: 12, paddingVertical: 8, paddingHorizontal: 24, backgroundColor: colors.accent, borderRadius: 8 }}
+            >
+              <Text style={{ color: '#000', fontWeight: '700', fontSize: 13 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
+  );
+}
+
 // ─── Exercise Demo Button + Modal ────────────────────────────────────────────
 function ExerciseDemoButton({ exerciseName, colors }) {
   const [visible, setVisible] = useState(false);
@@ -2686,15 +2725,24 @@ function EditSessionModal({
                             <View style={eS.acDropdown}>
                               {matches.map(n => {
                                 const exStyleAc = getWorkoutStyle(n, colors);
+                                const acImgKey = n.toLowerCase().trim();
+                                const acImgUrl = EXERCISE_IMAGES[acImgKey] ?? (() => {
+                                  const entry = Object.entries(EXERCISE_IMAGES).find(([k]) => k.includes(acImgKey) || acImgKey.includes(k));
+                                  return entry ? entry[1] : null;
+                                })();
                                 return (
-                                  <TouchableOpacity
-                                    key={n}
-                                    style={eS.acItem}
-                                    onPress={() => { updateExName(exIdx, n); setAcOpenIdx(null); }}
-                                  >
-                                    <Text style={{ fontSize: 14 }}>{exStyleAc.icon}</Text>
-                                    <Text style={eS.acItemText}>{n}</Text>
-                                  </TouchableOpacity>
+                                  <View key={n} style={[eS.acItem, { justifyContent: 'space-between' }]}>
+                                    <TouchableOpacity
+                                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}
+                                      onPress={() => { updateExName(exIdx, n); setAcOpenIdx(null); }}
+                                    >
+                                      <Text style={{ fontSize: 14 }}>{exStyleAc.icon}</Text>
+                                      <Text style={eS.acItemText}>{n}</Text>
+                                    </TouchableOpacity>
+                                    {acImgUrl && (
+                                      <AcDemoButton name={n} imageUrl={acImgUrl} colors={colors} />
+                                    )}
+                                  </View>
                                 );
                               })}
                             </View>
