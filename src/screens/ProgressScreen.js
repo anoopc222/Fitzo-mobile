@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, RefreshControl,
+  TextInput, RefreshControl, Modal, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import { typography, weight } from '../theme/typography';
 import PaywallModal from '../components/ui/PaywallModal';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
+import { EXERCISE_IMAGES } from '../lib/exerciseImages';
 
 export async function fetchProgress(userId) {
   const oneYearAgo = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
@@ -121,6 +122,56 @@ function avgDaysBetweenSessions(sessions) {
     totalDays += Math.abs(new Date(sessions[i].date) - new Date(sessions[i + 1].date)) / 86400000;
   }
   return Math.round(totalDays / (sessions.length - 1));
+}
+
+function ExerciseDemoButton({ exerciseName, colors }) {
+  const [visible, setVisible] = useState(false);
+  const key = (exerciseName ?? '').toLowerCase().trim();
+  const imageUrl = EXERCISE_IMAGES[key] ?? (() => {
+    const entry = Object.entries(EXERCISE_IMAGES).find(([k]) => k.includes(key) || key.includes(k));
+    return entry ? entry[1] : null;
+  })();
+
+  if (!imageUrl) return null;
+
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{ marginLeft: 6 }}
+      >
+        <Ionicons name="images-outline" size={14} color={colors.textDim} />
+      </TouchableOpacity>
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.82)', alignItems: 'center', justifyContent: 'center' }}
+          activeOpacity={1}
+          onPress={() => setVisible(false)}
+        >
+          <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, width: 300, alignItems: 'center' }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 12, textAlign: 'center' }}>
+              {exerciseName}
+            </Text>
+            <Image
+              source={{ uri: imageUrl }}
+              style={{ width: 268, height: 200, borderRadius: 10, backgroundColor: colors.bg }}
+              resizeMode="contain"
+            />
+            <Text style={{ color: colors.textDim, fontSize: 10, marginTop: 8 }}>
+              Image: wger.de (CC BY 4.0)
+            </Text>
+            <TouchableOpacity
+              onPress={() => setVisible(false)}
+              style={{ marginTop: 12, paddingVertical: 8, paddingHorizontal: 24, backgroundColor: colors.accent, borderRadius: 8 }}
+            >
+              <Text style={{ color: '#000', fontWeight: '700', fontSize: 13 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
+  );
 }
 
 function enrichExercise(ex) {
@@ -299,7 +350,10 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
             <View key={ex.name} style={styles.exCard}>
               <TouchableOpacity style={styles.exHeader} onPress={onHeaderPress} activeOpacity={0.8}>
                 <View style={styles.exHeaderLeft}>
-                  <Text style={styles.exName}>{ex.name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.exName}>{ex.name}</Text>
+                    <ExerciseDemoButton exerciseName={ex.name} colors={colors} />
+                  </View>
                   <View style={styles.exMeta}>
                     <Text style={styles.exSessions}>{t('progress.sessionsCount', { count: ex.sessions.length })}</Text>
                     {unlocked && daysSinceLast != null && (
