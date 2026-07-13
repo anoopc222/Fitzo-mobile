@@ -4,7 +4,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
   Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle, UIManager, AppState,
-  PanResponder, Image,
+  PanResponder, Image, Linking,
 } from 'react-native';
 import useExerciseDemo from '../hooks/useExerciseDemo';
 import VoiceLogButton from '../components/VoiceLogButton';
@@ -952,41 +952,18 @@ function getMuscleVolumeThisWeek(sessions) {
 
 // ─── Exercise Demo Button ─────────────────────────────────────────────────────
 function ExerciseDemoButton({ exerciseName, colors }) {
-  const [showDemo, setShowDemo] = useState(false);
-  const { imageUrl, isLoading } = useExerciseDemo(showDemo ? exerciseName : null);
+  const openDemo = () => {
+    const query = encodeURIComponent(`${exerciseName} exercise proper form`);
+    Linking.openURL(`https://www.youtube.com/results?search_query=${query}`);
+  };
   return (
-    <>
-      <TouchableOpacity
-        onPress={() => setShowDemo(true)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        style={{ marginLeft: 2 }}
-      >
-        <Ionicons name="play-circle-outline" size={13} color={colors.textDim} />
-      </TouchableOpacity>
-      <Modal visible={showDemo} transparent animationType="fade" onRequestClose={() => setShowDemo(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.82)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <View style={{ width: '100%', maxWidth: 340, backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 18, alignItems: 'center' }}>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 14 }}>{(exerciseName ?? '').toUpperCase()}</Text>
-            {isLoading ? (
-              <ActivityIndicator color={colors.accent} style={{ height: 180 }} />
-            ) : imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={{ width: 280, height: 200, borderRadius: 12 }} resizeMode="contain" />
-            ) : (
-              <View style={{ height: 140, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="barbell-outline" size={48} color={colors.textDim} />
-                <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 10 }}>No demo available</Text>
-              </View>
-            )}
-            <TouchableOpacity
-              onPress={() => setShowDemo(false)}
-              style={{ marginTop: 16, backgroundColor: colors.bgElevated, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
-            >
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </>
+    <TouchableOpacity
+      onPress={openDemo}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{ marginLeft: 2 }}
+    >
+      <Ionicons name="play-circle-outline" size={13} color={colors.textDim} />
+    </TouchableOpacity>
   );
 }
 
