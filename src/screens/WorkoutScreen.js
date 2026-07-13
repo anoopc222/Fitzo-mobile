@@ -4,9 +4,9 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
   Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle, UIManager, AppState,
-  PanResponder, Image, Linking,
+  PanResponder, Image,
 } from 'react-native';
-import useExerciseDemo from '../hooks/useExerciseDemo';
+import { EXERCISE_IMAGES } from '../lib/exerciseImages';
 import VoiceLogButton from '../components/VoiceLogButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -950,20 +950,57 @@ function getMuscleVolumeThisWeek(sessions) {
   return Object.entries(map).map(([m, v]) => ({ muscle: m, vol: Math.round(v) })).sort((a, b) => b.vol - a.vol).slice(0, 6);
 }
 
-// ─── Exercise Demo Button ─────────────────────────────────────────────────────
+// ─── Exercise Demo Button + Modal ────────────────────────────────────────────
 function ExerciseDemoButton({ exerciseName, colors }) {
-  const openDemo = () => {
-    const query = encodeURIComponent(`${exerciseName} exercise proper form`);
-    Linking.openURL(`https://www.youtube.com/results?search_query=${query}`);
-  };
+  const [visible, setVisible] = useState(false);
+  const key = (exerciseName ?? '').toLowerCase().trim();
+  const imageUrl = EXERCISE_IMAGES[key] ?? null;
+
+  // fuzzy fallback: try partial match
+  const resolvedUrl = imageUrl ?? (() => {
+    const entry = Object.entries(EXERCISE_IMAGES).find(([k]) => k.includes(key) || key.includes(k));
+    return entry ? entry[1] : null;
+  })();
+
+  if (!resolvedUrl) return null;
+
   return (
-    <TouchableOpacity
-      onPress={openDemo}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={{ marginLeft: 2 }}
-    >
-      <Ionicons name="play-circle-outline" size={13} color={colors.textDim} />
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{ marginLeft: 2 }}
+      >
+        <Ionicons name="images-outline" size={13} color={colors.textDim} />
+      </TouchableOpacity>
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.82)', alignItems: 'center', justifyContent: 'center' }}
+          activeOpacity={1}
+          onPress={() => setVisible(false)}
+        >
+          <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, padding: 16, width: 300, alignItems: 'center' }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 12, textAlign: 'center' }}>
+              {exerciseName}
+            </Text>
+            <Image
+              source={{ uri: resolvedUrl }}
+              style={{ width: 268, height: 200, borderRadius: 10, backgroundColor: colors.bg }}
+              resizeMode="contain"
+            />
+            <Text style={{ color: colors.textDim, fontSize: 10, marginTop: 8 }}>
+              Image: wger.de (CC BY 4.0)
+            </Text>
+            <TouchableOpacity
+              onPress={() => setVisible(false)}
+              style={{ marginTop: 12, paddingVertical: 8, paddingHorizontal: 24, backgroundColor: colors.accent, borderRadius: 8 }}
+            >
+              <Text style={{ color: '#000', fontWeight: '700', fontSize: 13 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
