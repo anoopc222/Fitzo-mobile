@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase';
 import { typography, weight, fontFamily } from '../theme/typography';
 import ScreenHeader from '../components/ScreenHeader';
 import PaywallModal from '../components/ui/PaywallModal';
+import { useTranslation } from 'react-i18next';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MOOD_EMOJIS   = ['', '😞', '😕', '😐', '🙂', '😄'];
@@ -235,7 +236,7 @@ function EditModal({ visible, log, colors, onClose, onSave, isPending }) {
           >
             {isPending
               ? <ActivityIndicator color="#000" size="small" />
-              : <Text style={s.saveBtnText}>SAVE CHANGES</Text>
+              : <Text style={s.saveBtnText}>{t('moodLog.saveChanges')}</Text>
             }
           </TouchableOpacity>
         </View>
@@ -246,6 +247,7 @@ function EditModal({ visible, log, colors, onClose, onSave, isPending }) {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function MoodLogScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { user } = useAuth();
   const { hasAccess } = useSubscription();
@@ -278,7 +280,7 @@ export default function MoodLogScreen({ navigation }) {
       qc.invalidateQueries({ queryKey: ['mood-data', user?.id] });
       setMood(0); setEnergy(0); setNotes('');
     },
-    onError: (e) => Alert.alert('Error', e.message),
+    onError: (e) => Alert.alert(t('common.error'), e.message),
   });
 
   const { mutate: editSave, isPending: editPending } = useMutation({
@@ -287,7 +289,7 @@ export default function MoodLogScreen({ navigation }) {
       qc.invalidateQueries({ queryKey: ['mood-data', user?.id] });
       setEditLog(null);
     },
-    onError: (e) => Alert.alert('Error', e.message),
+    onError: (e) => Alert.alert(t('common.error'), e.message),
   });
 
   // ── Derived data ─────────────────────────────────────────────────────────────
@@ -403,7 +405,7 @@ export default function MoodLogScreen({ navigation }) {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <ScreenHeader title="Mood & Energy" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('moodLog.title')} onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
         ref={scrollRef}
@@ -428,7 +430,7 @@ export default function MoodLogScreen({ navigation }) {
           <View style={[s.card, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
             <Ionicons name="bed-outline" size={18} color={colors.textMuted} />
             <View style={{ flex: 1 }}>
-              <Text style={s.cardTitle}>TODAY'S PREDICTED ENERGY</Text>
+              <Text style={s.cardTitle}>{t('moodLog.predictedEnergy')}</Text>
               <Text style={[s.energyPredText, { color: energyPrediction.color }]}>{energyPrediction.label}</Text>
             </View>
             <Text style={s.energyPredSub}>Based on last night's sleep</Text>
@@ -439,7 +441,7 @@ export default function MoodLogScreen({ navigation }) {
         {todayLog ? (
           <View style={s.todayCard}>
             <View style={s.todayTopRow}>
-              <Text style={s.todayLabel}>TODAY'S LOG</Text>
+              <Text style={s.todayLabel}>{t('moodLog.todayLog')}</Text>
               <TouchableOpacity
                 style={s.editBtn}
                 onPress={() => setEditLog(todayLog)}
@@ -470,7 +472,7 @@ export default function MoodLogScreen({ navigation }) {
           </View>
         ) : (
           <View style={s.logCard}>
-            <Text style={s.logTitle}>How are you feeling today?</Text>
+            <Text style={s.logTitle}>{t('moodLog.howFeeling')}</Text>
 
             <Text style={s.pickerLabel}>Mood</Text>
             <View style={s.emojiRow}>
@@ -509,7 +511,7 @@ export default function MoodLogScreen({ navigation }) {
             >
               {savePending
                 ? <ActivityIndicator color="#000" size="small" />
-                : <Text style={s.saveBtnText}>SAVE LOG</Text>
+                : <Text style={s.saveBtnText}>{t('moodLog.saveLog')}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -521,22 +523,22 @@ export default function MoodLogScreen({ navigation }) {
             <View style={s.statTile}>
               <Text style={s.statTileEmoji}>🔥</Text>
               <Text style={[s.statTileVal, { color: colors.accent }]}>{streak}</Text>
-              <Text style={s.statTileLabel}>Streak</Text>
+              <Text style={s.statTileLabel}>{t('moodLog.streak')}</Text>
             </View>
             <View style={s.statTile}>
               <Text style={s.statTileEmoji}>{avgMood ? MOOD_EMOJIS[Math.round(Number(avgMood))] : '—'}</Text>
               <Text style={[s.statTileVal, { color: colors.accent }]}>{avgMood ?? '—'}</Text>
-              <Text style={s.statTileLabel}>Avg Mood</Text>
+              <Text style={s.statTileLabel}>{t('moodLog.avgMood')}</Text>
             </View>
             <View style={s.statTile}>
               <Text style={s.statTileEmoji}>{avgEnergy ? ENERGY_EMOJIS[Math.round(Number(avgEnergy))] : '—'}</Text>
               <Text style={[s.statTileVal, { color: colors.purple ?? '#9d4edd' }]}>{avgEnergy ?? '—'}</Text>
-              <Text style={s.statTileLabel}>Avg Energy</Text>
+              <Text style={s.statTileLabel}>{t('moodLog.avgEnergy')}</Text>
             </View>
             <View style={s.statTile}>
               <Text style={s.statTileEmoji}>📋</Text>
               <Text style={[s.statTileVal, { color: colors.text }]}>{logs.length}</Text>
-              <Text style={s.statTileLabel}>Logged</Text>
+              <Text style={s.statTileLabel}>{t('moodLog.logged')}</Text>
             </View>
           </View>
         )}
@@ -544,7 +546,7 @@ export default function MoodLogScreen({ navigation }) {
         {/* 5. [PRO] Weekly mood summary */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>THIS WEEK</Text>
+            <Text style={s.cardTitle}>{t('moodLog.thisWeek')}</Text>
           </View>
           {hasAccess && weeklySummary ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -593,7 +595,7 @@ export default function MoodLogScreen({ navigation }) {
         {/* 6. 28-day mood heatmap */}
         {logs.length > 0 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>28-DAY MOOD HEATMAP</Text>
+            <Text style={s.cardTitle}>{t('moodLog.heatmapTitle')}</Text>
             <View style={s.heatmapGrid}>
               {heatmapDays.map((item, idx) => (
                 <View
@@ -627,7 +629,7 @@ export default function MoodLogScreen({ navigation }) {
         {/* 7. 7-day bar chart */}
         {last7.length > 1 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>LAST 7 DAYS</Text>
+            <Text style={s.cardTitle}>{t('moodLog.last7Days')}</Text>
             <View style={s.chartRow}>
               {last7.map((l, i) => {
                 const d = new Date(l.date + 'T00:00:00');
@@ -656,7 +658,7 @@ export default function MoodLogScreen({ navigation }) {
         {/* 8. Day-of-week pattern */}
         {logs.length >= 7 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>DAY-OF-WEEK PATTERN</Text>
+            <Text style={s.cardTitle}>{t('moodLog.dowPattern')}</Text>
             <View style={s.dowChartRow}>
               {dowData.map((item, idx) => {
                 const barH = item.avg ? (item.avg / 5) * 56 : 0;
@@ -683,7 +685,7 @@ export default function MoodLogScreen({ navigation }) {
         {/* 9. [PRO] Mood × Sleep correlation */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>MOOD × SLEEP</Text>
+            <Text style={s.cardTitle}>{t('moodLog.moodSleep')}</Text>
           </View>
           {hasAccess && sleepCorr ? (
             <>
@@ -721,7 +723,7 @@ export default function MoodLogScreen({ navigation }) {
         {/* 10. [PRO] Mood × Workout correlation */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>MOOD × WORKOUT</Text>
+            <Text style={s.cardTitle}>{t('moodLog.moodWorkout')}</Text>
           </View>
           {hasAccess && workoutCorr ? (
             <>
@@ -762,7 +764,7 @@ export default function MoodLogScreen({ navigation }) {
         {/* 11. [PRO] Mood × Steps correlation */}
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={s.cardTitle}>MOOD × STEPS</Text>
+            <Text style={s.cardTitle}>{t('moodLog.moodSteps')}</Text>
           </View>
           {hasAccess && stepsCorr ? (
             <>
@@ -800,7 +802,7 @@ export default function MoodLogScreen({ navigation }) {
         {/* 12. History with search */}
         {logs.length > 0 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>HISTORY · TAP TO EDIT</Text>
+            <Text style={s.cardTitle}>{t('moodLog.historyTitle')}</Text>
             <TextInput
               style={s.searchInput}
               placeholder="Search by mood, energy, notes..."

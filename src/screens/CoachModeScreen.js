@@ -19,6 +19,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { weight } from '../theme/typography';
+import { useTranslation } from 'react-i18next';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -423,7 +424,7 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
         </View>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }}>
-          <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>Edit Profile</Text>
+          <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>{t('coach.editProfile')}</Text>
           <View style={{ gap: 6 }}>
             <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>DISPLAY NAME</Text>
             <TextInput
@@ -462,7 +463,7 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
           <TouchableOpacity onPress={onSave} disabled={saving} activeOpacity={0.8}
             style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1 }}>
             {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
-            <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>Save Profile</Text>
+            <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>{t('coach.saveProfile')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -570,7 +571,7 @@ function ClientNotesSheet({ visible, onClose, link, colors, onSaved }) {
           <TouchableOpacity onPress={handleSave} disabled={saving} activeOpacity={0.8}
             style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1 }}>
             {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
-            <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>Save Notes</Text>
+            <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>{t('coach.saveNotes')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -581,6 +582,7 @@ function ClientNotesSheet({ visible, onClose, link, colors, onSaved }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function CoachModeScreen() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { user } = useAuth();
   const { isPro } = useSubscription();
@@ -678,8 +680,8 @@ export default function CoachModeScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 20, fontWeight: weight.black, color: colors.text }}>Coach Zone</Text>
-          <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 1.2 }}>COACH VIEW</Text>
+          <Text style={{ fontSize: 20, fontWeight: weight.black, color: colors.text }}>{t('coach.title')}</Text>
+          <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 1.2 }}>{t('coach.coachView')}</Text>
         </View>
         {totalUnread > 0 && (
           <View style={{ backgroundColor: colors.danger, borderRadius: 12, minWidth: 24, height: 24, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 }}>
@@ -780,7 +782,7 @@ export default function CoachModeScreen() {
         {/* ── Active clients ───────────────────────────────────────── */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
           <Text style={{ flex: 1, fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase' }}>
-            Active Clients
+            {t('coach.activeClients_section')}
           </Text>
           {!isPro && (
             <Text style={{ fontSize: 10, color: colors.textDim, marginRight: 6 }}>
@@ -796,7 +798,7 @@ export default function CoachModeScreen() {
           <View style={{ alignItems: 'center', paddingVertical: 44, gap: 10, backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed', marginBottom: 16 }}>
             <Ionicons name="people-outline" size={44} color={colors.textDim + '80'} />
             <Text style={{ fontSize: 14, color: colors.textDim, textAlign: 'center', lineHeight: 20 }}>
-              No active clients yet.{'\n'}Tap + to invite someone.
+              {t('coach.noClientsYet')}
             </Text>
           </View>
         ) : (

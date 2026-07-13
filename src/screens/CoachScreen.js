@@ -19,6 +19,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
+import { useTranslation } from 'react-i18next';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ function Avatar({ name, size = 44, fontSize = 16, bg, color }) {
 
 // ─── Invite Code Overlay ──────────────────────────────────────────────────────
 
-function InviteOverlay({ code, onClose, colors }) {
+function InviteOverlay({ code, onClose, colors, t }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await copyToClipboard(code);
@@ -88,7 +89,7 @@ function InviteOverlay({ code, onClose, colors }) {
         {/* Code */}
         <View style={{ alignItems: 'center', gap: 6 }}>
           <Text style={{ fontSize: 12, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 2, textTransform: 'uppercase' }}>
-            Invite Code
+            {t('coach.inviteCode')}
           </Text>
           <Text style={{ fontSize: 38, fontWeight: weight.black, color: colors.accent, letterSpacing: 10 }}>
             {code}
@@ -116,7 +117,7 @@ function InviteOverlay({ code, onClose, colors }) {
         </TouchableOpacity>
 
         <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={{ paddingVertical: 6 }}>
-          <Text style={{ fontSize: 14, color: colors.textDim }}>Done</Text>
+          <Text style={{ fontSize: 14, color: colors.textDim }}>{t('coach.done')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -136,6 +137,7 @@ const PRIVACY_ITEMS = [
 const DEFAULT_VIS = { workouts: true, weight: true, steps: true, sleep: true, food: true };
 
 function CoachTab({ userId, colors }) {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const qc = useQueryClient();
   const [inviteCode, setInviteCode] = useState(null);
@@ -307,7 +309,7 @@ function CoachTab({ userId, colors }) {
       </View>
 
       {/* ── Add clients ─────────────────────────────────────────────── */}
-      <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>Add Clients</Text>
+      <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>{t('coach.addClients')}</Text>
 
       {/* Search */}
       <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 10 }}>
@@ -380,7 +382,7 @@ function CoachTab({ userId, colors }) {
       {pending.length > 0 && (
         <View style={{ marginBottom: 20 }}>
           <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
-            Pending ({pending.length})
+            {t('coach.pending', { count: pending.length })}
           </Text>
           {pending.map(link => {
             const isSearch = !link.invite_code && link.client_id;
@@ -412,7 +414,7 @@ function CoachTab({ userId, colors }) {
 
       {/* ── Active clients ───────────────────────────────────────────── */}
       <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
-        Active Clients ({active.length})
+        {t('coach.activeClients', { count: active.length })}
       </Text>
 
       {active.length === 0 ? (
@@ -452,7 +454,7 @@ function CoachTab({ userId, colors }) {
         })
       )}
 
-      {inviteCode && <InviteOverlay code={inviteCode} onClose={() => setInviteCode(null)} colors={colors} />}
+      {inviteCode && <InviteOverlay code={inviteCode} onClose={() => setInviteCode(null)} colors={colors} t={t} />}
     </ScrollView>
   );
 }
@@ -460,6 +462,7 @@ function CoachTab({ userId, colors }) {
 // ─── Client Tab ───────────────────────────────────────────────────────────────
 
 function ClientTab({ userId, colors, isPro }) {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const [inviteCode, setInviteCode] = useState('');
   const [joining, setJoining] = useState(false);
@@ -649,7 +652,7 @@ function ClientTab({ userId, colors, isPro }) {
               style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
               <Ionicons name="chatbubble-ellipses" size={16} color={colors.bg} />
-              <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>Message Coach</Text>
+              <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>{t('coach.messageCoach')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -660,7 +663,7 @@ function ClientTab({ userId, colors, isPro }) {
             <Ionicons name="people-circle-outline" size={40} color={colors.accent} />
           </View>
           <View style={{ alignItems: 'center', gap: 4 }}>
-            <Text style={{ fontSize: 17, fontWeight: weight.black, color: colors.text }}>No Coach Yet</Text>
+            <Text style={{ fontSize: 17, fontWeight: weight.black, color: colors.text }}>{t('coach.noCoachYet')}</Text>
             <Text style={{ fontSize: 13, color: colors.textDim, textAlign: 'center', lineHeight: 19 }}>
               Enter a coach's invite code{'\n'}to get started
             </Text>
@@ -692,7 +695,7 @@ function ClientTab({ userId, colors, isPro }) {
 
       {/* ── Privacy controls ─────────────────────────────────────────── */}
       <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
-        Coach Visibility
+        {t('coach.visibility')}
       </Text>
       <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20 }}>
         {PRIVACY_ITEMS.map(({ key, label, icon, desc }, i) => (
@@ -740,6 +743,7 @@ function ClientTab({ userId, colors, isPro }) {
 // ─── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function CoachScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
   const { isPro } = useSubscription();
@@ -758,15 +762,15 @@ export default function CoachScreen() {
         >
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={{ flex: 1, fontSize: 20, fontWeight: weight.black, color: colors.text }}>Coach Zone</Text>
+        <Text style={{ flex: 1, fontSize: 20, fontWeight: weight.black, color: colors.text }}>{t('coach.title')}</Text>
         <Ionicons name="shield-checkmark" size={22} color={colors.accent} />
       </View>
 
       {/* ── Tab switcher ────────────────────────────────────────────── */}
       <View style={{ flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 4 }}>
         {[
-          { key: 'coach', label: 'I\'m a Coach', icon: 'ribbon-outline' },
-          { key: 'client', label: 'I\'m a Client', icon: 'person-outline' },
+          { key: 'coach', label: t('coach.tabCoach'), icon: 'ribbon-outline' },
+          { key: 'client', label: t('coach.tabClient'), icon: 'person-outline' },
         ].map(t => (
           <TouchableOpacity
             key={t.key}

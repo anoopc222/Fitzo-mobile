@@ -20,6 +20,7 @@ import CalorieStack from '../components/CalorieStack';
 import WorkoutBuilderPuzzle from '../components/WorkoutBuilderPuzzle';
 import BodyClockQuiz from '../components/BodyClockQuiz';
 import { useGameStreak } from '../components/GameStreak';
+import { useTranslation } from 'react-i18next';
 
 const { width: W } = Dimensions.get('window');
 const CARD_W = (W - 32 - 10) / 2;
@@ -158,6 +159,7 @@ function makeGameTheme(g) {
 const BG = '#06060f';
 
 export default function GameZoneScreen({ navigation }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { streak } = useGameStreak(user?.id);
   const [activeGame, setActiveGame] = useState(null);
@@ -176,7 +178,7 @@ export default function GameZoneScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
             <Ionicons name="chevron-back" size={20} color="#fff" />
           </TouchableOpacity>
-          <Text style={s.headerTitle}>Game Zone</Text>
+          <Text style={s.headerTitle}>{t('gameZone.title')}</Text>
           <View style={{ width: 36 }} />
         </View>
 
@@ -185,9 +187,9 @@ export default function GameZoneScreen({ navigation }) {
           {/* Hero */}
           <View style={s.hero}>
             <View style={s.heroBadge}>
-              <Text style={s.heroBadgeText}>🎮  PLAY & EARN</Text>
+              <Text style={s.heroBadgeText}>{t('gameZone.heroBadge')}</Text>
             </View>
-            <Text style={s.heroHeading}>Level Up Your{'\n'}Fitness IQ</Text>
+            <Text style={s.heroHeading}>{t('gameZone.heroHeading')}</Text>
             <Text style={s.heroSub}>10 mini-games · XP · Leaderboards</Text>
             {streak > 0 && (
               <View style={s.streakBadge}>
@@ -197,7 +199,7 @@ export default function GameZoneScreen({ navigation }) {
           </View>
 
           {/* Game grid */}
-          <Text style={s.sectionLabel}>CHOOSE A GAME</Text>
+          <Text style={s.sectionLabel}>{t('gameZone.chooseGame')}</Text>
           <View style={s.grid}>
             {GAMES.map((g, i) => {
               const isLast = i === GAMES.length - 1;
@@ -220,7 +222,7 @@ export default function GameZoneScreen({ navigation }) {
                     </View>
                     {g.hot && (
                       <View style={s.hotBadge}>
-                        <Text style={s.hotBadgeText}>🔥 HOT</Text>
+                        <Text style={s.hotBadgeText}>{t('gameZone.hot')}</Text>
                       </View>
                     )}
                   </View>
@@ -233,7 +235,7 @@ export default function GameZoneScreen({ navigation }) {
                       activeOpacity={0.85}
                     >
                       <Ionicons name="play" size={12} color="#000" />
-                      <Text style={s.playBtnText}>PLAY</Text>
+                      <Text style={s.playBtnText}>{t('gameZone.play')}</Text>
                     </TouchableOpacity>
                   </View>
                   <View style={[s.bottomLine, { backgroundColor: g.color }]} />

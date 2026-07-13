@@ -2003,7 +2003,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
           <TouchableOpacity onPress={onClose} style={{ marginRight: 12 }}>
             <Ionicons name="chevron-back" size={24} color={colors.accent} />
           </TouchableOpacity>
-          <Text style={{ flex: 1, fontSize: 15, fontWeight: '800', color: colors.text }}>MY WORKOUT PLANS</Text>
+          <Text style={{ flex: 1, fontSize: 15, fontWeight: '800', color: colors.text }}>{t('workout.myWorkoutPlans')}</Text>
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -2013,7 +2013,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
               <TextInput
                 style={{ flex: 1, backgroundColor: colors.card, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border }}
-                placeholder="New plan name…"
+                placeholder={t('workout.newPlanPlaceholder')}
                 placeholderTextColor={colors.textDim}
                 value={newPlanName}
                 onChangeText={setNewPlanName}
@@ -2022,13 +2022,13 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
               />
               <TouchableOpacity onPress={handleCreate}
                 style={{ backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 16, justifyContent: 'center' }}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.accentText }}>Add</Text>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.accentText }}>{t('workout.addPlan')}</Text>
               </TouchableOpacity>
             </View>
 
             {orderedPlans.length === 0 && (
               <Text style={{ color: colors.textDim, fontSize: 13, paddingVertical: 24, textAlign: 'center' }}>
-                No plans yet. Create your first plan above.
+                {t('workout.noPlansYet')}
               </Text>
             )}
 
@@ -3890,8 +3890,8 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
             <Ionicons name="list" size={18} color={colors.accent} />
           </View>
           <View style={s.quickText}>
-            <Text style={[s.quickLabel, { color: colors.text }]}>My Plans</Text>
-            <Text style={[s.quickSub, { color: colors.textDim }]}>View & manage workout templates</Text>
+            <Text style={[s.quickLabel, { color: colors.text }]}>{t('workout.myPlans')}</Text>
+            <Text style={[s.quickSub, { color: colors.textDim }]}>{t('workout.myPlansSub')}</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
         </TouchableOpacity>
@@ -3908,8 +3908,8 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
             <Ionicons name="barbell" size={18} color={colors.warning} />
           </View>
           <View style={s.quickText}>
-            <Text style={[s.quickLabel, { color: colors.text }]}>Exercise Reference</Text>
-            <Text style={[s.quickSub, { color: colors.textDim }]}>Browse 264 exercises with demos</Text>
+            <Text style={[s.quickLabel, { color: colors.text }]}>{t('workout.exerciseRef')}</Text>
+            <Text style={[s.quickSub, { color: colors.textDim }]}>{t('workout.exerciseRefSub')}</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
         </TouchableOpacity>
@@ -3926,8 +3926,8 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
             <Ionicons name="trending-up" size={18} color={colors.good} />
           </View>
           <View style={s.quickText}>
-            <Text style={[s.quickLabel, { color: colors.text }]}>Track My Progress</Text>
-            <Text style={[s.quickSub, { color: colors.textDim }]}>PRs, trends & exercise history</Text>
+            <Text style={[s.quickLabel, { color: colors.text }]}>{t('workout.trackProgress')}</Text>
+            <Text style={[s.quickSub, { color: colors.textDim }]}>{t('workout.trackProgressSub')}</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
         </TouchableOpacity>
