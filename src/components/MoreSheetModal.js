@@ -23,7 +23,6 @@ const getSections = (t, colors, isSuperAdmin, isPro, subReady) => [
     items: [
       { label: t('more.progress'),          icon: 'trending-up',   target: ['Home', 'Progress'],           color: colors.good },
       { label: t('more.measurements'),      icon: 'body',           target: ['Home', 'Measurements'],       color: colors.purple },
-      { label: 'Exercise Reference',        icon: 'barbell',        target: ['Home', 'ExerciseReference'],  color: colors.warning },
       { label: t('more.dietPlan'),          icon: 'nutrition',      target: ['Home', 'Diet'],               color: colors.accent2 },
     ],
   },
