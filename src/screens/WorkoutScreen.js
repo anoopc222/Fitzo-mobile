@@ -1916,6 +1916,14 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
                       <Ionicons name="reorder-three-outline" size={20} color={colors.textDim} />
                     </View>
                     <Text style={{ flex: 1, fontSize: 14, color: colors.text, fontWeight: '500' }} numberOfLines={1}>{ex}</Text>
+                    {(() => {
+                      const k = ex.toLowerCase().trim();
+                      const url = EXERCISE_IMAGES[k] ?? (() => {
+                        const entry = Object.entries(EXERCISE_IMAGES).find(([key]) => key.includes(k) || k.includes(key));
+                        return entry ? entry[1] : null;
+                      })();
+                      return url ? <AcDemoButton name={ex} imageUrl={url} colors={colors} /> : null;
+                    })()}
                     <TouchableOpacity onPress={() => removeTemplateEx(idx)} style={{ paddingHorizontal: 12, alignSelf: 'stretch', justifyContent: 'center' }}>
                       <Ionicons name="trash-outline" size={16} color={colors.danger} />
                     </TouchableOpacity>
@@ -1933,15 +1941,27 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
                   <ScrollView keyboardShouldPersistTaps="handled">
                     {tmplSuggestions.map(n => {
                       const ws = getWorkoutStyle(n, colors);
+                      const tmplImgKey = n.toLowerCase().trim();
+                      const tmplImgUrl = EXERCISE_IMAGES[tmplImgKey] ?? (() => {
+                        const entry = Object.entries(EXERCISE_IMAGES).find(([k]) => k.includes(tmplImgKey) || tmplImgKey.includes(k));
+                        return entry ? entry[1] : null;
+                      })();
                       return (
-                        <TouchableOpacity
+                        <View
                           key={n}
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.border }}
-                          onPress={() => { setNewExName(n); }}
+                          style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}
                         >
-                          <Text style={{ fontSize: 16 }}>{ws.icon}</Text>
-                          <Text style={{ fontSize: 14, color: colors.text }}>{n}</Text>
-                        </TouchableOpacity>
+                          <TouchableOpacity
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingVertical: 11 }}
+                            onPress={() => { setNewExName(n); }}
+                          >
+                            <Text style={{ fontSize: 16 }}>{ws.icon}</Text>
+                            <Text style={{ fontSize: 14, color: colors.text }}>{n}</Text>
+                          </TouchableOpacity>
+                          {tmplImgUrl && (
+                            <AcDemoButton name={n} imageUrl={tmplImgUrl} colors={colors} />
+                          )}
+                        </View>
                       );
                     })}
                   </ScrollView>
