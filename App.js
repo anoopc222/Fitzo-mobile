@@ -117,7 +117,7 @@ export default function App() {
   }
 
   return (
-    <PostHogProvider apiKey={POSTHOG_API_KEY} options={{ host: POSTHOG_HOST }} autocapture>
+    <PostHogProvider apiKey={POSTHOG_API_KEY} options={{ host: POSTHOG_HOST }}>
       <SafeAreaProvider>
         <PersistQueryClientProvider
           client={queryClient}
