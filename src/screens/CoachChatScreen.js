@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator, LayoutAnimation, UIManager,
+  KeyboardAvoidingView, Platform, ActivityIndicator, LayoutAnimation,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,10 +13,6 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { sendChatPushNotification } from '../lib/notifications';
 import { typography, weight } from '../theme/typography';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
