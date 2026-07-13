@@ -3220,7 +3220,7 @@ function EditSessionModal({
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function WorkoutScreen({ embedded = false } = {}) {
+export default function WorkoutScreen({ embedded = false, navigation } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -3890,7 +3890,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[s.plansBtn, { flex: 1 }]}
-          onPress={() => navigate('Home', { screen: 'ExerciseReference' })}
+          onPress={() => navigation ? navigation.navigate('ExerciseReference') : navigate('Home', { screen: 'ExerciseReference' })}
         >
           <Ionicons name="barbell" size={14} color={colors.warning} />
           <Text style={[s.plansBtnText, { color: colors.warning }]}>REF</Text>
@@ -3900,7 +3900,7 @@ export default function WorkoutScreen({ embedded = false } = {}) {
       {/* Track My Progress button */}
       <TouchableOpacity
         style={s.progressBtn}
-        onPress={() => navigate('Home', { screen: 'Progress' })}
+        onPress={() => navigation ? navigation.navigate('Progress') : navigate('Home', { screen: 'Progress' })}
       >
         <Ionicons name="trending-up" size={14} color={colors.good} />
         <Text style={[s.plansBtnText, { color: colors.good }]}>TRACK MY PROGRESS</Text>
