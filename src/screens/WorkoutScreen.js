@@ -3882,29 +3882,56 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
         onClose={() => setShowMonthPicker(false)}
       />
 
-      {/* Plans button + Exercise Reference button */}
-      <View style={s.plansBtnRow}>
-        <TouchableOpacity style={[s.plansBtn, { flex: 3 }]} onPress={() => setShowPlans(true)}>
-          <Ionicons name="list" size={14} color={colors.accent} />
-          <Text style={s.plansBtnText}>MY PLANS</Text>
+      {/* Quick Actions card */}
+      <View style={[s.quickCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+        {/* My Plans */}
+        <TouchableOpacity style={s.quickRow} onPress={() => setShowPlans(true)} activeOpacity={0.7}>
+          <View style={[s.quickIcon, { backgroundColor: colors.accent + '20' }]}>
+            <Ionicons name="list" size={18} color={colors.accent} />
+          </View>
+          <View style={s.quickText}>
+            <Text style={[s.quickLabel, { color: colors.text }]}>My Plans</Text>
+            <Text style={[s.quickSub, { color: colors.textDim }]}>View & manage workout templates</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
         </TouchableOpacity>
+
+        <View style={[s.quickDivider, { backgroundColor: colors.border }]} />
+
+        {/* Exercise Reference */}
         <TouchableOpacity
-          style={[s.plansBtn, { flex: 1 }]}
+          style={s.quickRow}
           onPress={() => navigation ? navigation.navigate('ExerciseReference') : navigate('Home', { screen: 'ExerciseReference' })}
+          activeOpacity={0.7}
         >
-          <Ionicons name="barbell" size={14} color={colors.warning} />
-          <Text style={[s.plansBtnText, { color: colors.warning }]}>REF</Text>
+          <View style={[s.quickIcon, { backgroundColor: colors.warning + '20' }]}>
+            <Ionicons name="barbell" size={18} color={colors.warning} />
+          </View>
+          <View style={s.quickText}>
+            <Text style={[s.quickLabel, { color: colors.text }]}>Exercise Reference</Text>
+            <Text style={[s.quickSub, { color: colors.textDim }]}>Browse 264 exercises with demos</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+        </TouchableOpacity>
+
+        <View style={[s.quickDivider, { backgroundColor: colors.border }]} />
+
+        {/* Track My Progress */}
+        <TouchableOpacity
+          style={s.quickRow}
+          onPress={() => navigation ? navigation.navigate('Progress') : navigate('Home', { screen: 'Progress' })}
+          activeOpacity={0.7}
+        >
+          <View style={[s.quickIcon, { backgroundColor: colors.good + '20' }]}>
+            <Ionicons name="trending-up" size={18} color={colors.good} />
+          </View>
+          <View style={s.quickText}>
+            <Text style={[s.quickLabel, { color: colors.text }]}>Track My Progress</Text>
+            <Text style={[s.quickSub, { color: colors.textDim }]}>PRs, trends & exercise history</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
         </TouchableOpacity>
       </View>
-
-      {/* Track My Progress button */}
-      <TouchableOpacity
-        style={s.progressBtn}
-        onPress={() => navigation ? navigation.navigate('Progress') : navigate('Home', { screen: 'Progress' })}
-      >
-        <Ionicons name="trending-up" size={14} color={colors.good} />
-        <Text style={[s.plansBtnText, { color: colors.good }]}>TRACK MY PROGRESS</Text>
-      </TouchableOpacity>
 
       {/* List */}
       <ScrollView
@@ -4584,22 +4611,23 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
 const createS = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
 
-  plansBtnRow: {
-    flexDirection: 'row', gap: 8,
-    marginHorizontal: 16, marginBottom: 8,
+  quickCard: {
+    marginHorizontal: 16, marginBottom: 10,
+    borderRadius: 16, borderWidth: 1,
+    overflow: 'hidden',
   },
-  plansBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+  quickRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 13, paddingHorizontal: 14,
   },
-  plansBtnText: { fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 0.5 },
-  progressBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginHorizontal: 16, marginBottom: 8,
-    paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+  quickIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
+  quickText: { flex: 1 },
+  quickLabel: { fontSize: 14, fontWeight: weight.semibold },
+  quickSub: { fontSize: 11, marginTop: 1 },
+  quickDivider: { height: 1, marginLeft: 62 },
 
   card: {
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
