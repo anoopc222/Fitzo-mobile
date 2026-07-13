@@ -27,6 +27,7 @@ import PaywallModal from '../components/ui/PaywallModal';
 import ScreenHeader from '../components/ScreenHeader';
 import SkeletonScreen from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
+import { navigate } from '../navigation/navigationRef';
 import { useGatedExport } from '../hooks/useGatedExport';
 import { useExportCard } from '../hooks/useExportCard';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -3881,11 +3882,20 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         onClose={() => setShowMonthPicker(false)}
       />
 
-      {/* Plans button */}
-      <TouchableOpacity style={s.plansBtn} onPress={() => setShowPlans(true)}>
-        <Ionicons name="list" size={14} color={colors.accent} />
-        <Text style={s.plansBtnText}>MY PLANS</Text>
-      </TouchableOpacity>
+      {/* Plans button + Exercise Reference button */}
+      <View style={s.plansBtnRow}>
+        <TouchableOpacity style={[s.plansBtn, { flex: 3 }]} onPress={() => setShowPlans(true)}>
+          <Ionicons name="list" size={14} color={colors.accent} />
+          <Text style={s.plansBtnText}>MY PLANS</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.plansBtn, { flex: 1 }]}
+          onPress={() => navigate('Home', { screen: 'ExerciseReference' })}
+        >
+          <Ionicons name="barbell" size={14} color={colors.warning} />
+          <Text style={[s.plansBtnText, { color: colors.warning }]}>REF</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* List */}
       <ScrollView
@@ -4565,9 +4575,12 @@ export default function WorkoutScreen({ embedded = false } = {}) {
 const createS = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
 
+  plansBtnRow: {
+    flexDirection: 'row', gap: 8,
+    marginHorizontal: 16, marginBottom: 8,
+  },
   plansBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginHorizontal: 16, marginBottom: 8,
     paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
   },
