@@ -32,6 +32,7 @@ import CoachModeScreen from '../screens/CoachModeScreen';
 import ClientModeScreen from '../screens/ClientModeScreen';
 import ClientDetailScreen from '../screens/ClientDetailScreen';
 import CoachChatScreen from '../screens/CoachChatScreen';
+import ExerciseReferenceScreen from '../screens/ExerciseReferenceScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -70,6 +71,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="ClientMode" component={ClientModeScreen} />
       <HomeStack.Screen name="ClientDetail" component={ClientDetailScreen} />
       <HomeStack.Screen name="CoachChat" component={CoachChatScreen} />
+      <HomeStack.Screen name="ExerciseReference" component={ExerciseReferenceScreen} />
     </HomeStack.Navigator>
   );
 }
