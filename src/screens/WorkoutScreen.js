@@ -3897,6 +3897,15 @@ export default function WorkoutScreen({ embedded = false } = {}) {
         </TouchableOpacity>
       </View>
 
+      {/* Track My Progress button */}
+      <TouchableOpacity
+        style={s.progressBtn}
+        onPress={() => navigate('Home', { screen: 'Progress' })}
+      >
+        <Ionicons name="trending-up" size={14} color={colors.good} />
+        <Text style={[s.plansBtnText, { color: colors.good }]}>TRACK MY PROGRESS</Text>
+      </TouchableOpacity>
+
       {/* List */}
       <ScrollView
         contentContainerStyle={s.content}
@@ -4585,6 +4594,12 @@ const createS = (colors) => StyleSheet.create({
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
   },
   plansBtnText: { fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 0.5 },
+  progressBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+  },
 
   card: {
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
