@@ -1206,18 +1206,21 @@ export default function HomeScreen() {
   const [showStepsLog, setShowStepsLog] = useState(false);
   const [stepsQuickInput, setStepsQuickInput] = useState('');
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isStale, refetch } = useQuery({
     queryKey: ['home', user?.id],
     queryFn: () => fetchHome(user.id),
     enabled: !!user?.id,
+    staleTime: 15_000,
   });
 
-  // Refetch whenever the user navigates back to the Home tab so stats
-  // logged on other screens (Steps, Weight, Sleep, etc.) are reflected.
+  // Refetch on Home tab focus only when data is stale (>15s old).
+  // Mutations that log weight/steps/sleep/food already call invalidateQueries
+  // which marks data stale and triggers a background refetch — so by the time
+  // the user switches back to this tab the data is already fresh.
   useFocusEffect(
     useCallback(() => {
-      if (user?.id) refetch();
-    }, [user?.id, refetch])
+      if (user?.id && isStale) refetch();
+    }, [user?.id, isStale, refetch])
   );
 
   useSmartReminders(user?.id);
