@@ -250,7 +250,8 @@ export default function WorkoutTemplateScreen({ navigation, route }) {
             <Image source={{ uri: previewImg?.url }} style={{ width: '100%', height: 260 }} resizeMode="contain" />
             <View style={{ padding: 16, alignItems: 'center' }}>
               <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, textAlign: 'center' }}>{previewImg?.name}</Text>
-              <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 4 }}>Tap anywhere to close</Text>
+              <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 6 }}>Image: wger.de (CC BY 4.0)</Text>
+              <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 4 }}>Tap anywhere to close</Text>
             </View>
           </View>
         </Pressable>
