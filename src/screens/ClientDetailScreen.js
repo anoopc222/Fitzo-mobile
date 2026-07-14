@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Dimensions,
+  Modal, TextInput, Pressable, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -377,7 +378,21 @@ export default function ClientDetailScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const navigation = useNavigation();
-  const { clientId, clientName } = useRoute().params ?? {};
+  const { clientId, clientName, linkId, initNotes = '', initCoachNote = '' } = useRoute().params ?? {};
+
+  const [editVisible, setEditVisible] = useState(false);
+  const [privateNote, setPrivateNote] = useState(initNotes);
+  const [clientNote, setClientNote] = useState(initCoachNote);
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveNotes = async () => {
+    setSaving(true);
+    await supabase.from('coach_clients')
+      .update({ notes: privateNote || null, coach_note: clientNote || null })
+      .eq('id', linkId);
+    setSaving(false);
+    setEditVisible(false);
+  };
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['clientDetail', clientId],
@@ -456,7 +471,15 @@ export default function ClientDetailScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScreenHeader title={clientName ?? 'Client'} onBack={() => navigation.goBack()} />
+      <ScreenHeader
+        title={clientName ?? 'Client'}
+        onBack={() => navigation.goBack()}
+        right={linkId ? (
+          <TouchableOpacity onPress={() => setEditVisible(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="create-outline" size={20} color={colors.accent} />
+          </TouchableOpacity>
+        ) : null}
+      />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}
@@ -666,6 +689,70 @@ export default function ClientDetailScreen() {
         })()}
 
       </ScrollView>
+
+      {/* ── Edit notes modal ─────────────────────────────────────────── */}
+      <Modal visible={editVisible} transparent animationType="slide" onRequestClose={() => setEditVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={() => setEditVisible(false)} />
+          <View style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0,
+            backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            borderTopWidth: 1, borderColor: colors.border, paddingBottom: 40,
+          }}>
+            <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+            </View>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled">
+              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>
+                Edit Notes · {clientName}
+              </Text>
+
+              {/* Note visible to client */}
+              <View style={{ gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="megaphone-outline" size={14} color={colors.accent} />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textDim, letterSpacing: 1 }}>NOTE TO CLIENT</Text>
+                </View>
+                <Text style={{ fontSize: 12, color: colors.textDim, marginBottom: 4 }}>Visible to {clientName} on their Coach Zone screen.</Text>
+                <TextInput
+                  value={clientNote}
+                  onChangeText={setClientNote}
+                  placeholder="Weekly focus, feedback, motivation…"
+                  placeholderTextColor={colors.textDim}
+                  multiline numberOfLines={3}
+                  style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: colors.accent + '40', paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: colors.text, minHeight: 80, textAlignVertical: 'top' }}
+                />
+              </View>
+
+              {/* Private coach note */}
+              <View style={{ gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="lock-closed-outline" size={14} color="#6366f1" />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textDim, letterSpacing: 1 }}>PRIVATE COACH NOTE</Text>
+                </View>
+                <Text style={{ fontSize: 12, color: colors.textDim, marginBottom: 4 }}>Only you can see this. Use it for observations, plans, or reminders.</Text>
+                <TextInput
+                  value={privateNote}
+                  onChangeText={setPrivateNote}
+                  placeholder="Internal notes, observations, next session plan…"
+                  placeholderTextColor={colors.textDim}
+                  multiline numberOfLines={3}
+                  style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: '#6366f140', paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: colors.text, minHeight: 80, textAlignVertical: 'top' }}
+                />
+              </View>
+
+              <TouchableOpacity onPress={handleSaveNotes} disabled={saving} activeOpacity={0.8}
+                style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1 }}>
+                {saving
+                  ? <ActivityIndicator size="small" color="#000" />
+                  : <Ionicons name="checkmark-circle" size={17} color="#000" />}
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#000' }}>Save Notes</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </SafeAreaView>
   );
 }
