@@ -91,6 +91,20 @@ async function leaveChallenge(challengeId, userId) {
   if (error) throw error;
 }
 
+const CHALLENGES_GUIDE = {
+  title: 'Challenges Guide',
+  tagline: '🏆 Compete, stay accountable, and hit goals together.',
+  sections: [
+    { icon: 'add-circle-outline',   heading: 'Create a Challenge', tip: 'Tap + to set a goal (steps, workouts, weight loss) and invite friends to join.' },
+    { icon: 'people-outline',       heading: 'Join a Challenge',   tip: 'Browse open challenges and tap Join. Your progress tracks automatically.' },
+    { icon: 'podium-outline',       heading: 'Leaderboard',        tip: 'Live rankings update as participants log data. Stay on top to win.' },
+    { icon: 'calendar-outline',     heading: 'Duration',           tip: 'Challenges run for a set number of days. Progress freezes when time is up.' },
+    { icon: 'trophy-outline',       heading: 'Winning',            tip: 'The participant closest to or furthest past the goal wins at the end date.' },
+    { icon: 'share-social-outline', heading: 'Share & Invite',     tip: 'Share a challenge link directly to WhatsApp, Instagram, or any app.' },
+  ],
+  footerTip: 'All tracked metrics (steps, workouts) update from your logs automatically — no manual entry needed.',
+};
+
 export default function ChallengesScreen({ navigation, embedded = false }) {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -246,6 +260,7 @@ export default function ChallengesScreen({ navigation, embedded = false }) {
           title={t('challenges.title')}
           colors={colors}
           onBack={() => navigation.goBack()}
+          info={CHALLENGES_GUIDE}
           right={
             <TouchableOpacity onPress={() => setShowCreate(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="add-circle-outline" size={22} color={colors.accent} />
