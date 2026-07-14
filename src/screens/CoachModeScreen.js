@@ -372,43 +372,25 @@ const SPECIALTIES = ['Strength', 'Weight Loss', 'Muscle Gain', 'Cardio', 'Flexib
 const COACHING_TYPES = ['Online', 'In-Person', 'Hybrid', 'Self-Trained'];
 const EXP_OPTIONS = ['< 1 year', '1–2 years', '3–5 years', '6–10 years', '10+ years'];
 
-function EditProfileSheet({ visible, onClose, initialDraft, onSave, saving, colors }) {
-  const { t } = useTranslation();
-  const [local, setLocal] = useState(initialDraft ?? EMPTY_PROFILE);
-
-  // Sync local state when sheet opens with fresh data
-  useEffect(() => {
-    if (visible) setLocal(initialDraft ?? EMPTY_PROFILE);
-  }, [visible]);
-
-  const Field = ({ label, children }) => (
+// ── Stable sub-components defined OUTSIDE EditProfileSheet ──────────────────
+// Defining components inside a render function gives them a new identity every
+// render, causing React to unmount/remount TextInputs and drop the keyboard.
+function EPField({ label, colors, children }) {
+  return (
     <View style={{ gap: 6 }}>
       <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>{label}</Text>
       {children}
     </View>
   );
-  const input = (key, placeholder, multiline) => (
-    <TextInput
-      value={local[key] ?? ''}
-      onChangeText={v => setLocal(d => ({ ...d, [key]: v }))}
-      placeholder={placeholder}
-      placeholderTextColor={colors.textDim}
-      multiline={multiline}
-      numberOfLines={multiline ? 3 : 1}
-      style={{
-        backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5,
-        borderColor: colors.accent + '40', paddingHorizontal: 14, paddingVertical: 11,
-        fontSize: 15, color: colors.text,
-        ...(multiline ? { minHeight: 76, textAlignVertical: 'top' } : {}),
-      }}
-    />
-  );
-  const Chips = ({ items, field }) => (
+}
+
+function EPChips({ items, selected, colors, onSelect }) {
+  return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
       {items.map(s => {
-        const sel = local[field] === s;
+        const sel = selected === s;
         return (
-          <TouchableOpacity key={s} onPress={() => setLocal(d => ({ ...d, [field]: sel ? '' : s }))} activeOpacity={0.75}
+          <TouchableOpacity key={s} onPress={() => onSelect(sel ? '' : s)} activeOpacity={0.75}
             style={{ paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20, backgroundColor: sel ? colors.accent : 'transparent', borderWidth: 1.5, borderColor: sel ? colors.accent : colors.border }}>
             <Text style={{ fontSize: 12, fontWeight: weight.semibold, color: sel ? colors.bg : colors.textDim }}>{s}</Text>
           </TouchableOpacity>
@@ -416,6 +398,21 @@ function EditProfileSheet({ visible, onClose, initialDraft, onSave, saving, colo
       })}
     </View>
   );
+}
+
+function EditProfileSheet({ visible, onClose, initialDraft, onSave, saving, colors }) {
+  const { t } = useTranslation();
+  const [local, setLocal] = useState(initialDraft ?? EMPTY_PROFILE);
+
+  useEffect(() => {
+    if (visible) setLocal(initialDraft ?? EMPTY_PROFILE);
+  }, [visible]);
+
+  const inputStyle = {
+    backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5,
+    borderColor: colors.accent + '40', paddingHorizontal: 14, paddingVertical: 11,
+    fontSize: 15, color: colors.text,
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -432,22 +429,33 @@ function EditProfileSheet({ visible, onClose, initialDraft, onSave, saving, colo
             <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>{t('coach.editProfile')}</Text>
 
-              <Field label="DISPLAY NAME">{input('full_name', 'Your name')}</Field>
-              <Field label="GYM / STUDIO NAME">{input('gym_name', 'e.g. Iron Fitness, Home Gym…')}</Field>
-              <Field label="LOCATION">{input('location', 'City, Country')}</Field>
-              <Field label="BIO">{input('bio', 'Tell your clients about yourself…', true)}</Field>
+              <EPField label="DISPLAY NAME" colors={colors}>
+                <TextInput value={local.full_name ?? ''} onChangeText={v => setLocal(d => ({ ...d, full_name: v }))} placeholder="Your name" placeholderTextColor={colors.textDim} style={inputStyle} />
+              </EPField>
 
-              <Field label="SPECIALTY">
-                <Chips items={SPECIALTIES} field="goal" />
-              </Field>
+              <EPField label="GYM / STUDIO NAME" colors={colors}>
+                <TextInput value={local.gym_name ?? ''} onChangeText={v => setLocal(d => ({ ...d, gym_name: v }))} placeholder="e.g. Iron Fitness, Home Gym…" placeholderTextColor={colors.textDim} style={inputStyle} />
+              </EPField>
 
-              <Field label="COACHING TYPE">
-                <Chips items={COACHING_TYPES} field="coaching_type" />
-              </Field>
+              <EPField label="LOCATION" colors={colors}>
+                <TextInput value={local.location ?? ''} onChangeText={v => setLocal(d => ({ ...d, location: v }))} placeholder="City, Country" placeholderTextColor={colors.textDim} style={inputStyle} />
+              </EPField>
 
-              <Field label="EXPERIENCE">
-                <Chips items={EXP_OPTIONS} field="experience_years" />
-              </Field>
+              <EPField label="BIO" colors={colors}>
+                <TextInput value={local.bio ?? ''} onChangeText={v => setLocal(d => ({ ...d, bio: v }))} placeholder="Tell your clients about yourself…" placeholderTextColor={colors.textDim} multiline numberOfLines={3} style={[inputStyle, { minHeight: 76, textAlignVertical: 'top' }]} />
+              </EPField>
+
+              <EPField label="SPECIALTY" colors={colors}>
+                <EPChips items={SPECIALTIES} selected={local.goal} colors={colors} onSelect={v => setLocal(d => ({ ...d, goal: v }))} />
+              </EPField>
+
+              <EPField label="COACHING TYPE" colors={colors}>
+                <EPChips items={COACHING_TYPES} selected={local.coaching_type} colors={colors} onSelect={v => setLocal(d => ({ ...d, coaching_type: v }))} />
+              </EPField>
+
+              <EPField label="EXPERIENCE" colors={colors}>
+                <EPChips items={EXP_OPTIONS} selected={local.experience_years} colors={colors} onSelect={v => setLocal(d => ({ ...d, experience_years: v }))} />
+              </EPField>
 
               <TouchableOpacity onPress={() => onSave(local)} disabled={saving} activeOpacity={0.8}
                 style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1, marginTop: 4 }}>
