@@ -13,6 +13,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { sendChatPushNotification } from '../lib/notifications';
 import { typography, weight } from '../theme/typography';
+import ScreenHeader from '../components/ScreenHeader';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -289,37 +290,7 @@ export default function CoachChatScreen() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: 'transparent' }}>
 
-        {/* ── Header ──────────────────────────────────────────────────── */}
-        <View style={{
-          flexDirection: 'row', alignItems: 'center', gap: 10,
-          paddingHorizontal: 10, paddingVertical: 10,
-          backgroundColor: colors.bgCard,
-          borderBottomWidth: 1, borderBottomColor: colors.border,
-        }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Ionicons name="chevron-back" size={20} color={colors.text} />
-          </TouchableOpacity>
-
-          {/* Avatar */}
-          <View style={{
-            width: 40, height: 40, borderRadius: 20,
-            backgroundColor: accent + '33',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: accent }}>{initials}</Text>
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>{otherName}</Text>
-            <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 0 }}>
-              {isCoach ? 'Client' : 'Your Coach'}
-            </Text>
-          </View>
-
-        </View>
+        <ScreenHeader title={otherName} onBack={() => navigation.goBack()} />
 
         {/* ── Stats bar (coach only) ──────────────────────────────────── */}
         {isCoach && <StatsBar clientId={clientId} colors={colors} />}

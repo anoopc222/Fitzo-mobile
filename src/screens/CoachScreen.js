@@ -20,6 +20,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 import { useTranslation } from 'react-i18next';
+import ScreenHeader from '../components/ScreenHeader';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -753,18 +754,7 @@ export default function CoachScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
 
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6, gap: 12 }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.75}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={{ flex: 1, fontSize: 20, fontWeight: weight.black, color: colors.text }}>{t('coach.title')}</Text>
-        <Ionicons name="shield-checkmark" size={22} color={colors.accent} />
-      </View>
+      <ScreenHeader title={t('coach.title')} onBack={() => navigation.goBack()} />
 
       {/* ── Tab switcher ────────────────────────────────────────────── */}
       <View style={{ flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 4 }}>

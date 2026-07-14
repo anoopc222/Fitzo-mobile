@@ -20,6 +20,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { weight } from '../theme/typography';
 import { useTranslation } from 'react-i18next';
+import ScreenHeader from '../components/ScreenHeader';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -676,26 +677,7 @@ export default function CoachModeScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
 
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, gap: 12 }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.75}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 20, fontWeight: weight.black, color: colors.text }}>{t('coach.title')}</Text>
-          <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent, letterSpacing: 1.2 }}>{t('coach.coachView')}</Text>
-        </View>
-        {totalUnread > 0 && (
-          <View style={{ backgroundColor: colors.danger, borderRadius: 12, minWidth: 24, height: 24, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 }}>
-            <Text style={{ fontSize: 12, fontWeight: weight.black, color: '#fff' }}>{totalUnread}</Text>
-          </View>
-        )}
-        <TouchableOpacity onPress={() => { setDraft({ full_name: profile.full_name, bio: profile.bio, goal: profile.goal }); setEditSheetVisible(true); }} activeOpacity={0.75}
-          style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: colors.accent + '18', borderWidth: 1, borderColor: colors.accent + '50' }}>
-          <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.accent }}>Edit</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title={t('coach.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 100 }}

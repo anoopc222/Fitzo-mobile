@@ -12,6 +12,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { supabase } from '../lib/supabase';
 import { weight } from '../theme/typography';
 import { useTranslation } from 'react-i18next';
+import ScreenHeader from '../components/ScreenHeader';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -240,20 +241,7 @@ export default function ClientModeScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
 
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, gap: 12 }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.75}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 20, fontWeight: weight.black, color: colors.text }}>{t('coach.title')}</Text>
-          <Text style={{ fontSize: 11, fontWeight: weight.bold, color: '#22c55e', letterSpacing: 1.2 }}>{t('coach.clientView')}</Text>
-        </View>
-        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#22c55e18', borderWidth: 1, borderColor: '#22c55e35', alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="person-outline" size={18} color="#22c55e" />
-        </View>
-      </View>
+      <ScreenHeader title={t('coach.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 60 }}

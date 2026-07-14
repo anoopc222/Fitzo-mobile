@@ -757,7 +757,7 @@ export default function FoodLogScreen({ embedded = false } = {}) {
 
   return (
     <Wrap {...wrapProps} style={styles.safe}>
-      {!embedded && <ScreenHeader title="LOG" colors={colors} />}
+      {!embedded && <ScreenHeader title="LOG" />}
       {/* Date nav */}
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={prevDay} style={styles.dateArrow}>
@@ -953,27 +953,10 @@ export default function FoodLogScreen({ embedded = false } = {}) {
       <Modal visible={showSheet} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeSheet}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <SafeAreaView style={styles.sheetContainer}>
-            <View style={styles.sheetHeader}>
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                {sheetStep !== 'search' && (
-                  <TouchableOpacity onPress={() => setSheetStep('search')} style={styles.sheetBackBtn}>
-                    <Ionicons name="chevron-back" size={20} color={colors.textMuted} />
-                  </TouchableOpacity>
-                )}
-                <View>
-                  <Text style={styles.sheetHeaderTop}>
-                    <Text style={styles.sheetHeaderLOG}>{t('foodLog.logPrefix')} </Text>
-                    <Text style={styles.sheetHeaderSub}>
-                      {sheetStep === 'detail' ? t('foodLog.addServing') : sheetStep === 'manual' ? t('foodLog.customFood') : t('foodLog.food')}
-                    </Text>
-                  </Text>
-                  <Text style={styles.trackLabel}>{t('foodLog.trackWhatYouEat')}</Text>
-                </View>
-              </View>
-              <TouchableOpacity onPress={closeSheet} style={styles.sheetCloseBtn}>
-                <Ionicons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
+            <ScreenHeader
+              title={sheetStep === 'detail' ? t('foodLog.addServing') : sheetStep === 'manual' ? t('foodLog.customFood') : t('foodLog.food')}
+              onBack={sheetStep !== 'search' ? () => setSheetStep('search') : closeSheet}
+            />
 
             {/* Meal type chips (shown on every step) */}
             <View style={[styles.mealChips, { paddingHorizontal: 16 }]}>
