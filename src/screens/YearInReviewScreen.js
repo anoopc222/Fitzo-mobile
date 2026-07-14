@@ -585,7 +585,7 @@ export default function YearInReviewScreen({ navigation }) {
 
         {/* ── Year-over-year comparison (PRO) ── */}
         <View style={s.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={s.cardTitle}>{t('yearInReview.yoyComparison')}</Text>
           </View>
           <View style={[s.yoyRow, { backgroundColor: colors.dim ?? colors.border }]}>
@@ -632,7 +632,7 @@ export default function YearInReviewScreen({ navigation }) {
 
         {/* ── Monthly breakdown table (PRO) ── */}
         <View style={s.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={s.cardTitle}>{t('yearInReview.monthlyBreakdown')}</Text>
           </View>
           <View style={[s.tableRow, { backgroundColor: colors.dim ?? colors.border }]}>
@@ -686,7 +686,7 @@ export default function YearInReviewScreen({ navigation }) {
 
         {/* ── 7. Activity split (PRO) ── */}
         <View style={s.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={s.cardTitle}>{t('yearInReview.activitySplit')}</Text>
           </View>
           {hasAccess ? (
@@ -754,7 +754,7 @@ export default function YearInReviewScreen({ navigation }) {
 
         {/* ── 9. Nutrition summary (PRO) ── */}
         <View style={s.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={s.cardTitle}>{t('yearInReview.nutritionSummary')}</Text>
           </View>
           {hasAccess ? (
@@ -805,7 +805,7 @@ export default function YearInReviewScreen({ navigation }) {
 
         {/* ── 10. Top 5 exercises by volume (PRO) ── */}
         <View style={s.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={s.cardTitle}>{t('yearInReview.topExercises')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               {/* kg / lbs toggle */}
@@ -862,7 +862,7 @@ export default function YearInReviewScreen({ navigation }) {
 
         {/* ── 11. Sleep quality trend (PRO) ── */}
         <View style={s.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={s.cardTitle}>{t('yearInReview.sleepTrend')}</Text>
           </View>
           {hasAccess ? (
@@ -919,7 +919,7 @@ export default function YearInReviewScreen({ navigation }) {
 
         {/* ── 12. Mood year summary (PRO) ── */}
         <View style={s.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={s.cardTitle}>{t('yearInReview.moodSummary')}</Text>
           </View>
           {hasAccess ? (
@@ -1046,10 +1046,10 @@ export default function YearInReviewScreen({ navigation }) {
 
 const styles = (colors) => StyleSheet.create({
   safe:               { flex: 1, backgroundColor: colors.bg },
-  scroll:             { padding: 10, paddingBottom: 40, gap: 8 },
+  scroll:             { padding: 8, paddingBottom: 32, gap: 6 },
 
   // year picker
-  yearPicker:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 10 },
+  yearPicker:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 7 },
   yearArrow:          { padding: 4 },
   yearArrowDisabled:  { opacity: 0.3 },
   yearCenter:         { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -1060,73 +1060,73 @@ const styles = (colors) => StyleSheet.create({
   // stats grid
   statsGrid:          { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   statCard:           { width: '48%', flexGrow: 1, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1.5, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  uniPrimaryRow:      { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 },
-  uniPrimaryEmoji:    { fontSize: 36 },
+  uniPrimaryRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 },
+  uniPrimaryEmoji:    { fontSize: 28 },
   uniPrimaryBody:     { flex: 1 },
-  uniPrimaryVal:      { fontSize: 42, fontFamily: fontFamily.monoBold, lineHeight: 48 },
-  uniPrimaryLabel:    { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1, marginTop: 2 },
-  uniDivider:         { height: 1, marginVertical: 12 },
+  uniPrimaryVal:      { fontSize: 34, fontFamily: fontFamily.monoBold, lineHeight: 38 },
+  uniPrimaryLabel:    { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1, marginTop: 1 },
+  uniDivider:         { height: 1, marginVertical: 7 },
   uniSubRow:          { flexDirection: 'row' },
-  uniSubTile:         { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 2 },
+  uniSubTile:         { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 1 },
   uniSubBorder:       { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
-  uniSubVal:          { fontSize: 17, fontFamily: fontFamily.monoBold },
-  uniSubLabel:        { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.7, textAlign: 'center' },
+  uniSubVal:          { fontSize: 14, fontFamily: fontFamily.monoBold },
+  uniSubLabel:        { fontSize: 7, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.5, textAlign: 'center' },
   statEmoji:          { fontSize: 22 },
   statBody:           { flex: 1, gap: 2 },
   statVal:            { fontSize: 20, fontFamily: fontFamily.monoBold },
   statLabel:          { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.8 },
 
   // card
-  card:               { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 10, gap: 8 },
-  cardTitle:          { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.5 },
-  cardSubtitle:       { fontSize: 10, fontFamily: fontFamily.body, color: colors.textDim },
+  card:               { backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 8, gap: 6 },
+  cardTitle:          { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.accent, letterSpacing: 1.2 },
+  cardSubtitle:       { fontSize: 9, fontFamily: fontFamily.body, color: colors.textDim },
 
   // quick wins
   quickWinsRow:       { flexDirection: 'row' },
-  quickWinTile:       { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 4 },
+  quickWinTile:       { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 2 },
   quickWinTileBorder: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
-  quickWinEmoji:      { fontSize: 20 },
-  quickWinVal:        { fontSize: 17, fontFamily: fontFamily.monoBold },
-  quickWinLabel:      { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.7, textAlign: 'center' },
+  quickWinEmoji:      { fontSize: 16 },
+  quickWinVal:        { fontSize: 14, fontFamily: fontFamily.monoBold },
+  quickWinLabel:      { fontSize: 7, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.5, textAlign: 'center' },
 
   // bar chart
-  barChart:           { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 4 },
-  barCol:             { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: 2 },
-  barVal:             { fontSize: 8, fontFamily: fontFamily.mono, color: colors.textDim, height: 12 },
+  barChart:           { flexDirection: 'row', alignItems: 'flex-end', height: 72, gap: 3 },
+  barCol:             { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: 1 },
+  barVal:             { fontSize: 7, fontFamily: fontFamily.mono, color: colors.textDim, height: 10 },
   barTrack:           { flex: 1, width: '80%', backgroundColor: colors.border, borderRadius: 3, justifyContent: 'flex-end', overflow: 'hidden' },
   barFill:            { width: '100%', borderRadius: 3 },
-  barLabel:           { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.textMuted },
+  barLabel:           { fontSize: 7, fontFamily: fontFamily.bodyBold, color: colors.textMuted },
 
   // year over year
-  yoyRow:             { flexDirection: 'row', alignItems: 'center', borderRadius: 8, paddingVertical: 7, paddingHorizontal: 6 },
-  yoyCell:            { fontSize: 12 },
+  yoyRow:             { flexDirection: 'row', alignItems: 'center', borderRadius: 6, paddingVertical: 4, paddingHorizontal: 4 },
+  yoyCell:            { fontSize: 11 },
   yoyLabelCol:        { flex: 1 },
-  yoyValCol:          { width: 72 },
+  yoyValCol:          { width: 64 },
 
   // monthly table
-  tableRow:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, paddingHorizontal: 4, borderRadius: 6 },
-  tableCell:          { fontSize: 11 },
+  tableRow:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 3, paddingHorizontal: 3, borderRadius: 4 },
+  tableCell:          { fontSize: 10 },
   tableMonthCol:      { flex: 1 },
   tableNumCol:        { flex: 2, textAlign: 'center' },
 
   // activity split
-  activityBar:        { flexDirection: 'row', height: 18, borderRadius: 6, overflow: 'hidden' },
+  activityBar:        { flexDirection: 'row', height: 14, borderRadius: 4, overflow: 'hidden' },
   activitySegment:    { height: '100%' },
-  activityLegend:     { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },
-  legendItem:         { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot:          { width: 8, height: 8, borderRadius: 4 },
-  legendText:         { fontSize: 12, fontFamily: fontFamily.body, color: colors.textDim },
+  activityLegend:     { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
+  legendItem:         { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot:          { width: 6, height: 6, borderRadius: 3 },
+  legendText:         { fontSize: 10, fontFamily: fontFamily.body, color: colors.textDim },
 
   // body transform
   transformRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
-  transformSide:      { alignItems: 'center', gap: 4 },
-  transformLabel:     { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1 },
-  transformVal:       { fontSize: 22, fontFamily: fontFamily.monoBold },
-  transformDelta:     { fontSize: 13, fontFamily: fontFamily.monoBold, textAlign: 'center' },
+  transformSide:      { alignItems: 'center', gap: 2 },
+  transformLabel:     { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1 },
+  transformVal:       { fontSize: 18, fontFamily: fontFamily.monoBold },
+  transformDelta:     { fontSize: 11, fontFamily: fontFamily.monoBold, textAlign: 'center' },
 
   // mood
   moodRow:            { flexDirection: 'row' },
-  moodTile:           { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 4 },
+  moodTile:           { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 2 },
   moodEmoji:          { fontSize: 22 },
 
   // achievements
@@ -1138,11 +1138,11 @@ const styles = (colors) => StyleSheet.create({
   achieveChipLabel:   { fontSize: 11, fontFamily: fontFamily.bodyBold },
 
   // PR rows
-  prRow:              { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  prRow:              { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
   prRowBorder:        { borderBottomWidth: 1, borderBottomColor: colors.border },
-  prRank:             { fontSize: 12, fontFamily: fontFamily.mono, color: colors.textDim, width: 24 },
-  prName:             { flex: 1, fontSize: 13, fontFamily: fontFamily.bodySemibold, color: colors.text },
-  prKg:               { fontSize: 14, fontFamily: fontFamily.monoBold },
+  prRank:             { fontSize: 11, fontFamily: fontFamily.mono, color: colors.textDim, width: 20 },
+  prName:             { flex: 1, fontSize: 12, fontFamily: fontFamily.bodySemibold, color: colors.text },
+  prKg:               { fontSize: 12, fontFamily: fontFamily.monoBold },
 
   // fun fact
   funFact:            { backgroundColor: colors.accent + '12', borderRadius: 14, borderWidth: 1, borderColor: colors.accent + '30', padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
