@@ -316,45 +316,18 @@ async function deleteFullSession(sessionId) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const WORKOUT_GUIDE = {
-  title: 'Workout — Guide',
-  intro: 'The Workout screen lets you track every session from start to finish, browse your history, manage training plans, and review progress over time.',
+  title: 'Workout Guide',
+  tagline: '💪 Track every rep, set, and session — start to finish.',
   sections: [
-    {
-      icon: 'play-circle-outline',
-      heading: 'Starting a Session',
-      body: 'Tap the green Start Workout button at the top.\n• Choose a workout type: Gym, Cardio, or Rest Day.\n• Give the session a name or pick from your plans — the template pre-fills exercises automatically.\n• The timer starts as soon as the session opens.',
-    },
-    {
-      icon: 'barbell-outline',
-      heading: 'Adding Exercises',
-      body: 'Inside an active session, tap Add Exercise.\n• Type to search from hundreds of common exercises, or enter a custom name.\n• Exercises are grouped by muscle group and show your previous best.\n• Tap the thumbnail image to preview the movement.',
-    },
-    {
-      icon: 'list-outline',
-      heading: 'Logging Sets',
-      body: 'Each exercise row has a + Set button.\n• Enter weight (kg or lbs) and reps for each set.\n• RPE (Rate of Perceived Exertion, 1–10) is optional but helps track effort over time.\n• Swipe left on a set to delete it.\n• Completed sets turn green.',
-    },
-    {
-      icon: 'checkmark-done-circle-outline',
-      heading: 'Finishing a Session',
-      body: 'Tap Finish Workout when done.\n• Total volume, duration, and estimated calories are saved automatically.\n• A summary card appears — you can share it directly to social.\n• The session appears in your history list immediately.',
-    },
-    {
-      icon: 'time-outline',
-      heading: 'Session History',
-      body: 'Past sessions are listed newest-first below the start button.\n• Tap any session to expand it and see all exercises and sets.\n• Use the search bar to filter by exercise name or date.\n• Tap the calendar icon to jump to a specific month.',
-    },
-    {
-      icon: 'document-text-outline',
-      heading: 'Workout Plans & Templates',
-      body: 'Tap My Plans to manage your training plans.\n• Create a plan (e.g. Push, Pull, Legs) and assign a template exercise list.\n• Starting a session from a plan pre-loads all template exercises in order.\n• Tap the barbell icon next to a plan to edit its template.',
-    },
-    {
-      icon: 'trending-up-outline',
-      heading: 'Progress & PRs',
-      body: 'The Progress tab shows PR badges and trend lines for every exercise.\n• A green Improving badge means your volume has increased in the last 4 weeks.\n• A gold PR badge appears when you hit a new personal record weight or reps.\n• Tap an exercise card to see its full history chart.',
-    },
+    { icon: 'play-circle-outline',          heading: 'Start a Session',     tip: 'Tap Start Workout, pick Gym / Cardio / Rest, and the timer runs automatically.' },
+    { icon: 'barbell-outline',              heading: 'Add Exercises',       tip: 'Search 264+ exercises or type a custom name. See your previous best instantly.' },
+    { icon: 'list-outline',                 heading: 'Log Sets',            tip: 'Enter weight + reps per set. Add RPE (1–10) to track effort over time.' },
+    { icon: 'checkmark-done-circle-outline',heading: 'Finish & Share',      tip: 'Tap Finish — volume, duration & calories save automatically. Share the summary.' },
+    { icon: 'time-outline',                 heading: 'Session History',     tip: 'Tap any past session to expand sets. Search or filter by month.' },
+    { icon: 'document-text-outline',        heading: 'Plans & Templates',   tip: 'Create Push/Pull/Legs plans. Starting from a plan pre-loads exercises in order.' },
+    { icon: 'trending-up-outline',          heading: 'Progress & PRs',      tip: 'Gold PR badge = new record. Green Improving = volume up in the last 4 weeks.' },
   ],
+  footerTip: 'Tap the barbell icon on any plan to edit its exercise template.',
 };
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];

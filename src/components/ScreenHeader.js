@@ -1,84 +1,77 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Pressable, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, weight, fontFamily } from '../theme/typography';
 import { useTheme } from '../context/ThemeContext';
 
+// Accent colors cycled across section cards
+const CARD_ACCENTS = ['#d4ff00', '#a78bfa', '#38bdf8', '#fb923c', '#34d399', '#f472b6', '#facc15'];
+
 // info prop shape:
-// { title: string, intro: string, sections: [{ icon: string, heading: string, body: string }] }
+// { title: string, tagline: string, sections: [{ icon: string, heading: string, tip: string }], footerTip?: string }
 function InfoModal({ visible, onClose, info, colors }) {
   if (!info) return null;
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose} statusBarTranslucent>
       <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        {/* Header */}
-        <View style={{
-          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-          paddingHorizontal: 20, paddingVertical: 14,
-          borderBottomWidth: 1, borderBottomColor: colors.border,
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.accent + '22', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="information-circle" size={20} color={colors.accent} />
-            </View>
-            <Text style={{ fontSize: 16, fontFamily: fontFamily.bodyBold, color: colors.text, fontWeight: '700' }}>
-              {info.title}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close" size={22} color={colors.text} />
+
+        {/* Top bar */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 }}>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.3 }}>
+            {info.title}
+          </Text>
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="close" size={18} color={colors.text} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-          {/* Intro */}
-          {!!info.intro && (
-            <View style={{
-              backgroundColor: colors.accent + '14', borderRadius: 14, padding: 16, marginBottom: 24,
-              borderLeftWidth: 3, borderLeftColor: colors.accent,
-            }}>
-              <Text style={{ fontSize: 14, color: colors.text, lineHeight: 21, fontFamily: fontFamily.body }}>
-                {info.intro}
+        {/* Tagline pill */}
+        {!!info.tagline && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+            <View style={{ backgroundColor: colors.accent + '18', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.accent + '33' }}>
+              <Text style={{ fontSize: 13, color: colors.accent, fontWeight: '700', lineHeight: 19 }}>
+                {info.tagline}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          {/* 2-column grid of feature cards */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {(info.sections ?? []).map((sec, i) => {
+              const accent = CARD_ACCENTS[i % CARD_ACCENTS.length];
+              return (
+                <View key={i} style={{
+                  width: '47.5%', backgroundColor: colors.card,
+                  borderRadius: 16, padding: 14,
+                  borderWidth: 1, borderColor: colors.border,
+                }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: accent + '22', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Ionicons name={sec.icon} size={20} color={accent} />
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 4, lineHeight: 17 }}>
+                    {sec.heading}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }}>
+                    {sec.tip}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Footer tip */}
+          {!!info.footerTip && (
+            <View style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.card, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border }}>
+              <Ionicons name="bulb-outline" size={18} color={colors.accent} />
+              <Text style={{ flex: 1, fontSize: 12.5, color: colors.textMuted, lineHeight: 18 }}>
+                {info.footerTip}
               </Text>
             </View>
           )}
-
-          {/* Sections */}
-          {(info.sections ?? []).map((sec, i) => (
-            <View key={i} style={{ marginBottom: 20 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}>
-                  <Ionicons name={sec.icon} size={18} color={colors.accent} />
-                </View>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text, fontFamily: fontFamily.bodyBold, flex: 1 }}>
-                  {sec.heading}
-                </Text>
-              </View>
-              <View style={{ paddingLeft: 44 }}>
-                {sec.body.split('\n').map((line, li) => {
-                  const isBullet = line.startsWith('• ');
-                  return (
-                    <Text key={li} style={{
-                      fontSize: 13.5, color: isBullet ? colors.text : colors.textMuted,
-                      lineHeight: 20, fontFamily: fontFamily.body,
-                      marginBottom: isBullet ? 4 : 2,
-                    }}>
-                      {line}
-                    </Text>
-                  );
-                })}
-              </View>
-            </View>
-          ))}
-
-          {/* Footer */}
-          <View style={{ marginTop: 12, padding: 14, backgroundColor: colors.card, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Ionicons name="bulb-outline" size={16} color={colors.accent} />
-            <Text style={{ flex: 1, fontSize: 12, color: colors.textDim, lineHeight: 17, fontFamily: fontFamily.body }}>
-              Tap any stat card or chart to interact with it. Changes you log are reflected across all screens instantly.
-            </Text>
-          </View>
         </ScrollView>
       </SafeAreaView>
     </Modal>

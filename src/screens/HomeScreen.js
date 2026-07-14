@@ -15,40 +15,17 @@ import ScreenHeader from '../components/ScreenHeader';
 const SCREEN_W  = Dimensions.get('window').width;
 
 const HOME_GUIDE = {
-  title: 'Home Dashboard — Guide',
-  intro: 'Your Home screen is your daily command centre. At a glance you can see every key metric, log new data, and spot trends — all without leaving this screen.',
+  title: 'Home Guide',
+  tagline: '🏠 Your daily command centre — every metric, one screen.',
   sections: [
-    {
-      icon: 'grid-outline',
-      heading: 'Stat Cards',
-      body: 'Four cards show today\'s Steps, Weight, Sleep, and Calories.\n• Tap a card to jump straight to that screen for full detail.\n• The sparkline inside each card shows your last 7 days at a glance.\n• The ring or bar fills up toward your daily goal.',
-    },
-    {
-      icon: 'add-circle-outline',
-      heading: 'Quick Log (+)',
-      body: 'Use the floating + buttons on each stat card to log a new entry without navigating away.\n• Steps / Weight / Sleep / Food can each be logged in seconds.\n• The card updates instantly after you save.',
-    },
-    {
-      icon: 'calendar-outline',
-      heading: 'Week & Month Tabs',
-      body: 'Switch between Week and Month views to see totals and averages over different periods.\n• Week: Mon–Sun bar chart of daily activity.\n• Month: heatmap grid — darker cells mean higher volume.\n• Tap any day cell to see that day\'s breakdown.',
-    },
-    {
-      icon: 'flame-outline',
-      heading: 'Cut Score',
-      body: 'The Cut Score is a combined wellness index (0–100) calculated from your sleep quality, step goal completion, calorie balance, and workout frequency.\n• Green (70+): on track.\n• Amber (40–69): room to improve.\n• Red (<40): one or more areas need attention.',
-    },
-    {
-      icon: 'trophy-outline',
-      heading: 'Achievements & Streaks',
-      body: 'Badges unlock automatically when you hit milestones (first workout, 7-day step streak, PR, etc.).\n• Tap a badge to see what you did to earn it.\n• The streak counter resets if you miss a day — use Streak Freeze to protect it.',
-    },
-    {
-      icon: 'notifications-outline',
-      heading: 'Alert Banners',
-      body: 'Coloured banners appear at the top when something needs attention — low sleep, missed workout goal, or a personal record.\n• Tap a banner to go directly to the relevant screen.\n• Banners clear once the underlying condition is resolved.',
-    },
+    { icon: 'grid-outline',          heading: 'Stat Cards',          tip: 'Steps · Weight · Sleep · Calories at a glance. Tap any card to dive deeper.' },
+    { icon: 'add-circle-outline',    heading: 'Quick Log',           tip: 'Hit + on any card to log in seconds — no screen switching needed.' },
+    { icon: 'calendar-outline',      heading: 'Week & Month Tabs',   tip: 'Toggle between a 7-day bar chart and a full month heatmap.' },
+    { icon: 'flame-outline',         heading: 'Cut Score',           tip: 'A 0–100 wellness index. Green = on track, Amber = almost there, Red = act now.' },
+    { icon: 'trophy-outline',        heading: 'Achievements',        tip: 'Badges unlock automatically at milestones. Tap to see what you earned.' },
+    { icon: 'notifications-outline', heading: 'Alert Banners',       tip: 'Coloured banners flag issues. Tap one to jump straight to the fix.' },
   ],
+  footerTip: 'All changes you log anywhere in the app reflect here instantly.',
 };
 const CAL_PAD   = 16;  // horizontal padding inside the calendar section
 const CAL_GAP   = 3;   // gap between cells
