@@ -13,6 +13,43 @@ import BottomSheet from '../components/ui/BottomSheet';
 import ScreenHeader from '../components/ScreenHeader';
 
 const SCREEN_W  = Dimensions.get('window').width;
+
+const HOME_GUIDE = {
+  title: 'Home Dashboard — Guide',
+  intro: 'Your Home screen is your daily command centre. At a glance you can see every key metric, log new data, and spot trends — all without leaving this screen.',
+  sections: [
+    {
+      icon: 'grid-outline',
+      heading: 'Stat Cards',
+      body: 'Four cards show today\'s Steps, Weight, Sleep, and Calories.\n• Tap a card to jump straight to that screen for full detail.\n• The sparkline inside each card shows your last 7 days at a glance.\n• The ring or bar fills up toward your daily goal.',
+    },
+    {
+      icon: 'add-circle-outline',
+      heading: 'Quick Log (+)',
+      body: 'Use the floating + buttons on each stat card to log a new entry without navigating away.\n• Steps / Weight / Sleep / Food can each be logged in seconds.\n• The card updates instantly after you save.',
+    },
+    {
+      icon: 'calendar-outline',
+      heading: 'Week & Month Tabs',
+      body: 'Switch between Week and Month views to see totals and averages over different periods.\n• Week: Mon–Sun bar chart of daily activity.\n• Month: heatmap grid — darker cells mean higher volume.\n• Tap any day cell to see that day\'s breakdown.',
+    },
+    {
+      icon: 'flame-outline',
+      heading: 'Cut Score',
+      body: 'The Cut Score is a combined wellness index (0–100) calculated from your sleep quality, step goal completion, calorie balance, and workout frequency.\n• Green (70+): on track.\n• Amber (40–69): room to improve.\n• Red (<40): one or more areas need attention.',
+    },
+    {
+      icon: 'trophy-outline',
+      heading: 'Achievements & Streaks',
+      body: 'Badges unlock automatically when you hit milestones (first workout, 7-day step streak, PR, etc.).\n• Tap a badge to see what you did to earn it.\n• The streak counter resets if you miss a day — use Streak Freeze to protect it.',
+    },
+    {
+      icon: 'notifications-outline',
+      heading: 'Alert Banners',
+      body: 'Coloured banners appear at the top when something needs attention — low sleep, missed workout goal, or a personal record.\n• Tap a banner to go directly to the relevant screen.\n• Banners clear once the underlying condition is resolved.',
+    },
+  ],
+};
 const CAL_PAD   = 16;  // horizontal padding inside the calendar section
 const CAL_GAP   = 3;   // gap between cells
 const MODAL_W   = Math.min(SCREEN_W - 40, 420) - 2; // overlay padding(20*2) + popup maxWidth - popup border(1*2)
@@ -1440,7 +1477,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
       {/* ── App Header ─────────────────────────────────────────── */}
-      <ScreenHeader title={t('home.homeTitle')} colors={colors} />
+      <ScreenHeader title={t('home.homeTitle')} colors={colors} info={HOME_GUIDE} />
 
       <ScrollView
         style={styles.scroll}
