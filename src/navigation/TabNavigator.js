@@ -33,6 +33,8 @@ import ClientModeScreen from '../screens/ClientModeScreen';
 import ClientDetailScreen from '../screens/ClientDetailScreen';
 import CoachChatScreen from '../screens/CoachChatScreen';
 import ExerciseReferenceScreen from '../screens/ExerciseReferenceScreen';
+import WorkoutPlansScreen from '../screens/WorkoutPlansScreen';
+import WorkoutTemplateScreen from '../screens/WorkoutTemplateScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -81,6 +83,8 @@ function WorkoutStackNavigator() {
   return (
     <WorkoutStack.Navigator screenOptions={{ headerShown: false }}>
       <WorkoutStack.Screen name="WorkoutMain" component={WorkoutScreen} />
+      <WorkoutStack.Screen name="WorkoutPlans" component={WorkoutPlansScreen} />
+      <WorkoutStack.Screen name="WorkoutTemplate" component={WorkoutTemplateScreen} />
       <WorkoutStack.Screen name="Progress" component={ProgressScreen} />
       <WorkoutStack.Screen name="ExerciseReference" component={ExerciseReferenceScreen} />
     </WorkoutStack.Navigator>
