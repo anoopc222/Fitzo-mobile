@@ -3868,62 +3868,62 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
         onClose={() => setShowMonthPicker(false)}
       />
 
-      {/* Quick Actions card */}
-      <View style={[s.quickCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
-        {/* My Plans */}
-        <TouchableOpacity style={s.quickRow} onPress={() => setShowPlans(true)} activeOpacity={0.7}>
-          <View style={[s.quickIcon, { backgroundColor: colors.accent + '20' }]}>
-            <Ionicons name="list" size={18} color={colors.accent} />
-          </View>
-          <View style={s.quickText}>
-            <Text style={[s.quickLabel, { color: colors.text }]}>{t('workout.myPlans')}</Text>
-            <Text style={[s.quickSub, { color: colors.textDim }]}>{t('workout.myPlansSub')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-        </TouchableOpacity>
-
-        <View style={[s.quickDivider, { backgroundColor: colors.border }]} />
-
-        {/* Exercise Reference */}
-        <TouchableOpacity
-          style={s.quickRow}
-          onPress={() => navigation ? navigation.navigate('ExerciseReference') : navigate('Home', { screen: 'ExerciseReference' })}
-          activeOpacity={0.7}
-        >
-          <View style={[s.quickIcon, { backgroundColor: colors.warning + '20' }]}>
-            <Ionicons name="barbell" size={18} color={colors.warning} />
-          </View>
-          <View style={s.quickText}>
-            <Text style={[s.quickLabel, { color: colors.text }]}>{t('workout.exerciseRef')}</Text>
-            <Text style={[s.quickSub, { color: colors.textDim }]}>{t('workout.exerciseRefSub')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-        </TouchableOpacity>
-
-        <View style={[s.quickDivider, { backgroundColor: colors.border }]} />
-
-        {/* Track My Progress */}
-        <TouchableOpacity
-          style={s.quickRow}
-          onPress={() => navigation ? navigation.navigate('Progress') : navigate('Home', { screen: 'Progress' })}
-          activeOpacity={0.7}
-        >
-          <View style={[s.quickIcon, { backgroundColor: colors.good + '20' }]}>
-            <Ionicons name="trending-up" size={18} color={colors.good} />
-          </View>
-          <View style={s.quickText}>
-            <Text style={[s.quickLabel, { color: colors.text }]}>{t('workout.trackProgress')}</Text>
-            <Text style={[s.quickSub, { color: colors.textDim }]}>{t('workout.trackProgressSub')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-        </TouchableOpacity>
-      </View>
-
       {/* List */}
       <ScrollView
         contentContainerStyle={s.content}
         refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
+        {/* Quick Actions card */}
+        <View style={[s.quickCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+          {/* My Plans */}
+          <TouchableOpacity style={s.quickRow} onPress={() => setShowPlans(true)} activeOpacity={0.7}>
+            <View style={[s.quickIcon, { backgroundColor: colors.accent + '20' }]}>
+              <Ionicons name="list" size={18} color={colors.accent} />
+            </View>
+            <View style={s.quickText}>
+              <Text style={[s.quickLabel, { color: colors.text }]}>{t('workout.myPlans')}</Text>
+              <Text style={[s.quickSub, { color: colors.textDim }]}>{t('workout.myPlansSub')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+          </TouchableOpacity>
+
+          <View style={[s.quickDivider, { backgroundColor: colors.border }]} />
+
+          {/* Exercise Reference */}
+          <TouchableOpacity
+            style={s.quickRow}
+            onPress={() => navigation ? navigation.navigate('ExerciseReference') : navigate('Home', { screen: 'ExerciseReference' })}
+            activeOpacity={0.7}
+          >
+            <View style={[s.quickIcon, { backgroundColor: colors.warning + '20' }]}>
+              <Ionicons name="barbell" size={18} color={colors.warning} />
+            </View>
+            <View style={s.quickText}>
+              <Text style={[s.quickLabel, { color: colors.text }]}>{t('workout.exerciseRef')}</Text>
+              <Text style={[s.quickSub, { color: colors.textDim }]}>{t('workout.exerciseRefSub')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+          </TouchableOpacity>
+
+          <View style={[s.quickDivider, { backgroundColor: colors.border }]} />
+
+          {/* Track My Progress */}
+          <TouchableOpacity
+            style={s.quickRow}
+            onPress={() => navigation ? navigation.navigate('Progress') : navigate('Home', { screen: 'Progress' })}
+            activeOpacity={0.7}
+          >
+            <View style={[s.quickIcon, { backgroundColor: colors.good + '20' }]}>
+              <Ionicons name="trending-up" size={18} color={colors.good} />
+            </View>
+            <View style={s.quickText}>
+              <Text style={[s.quickLabel, { color: colors.text }]}>{t('workout.trackProgress')}</Text>
+              <Text style={[s.quickSub, { color: colors.textDim }]}>{t('workout.trackProgressSub')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+          </TouchableOpacity>
+        </View>
+
         {isLoading && <SkeletonScreen cards={4} linesPerCard={3} />}
 
         {!isLoading && (
