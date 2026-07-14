@@ -445,6 +445,20 @@ const buildCalculators = (t, ACTIVITY) => [
 ];
 
 // ─── screen ───────────────────────────────────────────────────────────────────
+const CALC_GUIDE = {
+  title: 'Calculators Guide',
+  tagline: '🧮 20 science-backed tools — no guesswork needed.',
+  sections: [
+    { icon: 'body-outline',        heading: 'BMI',               tip: 'Body Mass Index — a quick weight-to-height ratio. Best used alongside body fat %.' },
+    { icon: 'flame-outline',       heading: 'TDEE',              tip: 'Total Daily Energy Expenditure — your true calorie burn based on weight, age & activity.' },
+    { icon: 'barbell-outline',     heading: '1RM Calculator',    tip: 'Estimate your one-rep max from any set. Useful for programming training percentages.' },
+    { icon: 'pie-chart-outline',   heading: 'Macros',            tip: 'Split your calorie target into protein, carbs, and fat based on your goal.' },
+    { icon: 'heart-outline',       heading: 'HR Zones',          tip: 'Heart rate training zones from your max HR — target fat burn, aerobic, or peak zones.' },
+    { icon: 'trophy-outline',      heading: 'Wilks Score',       tip: 'Compare powerlifting strength across different body weights — the gold standard metric.' },
+  ],
+  footerTip: 'Tap any calculator title to expand it. All results update instantly as you type.',
+};
+
 export default function CalculatorsScreen({ navigation }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -479,6 +493,7 @@ export default function CalculatorsScreen({ navigation }) {
         title={t('calculators.screenTitle')}
         colors={colors}
         onBack={() => navigation.goBack()}
+        info={CALC_GUIDE}
         right={<Text style={styles.count}>{CALCULATORS.length}</Text>}
       />
 
