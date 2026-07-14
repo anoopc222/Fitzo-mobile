@@ -1882,7 +1882,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
     const planName = (plans.find(p => p.id === templatePlanId) ?? {}).name ?? '';
     return (
       <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setTemplatePlanId(null)}>
-        <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: bg }}>
+        <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: bg }}>
           {/* Header */}
           <ScreenHeader title={planName} onBack={() => setTemplatePlanId(null)} />
 
@@ -1959,26 +1959,26 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
                   </ScrollView>
                 </View>
               )}
-              <View style={{ flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 12 }}>
-                <TextInput
-                  style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border }}
-                  placeholder="Add exercise…"
-                  placeholderTextColor={colors.textDim}
-                  value={newExName}
-                  onChangeText={setNewExName}
-                  onSubmitEditing={addTemplateEx}
-                  returnKeyType="done"
-                />
-                <TouchableOpacity onPress={addTemplateEx}
-                  style={{ backgroundColor: colors.accent + '22', borderRadius: 12, width: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.accent + '44' }}>
-                  <Ionicons name="add" size={22} color={colors.accent} />
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity onPress={saveTemplate}
-                style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginHorizontal: 16, marginBottom: 16 }}>
-                <Text style={{ fontSize: 15, fontWeight: '800', color: colors.accentText }}>Save Template</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+              <TextInput
+                style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border }}
+                placeholder="Add exercise…"
+                placeholderTextColor={colors.textDim}
+                value={newExName}
+                onChangeText={setNewExName}
+                onSubmitEditing={addTemplateEx}
+                returnKeyType="done"
+              />
+              <TouchableOpacity onPress={addTemplateEx}
+                style={{ backgroundColor: colors.accent + '22', borderRadius: 12, width: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.accent + '44' }}>
+                <Ionicons name="add" size={22} color={colors.accent} />
               </TouchableOpacity>
             </View>
+            <TouchableOpacity onPress={saveTemplate}
+              style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginHorizontal: 16, marginBottom: 12 }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.accentText }}>Save Template</Text>
+            </TouchableOpacity>
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
@@ -1988,7 +1988,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
   // ── Main plans list (full-screen) ──
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: bg }}>
+      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: bg }}>
         {/* Header */}
         <ScreenHeader title={t('workout.myWorkoutPlans')} onBack={onClose} />
 
@@ -4598,7 +4598,7 @@ const createS = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
 
   quickCard: {
-    marginHorizontal: 16, marginBottom: 10,
+    marginBottom: 10,
     borderRadius: 16, borderWidth: 1,
     overflow: 'hidden',
   },
