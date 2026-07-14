@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Alert,
+  View, Text, ScrollView, TouchableOpacity, Alert, Modal, Pressable,
   TextInput, KeyboardAvoidingView, Platform, PanResponder, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -138,6 +138,7 @@ export default function WorkoutTemplateScreen({ navigation, route }) {
   const removeEx = (idx) => setExercises(prev => prev.filter((_, i) => i !== idx));
 
   const hasTemplate = Array.isArray(plan?.template_exercises) && plan.template_exercises.length > 0;
+  const [previewImg, setPreviewImg] = useState(null);
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -190,7 +191,9 @@ export default function WorkoutTemplateScreen({ navigation, route }) {
                 </View>
                 <Text style={{ flex: 1, fontSize: 14, color: colors.text, fontWeight: '500' }} numberOfLines={1}>{ex}</Text>
                 {imgUrl && (
-                  <Image source={{ uri: imgUrl }} style={{ width: 28, height: 28, borderRadius: 6, marginRight: 4 }} resizeMode="cover" />
+                  <TouchableOpacity onPress={() => setPreviewImg({ url: imgUrl, name: ex })} style={{ marginRight: 4 }}>
+                    <Image source={{ uri: imgUrl }} style={{ width: 28, height: 28, borderRadius: 6 }} resizeMode="cover" />
+                  </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={() => removeEx(idx)} style={{ paddingHorizontal: 12, alignSelf: 'stretch', justifyContent: 'center' }}>
                   <Ionicons name="trash-outline" size={16} color={colors.danger} />
@@ -239,6 +242,19 @@ export default function WorkoutTemplateScreen({ navigation, route }) {
           <Text style={{ fontSize: 15, fontWeight: '800', color: colors.accentText }}>Save Template</Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
+
+      {/* Exercise image preview modal */}
+      <Modal visible={!!previewImg} transparent animationType="fade" onRequestClose={() => setPreviewImg(null)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setPreviewImg(null)}>
+          <View style={{ width: '85%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', alignItems: 'center' }}>
+            <Image source={{ uri: previewImg?.url }} style={{ width: '100%', height: 260 }} resizeMode="contain" />
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, textAlign: 'center' }}>{previewImg?.name}</Text>
+              <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 4 }}>Tap anywhere to close</Text>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
