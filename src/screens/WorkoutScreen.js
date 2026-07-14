@@ -1718,6 +1718,7 @@ function usePlanOrder(plans) {
 }
 
 function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, onDelete, onCopy, onSelect, onSaveTemplate, allSessions }) {
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const [newPlanName, setNewPlanName] = useState('');
   const [editingId, setEditingId] = useState(null);
