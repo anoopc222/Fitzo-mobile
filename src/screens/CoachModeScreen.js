@@ -834,7 +834,7 @@ export default function CoachModeScreen() {
               return (
                 <TouchableOpacity
                   key={link.id}
-                  onPress={() => navigation.navigate('ClientDetail', { clientId: link.client?.id, clientName: name })}
+                  onPress={() => navigation.navigate('ClientDetail', { clientId: link.client?.id, clientName: name, linkId: link.id, initNotes: link.notes ?? '', initCoachNote: link.coach_note ?? '' })}
                   activeOpacity={0.75}
                   style={{ backgroundColor: colors.bgCard, borderRadius: 18, borderWidth: 1, borderColor: unread > 0 ? colors.danger + '60' : colors.border, padding: 14, marginBottom: 12 }}
                 >
