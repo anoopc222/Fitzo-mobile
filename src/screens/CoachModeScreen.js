@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Modal, Pressable,
   Alert, RefreshControl, ActivityIndicator, TextInput, Animated, Share,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 let Clipboard = null;
 try { Clipboard = require('expo-clipboard'); } catch (_) {}
@@ -411,16 +412,17 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={onClose} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <Pressable style={{ flex: 1 }} onPress={onClose} />
       <View style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0,
         backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
         borderTopWidth: 1, borderColor: colors.border, paddingBottom: 40,
+        maxHeight: '90%',
       }}>
         <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
         </View>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>{t('coach.editProfile')}</Text>
 
           <Field label="DISPLAY NAME">{input('full_name', 'Your name')}</Field>
@@ -447,6 +449,7 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
           </TouchableOpacity>
         </ScrollView>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
