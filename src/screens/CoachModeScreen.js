@@ -353,6 +353,20 @@ function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGener
 
 // ─── Edit Profile Sheet ───────────────────────────────────────────────────────
 
+const COACH_GUIDE = {
+  title: 'Coach Zone Guide',
+  tagline: '🏅 Connect with clients and manage their progress in one place.',
+  sections: [
+    { icon: 'person-add-outline',   heading: 'Add a Client',      tip: 'Generate a one-time invite code and share it via WhatsApp or any app. Client enters it to link.' },
+    { icon: 'key-outline',          heading: 'Invite Code',        tip: 'Each code is single-use and expires. Generate a new one for each client.' },
+    { icon: 'people-outline',       heading: 'Client List',        tip: 'All linked clients appear here. Tap any client to view their stats and history.' },
+    { icon: 'stats-chart-outline',  heading: 'Client Stats',       tip: 'See weight, steps, sleep, and workout data for each client in real time.' },
+    { icon: 'chatbubble-outline',   heading: 'Messaging',          tip: 'Chat directly with clients inside the app — no need for a separate messaging tool.' },
+    { icon: 'ribbon-outline',       heading: 'Coach Profile',      tip: 'Set your speciality, bio, and rates so clients know what you offer.' },
+  ],
+  footerTip: 'Clients must accept your invite before their data becomes visible to you.',
+};
+
 const SPECIALTIES = ['Strength', 'Weight Loss', 'Muscle Gain', 'Cardio', 'Flexibility', 'Nutrition', 'Athletic Performance', 'Rehabilitation'];
 
 function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, colors }) {
@@ -619,7 +633,7 @@ export default function CoachModeScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
 
-      <ScreenHeader title={t('coach.title')} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('coach.title')} onBack={() => navigation.goBack()} info={COACH_GUIDE} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 100 }}
