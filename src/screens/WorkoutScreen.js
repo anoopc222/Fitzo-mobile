@@ -3208,7 +3208,7 @@ function EditSessionModal({
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function WorkoutScreen({ embedded = false, navigation } = {}) {
+export default function WorkoutScreen({ embedded = false, navigation, route } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -3237,6 +3237,16 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
   const [showToolsPaywall, setShowToolsPaywall] = useState(false);
   const [hideRestDays, setHideRestDays] = useState(false);
   const [showPlans, setShowPlans] = useState(false);
+
+  // Handle plan selected from WorkoutPlansScreen (navigated back with params)
+  const pendingPlanRef = useRef(null);
+  useEffect(() => {
+    const sp = route?.params?.selectedPlan;
+    if (sp) {
+      pendingPlanRef.current = sp;
+      navigation?.setParams({ selectedPlan: undefined });
+    }
+  }, [route?.params?.selectedPlan]);
 
   useEffect(() => {
     AsyncStorage.getItem('fitzo:hideRestDays').then(stored => {
@@ -3821,6 +3831,15 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
     setShowEdit(true);
   };
 
+  // Drain pending plan selection from WorkoutPlansScreen (set via route params)
+  useEffect(() => {
+    if (pendingPlanRef.current) {
+      const sp = pendingPlanRef.current;
+      pendingPlanRef.current = null;
+      openNew({ name: sp.plan.name, planId: sp.plan.id, exercises: sp.exercises });
+    }
+  });
+
   const handleRepeat = (session) => {
     setEditIsNew(true);
     setEditInitial({
@@ -3878,7 +3897,7 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
         {/* Quick Actions card */}
         <View style={[s.quickCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           {/* My Plans */}
-          <TouchableOpacity style={s.quickRow} onPress={() => setShowPlans(true)} activeOpacity={0.7}>
+          <TouchableOpacity style={s.quickRow} onPress={() => navigation ? navigation.navigate('WorkoutPlans', { allSessions: sessions }) : setShowPlans(true)} activeOpacity={0.7}>
             <View style={[s.quickIcon, { backgroundColor: colors.accent + '20' }]}>
               <Ionicons name="list" size={18} color={colors.accent} />
             </View>
@@ -4496,19 +4515,21 @@ export default function WorkoutScreen({ embedded = false, navigation } = {}) {
         </Modal>
       )}
 
-      <PlansModal
-        visible={showPlans}
-        plans={orderedPlansMain}
-        onSaveOrder={saveOrderMain}
-        onClose={() => setShowPlans(false)}
-        onCreate={(name) => createPlanMut.mutate(name)}
-        onRename={(planId, name) => renamePlanMut.mutate({ planId, name })}
-        onDelete={(planId, planName) => deletePlanMut.mutate({ planId, planName })}
-        onCopy={(plan) => copyPlanMut.mutate(plan)}
-        onSelect={(plan, exercises) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id, exercises }); }}
-        onSaveTemplate={(planId, exercises) => savePlanTemplateMut.mutate({ planId, exercises })}
-        allSessions={sessions}
-      />
+      {!navigation && (
+        <PlansModal
+          visible={showPlans}
+          plans={orderedPlansMain}
+          onSaveOrder={saveOrderMain}
+          onClose={() => setShowPlans(false)}
+          onCreate={(name) => createPlanMut.mutate(name)}
+          onRename={(planId, name) => renamePlanMut.mutate({ planId, name })}
+          onDelete={(planId, planName) => deletePlanMut.mutate({ planId, planName })}
+          onCopy={(plan) => copyPlanMut.mutate(plan)}
+          onSelect={(plan, exercises) => { setShowPlans(false); openNew({ name: plan.name, planId: plan.id, exercises }); }}
+          onSaveTemplate={(planId, exercises) => savePlanTemplateMut.mutate({ planId, exercises })}
+          allSessions={sessions}
+        />
+      )}
 
       <EditSessionModal
         visible={showEdit}
