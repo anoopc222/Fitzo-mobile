@@ -25,6 +25,20 @@ const PRIVACY_ITEMS = [
 ];
 const DEFAULT_VIS = { workouts: true, weight: true, steps: true, sleep: true, food: true };
 
+const CLIENT_GUIDE = {
+  title: 'Client View Guide',
+  tagline: '🤝 Stay connected with your coach and in control of your data.',
+  sections: [
+    { icon: 'chatbubble-outline',    heading: 'Message Coach',     tip: 'Tap Message Coach to chat directly. Your coach sees your last reply time.' },
+    { icon: 'megaphone-outline',     heading: 'Coach Notes',       tip: 'Pinned notes from your coach appear here — tips, focus areas, or reminders.' },
+    { icon: 'stats-chart-outline',   heading: 'Week at a Glance',  tip: 'Your weekly workouts, steps, sleep, and calories — exactly what your coach sees.' },
+    { icon: 'eye-outline',           heading: 'Privacy Controls',  tip: 'Toggle each data type on/off to control exactly what your coach can access.' },
+    { icon: 'checkmark-circle-outline', heading: 'Active Status',  tip: 'Green tick = coach is actively monitoring your progress this week.' },
+    { icon: 'time-outline',          heading: 'Coaching Since',    tip: 'Shows how long you\'ve been working with this coach and their avg reply time.' },
+  ],
+  footerTip: 'Your coach can only see data you\'ve toggled ON in the Shared with Coach section.',
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function timeAgo(ts) {
@@ -241,7 +255,7 @@ export default function ClientModeScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
 
-      <ScreenHeader title={t('coach.title')} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('coach.title')} onBack={() => navigation.goBack()} info={CLIENT_GUIDE} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 60 }}
