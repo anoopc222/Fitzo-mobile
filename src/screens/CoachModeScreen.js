@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Modal, Pressable,
-  Alert, RefreshControl, ActivityIndicator, TextInput, Animated,
+  Alert, RefreshControl, ActivityIndicator, TextInput, Animated, Share,
 } from 'react-native';
 let Clipboard = null;
 try { Clipboard = require('expo-clipboard'); } catch (_) {}
@@ -176,6 +176,13 @@ function InviteOverlay({ code, onClose, colors }) {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleShare = () => {
+    Share.share({
+      message: `Join me on Fitzo! Use this invite code: ${code}\n\nOr open the link: fitzo://join?code=${code}`,
+      title: 'Join my coaching on Fitzo',
+    });
+  };
+
   return (
     <View style={{
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -221,6 +228,16 @@ function InviteOverlay({ code, onClose, colors }) {
           </Text>
         </TouchableOpacity>
 
+        {/* Share via WhatsApp / other apps */}
+        <TouchableOpacity onPress={handleShare} activeOpacity={0.8} style={{
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+          backgroundColor: '#25D36620', borderWidth: 1.5, borderColor: '#25D366',
+          paddingVertical: 13, borderRadius: 14, width: '100%',
+        }}>
+          <Ionicons name="share-social-outline" size={18} color="#25D366" />
+          <Text style={{ fontSize: 15, fontWeight: weight.bold, color: '#25D366' }}>Share via…</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={{ paddingVertical: 6 }}>
           <Text style={{ fontSize: 14, color: colors.textDim }}>Done</Text>
         </TouchableOpacity>
@@ -233,38 +250,7 @@ function InviteOverlay({ code, onClose, colors }) {
 
 function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGenerate, generating, isPro, activeCount, onUpgrade }) {
   const { t } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [inviting, setInviting] = useState(null);
-  const qc = useQueryClient();
-
   const limitReached = !isPro && activeCount >= 2;
-
-  useEffect(() => {
-    if (!visible) { setSearchQuery(''); setSearchResults([]); }
-  }, [visible]);
-
-  const handleSearch = async (text) => {
-    setSearchQuery(text);
-    if (text.trim().length < 2) { setSearchResults([]); return; }
-    setSearching(true);
-    const existingIds = clientLinks.filter(l => l.client_id).map(l => l.client_id);
-    const { data } = await supabase.from('profiles').select('id, full_name, goal, email').ilike('full_name', `%${text.trim()}%`).neq('id', userId).limit(10);
-    setSearchResults((data ?? []).filter(p => !existingIds.includes(p.id)));
-    setSearching(false);
-  };
-
-  const handleInvite = async (p) => {
-    setInviting(p.id);
-    const { error } = await supabase.from('coach_clients').insert({ coach_id: userId, client_id: p.id, status: 'pending' });
-    setInviting(null);
-    if (error) { Alert.alert('Error', error.message); return; }
-    Alert.alert('Invite Sent!', `${p.full_name} will see your invitation.`);
-    setSearchResults(prev => prev.filter(x => x.id !== p.id));
-    setSearchQuery('');
-    qc.invalidateQueries({ queryKey: ['coachClients', userId] });
-  };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -339,50 +325,6 @@ function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGener
                     Free plan: you can add <Text style={{ fontWeight: weight.bold, color: colors.text }}>up to 2 clients</Text>. You have {2 - activeCount} slot{2 - activeCount !== 1 ? 's' : ''} remaining.
                   </Text>
                 </View>
-              )}
-
-              {/* Search */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1.5, borderColor: searchQuery ? colors.accent + '60' : colors.border, paddingHorizontal: 14, paddingVertical: 4 }}>
-                <Ionicons name="search" size={17} color={colors.textDim} />
-                <TextInput
-                  style={{ flex: 1, paddingVertical: 11, fontSize: 15, color: colors.text }}
-                  placeholder="Search client by name…"
-                  placeholderTextColor={colors.textDim}
-                  value={searchQuery}
-                  onChangeText={handleSearch}
-                  autoCorrect={false}
-                />
-                {searching
-                  ? <ActivityIndicator size="small" color={colors.accent} />
-                  : searchQuery.length > 0
-                    ? <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }} activeOpacity={0.7}>
-                        <Ionicons name="close-circle" size={18} color={colors.textDim} />
-                      </TouchableOpacity>
-                    : null}
-              </View>
-
-              {searchResults.length > 0 && (
-                <View style={{ backgroundColor: colors.bg, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
-                  {searchResults.map((p, i) => (
-                    <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border }}>
-                      <Avatar name={p.full_name} size={40} fontSize={13} bg={colors.accent + '20'} color={colors.accent} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: weight.semibold, color: colors.text }}>{p.full_name}</Text>
-                        {p.email ? <Text style={{ fontSize: 11, color: colors.textDim }} numberOfLines={1}>{p.email}</Text> : p.goal ? <Text style={{ fontSize: 11, color: colors.textDim }}>{p.goal}</Text> : null}
-                      </View>
-                      <TouchableOpacity onPress={() => handleInvite(p)} disabled={inviting === p.id} activeOpacity={0.8}
-                        style={{ backgroundColor: colors.accent, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 7, opacity: inviting === p.id ? 0.6 : 1 }}>
-                        {inviting === p.id
-                          ? <ActivityIndicator size="small" color={colors.bg} />
-                          : <Text style={{ fontSize: 13, fontWeight: weight.bold, color: colors.bg }}>Invite</Text>}
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
-                <Text style={{ fontSize: 13, color: colors.textDim, textAlign: 'center' }}>No users found</Text>
               )}
 
               {/* Invite code */}
