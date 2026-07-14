@@ -590,6 +590,20 @@ function PacerCard({ todaySteps, goal, colors, t }) {
   );
 }
 
+const STEPS_GUIDE = {
+  title: 'Steps Guide',
+  tagline: '👟 Build your daily movement habit, one step at a time.',
+  sections: [
+    { icon: 'add-circle-outline',      heading: 'Log Steps',         tip: 'Tap + to enter today\'s step count manually or from your phone\'s pedometer.' },
+    { icon: 'flame-outline',           heading: 'Streak',            tip: 'Hit your daily goal every day to grow your streak. Miss a day and it resets.' },
+    { icon: 'swap-horizontal-outline', heading: 'km / mi Toggle',    tip: 'Switch distance units anytime — your step count stays the same.' },
+    { icon: 'bar-chart-outline',       heading: 'Week Comparison',   tip: 'This week vs last week bar chart — see if you\'re moving more or less.' },
+    { icon: 'calendar-outline',        heading: 'Month Heatmap',     tip: 'Green = goal hit, faded = below goal. Aim for a solid green month.' },
+    { icon: 'settings-outline',        heading: 'Daily Goal',        tip: 'Change your step goal in Settings. Common targets: 7,500 · 10,000 · 12,500.' },
+  ],
+  footerTip: 'Every 2,000 steps ≈ 1 mile. A 10,000-step day burns roughly 400–500 kcal.',
+};
+
 export default function StepsScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -1057,7 +1071,7 @@ export default function StepsScreen({ embedded = false } = {}) {
 
   return (
     <Wrap {...wrapProps} style={styles.safe}>
-      {!embedded && <ScreenHeader title={t('steps.screenTitle')} colors={colors} />}
+      {!embedded && <ScreenHeader title={t('steps.screenTitle')} colors={colors} info={STEPS_GUIDE} />}
 
       {/* Month nav + unit toggle */}
       <View style={styles.topRow}>

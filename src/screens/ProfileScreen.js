@@ -94,6 +94,18 @@ async function updateProfile(userId, fields) {
   if (error) throw error;
 }
 
+const PROFILE_GUIDE = {
+  title: 'Profile Guide',
+  tagline: '👤 Your stats power every calculation in the app.',
+  sections: [
+    { icon: 'flag-outline',        heading: 'Fitness Goal',       tip: 'Pick from 10 goals (e.g. Lose Fat, Build Muscle). Affects your plan suggestions.' },
+    { icon: 'body-outline',        heading: 'Body Stats',         tip: 'Height, date of birth, and sex are used for TDEE, BMI, and calorie estimates.' },
+    { icon: 'trophy-outline',      heading: 'Stat Tiles',         tip: 'Quick view of your total workouts, streak, PRs, and current weight.' },
+    { icon: 'log-out-outline',     heading: 'Sign Out',           tip: 'Tap Sign Out to safely log out. Your data is always saved in the cloud.' },
+  ],
+  footerTip: 'Keep your body stats up to date — they affect calorie and macro targets.',
+};
+
 export default function ProfileScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -166,6 +178,7 @@ export default function ProfileScreen({ navigation }) {
         title={t('profile.title')}
         colors={colors}
         onBack={() => navigation.goBack()}
+        info={PROFILE_GUIDE}
         right={(
           <TouchableOpacity onPress={() => editing ? handleSave() : setEditing(true)} disabled={updateMut.isPending}>
             {updateMut.isPending

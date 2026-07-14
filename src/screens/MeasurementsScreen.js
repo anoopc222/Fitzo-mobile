@@ -294,6 +294,18 @@ const styles_static = StyleSheet.create({
   chartStatVal: { fontSize: typography.sm, fontWeight: weight.bold },
 });
 
+const MEASUREMENTS_GUIDE = {
+  title: 'Measurements Guide',
+  tagline: '📐 Track body composition beyond the scale.',
+  sections: [
+    { icon: 'add-circle-outline',  heading: 'Log Measurements',   tip: 'Tap + to record 7 body sites: chest, waist, hips, arms, and thighs.' },
+    { icon: 'git-compare-outline', heading: 'NOW / PREV / DIFF',  tip: 'See your latest vs previous entry side-by-side with the change highlighted.' },
+    { icon: 'time-outline',        heading: 'History',            tip: 'Every measurement session is saved. Scroll down to review past entries.' },
+    { icon: 'body-outline',        heading: '7-Site Tracking',    tip: 'Measuring multiple sites gives a fuller picture of body recomposition.' },
+  ],
+  footerTip: 'Measure at the same time of day and under the same conditions for accuracy.',
+};
+
 export default function MeasurementsScreen({ navigation, embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -430,6 +442,7 @@ export default function MeasurementsScreen({ navigation, embedded = false } = {}
           title={t('measurements.headerTitle', 'MEASUREMENTS')}
           colors={colors}
           onBack={() => navigation.goBack()}
+          info={MEASUREMENTS_GUIDE}
         />
       )}
 

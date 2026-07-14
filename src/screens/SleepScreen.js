@@ -429,6 +429,20 @@ function SleepWorkoutInsightsCard({ logs, sessions, goal, colors }) {
 }
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
+const SLEEP_GUIDE = {
+  title: 'Sleep Guide',
+  tagline: '🌙 Quality sleep is the foundation of every fitness goal.',
+  sections: [
+    { icon: 'add-circle-outline',  heading: 'Log Sleep',          tip: 'Tap + to record hours slept and a quality rating (1–10) each morning.' },
+    { icon: 'pulse-outline',       heading: 'Recovery Score',     tip: 'A 0–100 score based on hours, quality, and consistency. Aim for 70+.' },
+    { icon: 'moon-outline',        heading: 'Sleep Debt',         tip: 'Hours below your goal accumulate as debt. Pay it back over the week.' },
+    { icon: 'sync-outline',        heading: 'Consistency',        tip: 'Going to bed at the same time each night improves deep sleep quality.' },
+    { icon: 'trending-up-outline', heading: 'Trend Chart',        tip: '30-day view of your sleep duration — spot dips before they hurt recovery.' },
+    { icon: 'calendar-outline',    heading: 'Month Heatmap',      tip: 'Darker cells = more hours. Pair with Recovery Score to find your sweet spot.' },
+  ],
+  footerTip: 'Most adults need 7–9 hours. Consistency matters more than total hours.',
+};
+
 export default function SleepScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -867,7 +881,7 @@ export default function SleepScreen({ embedded = false } = {}) {
 
   return (
     <Wrap {...wrapProps} style={styles.safe}>
-      {!embedded && <ScreenHeader title={t('sleep.headerTitle')} colors={colors} />}
+      {!embedded && <ScreenHeader title={t('sleep.headerTitle')} colors={colors} info={SLEEP_GUIDE} />}
 
       {/* Month nav */}
       <View style={styles.topRow}>
