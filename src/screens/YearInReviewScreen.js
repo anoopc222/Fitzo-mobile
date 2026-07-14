@@ -445,46 +445,78 @@ export default function YearInReviewScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* ── 2. Stats grid ── */}
-        <View style={s.statsGrid}>
-          {[
-            { emoji: '🏋️', val: String(data.totalWorkouts), label: 'WORKOUTS',     color: colors.accent,  border: colors.accent + '40' },
-            { emoji: '⚖️',  val: data.totalVolKg >= 1000 ? `${(data.totalVolKg/1000).toFixed(1)}t` : `${data.totalVolKg}kg`, label: 'TOTAL LIFTED', color: '#fb7185', border: '#fb718540' },
-            { emoji: '👟', val: data.totalSteps >= 1000000 ? `${(data.totalSteps/1000000).toFixed(1)}M` : data.totalSteps >= 1000 ? `${(data.totalSteps/1000).toFixed(0)}k` : String(data.totalSteps), label: 'TOTAL STEPS', color: '#fbbf24', border: '#fbbf2440' },
-            { emoji: '😴', val: data.avgSleep ? `${data.avgSleep}h` : '—',         label: 'AVG SLEEP',    color: '#c4b5fd', border: '#c4b5fd40' },
-            { emoji: '🔥', val: String(data.bestStreak),                             label: 'BEST STREAK',  color: '#34d399', border: '#34d39940' },
-            { emoji: data.weightDelta != null ? (data.weightDelta <= 0 ? '📉' : '📈') : '⚖️', val: data.weightDelta != null ? `${data.weightDelta > 0 ? '+' : ''}${data.weightDelta}kg` : '—', label: 'WEIGHT CHANGE', color: colors.text, border: colors.border },
-          ].map((item, i) => (
-            <View key={i} style={[s.statCard, { borderColor: item.border }]}>
-              <Text style={s.statEmoji}>{item.emoji}</Text>
-              <View style={s.statBody}>
-                <Text style={[s.statVal, { color: item.color }]}>{item.val}</Text>
-                <Text style={s.statLabel}>{item.label}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* ── 3. Quick wins row (FREE) ── */}
+        {/* ── 2. Unified stats card ── */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>{t('yearInReview.quickWins')}</Text>
-          <View style={s.quickWinsRow}>
-            <View style={s.quickWinTile}>
-              <Text style={s.quickWinEmoji}>⏱️</Text>
-              <Text style={[s.quickWinVal, { color: colors.accent }]}>{data.totalDurationHours}</Text>
-              <Text style={s.quickWinLabel}>WORKOUT HOURS</Text>
+          {/* Primary stat */}
+          <View style={s.uniPrimaryRow}>
+            <Text style={s.uniPrimaryEmoji}>🏋️</Text>
+            <View style={s.uniPrimaryBody}>
+              <Text style={[s.uniPrimaryVal, { color: colors.accent }]}>{data.totalWorkouts}</Text>
+              <Text style={s.uniPrimaryLabel}>WORKOUTS IN {selectedYear}</Text>
             </View>
-            <View style={[s.quickWinTile, s.quickWinTileBorder]}>
-              <Text style={s.quickWinEmoji}>🎯</Text>
-              <Text style={[s.quickWinVal, { color: '#fbbf24' }]}>{data.stepGoalHitRate}%</Text>
-              <Text style={s.quickWinLabel}>STEP GOAL RATE</Text>
+          </View>
+
+          <View style={[s.uniDivider, { backgroundColor: colors.border }]} />
+
+          {/* 3-column sub-stats row 1 */}
+          <View style={s.uniSubRow}>
+            <View style={s.uniSubTile}>
+              <Text style={[s.uniSubVal, { color: '#fb7185' }]}>
+                {data.totalVolKg >= 1000 ? `${(data.totalVolKg/1000).toFixed(1)}t` : `${data.totalVolKg}kg`}
+              </Text>
+              <Text style={s.uniSubLabel}>TOTAL LIFTED</Text>
             </View>
-            <View style={s.quickWinTile}>
-              <Text style={s.quickWinEmoji}>🏅</Text>
-              <Text style={[s.quickWinVal, { color: '#c4b5fd', fontSize: 13 }]} numberOfLines={1}>
+            <View style={[s.uniSubTile, s.uniSubBorder]}>
+              <Text style={[s.uniSubVal, { color: '#fbbf24' }]}>
+                {data.totalSteps >= 1000000 ? `${(data.totalSteps/1000000).toFixed(1)}M` : data.totalSteps >= 1000 ? `${(data.totalSteps/1000).toFixed(0)}k` : String(data.totalSteps)}
+              </Text>
+              <Text style={s.uniSubLabel}>TOTAL STEPS</Text>
+            </View>
+            <View style={s.uniSubTile}>
+              <Text style={[s.uniSubVal, { color: '#c4b5fd' }]}>{data.avgSleep ? `${data.avgSleep}h` : '—'}</Text>
+              <Text style={s.uniSubLabel}>AVG SLEEP</Text>
+            </View>
+          </View>
+
+          <View style={[s.uniDivider, { backgroundColor: colors.border }]} />
+
+          {/* 3-column sub-stats row 2 */}
+          <View style={s.uniSubRow}>
+            <View style={s.uniSubTile}>
+              <Text style={[s.uniSubVal, { color: '#34d399' }]}>{data.bestStreak}</Text>
+              <Text style={s.uniSubLabel}>BEST STREAK</Text>
+            </View>
+            <View style={[s.uniSubTile, s.uniSubBorder]}>
+              <Text style={[s.uniSubVal, { color: colors.text }]}>
+                {data.weightDelta != null ? `${data.weightDelta > 0 ? '+' : ''}${data.weightDelta}kg` : '—'}
+              </Text>
+              <Text style={s.uniSubLabel}>WEIGHT CHANGE</Text>
+            </View>
+            <View style={s.uniSubTile}>
+              <Text style={[s.uniSubVal, { color: colors.accent }]}>{data.totalDurationHours}</Text>
+              <Text style={s.uniSubLabel}>WORKOUT HRS</Text>
+            </View>
+          </View>
+
+          <View style={[s.uniDivider, { backgroundColor: colors.border }]} />
+
+          {/* Quick wins row */}
+          <View style={s.uniSubRow}>
+            <View style={s.uniSubTile}>
+              <Text style={[s.uniSubVal, { color: '#fbbf24' }]}>{data.stepGoalHitRate}%</Text>
+              <Text style={s.uniSubLabel}>STEP GOAL RATE</Text>
+            </View>
+            <View style={[s.uniSubTile, s.uniSubBorder]}>
+              <Text style={[s.uniSubVal, { color: '#c4b5fd', fontSize: 13 }]} numberOfLines={1}>
                 {data.mostTrainedExercise ? data.mostTrainedExercise.slice(0, 12) : '—'}
               </Text>
-              <Text style={s.quickWinLabel}>MOST TRAINED</Text>
+              <Text style={s.uniSubLabel}>MOST TRAINED</Text>
+            </View>
+            <View style={s.uniSubTile}>
+              <Text style={[s.uniSubVal, { color: '#fb7185' }]}>
+                {data.weightDelta != null ? (data.weightDelta <= 0 ? '📉' : '📈') : '—'}
+              </Text>
+              <Text style={s.uniSubLabel}>TREND</Text>
             </View>
           </View>
         </View>
@@ -1028,6 +1060,17 @@ const styles = (colors) => StyleSheet.create({
   // stats grid
   statsGrid:          { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   statCard:           { width: '48%', flexGrow: 1, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1.5, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  uniPrimaryRow:      { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 },
+  uniPrimaryEmoji:    { fontSize: 36 },
+  uniPrimaryBody:     { flex: 1 },
+  uniPrimaryVal:      { fontSize: 42, fontFamily: fontFamily.monoBold, lineHeight: 48 },
+  uniPrimaryLabel:    { fontSize: 10, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1, marginTop: 2 },
+  uniDivider:         { height: 1, marginVertical: 12 },
+  uniSubRow:          { flexDirection: 'row' },
+  uniSubTile:         { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 2 },
+  uniSubBorder:       { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
+  uniSubVal:          { fontSize: 17, fontFamily: fontFamily.monoBold },
+  uniSubLabel:        { fontSize: 8, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 0.7, textAlign: 'center' },
   statEmoji:          { fontSize: 22 },
   statBody:           { flex: 1, gap: 2 },
   statVal:            { fontSize: 20, fontFamily: fontFamily.monoBold },
