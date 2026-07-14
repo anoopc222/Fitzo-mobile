@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity, Alert,
   TextInput, KeyboardAvoidingView, Platform, PanResponder, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -110,6 +110,25 @@ export default function WorkoutTemplateScreen({ navigation, route }) {
     },
   });
 
+  const clearMut = useMutation({
+    mutationFn: () => updatePlanTemplate(plan.id, []),
+    onSuccess: () => {
+      qc.invalidateQueries(['workoutPlans', user?.id]);
+      navigation.goBack();
+    },
+  });
+
+  const confirmClear = () => {
+    Alert.alert(
+      'Delete Template',
+      `Remove all exercises from "${plan?.name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => clearMut.mutate() },
+      ],
+    );
+  };
+
   const addEx = () => {
     if (!newEx.trim()) return;
     setExercises(prev => [...prev, newEx.trim()]);
@@ -118,9 +137,19 @@ export default function WorkoutTemplateScreen({ navigation, route }) {
 
   const removeEx = (idx) => setExercises(prev => prev.filter((_, i) => i !== idx));
 
+  const hasTemplate = Array.isArray(plan?.template_exercises) && plan.template_exercises.length > 0;
+
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScreenHeader title={plan?.name ?? ''} onBack={() => navigation.goBack()} />
+      <ScreenHeader
+        title={plan?.name ?? ''}
+        onBack={() => navigation.goBack()}
+        right={hasTemplate ? (
+          <TouchableOpacity onPress={confirmClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="trash-outline" size={18} color={colors.danger} />
+          </TouchableOpacity>
+        ) : null}
+      />
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
