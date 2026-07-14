@@ -24,6 +24,20 @@ const ENERGY_LABELS = ['', 'Drained', 'Low', 'Moderate', 'High', 'Peak'];
 const MOOD_COLORS   = ['', '#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399'];
 const DOW_SHORT     = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+const MOOD_GUIDE = {
+  title: 'Mood & Energy Guide',
+  tagline: '😄 Track how you feel daily — spot patterns, boost wellbeing.',
+  sections: [
+    { icon: 'happy-outline',       heading: 'Log Mood',          tip: 'Rate your mood 1–5 each day. From 😞 Terrible to 😄 Great — honest beats optimistic.' },
+    { icon: 'flash-outline',       heading: 'Log Energy',        tip: 'Rate your energy 1–5. From 🪫 Drained to 🚀 Peak — helps link sleep and workouts to how you feel.' },
+    { icon: 'create-outline',      heading: 'Add a Note',        tip: 'Jot a quick reason (stressful day, great workout, poor sleep). Notes unlock deeper patterns.' },
+    { icon: 'bar-chart-outline',   heading: 'Weekly Chart',      tip: '7-day mood and energy bars side by side. Dips on the same day often share a cause.' },
+    { icon: 'trending-up-outline', heading: 'Trends Over Time',  tip: 'Monthly average line shows your baseline mood — useful for spotting burnout early.' },
+    { icon: 'calendar-outline',    heading: 'History',           tip: 'Tap any past day to view or edit your entry. Build a complete emotional timeline.' },
+  ],
+  footerTip: 'Log at the same time each day (e.g. evening) for the most consistent data.',
+};
+
 // ── Pure helpers ──────────────────────────────────────────────────────────────
 function localDateStr(d) {
   const y = d.getFullYear();
@@ -405,7 +419,7 @@ export default function MoodLogScreen({ navigation }) {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <ScreenHeader title={t('moodLog.title')} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('moodLog.title')} onBack={() => navigation.goBack()} info={MOOD_GUIDE} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
         ref={scrollRef}
