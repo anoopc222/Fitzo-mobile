@@ -368,9 +368,47 @@ const COACH_GUIDE = {
 };
 
 const SPECIALTIES = ['Strength', 'Weight Loss', 'Muscle Gain', 'Cardio', 'Flexibility', 'Nutrition', 'Athletic Performance', 'Rehabilitation'];
+const COACHING_TYPES = ['Online', 'In-Person', 'Hybrid', 'Self-Trained'];
+const EXP_OPTIONS = ['< 1 year', '1–2 years', '3–5 years', '6–10 years', '10+ years'];
 
 function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, colors }) {
   const { t } = useTranslation();
+  const Field = ({ label, children }) => (
+    <View style={{ gap: 6 }}>
+      <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>{label}</Text>
+      {children}
+    </View>
+  );
+  const input = (key, placeholder, multiline) => (
+    <TextInput
+      value={draft[key] ?? ''}
+      onChangeText={v => setDraft(d => ({ ...d, [key]: v }))}
+      placeholder={placeholder}
+      placeholderTextColor={colors.textDim}
+      multiline={multiline}
+      numberOfLines={multiline ? 3 : 1}
+      style={{
+        backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5,
+        borderColor: colors.accent + '40', paddingHorizontal: 14, paddingVertical: 11,
+        fontSize: 15, color: colors.text,
+        ...(multiline ? { minHeight: 76, textAlignVertical: 'top' } : {}),
+      }}
+    />
+  );
+  const Chips = ({ items, field }) => (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      {items.map(s => {
+        const sel = draft[field] === s;
+        return (
+          <TouchableOpacity key={s} onPress={() => setDraft(d => ({ ...d, [field]: sel ? '' : s }))} activeOpacity={0.75}
+            style={{ paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20, backgroundColor: sel ? colors.accent : 'transparent', borderWidth: 1.5, borderColor: sel ? colors.accent : colors.border }}>
+            <Text style={{ fontSize: 12, fontWeight: weight.semibold, color: sel ? colors.bg : colors.textDim }}>{s}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={onClose} />
@@ -382,45 +420,28 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
         <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
         </View>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled">
           <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>{t('coach.editProfile')}</Text>
-          <View style={{ gap: 6 }}>
-            <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>DISPLAY NAME</Text>
-            <TextInput
-              value={draft.full_name}
-              onChangeText={v => setDraft(d => ({ ...d, full_name: v }))}
-              placeholder="Your name"
-              placeholderTextColor={colors.textDim}
-              style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: colors.accent + '40', paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: colors.text }}
-            />
-          </View>
-          <View style={{ gap: 6 }}>
-            <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>BIO</Text>
-            <TextInput
-              value={draft.bio}
-              onChangeText={v => setDraft(d => ({ ...d, bio: v }))}
-              placeholder="Tell your clients about yourself…"
-              placeholderTextColor={colors.textDim}
-              multiline numberOfLines={3}
-              style={{ backgroundColor: colors.bg, borderRadius: 12, borderWidth: 1.5, borderColor: colors.accent + '40', paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: colors.text, minHeight: 76, textAlignVertical: 'top' }}
-            />
-          </View>
-          <View style={{ gap: 8 }}>
-            <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>SPECIALTY</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {SPECIALTIES.map(s => {
-                const sel = draft.goal === s;
-                return (
-                  <TouchableOpacity key={s} onPress={() => setDraft(d => ({ ...d, goal: sel ? '' : s }))} activeOpacity={0.75}
-                    style={{ paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20, backgroundColor: sel ? colors.accent : 'transparent', borderWidth: 1.5, borderColor: sel ? colors.accent : colors.border }}>
-                    <Text style={{ fontSize: 12, fontWeight: weight.semibold, color: sel ? colors.bg : colors.textDim }}>{s}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
+
+          <Field label="DISPLAY NAME">{input('full_name', 'Your name')}</Field>
+          <Field label="GYM / STUDIO NAME">{input('gym_name', 'e.g. Iron Fitness, Home Gym…')}</Field>
+          <Field label="LOCATION">{input('location', 'City, Country')}</Field>
+          <Field label="BIO">{input('bio', 'Tell your clients about yourself…', true)}</Field>
+
+          <Field label="SPECIALTY">
+            <Chips items={SPECIALTIES} field="goal" />
+          </Field>
+
+          <Field label="COACHING TYPE">
+            <Chips items={COACHING_TYPES} field="coaching_type" />
+          </Field>
+
+          <Field label="EXPERIENCE">
+            <Chips items={EXP_OPTIONS} field="experience_years" />
+          </Field>
+
           <TouchableOpacity onPress={onSave} disabled={saving} activeOpacity={0.8}
-            style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1 }}>
+            style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1, marginTop: 4 }}>
             {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
             <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>{t('coach.saveProfile')}</Text>
           </TouchableOpacity>
@@ -554,8 +575,9 @@ export default function CoachModeScreen() {
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   const [editSheetVisible, setEditSheetVisible] = useState(false);
   const [notesLink, setNotesLink] = useState(null);
-  const [profile, setProfile] = useState({ full_name: '', bio: '', goal: '', created_at: null });
-  const [draft, setDraft] = useState({ full_name: '', bio: '', goal: '' });
+  const EMPTY_PROFILE = { full_name: '', bio: '', goal: '', gym_name: '', coaching_type: '', experience_years: '', location: '', created_at: null };
+  const [profile, setProfile] = useState(EMPTY_PROFILE);
+  const [draft, setDraft] = useState(EMPTY_PROFILE);
   const [saving, setSaving] = useState(false);
 
   const { data: clientLinks = [], isLoading, refetch, isRefetching } = useQuery({
@@ -566,10 +588,15 @@ export default function CoachModeScreen() {
 
   useEffect(() => {
     if (!userId) return;
-    supabase.from('profiles').select('full_name, bio, goal, created_at').eq('id', userId).single()
+    supabase.from('profiles').select('full_name, bio, goal, gym_name, coaching_type, experience_years, location, created_at').eq('id', userId).single()
       .then(({ data }) => {
         if (data) {
-          const p = { full_name: data.full_name ?? '', bio: data.bio ?? '', goal: data.goal ?? '', created_at: data.created_at };
+          const p = {
+            full_name: data.full_name ?? '', bio: data.bio ?? '', goal: data.goal ?? '',
+            gym_name: data.gym_name ?? '', coaching_type: data.coaching_type ?? '',
+            experience_years: data.experience_years ?? '', location: data.location ?? '',
+            created_at: data.created_at,
+          };
           setProfile(p); setDraft(p);
         }
       });
@@ -597,7 +624,11 @@ export default function CoachModeScreen() {
 
   const handleSave = async () => {
     setSaving(true);
-    await supabase.from('profiles').update({ full_name: draft.full_name, bio: draft.bio, goal: draft.goal }).eq('id', userId);
+    await supabase.from('profiles').update({
+      full_name: draft.full_name, bio: draft.bio, goal: draft.goal,
+      gym_name: draft.gym_name, coaching_type: draft.coaching_type,
+      experience_years: draft.experience_years || null, location: draft.location,
+    }).eq('id', userId);
     setProfile(prev => ({ ...prev, ...draft }));
     setSaving(false);
     setEditSheetVisible(false);
@@ -643,23 +674,66 @@ export default function CoachModeScreen() {
 
         {/* ── Profile card ─────────────────────────────────────────── */}
         <View style={{ backgroundColor: colors.bgCard, borderRadius: 20, overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: colors.border }}>
-
           <View style={{ padding: 16, gap: 14 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+
+            {/* Top row: avatar + name + edit button */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
               <Avatar name={profile.full_name || '?'} size={56} fontSize={18} bg={colors.accent + '25'} color={colors.accent} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={{ fontSize: 18, fontWeight: weight.black, color: colors.text }}>{profile.full_name || 'Your Name'}</Text>
-                <Text style={{ fontSize: 12, color: colors.textDim }}>
-                  {profile.goal || 'No specialty set'}{' · Coach'}
-                </Text>
-                {profile.goal ? (
-                  <View style={{ alignSelf: 'flex-start', marginTop: 4, backgroundColor: colors.accent + '18', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.accent + '35' }}>
-                    <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent }}>{profile.goal}</Text>
-                  </View>
-                ) : null}
+                <Text style={{ fontSize: 12, color: colors.textDim }}>Coach</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  {!!profile.goal && (
+                    <View style={{ backgroundColor: colors.accent + '18', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.accent + '35' }}>
+                      <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.accent }}>{profile.goal}</Text>
+                    </View>
+                  )}
+                  {!!profile.coaching_type && (
+                    <View style={{ backgroundColor: colors.card, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.border }}>
+                      <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textMuted }}>{profile.coaching_type}</Text>
+                    </View>
+                  )}
+                </View>
               </View>
+              <TouchableOpacity onPress={() => { setDraft(profile); setEditSheetVisible(true); }}
+                style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Ionicons name="pencil-outline" size={16} color={colors.accent} />
+              </TouchableOpacity>
             </View>
+
+            {/* Extra details row */}
+            {(profile.gym_name || profile.location || profile.experience_years) ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                {!!profile.gym_name && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <Ionicons name="business-outline" size={13} color={colors.textDim} />
+                    <Text style={{ fontSize: 12, color: colors.textDim }}>{profile.gym_name}</Text>
+                  </View>
+                )}
+                {!!profile.location && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <Ionicons name="location-outline" size={13} color={colors.textDim} />
+                    <Text style={{ fontSize: 12, color: colors.textDim }}>{profile.location}</Text>
+                  </View>
+                )}
+                {!!profile.experience_years && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <Ionicons name="time-outline" size={13} color={colors.textDim} />
+                    <Text style={{ fontSize: 12, color: colors.textDim }}>{profile.experience_years} exp.</Text>
+                  </View>
+                )}
+              </View>
+            ) : null}
+
+            {/* Bio */}
+            {!!profile.bio && (
+              <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 19 }}>{profile.bio}</Text>
+            )}
+
             <View style={{ height: 1, backgroundColor: colors.border }} />
+
+            {/* Stats row */}
             <View style={{ flexDirection: 'row' }}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.accent + '15', alignItems: 'center', justifyContent: 'center' }}>
