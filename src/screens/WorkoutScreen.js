@@ -3908,7 +3908,7 @@ export default function WorkoutScreen({ embedded = false, navigation, route } = 
 
   return (
     <Wrap {...wrapProps} style={s.safe}>
-      {!embedded && <ScreenHeader title={t('workout.workoutTitleUpper')} colors={colors} info={WORKOUT_GUIDE} right={<Text style={s.sessionCount}>{t('workout.sessionsCountUpper', { count: sessions.length })}</Text>} />}
+      {!embedded && <ScreenHeader title={t('workout.workoutTitleUpper')} colors={colors} info={WORKOUT_GUIDE} />}
 
       {/* Month nav */}
       <View style={s.monthNav}>
