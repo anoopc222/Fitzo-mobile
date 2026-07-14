@@ -412,44 +412,45 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <Pressable style={{ flex: 1 }} onPress={onClose} />
-      <View style={{
-        backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-        borderTopWidth: 1, borderColor: colors.border, paddingBottom: 40,
-        maxHeight: '90%',
-      }}>
-        <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
-        </View>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>{t('coach.editProfile')}</Text>
+      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }} onPress={onClose}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} style={{ width: '100%' }}>
+          <Pressable onPress={() => {}} style={{
+            backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            borderTopWidth: 1, borderColor: colors.border, paddingBottom: 40,
+            maxHeight: '90%',
+          }}>
+            <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+            </View>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>{t('coach.editProfile')}</Text>
 
-          <Field label="DISPLAY NAME">{input('full_name', 'Your name')}</Field>
-          <Field label="GYM / STUDIO NAME">{input('gym_name', 'e.g. Iron Fitness, Home Gym…')}</Field>
-          <Field label="LOCATION">{input('location', 'City, Country')}</Field>
-          <Field label="BIO">{input('bio', 'Tell your clients about yourself…', true)}</Field>
+              <Field label="DISPLAY NAME">{input('full_name', 'Your name')}</Field>
+              <Field label="GYM / STUDIO NAME">{input('gym_name', 'e.g. Iron Fitness, Home Gym…')}</Field>
+              <Field label="LOCATION">{input('location', 'City, Country')}</Field>
+              <Field label="BIO">{input('bio', 'Tell your clients about yourself…', true)}</Field>
 
-          <Field label="SPECIALTY">
-            <Chips items={SPECIALTIES} field="goal" />
-          </Field>
+              <Field label="SPECIALTY">
+                <Chips items={SPECIALTIES} field="goal" />
+              </Field>
 
-          <Field label="COACHING TYPE">
-            <Chips items={COACHING_TYPES} field="coaching_type" />
-          </Field>
+              <Field label="COACHING TYPE">
+                <Chips items={COACHING_TYPES} field="coaching_type" />
+              </Field>
 
-          <Field label="EXPERIENCE">
-            <Chips items={EXP_OPTIONS} field="experience_years" />
-          </Field>
+              <Field label="EXPERIENCE">
+                <Chips items={EXP_OPTIONS} field="experience_years" />
+              </Field>
 
-          <TouchableOpacity onPress={onSave} disabled={saving} activeOpacity={0.8}
-            style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1, marginTop: 4 }}>
-            {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
-            <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>{t('coach.saveProfile')}</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-      </KeyboardAvoidingView>
+              <TouchableOpacity onPress={onSave} disabled={saving} activeOpacity={0.8}
+                style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1, marginTop: 4 }}>
+                {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
+                <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>{t('coach.saveProfile')}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Pressable>
     </Modal>
   );
 }
