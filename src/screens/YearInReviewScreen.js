@@ -1060,7 +1060,7 @@ const styles = (colors) => StyleSheet.create({
   // stats grid
   statsGrid:          { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   statCard:           { width: '48%', flexGrow: 1, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1.5, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  uniPrimaryRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 },
+  uniPrimaryRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2, paddingHorizontal: 4 },
   uniPrimaryEmoji:    { fontSize: 28 },
   uniPrimaryBody:     { flex: 1 },
   uniPrimaryVal:      { fontSize: 34, fontFamily: fontFamily.monoBold, lineHeight: 38 },
