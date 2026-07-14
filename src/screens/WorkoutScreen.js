@@ -315,6 +315,48 @@ async function deleteFullSession(sessionId) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+const WORKOUT_GUIDE = {
+  title: 'Workout — Guide',
+  intro: 'The Workout screen lets you track every session from start to finish, browse your history, manage training plans, and review progress over time.',
+  sections: [
+    {
+      icon: 'play-circle-outline',
+      heading: 'Starting a Session',
+      body: 'Tap the green Start Workout button at the top.\n• Choose a workout type: Gym, Cardio, or Rest Day.\n• Give the session a name or pick from your plans — the template pre-fills exercises automatically.\n• The timer starts as soon as the session opens.',
+    },
+    {
+      icon: 'barbell-outline',
+      heading: 'Adding Exercises',
+      body: 'Inside an active session, tap Add Exercise.\n• Type to search from hundreds of common exercises, or enter a custom name.\n• Exercises are grouped by muscle group and show your previous best.\n• Tap the thumbnail image to preview the movement.',
+    },
+    {
+      icon: 'list-outline',
+      heading: 'Logging Sets',
+      body: 'Each exercise row has a + Set button.\n• Enter weight (kg or lbs) and reps for each set.\n• RPE (Rate of Perceived Exertion, 1–10) is optional but helps track effort over time.\n• Swipe left on a set to delete it.\n• Completed sets turn green.',
+    },
+    {
+      icon: 'checkmark-done-circle-outline',
+      heading: 'Finishing a Session',
+      body: 'Tap Finish Workout when done.\n• Total volume, duration, and estimated calories are saved automatically.\n• A summary card appears — you can share it directly to social.\n• The session appears in your history list immediately.',
+    },
+    {
+      icon: 'time-outline',
+      heading: 'Session History',
+      body: 'Past sessions are listed newest-first below the start button.\n• Tap any session to expand it and see all exercises and sets.\n• Use the search bar to filter by exercise name or date.\n• Tap the calendar icon to jump to a specific month.',
+    },
+    {
+      icon: 'document-text-outline',
+      heading: 'Workout Plans & Templates',
+      body: 'Tap My Plans to manage your training plans.\n• Create a plan (e.g. Push, Pull, Legs) and assign a template exercise list.\n• Starting a session from a plan pre-loads all template exercises in order.\n• Tap the barbell icon next to a plan to edit its template.',
+    },
+    {
+      icon: 'trending-up-outline',
+      heading: 'Progress & PRs',
+      body: 'The Progress tab shows PR badges and trend lines for every exercise.\n• A green Improving badge means your volume has increased in the last 4 weeks.\n• A gold PR badge appears when you hit a new personal record weight or reps.\n• Tap an exercise card to see its full history chart.',
+    },
+  ],
+};
+
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL  = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
@@ -3866,7 +3908,7 @@ export default function WorkoutScreen({ embedded = false, navigation, route } = 
 
   return (
     <Wrap {...wrapProps} style={s.safe}>
-      {!embedded && <ScreenHeader title={t('workout.workoutTitleUpper')} colors={colors} right={<Text style={s.sessionCount}>{t('workout.sessionsCountUpper', { count: sessions.length })}</Text>} />}
+      {!embedded && <ScreenHeader title={t('workout.workoutTitleUpper')} colors={colors} info={WORKOUT_GUIDE} right={<Text style={s.sessionCount}>{t('workout.sessionsCountUpper', { count: sessions.length })}</Text>} />}
 
       {/* Month nav */}
       <View style={s.monthNav}>
