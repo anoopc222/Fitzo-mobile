@@ -325,6 +325,20 @@ function energyEmoji(val) {
   return '😴';
 }
 
+const YEAR_GUIDE = {
+  title: 'Year in Review Guide',
+  tagline: '📅 Your entire fitness year, beautifully summarised.',
+  sections: [
+    { icon: 'barbell-outline',      heading: 'Workout Stats',      tip: 'Total sessions, volume lifted, and best streak for the selected year.' },
+    { icon: 'footsteps-outline',    heading: 'Steps & Distance',   tip: 'Total steps walked and distance covered throughout the year.' },
+    { icon: 'moon-outline',         heading: 'Sleep Summary',      tip: 'Average sleep hours and your best recovery month.' },
+    { icon: 'scale-outline',        heading: 'Weight Journey',     tip: 'Start vs end weight and the lowest point you reached this year.' },
+    { icon: 'calendar-outline',     heading: 'Change Year',        tip: 'Use the ← → arrows at the top to browse previous years.' },
+    { icon: 'share-social-outline', heading: 'Share',              tip: 'Tap Share to export your Year in Review as a card to WhatsApp, Instagram, etc.' },
+  ],
+  footerTip: 'Data only appears for years where you have logged activity.',
+};
+
 export default function YearInReviewScreen({ navigation }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -348,7 +362,7 @@ export default function YearInReviewScreen({ navigation }) {
 
   if (isLoading || !data) return (
     <SafeAreaView edges={['top']} style={s.safe}>
-      <ScreenHeader title={t('yearInReview.title')} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('yearInReview.title')} onBack={() => navigation.goBack()} info={YEAR_GUIDE} />
       <ActivityIndicator color={colors.accent} style={{ flex: 1 }} />
     </SafeAreaView>
   );
@@ -415,7 +429,7 @@ export default function YearInReviewScreen({ navigation }) {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <ScreenHeader title={t('yearInReview.title')} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('yearInReview.title')} onBack={() => navigation.goBack()} info={YEAR_GUIDE} />
       <ScrollView contentContainerStyle={s.scroll}>
 
         {/* ── 1. Year picker ── */}

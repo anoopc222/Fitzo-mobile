@@ -381,6 +381,20 @@ function MacroSlotsCard({ show, onDismiss, colors }) {
   );
 }
 
+const FOOD_GUIDE = {
+  title: 'Food Log Guide',
+  tagline: '🥗 Hit your nutrition targets without the guesswork.',
+  sections: [
+    { icon: 'add-circle-outline',  heading: 'Add Food',           tip: 'Tap + under any meal to search and log food. Adjust serving size before saving.' },
+    { icon: 'pie-chart-outline',   heading: 'Calorie Ring',       tip: 'The ring fills as you log meals. Green = under target, red = over.' },
+    { icon: 'bar-chart-outline',   heading: 'Macro Bars',         tip: 'Protein · Carbs · Fats bars show your daily progress toward each macro target.' },
+    { icon: 'restaurant-outline',  heading: 'Meal Types',         tip: 'Log under Breakfast, Lunch, Dinner, or Snacks to see your eating pattern.' },
+    { icon: 'calendar-outline',    heading: 'Date Navigation',    tip: 'Use the ← → arrows to review or edit any past day\'s food log.' },
+    { icon: 'settings-outline',    heading: 'Set Targets',        tip: 'Adjust calorie and macro goals in Settings → Daily Goals.' },
+  ],
+  footerTip: 'Log meals as you eat them — recall accuracy drops fast after a few hours.',
+};
+
 export default function FoodLogScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -757,7 +771,7 @@ export default function FoodLogScreen({ embedded = false } = {}) {
 
   return (
     <Wrap {...wrapProps} style={styles.safe}>
-      {!embedded && <ScreenHeader title="LOG" />}
+      {!embedded && <ScreenHeader title="LOG" info={FOOD_GUIDE} />}
       {/* Date nav */}
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={prevDay} style={styles.dateArrow}>

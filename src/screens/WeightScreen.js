@@ -630,6 +630,20 @@ function WeightLogRow({ log, delta, goalVal, unit, barMin, barMax, colors, onDel
 const styles_weightLogRow = { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 10 };
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
+const WEIGHT_GUIDE = {
+  title: 'Weight Guide',
+  tagline: '⚖️ Track your weight journey and hit your goal.',
+  sections: [
+    { icon: 'add-circle-outline',      heading: 'Log Weight',        tip: 'Tap + to log today\'s weight in kg or lbs. Best done first thing in the morning.' },
+    { icon: 'trending-up-outline',     heading: 'Trend Chart',       tip: 'The line shows your rolling average — ignores daily fluctuations for a true trend.' },
+    { icon: 'swap-horizontal-outline', heading: 'kg / lbs Toggle',   tip: 'Switch units anytime. All values convert instantly across the app.' },
+    { icon: 'calendar-outline',        heading: 'Month Heatmap',     tip: 'Darker cells = heavier weigh-ins. Spot patterns at a glance.' },
+    { icon: 'flag-outline',            heading: 'Goal Ring',         tip: 'Set a target weight in Profile. The ring fills as you get closer.' },
+    { icon: 'time-outline',            heading: 'History',           tip: 'Swipe up to see every entry. Tap one to edit or delete it.' },
+  ],
+  footerTip: 'Weigh yourself at the same time each day for the most consistent data.',
+};
+
 export default function WeightScreen({ embedded = false } = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -1070,7 +1084,7 @@ export default function WeightScreen({ embedded = false } = {}) {
 
   return (
     <Wrap {...wrapProps} style={styles.safe}>
-      {!embedded && <ScreenHeader title={t('weight.screenTitle')} colors={colors} />}
+      {!embedded && <ScreenHeader title={t('weight.screenTitle')} colors={colors} info={WEIGHT_GUIDE} />}
 
       {/* Month nav + unit toggle */}
       <View style={styles.topRow}>

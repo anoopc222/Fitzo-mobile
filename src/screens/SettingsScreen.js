@@ -26,6 +26,18 @@ function formatTime(hour, minute) {
   return `${h12}:${String(minute).padStart(2, '0')} ${ampm}`;
 }
 
+const SETTINGS_GUIDE = {
+  title: 'Settings Guide',
+  tagline: '⚙️ Customise Fitzo to fit your routine perfectly.',
+  sections: [
+    { icon: 'flag-outline',          heading: 'Daily Goals',        tip: 'Set your calorie, step, sleep, and workout targets. Used for all goal rings.' },
+    { icon: 'contrast-outline',      heading: 'Theme',              tip: 'Switch between Dark and Light mode. Also toggleable via the sun/moon icon.' },
+    { icon: 'notifications-outline', heading: 'Notifications',      tip: 'Enable reminders for workouts, meals, and sleep. Respects system permissions.' },
+    { icon: 'warning-outline',       heading: 'Danger Zone',        tip: 'Delete account or clear all data. These actions are permanent and irreversible.' },
+  ],
+  footerTip: 'Your goals sync instantly — changes reflect on all screens right away.',
+};
+
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
@@ -106,7 +118,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
-      <ScreenHeader title={t('settings.screenTitle')} colors={colors} />
+      <ScreenHeader title={t('settings.screenTitle')} colors={colors} info={SETTINGS_GUIDE} />
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* ── Account ─────────────────────────────────────────────── */}

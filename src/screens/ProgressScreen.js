@@ -216,6 +216,18 @@ function TrendIcon({ trend }) {
   );
 }
 
+const PROGRESS_GUIDE = {
+  title: 'Progress Guide',
+  tagline: '📈 Watch every exercise trend and personal record.',
+  sections: [
+    { icon: 'trophy-outline',      heading: 'PR Badge',           tip: 'Gold PR = new personal record weight or reps. Tap the card to see the full chart.' },
+    { icon: 'trending-up-outline', heading: 'Trend Badge',        tip: 'Green Improving = volume up in 4 weeks. Yellow Plateau = flat. Red = declining.' },
+    { icon: 'bar-chart-outline',   heading: 'Volume Chart',       tip: 'Each bar is one session. Taller = more total weight moved that day.' },
+    { icon: 'search-outline',      heading: 'Find Exercises',     tip: 'Scroll or search to find any exercise you\'ve ever logged.' },
+  ],
+  footerTip: 'Progress cards appear automatically once you have 2+ sessions with that exercise.',
+};
+
 export default function ProgressScreen({ navigation, embedded = false } = {}) {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -291,7 +303,7 @@ export default function ProgressScreen({ navigation, embedded = false } = {}) {
 
   return (
     <Wrap {...wrapProps} style={styles.safe}>
-      {!embedded && <ScreenHeader title={t('progress.headerTitle')} colors={colors} onBack={() => navigation.goBack()} />}
+      {!embedded && <ScreenHeader title={t('progress.headerTitle')} colors={colors} onBack={() => navigation.goBack()} info={PROGRESS_GUIDE} />}
       <Text style={styles.subtitle}>{t('progress.exercisesTracked', { count: grouped.length })}</Text>
 
       <View style={styles.searchWrap}>
