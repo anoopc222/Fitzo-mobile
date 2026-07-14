@@ -1884,17 +1884,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
       <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setTemplatePlanId(null)}>
         <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: bg }}>
           {/* Header */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: headerBg, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <TouchableOpacity onPress={() => setTemplatePlanId(null)} style={{ marginRight: 12 }}>
-              <Ionicons name="chevron-back" size={24} color={colors.accent} />
-            </TouchableOpacity>
-            <Text style={{ flex: 1, fontSize: 16, fontWeight: '800', color: colors.text }} numberOfLines={1}>
-              {planName}
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={22} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
+          <ScreenHeader title={planName} onBack={() => setTemplatePlanId(null)} />
 
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled" scrollEnabled={exDraggingIdx < 0}>
