@@ -372,8 +372,15 @@ const SPECIALTIES = ['Strength', 'Weight Loss', 'Muscle Gain', 'Cardio', 'Flexib
 const COACHING_TYPES = ['Online', 'In-Person', 'Hybrid', 'Self-Trained'];
 const EXP_OPTIONS = ['< 1 year', '1–2 years', '3–5 years', '6–10 years', '10+ years'];
 
-function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, colors }) {
+function EditProfileSheet({ visible, onClose, initialDraft, onSave, saving, colors }) {
   const { t } = useTranslation();
+  const [local, setLocal] = useState(initialDraft ?? EMPTY_PROFILE);
+
+  // Sync local state when sheet opens with fresh data
+  useEffect(() => {
+    if (visible) setLocal(initialDraft ?? EMPTY_PROFILE);
+  }, [visible]);
+
   const Field = ({ label, children }) => (
     <View style={{ gap: 6 }}>
       <Text style={{ fontSize: 11, fontWeight: weight.bold, color: colors.textDim, letterSpacing: 1 }}>{label}</Text>
@@ -382,8 +389,8 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
   );
   const input = (key, placeholder, multiline) => (
     <TextInput
-      value={draft[key] ?? ''}
-      onChangeText={v => setDraft(d => ({ ...d, [key]: v }))}
+      value={local[key] ?? ''}
+      onChangeText={v => setLocal(d => ({ ...d, [key]: v }))}
       placeholder={placeholder}
       placeholderTextColor={colors.textDim}
       multiline={multiline}
@@ -399,9 +406,9 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
   const Chips = ({ items, field }) => (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
       {items.map(s => {
-        const sel = draft[field] === s;
+        const sel = local[field] === s;
         return (
-          <TouchableOpacity key={s} onPress={() => setDraft(d => ({ ...d, [field]: sel ? '' : s }))} activeOpacity={0.75}
+          <TouchableOpacity key={s} onPress={() => setLocal(d => ({ ...d, [field]: sel ? '' : s }))} activeOpacity={0.75}
             style={{ paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20, backgroundColor: sel ? colors.accent : 'transparent', borderWidth: 1.5, borderColor: sel ? colors.accent : colors.border }}>
             <Text style={{ fontSize: 12, fontWeight: weight.semibold, color: sel ? colors.bg : colors.textDim }}>{s}</Text>
           </TouchableOpacity>
@@ -412,44 +419,45 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <Pressable style={{ flex: 1 }} onPress={onClose} />
-      <View style={{
-        backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-        borderTopWidth: 1, borderColor: colors.border, paddingBottom: 40,
-        maxHeight: '90%',
-      }}>
-        <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
-        </View>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>{t('coach.editProfile')}</Text>
+      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }} onPress={onClose}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} style={{ width: '100%' }}>
+          <Pressable onPress={() => {}} style={{
+            backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            borderTopWidth: 1, borderColor: colors.border, paddingBottom: 40,
+            maxHeight: '90%',
+          }}>
+            <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+            </View>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Text style={{ fontSize: 19, fontWeight: weight.black, color: colors.text }}>{t('coach.editProfile')}</Text>
 
-          <Field label="DISPLAY NAME">{input('full_name', 'Your name')}</Field>
-          <Field label="GYM / STUDIO NAME">{input('gym_name', 'e.g. Iron Fitness, Home Gym…')}</Field>
-          <Field label="LOCATION">{input('location', 'City, Country')}</Field>
-          <Field label="BIO">{input('bio', 'Tell your clients about yourself…', true)}</Field>
+              <Field label="DISPLAY NAME">{input('full_name', 'Your name')}</Field>
+              <Field label="GYM / STUDIO NAME">{input('gym_name', 'e.g. Iron Fitness, Home Gym…')}</Field>
+              <Field label="LOCATION">{input('location', 'City, Country')}</Field>
+              <Field label="BIO">{input('bio', 'Tell your clients about yourself…', true)}</Field>
 
-          <Field label="SPECIALTY">
-            <Chips items={SPECIALTIES} field="goal" />
-          </Field>
+              <Field label="SPECIALTY">
+                <Chips items={SPECIALTIES} field="goal" />
+              </Field>
 
-          <Field label="COACHING TYPE">
-            <Chips items={COACHING_TYPES} field="coaching_type" />
-          </Field>
+              <Field label="COACHING TYPE">
+                <Chips items={COACHING_TYPES} field="coaching_type" />
+              </Field>
 
-          <Field label="EXPERIENCE">
-            <Chips items={EXP_OPTIONS} field="experience_years" />
-          </Field>
+              <Field label="EXPERIENCE">
+                <Chips items={EXP_OPTIONS} field="experience_years" />
+              </Field>
 
-          <TouchableOpacity onPress={onSave} disabled={saving} activeOpacity={0.8}
-            style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1, marginTop: 4 }}>
-            {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
-            <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>{t('coach.saveProfile')}</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-      </KeyboardAvoidingView>
+              <TouchableOpacity onPress={() => onSave(local)} disabled={saving} activeOpacity={0.8}
+                style={{ backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1, marginTop: 4 }}>
+                {saving ? <ActivityIndicator size="small" color={colors.bg} /> : <Ionicons name="checkmark-circle" size={17} color={colors.bg} />}
+                <Text style={{ fontSize: 15, fontWeight: weight.bold, color: colors.bg }}>{t('coach.saveProfile')}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Pressable>
     </Modal>
   );
 }
@@ -580,7 +588,6 @@ export default function CoachModeScreen() {
   const [notesLink, setNotesLink] = useState(null);
   const EMPTY_PROFILE = { full_name: '', bio: '', goal: '', gym_name: '', coaching_type: '', experience_years: '', location: '', created_at: null };
   const [profile, setProfile] = useState(EMPTY_PROFILE);
-  const [draft, setDraft] = useState(EMPTY_PROFILE);
   const [saving, setSaving] = useState(false);
 
   const { data: clientLinks = [], isLoading, refetch, isRefetching } = useQuery({
@@ -600,7 +607,7 @@ export default function CoachModeScreen() {
             experience_years: data.experience_years ?? '', location: data.location ?? '',
             created_at: data.created_at,
           };
-          setProfile(p); setDraft(p);
+          setProfile(p);
         }
       });
   }, [userId]);
@@ -625,14 +632,14 @@ export default function CoachModeScreen() {
     onError: e => Alert.alert('Error', e.message),
   });
 
-  const handleSave = async () => {
+  const handleSave = async (d) => {
     setSaving(true);
     await supabase.from('profiles').update({
-      full_name: draft.full_name, bio: draft.bio, goal: draft.goal,
-      gym_name: draft.gym_name, coaching_type: draft.coaching_type,
-      experience_years: draft.experience_years || null, location: draft.location,
+      full_name: d.full_name, bio: d.bio, goal: d.goal,
+      gym_name: d.gym_name, coaching_type: d.coaching_type,
+      experience_years: d.experience_years || null, location: d.location,
     }).eq('id', userId);
-    setProfile(prev => ({ ...prev, ...draft }));
+    setProfile(prev => ({ ...prev, ...d }));
     setSaving(false);
     setEditSheetVisible(false);
   };
@@ -698,7 +705,7 @@ export default function CoachModeScreen() {
                   )}
                 </View>
               </View>
-              <TouchableOpacity onPress={() => { setDraft(profile); setEditSheetVisible(true); }}
+              <TouchableOpacity onPress={() => setEditSheetVisible(true)}
                 style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
                 <Ionicons name="pencil-outline" size={16} color={colors.accent} />
@@ -966,8 +973,7 @@ export default function CoachModeScreen() {
       <EditProfileSheet
         visible={editSheetVisible}
         onClose={() => setEditSheetVisible(false)}
-        draft={draft}
-        setDraft={setDraft}
+        initialDraft={profile}
         onSave={handleSave}
         saving={saving}
         colors={colors}
