@@ -4,7 +4,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, RefreshControl,
   Modal, KeyboardAvoidingView, Platform, Dimensions, findNodeHandle, UIManager, AppState,
-  PanResponder, Image,
+  PanResponder, Image, StatusBar,
 } from 'react-native';
 import { EXERCISE_IMAGES } from '../lib/exerciseImages';
 import VoiceLogButton from '../components/VoiceLogButton';
@@ -1882,6 +1882,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
     const planName = (plans.find(p => p.id === templatePlanId) ?? {}).name ?? '';
     return (
       <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setTemplatePlanId(null)}>
+        <StatusBar backgroundColor={bg} barStyle={isDark ? 'light-content' : 'dark-content'} />
         <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: bg }}>
           {/* Header */}
           <ScreenHeader title={planName} onBack={() => setTemplatePlanId(null)} />
@@ -1960,7 +1961,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
                 </View>
               )}
             </View>
-            <View style={{ flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <View style={{ flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: bg }}>
               <TextInput
                 style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border }}
                 placeholder="Add exercise…"
@@ -1988,6 +1989,7 @@ function PlansModal({ visible, plans, onSaveOrder, onClose, onCreate, onRename, 
   // ── Main plans list (full-screen) ──
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      <StatusBar backgroundColor={bg} barStyle={isDark ? 'light-content' : 'dark-content'} />
       <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: bg }}>
         {/* Header */}
         <ScreenHeader title={t('workout.myWorkoutPlans')} onBack={onClose} />
