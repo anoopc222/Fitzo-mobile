@@ -1063,7 +1063,7 @@ const styles = (colors) => StyleSheet.create({
   uniPrimaryRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2, paddingHorizontal: 4 },
   uniPrimaryEmoji:    { fontSize: 28 },
   uniPrimaryBody:     { flex: 1 },
-  uniPrimaryVal:      { fontSize: 34, fontFamily: fontFamily.monoBold, lineHeight: 38 },
+  uniPrimaryVal:      { fontSize: 34, fontFamily: fontFamily.monoBold, lineHeight: 44 },
   uniPrimaryLabel:    { fontSize: 9, fontFamily: fontFamily.bodyBold, color: colors.textDim, letterSpacing: 1, marginTop: 1 },
   uniDivider:         { height: 1, marginVertical: 7 },
   uniSubRow:          { flexDirection: 'row' },
