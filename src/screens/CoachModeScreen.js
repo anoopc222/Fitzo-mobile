@@ -231,6 +231,7 @@ function InviteOverlay({ code, onClose, colors }) {
 // ─── Add Client Sheet ─────────────────────────────────────────────────────────
 
 function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGenerate, generating, isPro, activeCount, onUpgrade }) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -412,6 +413,7 @@ function AddClientSheet({ visible, onClose, userId, clientLinks, colors, onGener
 const SPECIALTIES = ['Strength', 'Weight Loss', 'Muscle Gain', 'Cardio', 'Flexibility', 'Nutrition', 'Athletic Performance', 'Rehabilitation'];
 
 function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, colors }) {
+  const { t } = useTranslation();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={onClose} />
@@ -474,6 +476,7 @@ function EditProfileSheet({ visible, onClose, draft, setDraft, onSave, saving, c
 // ─── Client Notes Sheet ───────────────────────────────────────────────────────
 
 function ClientNotesSheet({ visible, onClose, link, colors, onSaved }) {
+  const { t } = useTranslation();
   const [privateNote, setPrivateNote] = useState('');
   const [clientNote, setClientNote] = useState('');
   const [saving, setSaving] = useState(false);
