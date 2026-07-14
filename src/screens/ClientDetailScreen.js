@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import ScreenHeader from '../components/ScreenHeader';
 import { supabase } from '../lib/supabase';
 import { typography, weight } from '../theme/typography';
 const W = Dimensions.get('window').width;
@@ -455,30 +456,7 @@ export default function ClientDetailScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 10 }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent + '22', borderWidth: 1.5, borderColor: colors.accent + '55', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 14, fontWeight: weight.black, color: colors.accent }}>{initials}</Text>
-          </View>
-          <View>
-            <Text style={{ fontSize: 16, fontWeight: weight.bold, color: colors.text }}>{clientName ?? 'Client'}</Text>
-            {profile?.goal && <Text style={{ fontSize: 11, color: colors.textDim }}>{profile.goal}</Text>}
-          </View>
-        </View>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('CoachChat', { coachId: user?.id, clientId, clientName: clientName ?? 'Client' })}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Ionicons name="chatbubble-ellipses" size={16} color={colors.bg} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title={clientName ?? 'Client'} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}

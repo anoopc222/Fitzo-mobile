@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import ScreenHeader from '../../components/ScreenHeader';
 import { typography, weight } from '../../theme/typography';
 
 export default function ForgotPasswordScreen({ navigation }) {
@@ -42,9 +43,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Ionicons name="chevron-back" size={20} color={colors.text} />
-      </TouchableOpacity>
+      <ScreenHeader title={t('auth.forgotPassword')} onBack={() => navigation.goBack()} />
 
       <Text style={styles.logo}>FitZo</Text>
       <Text style={styles.tagline}>{t('auth.tagline')}</Text>
