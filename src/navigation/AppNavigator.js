@@ -4,6 +4,7 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { usePostHog } from 'posthog-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import AuthNavigator from './AuthNavigator';
@@ -22,13 +23,23 @@ export default function AppNavigator() {
   const [onboarded, setOnboarded] = useState(null);
 
   useEffect(() => {
-    if (user) {
-      AsyncStorage.getItem('fitzo:onboarded').then(val => {
-        setOnboarded(val === 'true');
-      });
-    } else {
-      setOnboarded(null);
-    }
+    if (!user) { setOnboarded(null); return; }
+    // AsyncStorage can be wiped on Android after a Play Store update.
+    // Fall back to the DB: if the profile already has a goal or step_goal set,
+    // the user has completed onboarding before — skip it and repair the local flag.
+    AsyncStorage.getItem('fitzo:onboarded').then(async val => {
+      if (val === 'true') { setOnboarded(true); return; }
+      const { data } = await supabase
+        .from('profiles')
+        .select('goal, step_goal, height_cm')
+        .eq('id', user.id)
+        .single();
+      const alreadyOnboarded = !!(data?.goal || data?.step_goal || data?.height_cm);
+      if (alreadyOnboarded) {
+        await AsyncStorage.setItem('fitzo:onboarded', 'true');
+      }
+      setOnboarded(alreadyOnboarded);
+    });
   }, [user]);
 
   const navTheme = {
