@@ -28,10 +28,19 @@ export function AuthProvider({ children }) {
   const [isRecovering, setIsRecovering] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // 5-second safety net: if SecureStore hangs on process restart (Android),
+    // force loading=false so the app never shows an infinite black screen.
+    const timeout = setTimeout(() => setLoading(false), 5000);
+
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      })
+      .finally(() => clearTimeout(timeout));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
