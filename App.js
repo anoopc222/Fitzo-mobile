@@ -203,7 +203,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-export default function Root() {
+export default function AppRoot() {
   return (
     <ErrorBoundary>
       <App />
