@@ -1,3 +1,11 @@
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://placeholder@sentry.io/placeholder', // Replace with your Sentry DSN
+  enableNativeNagger: false,
+  tracesSampleRate: 0.2,
+});
+
 import React, { useEffect, useRef } from 'react';
 import { View, AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -123,7 +131,7 @@ function Root() {
   );
 }
 
-export default function App() {
+function App() {
   const [fontsLoaded] = useAppFonts();
 
   if (!fontsLoaded) {
@@ -160,3 +168,5 @@ export default function App() {
     </PostHogProvider>
   );
 }
+
+export default Sentry.wrap(App);
