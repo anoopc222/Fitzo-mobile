@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { SOUND_URIS } from './soundUris';
 
-// Global mute state (persists across component remounts without context)
 let _muted = false;
 export function getSoundMuted() { return _muted; }
 export function setSoundMuted(v) { _muted = v; }
@@ -12,10 +11,13 @@ export function useSound() {
     try {
       const uri = SOUND_URIS[name];
       if (!uri) return;
-      // Lazy-import so bundler only loads expo-audio when actually needed
-      const { AudioPlayer } = await import('expo-audio');
-      const player = new AudioPlayer({ uri });
-      player.play();
+      const { Audio } = await import('expo-av');
+      const { sound } = await Audio.Sound.createAsync({ uri });
+      await sound.playAsync();
+      // Unload after playback to free memory
+      sound.setOnPlaybackStatusUpdate(status => {
+        if (status.didJustFinish) sound.unloadAsync().catch(() => {});
+      });
     } catch {
       // Silently ignore audio errors — never crash the game
     }
