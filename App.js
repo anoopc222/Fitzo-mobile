@@ -47,8 +47,22 @@ focusManager.setEventListener((handleFocus) => {
   return () => sub.remove();
 });
 
+// Wrap AsyncStorage so any read/write/parse error never crashes the app.
+// Stale or corrupted cache from a previous build is silently discarded.
+const safeAsyncStorage = {
+  getItem: async (key) => {
+    try { return await AsyncStorage.getItem(key); } catch { return null; }
+  },
+  setItem: async (key, value) => {
+    try { await AsyncStorage.setItem(key, value); } catch { /* ignore */ }
+  },
+  removeItem: async (key) => {
+    try { await AsyncStorage.removeItem(key); } catch { /* ignore */ }
+  },
+};
+
 const persister = createAsyncStoragePersister({
-  storage: AsyncStorage,
+  storage: safeAsyncStorage,
   key: 'fitzo-query-cache',
 });
 

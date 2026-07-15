@@ -16,6 +16,7 @@
     "android": {
       "package": "com.fitness.fitzo",
       "backgroundColor": "#0c0c0f",
+      "allowBackup": false,
       "adaptiveIcon": {
         "backgroundColor": "#0c0c0f",
         "foregroundImage": "./assets/android-icon-foreground.png",
