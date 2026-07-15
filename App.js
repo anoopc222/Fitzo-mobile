@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
   dsn: 'https://42e684a3b993b4091e0d11e3cd8b384a@o4511737932152832.ingest.us.sentry.io/4511737934249987',
-  enableNativeNagger: false,
+  enableNative: false, // disable native SDK — prevents hang on Android process restart
   tracesSampleRate: 0.2,
 });
 
