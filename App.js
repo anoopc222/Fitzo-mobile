@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
-  dsn: 'https://placeholder@sentry.io/placeholder', // Replace with your Sentry DSN
+  dsn: 'https://42e684a3b993b4091e0d11e3cd8b384a@o4511737932152832.ingest.us.sentry.io/4511737934249987',
   enableNativeNagger: false,
   tracesSampleRate: 0.2,
 });
