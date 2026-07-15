@@ -6,8 +6,8 @@ Sentry.init({
   tracesSampleRate: 0.2,
 });
 
-import React, { useEffect, useRef } from 'react';
-import { View, AppState } from 'react-native';
+import React, { useEffect, useRef, Component } from 'react';
+import { View, AppState, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { focusManager } from '@tanstack/react-query';
@@ -148,7 +148,7 @@ function App() {
           persistOptions={{
             persister,
             maxAge: CACHE_MAX_AGE,
-            buster: 'v2',
+            buster: 'v3',
             dehydrateOptions: {
               shouldDehydrateQuery: (query) => query.state.status === 'success',
             },
@@ -171,4 +171,42 @@ function App() {
   );
 }
 
-export default Sentry.wrap(App);
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    Sentry.captureException(error, { extra: info });
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#0c0c0f', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ color: '#d4ff00', fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>Something went wrong</Text>
+          <Text style={{ color: '#aaa', fontSize: 13, textAlign: 'center', marginBottom: 8 }}>
+            {this.state.error?.message || 'Unknown error'}
+          </Text>
+          <Text style={{ color: '#555', fontSize: 11, textAlign: 'center', marginBottom: 24 }}>
+            {this.state.error?.stack?.slice(0, 300)}
+          </Text>
+          <TouchableOpacity onPress={() => this.setState({ error: null })} style={{ backgroundColor: '#d4ff00', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
+            <Text style={{ color: '#000', fontWeight: 'bold' }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function Root() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}
