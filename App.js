@@ -124,7 +124,7 @@ export default function App() {
           persistOptions={{
             persister,
             maxAge: CACHE_MAX_AGE,
-            buster: 'v1',
+            buster: 'v2',
             dehydrateOptions: {
               shouldDehydrateQuery: (query) => query.state.status === 'success',
             },
