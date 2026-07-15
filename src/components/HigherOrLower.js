@@ -5,7 +5,6 @@ import { typography, weight } from '../theme/typography';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
 import { recordGamePlay } from './GameStreak';
-import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
 // [name, calories per 100g, emoji]
@@ -43,7 +42,6 @@ const BEST_KEY = (userId) => `fitzo:higherLower:${userId}:best`;
 export default function HigherOrLower({ userId }) {
   const { colors } = useTheme();
   const s = styles(colors);
-  const { play } = useSound();
 
   const [pair, setPair] = useState(() => {
     const s2 = shuffle(FOODS);
@@ -72,7 +70,6 @@ export default function HigherOrLower({ userId }) {
 
     setResult(correct ? 'correct' : 'wrong');
     if (correct) haptics.success(); else haptics.error();
-    play(correct ? 'correct' : 'wrong');
     Animated.timing(resultAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
 
     if (correct) {
@@ -84,7 +81,6 @@ export default function HigherOrLower({ userId }) {
         upsertGameScore(userId, 'higherOrLower', newStreak);
         recordGameHistory(userId, 'higherOrLower', newStreak);
         recordGamePlay(userId);
-        if (newStreak >= 5) play('win');
       }
       setTimeout(() => {
         resultAnim.setValue(0);

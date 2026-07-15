@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
-import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 import GameLeaderboard, { upsertGameScore } from './GameLeaderboard';
 
@@ -32,7 +31,6 @@ function todayKey(userId) {
 export default function DailySpin({ userId }) {
   const { colors } = useTheme();
   const s = styles(colors);
-  const { play } = useSound();
 
   const [dareIndex, setDareIndex] = useState(null);
   const [done, setDone] = useState(false);
@@ -77,7 +75,6 @@ export default function DailySpin({ userId }) {
         setDisplayIdx(final);
         setDareIndex(final);
         setSpinning(false);
-        play('reveal');
         AsyncStorage.setItem(todayKey(userId), JSON.stringify({ dare: final, done: false }));
       }
     }, 70);
@@ -87,7 +84,6 @@ export default function DailySpin({ userId }) {
     if (done) return;
     haptics.success();
     setDone(true);
-    play('win');
     AsyncStorage.setItem(todayKey(userId), JSON.stringify({ dare: dareIndex, done: true }));
     upsertGameScore(userId, 'dailySpin', 1);
     burst();
