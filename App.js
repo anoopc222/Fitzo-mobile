@@ -132,9 +132,11 @@ function Root() {
 }
 
 function App() {
-  const [fontsLoaded] = useAppFonts();
+  const [fontsLoaded, fontError] = useAppFonts();
 
-  if (!fontsLoaded) {
+  // Proceed even if fonts fail — native fallbacks render fine and a black
+  // screen is far worse than a slightly different typeface on restart.
+  if (!fontsLoaded && !fontError) {
     return <View style={{ flex: 1, backgroundColor: '#0c0c0f' }} />;
   }
 
