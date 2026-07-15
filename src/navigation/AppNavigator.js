@@ -24,22 +24,26 @@ export default function AppNavigator() {
 
   useEffect(() => {
     if (!user) { setOnboarded(null); return; }
-    // AsyncStorage can be wiped on Android after a Play Store update.
-    // Fall back to the DB: if the profile already has a goal or step_goal set,
-    // the user has completed onboarding before — skip it and repair the local flag.
-    AsyncStorage.getItem('fitzo:onboarded').then(async val => {
-      if (val === 'true') { setOnboarded(true); return; }
-      const { data } = await supabase
-        .from('profiles')
-        .select('goal, step_goal, height_cm')
-        .eq('id', user.id)
-        .single();
-      const alreadyOnboarded = !!(data?.goal || data?.step_goal || data?.height_cm);
-      if (alreadyOnboarded) {
-        await AsyncStorage.setItem('fitzo:onboarded', 'true');
+    let cancelled = false;
+    (async () => {
+      try {
+        const val = await AsyncStorage.getItem('fitzo:onboarded');
+        if (val === 'true') { if (!cancelled) setOnboarded(true); return; }
+        // AsyncStorage wiped (e.g. Play Store update) — check DB instead.
+        const { data } = await supabase
+          .from('profiles')
+          .select('goal, step_goal, height_cm')
+          .eq('id', user.id)
+          .single();
+        const already = !!(data?.goal || data?.step_goal || data?.height_cm);
+        if (already) AsyncStorage.setItem('fitzo:onboarded', 'true').catch(() => {});
+        if (!cancelled) setOnboarded(already);
+      } catch {
+        // If anything fails, default to showing the main app rather than crashing.
+        if (!cancelled) setOnboarded(true);
       }
-      setOnboarded(alreadyOnboarded);
-    });
+    })();
+    return () => { cancelled = true; };
   }, [user]);
 
   const navTheme = {
