@@ -5,7 +5,6 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
 import { recordGamePlay } from './GameStreak';
-import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
 const QUESTIONS = [
@@ -62,7 +61,6 @@ export default function NutritionTrivia({ userId }) {
   const [chosen, setChosen] = useState(null);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
-  const { play } = useSound();
   const [collapsed, setCollapsed] = useState(false);
   const [showBoard, setShowBoard] = useState(false);
   const [bestScore, setBestScore] = useState(null);
@@ -93,7 +91,6 @@ export default function NutritionTrivia({ userId }) {
     const q = questions[qIdx];
     const correct = choice === q.correct;
     if (correct) haptics.success(); else haptics.error();
-    play(correct ? 'correct' : 'wrong');
     const newAnswered = [...answered, correct ? 'correct' : 'wrong'];
     const newScore = score + (correct ? 1 : 0);
 
@@ -119,7 +116,6 @@ export default function NutritionTrivia({ userId }) {
           setBestScore(newBest);
           AsyncStorage.setItem(bestKey(userId), String(newBest));
         }
-        play('win');
         upsertGameScore(userId, 'nutritionTrivia', newScore);
         recordGameHistory(userId, 'nutritionTrivia', newScore);
         recordGamePlay(userId);

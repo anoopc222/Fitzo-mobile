@@ -8,7 +8,6 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
 import { recordGamePlay } from './GameStreak';
-import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
 // [name, emoji, calories per 100g, hint]
@@ -58,7 +57,6 @@ function scorePoints(diff) {
 export default function CalorieGuesser({ userId }) {
   const { colors } = useTheme();
   const s = styles(colors);
-  const { play } = useSound();
   const TRACK_W = Dimensions.get('window').width - 64;
 
   const [foodIdx, setFoodIdx] = useState(() => Math.floor(Math.random() * FOODS.length));
@@ -103,7 +101,6 @@ export default function CalorieGuesser({ userId }) {
 
     setRevealed(true);
     if (pts >= 75) haptics.success(); else if (pts < 25) haptics.error();
-    play(pts >= 75 ? 'correct' : pts >= 25 ? 'reveal' : 'wrong');
     const newScore = totalScore + pts;
     setTotalScore(newScore);
 
@@ -119,7 +116,6 @@ export default function CalorieGuesser({ userId }) {
   function nextRound() {
     const isGameOver = round >= 5;
     if (isGameOver) {
-      play('win');
       if (totalScore > best) {
         setBest(totalScore);
         AsyncStorage.setItem(BEST_KEY(userId), String(totalScore));

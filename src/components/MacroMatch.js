@@ -5,7 +5,6 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
 import { recordGamePlay } from './GameStreak';
-import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
 const MACRO_DATA = [
@@ -55,7 +54,6 @@ function buildRound() {
 export default function MacroMatch({ userId }) {
   const { colors } = useTheme();
   const s = styles(colors);
-  const { play } = useSound();
 
   const [round, setRound] = useState(1);
   const [totalScore, setTotalScore] = useState(0);
@@ -86,7 +84,6 @@ export default function MacroMatch({ userId }) {
 
     if (isCorrect) {
       haptics.success();
-      play('correct');
       const bonus = Math.max(0, Math.floor(100 - elapsed * 2));
       const pts = bonus;
       const newTotal = totalScore + pts;
@@ -104,7 +101,6 @@ export default function MacroMatch({ userId }) {
       }, 1000);
     } else {
       haptics.error();
-      play('wrong');
       setTimeout(() => {
         if (round >= TOTAL_ROUNDS) {
           finishGame(totalScore);
@@ -119,7 +115,6 @@ export default function MacroMatch({ userId }) {
   }
 
   async function finishGame(finalScore) {
-    play('win');
     setGameOver(true);
     recordGameHistory(userId, 'macroMatch', finalScore);
     recordGamePlay(userId);

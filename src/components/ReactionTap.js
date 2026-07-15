@@ -5,7 +5,6 @@ import { useTheme } from '../context/ThemeContext';
 import { typography, weight } from '../theme/typography';
 import GameLeaderboard, { upsertGameScore, recordGameHistory } from './GameLeaderboard';
 import { recordGamePlay } from './GameStreak';
-import { useSound } from '../lib/useSound';
 import { haptics } from '../lib/haptics';
 
 const TARGETS = [
@@ -22,7 +21,6 @@ const BEST_KEY = (userId) => `fitzo:reactionTap:${userId}:best`;
 export default function ReactionTap({ userId }) {
   const { colors } = useTheme();
   const s = styles(colors);
-  const { play } = useSound();
 
   const [phase, setPhase] = useState('idle'); // idle | countdown | waiting | active | result | toosoon
   const [countdown, setCountdown] = useState(3);
@@ -63,7 +61,6 @@ export default function ReactionTap({ userId }) {
         clearInterval(countdownTimer.current);
         beginWait();
       } else {
-        play('tick');
       }
     }, 800);
   }, [play]);
@@ -79,7 +76,6 @@ export default function ReactionTap({ userId }) {
     const delay = 1500 + Math.random() * 2500;
     waitTimer.current = setTimeout(() => {
       startedAt.current = Date.now();
-      play('go');
       haptics.heavy();
       setPhase('active');
 
@@ -115,7 +111,6 @@ export default function ReactionTap({ userId }) {
       setHistory(newHistory);
       setReactionMs(ms);
       if (ms < 300) haptics.success();
-      play(ms < 300 ? 'correct' : 'reveal');
       setRound(r => r + 1);
 
       const newBest = best === null || ms < best ? ms : best;
