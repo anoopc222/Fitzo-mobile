@@ -1902,7 +1902,7 @@ export default function HomeScreen() {
                       </View>
                       <Text style={styles.insightsHubSub} numberOfLines={2}>
                         {hasAccess && data?.goalForecast
-                          ? t('home.goalForecastProjected', { date: data.goalForecast.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), pace: Math.abs(data.goalForecast.weeklyPaceKg) })
+                          ? t('home.goalForecastProjected', { date: new Date(data.goalForecast.forecastDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), pace: Math.abs(data.goalForecast.weeklyPaceKg) })
                           : t('home.unlockProjection') + ' 🔒'}
                       </Text>
                     </View>
