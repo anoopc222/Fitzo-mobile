@@ -151,6 +151,10 @@ function App() {
             buster: 'v3',
             dehydrateOptions: {
               shouldDehydrateQuery: (query) => query.state.status === 'success',
+              // Only cache query data, never queue mutations for later replay —
+              // a paused quick-log mutation resuming on an unrelated later
+              // launch is surprising and can write stale/out-of-context data.
+              shouldDehydrateMutation: () => false,
             },
           }}
         >
